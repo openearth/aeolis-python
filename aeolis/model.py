@@ -759,6 +759,9 @@ class AeoLiSWrapper():
 
     Examples
     --------
+    >>> # run with default settings
+    ... AeoLiSWrapper().run()
+
     >>> AeoLiSWrapper(configfile='aeolis.txt').run()
 
     >>> model = AeoLiSWrapper(configfile='aeolis.txt')
@@ -780,21 +783,25 @@ class AeoLiSWrapper():
     o = {} # output stats
 
     
-    def __init__(self, configfile):
+    def __init__(self, configfile='aeolis.txt'):
         '''Initialize class
 
         Reads model configuration file without parsing all referenced
-        files for the progress indicator and netCDF output.
+        files for the progress indicator and netCDF output. If no
+        configuration file is given, the default settings are used.
         
         Parameters
         ----------
-        configfile : str
+        configfile : str, optional
             Model configuration file. See :func:`aeolis.io.read_configfile()`.
 
         '''
-        
-        self.configfile = os.path.abspath(configfile)
-        self.p = io.read_configfile(configfile, parse_files=False)
+
+        self.configfile = configfile
+        if os.path.exists(self.configfile):
+            self.p = io.read_configfile(configfile, parse_files=False)
+        else:
+            self.p = io.DEFAULT_CONFIG
 
 
     def run(self, callback=None):
@@ -845,6 +852,9 @@ class AeoLiSWrapper():
         # print settings
         self.print_params()
 
+        # write settings
+        self.write_params()
+
         # parse callback
         callback = self.parse_callback(callback)
 
@@ -868,12 +878,41 @@ class AeoLiSWrapper():
             self.print_stats()
 
 
+    def set_configfile(self, configfile):
+        '''Set model configuration file name'''
+
+        self.configfile = os.path.abspath(configfile)
+
+        
+    def set_params(self, **kwargs):
+        '''Set model configuration parameters'''
+        
+        self.p.update(kwargs)
+
+
+    def write_params(self):
+        '''Write updated model configuration to configuration file
+
+        Creates a backup in case the model configration file already
+        exists.
+
+        See Also
+        --------
+        aeolis.io.backup
+
+        '''
+
+        io.backup(self.configfile)
+        io.write_configfile(self.configfile, self.p)
+                            
+        
     def output_init(self):
+
         '''Initialize netCDF4 output file and output statistics dictionary'''
         
-        netcdf.initialize(self.p['outputfile'],
-                          self.p['outputvars'],
-                          self.p['outputtypes'],
+        netcdf.initialize(self.p['output_file'],
+                          self.p['output_vars'],
+                          self.p['output_types'],
                           self.engine.s,
                           self.engine.p,
                           self.engine.dimensions())
@@ -890,7 +929,7 @@ class AeoLiSWrapper():
 
         '''
         
-        for k in self.p['outputvars']:
+        for k in self.p['output_vars']:
             s = self.engine.get_var_shape(k)
             self.o[k] = dict(min=np.zeros(s) + np.inf,
                              max=np.zeros(s) - np.inf,
@@ -910,17 +949,17 @@ class AeoLiSWrapper():
 
         '''
         
-        for k in self.p['outputvars']:
+        for k in self.p['output_vars']:
             v = self.engine.get_var(k).copy()
-            if 'min' in self.p['outputtypes']:
+            if 'min' in self.p['output_types']:
                 self.o[k]['min'] = np.minimum(self.o[k]['min'], v)
-            if 'max' in self.p['outputtypes']:
+            if 'max' in self.p['output_types']:
                 self.o[k]['max'] = np.minimum(self.o[k]['max'], v)
-            if 'sum' in self.p['outputtypes'] or \
-               'avg' in self.p['outputtypes'] or \
-               'var' in self.p['outputtypes']:
+            if 'sum' in self.p['output_types'] or \
+               'avg' in self.p['output_types'] or \
+               'var' in self.p['output_types']:
                 self.o[k]['sum'] = self.o[k]['sum'] + v
-            if 'var' in self.p['outputtypes']:
+            if 'var' in self.p['output_types']:
                 self.o[k]['var'] = self.o[k]['var'] + v**2
             
         self.n += 1
@@ -937,21 +976,21 @@ class AeoLiSWrapper():
 
         '''
         
-        if self.t - self.tout >= self.p['outputtimes']:
+        if self.t - self.tout >= self.p['output_times']:
             
             variables = {}
-            for k in self.p['outputvars']:
+            for k in self.p['output_vars']:
                 variables['time'] = self.t
                 variables[k] = self.engine.get_var(k).copy()
                 for t in ['min', 'max', 'sum', 'var']:
-                    if t in self.p['outputtypes']:
+                    if t in self.p['output_types']:
                         variables['%s.%s' % (k, t)] = self.o[k][t]
-                if 'avg' in self.p['outputtypes']:
+                if 'avg' in self.p['output_types']:
                     variables['%s.avg' % k] = self.o[k]['sum'] / self.n
-                if 'var' in self.p['outputtypes']:
+                if 'var' in self.p['output_types']:
                     variables['%s.var' % k] = (self.o[k]['var'] - self[k]['sum']**2 / self.n) / (self.n - 1)
 
-            netcdf.append(self.p['outputfile'], variables)
+            netcdf.append(self.p['output_file'], variables)
         
             self.output_clear()
             self.tout = self.t
@@ -978,7 +1017,7 @@ class AeoLiSWrapper():
 
         '''
 
-        if type(callback) is str:
+        if isinstance(callback, str):
             if ':' in callback:
                 fname, func = callback.split(':')
                 if os.path.exists(fname):
@@ -1036,11 +1075,16 @@ class AeoLiSWrapper():
 
         for par, val in sorted(self.p.iteritems()):
             if isiterable(val):
-                print fmt1 % (par, self.print_value(val[0]))
-                for v in val[1:]:
-                    print fmt2 % ('', self.print_value(v))
+                if par.endswith('_file'):
+                    print fmt1 % (par, '%s.txt' % par.replace('_file', ''))
+                elif len(val) > 0:
+                    print fmt1 % (par, io.print_value(val[0]))
+                    for v in val[1:]:
+                        print fmt2 % ('', io.print_value(v))
+                else:
+                    print fmt1 % (par, '')
             else:
-                print fmt1 % (par, self.print_value(val))
+                print fmt1 % (par, io.print_value(val))
 
         print '**********************************************************'
         print ''
@@ -1055,40 +1099,15 @@ class AeoLiSWrapper():
         print '**********************************************************'
 
         fmt = '%-20s : %s'
-        print fmt % ('# time steps', self.print_value(c['time']))
-        print fmt % ('# matrix solves', self.print_value(c['matrixsolve']))
+        print fmt % ('# time steps', io.print_value(c['time']))
+        print fmt % ('# matrix solves', io.print_value(c['matrixsolve']))
         print fmt % ('avg. solves per step',
-                     self.print_value(float(c['matrixsolve']) / c['time']))
+                     io.print_value(float(c['matrixsolve']) / c['time']))
         print fmt % ('avg. time step',
-                     self.print_value(float(self.p['tstop']) / c['time']))
+                     io.print_value(float(self.p['tstop']) / c['time']))
 
         print '**********************************************************'
         print ''
-
-        
-    @staticmethod
-    def print_value(val):
-        '''Get string representation of arbitrary value
-
-        Parameters
-        ----------
-        val : misc
-            Value to be converted to string
-
-        Returns:
-        str
-            String representation of value
-
-        '''
-        
-        if val is None:
-            return '<novalue>'
-        elif isinstance(val, float):
-            return '%0.6f' % val
-        elif isinstance(val, int):
-            return '%0d' % val
-        else:
-            return str(val)
 
 
 class WindGenerator():

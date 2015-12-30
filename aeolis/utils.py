@@ -3,8 +3,8 @@ import numpy as np
 
 def isiterable(x):
     '''Check if variable is iterable'''
-    
-    if type(x) is str:
+
+    if isinstance(x, str):
         return False
     try:
         _ = [i for i in x]
@@ -24,7 +24,7 @@ def makeiterable(x):
 def isarray(x):
     '''Check if variable is an array'''
     
-    if type(x) is str:
+    if isinstance(x, str):
         return False
     if hasattr(x, '__getitem__'):
         return True

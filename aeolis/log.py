@@ -85,7 +85,7 @@ class Logger():
 
 def error(msg):
     '''Log error and flush immediately'''
-    Logger().error(msg, exception=ValueError(msg)).flush()
+    Logger().error(msg).flush(exception=ValueError(msg))
 
 
 def warn(msg):
