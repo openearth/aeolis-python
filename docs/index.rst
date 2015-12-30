@@ -33,6 +33,7 @@ Contents
    :maxdepth: 3
 
    sourcecode
+   defaults
    
 
 Acknowledgements

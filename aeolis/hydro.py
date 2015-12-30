@@ -5,10 +5,10 @@ from utils import *
 
 
 def interpolate(s, p, t):
-    '''Interpolate tide and meteorological condition to current time step
+    '''Interpolate hydrodynamic and meteorological conditions to current time step
 
-    Interpolates the tide and meteorological time series to the
-    current time step, if available. Meteorological parameters are
+    Interpolates the hydrodynamic and meteorological time series to
+    the current time step, if available. Meteorological parameters are
     stored as dictionary rather than a single value.
 
     Parameters
@@ -36,6 +36,15 @@ def interpolate(s, p, t):
         # ensure compatibility with XBeach: zs >= zb
         s['zs'] = np.maximum(s['zs'], s['zb'])
 
+    if p['wave_file'] is not None:
+    
+        s['Hs'][:,:] = np.interp(t,
+                                 p['wave_file'][:,0],
+                                 p['wave_file'][:,1])
+
+        # maximize wave height by depth ratio ``gamma``
+        s['Hs'] = np.minimum((s['zs'] - s['zb']) * p['gamma'], s['Hs'])
+        
     if p['meteo_file'] is not None:
 
         m = interp_array(t,

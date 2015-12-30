@@ -8,7 +8,7 @@ import scipy.sparse.linalg
 from bmi.api import IBmi
 
 # package modules
-import io, bed, wind, threshold, transport, hydro, netcdf, log
+import io, bed, wind, threshold, transport, hydro, netcdf, log, constants
 from utils import *
 
 
@@ -797,11 +797,20 @@ class AeoLiSWrapper():
 
         '''
 
-        self.configfile = configfile
+        self.configfile = os.path.abspath(configfile)
         if os.path.exists(self.configfile):
             self.p = io.read_configfile(configfile, parse_files=False)
         else:
-            self.p = io.DEFAULT_CONFIG
+            self.p = constants.DEFAULT_CONFIG
+
+            # add default profile and time series
+            self.p.update(dict(nx         = 99,
+                               ny         = 0,
+                               xgrid_file = np.arange(0.,100.,1.),
+                               ygrid_file = np.zeros((1,100)),
+                               bed_file   = np.linspace(-5.,5.,100.),
+                               wind_file  = np.asarray([[0.,10.,0.],
+                                                        [3601.,10.,0.]])))
 
 
     def run(self, callback=None):
@@ -857,6 +866,9 @@ class AeoLiSWrapper():
 
         # parse callback
         callback = self.parse_callback(callback)
+        if callback is not None:
+            print '  Applying callback function: %s()' % callback.__name__
+            print ''
 
         # initialize model
         with AeoLiS(configfile=fname) as self.engine:

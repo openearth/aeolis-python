@@ -7,62 +7,7 @@ import numpy as np
 # package modules
 import log
 from utils import *
-
-#: AeoLiS model default configuration
-DEFAULT_CONFIG = dict(th_grainsize=True,
-                      th_bedslope=False,
-                      th_moisture=True,
-                      th_humidity=False,
-                      th_roughness=False,
-                      mixtoplayer=True,
-                      bedupdate=True,
-                      evaporation=True,
-                      xgrid_file=np.arange(0., 100., 1.),
-                      ygrid_file=np.zeros((1, 100)),
-                      bed_file=np.linspace(-5., 5., 100.),
-                      wind_file=np.asarray([[0., 10., 0.],
-                                            [3601., 10., 0.]]),
-                      tide_file=np.asarray([[0., 0.],
-                                            [3601., 10.]]),
-                      meteo_file=None,
-                      bedcomp_file=None,
-                      nx=99,
-                      ny=0,
-                      dt=60.,
-                      tstart=0.,
-                      tstop=3600.,
-                      output_times=60.,
-                      output_file='aeolis.nc',
-                      output_vars=['zb', 'zs', 'Ct', 'Cu', 'uw', 'uth', 'mass', 'pickup'],
-                      output_types=[],
-                      grain_size=[225e-6],
-                      grain_dist=[1.],
-                      nfractions=1,
-                      nlayers=3,
-                      layer_thickness=.01,
-                      g=9.81,
-                      rhoa=1.25,
-                      rhop=2650.,
-                      rhow=1025.,
-                      porosity=.4,
-                      A=100.,
-                      z0=1.,
-                      k=0.01,
-                      Cb=1.5,
-                      bi=1.,
-                      T=1.,
-                      F=1e-4,
-                      eps=1e-3,
-                      gamma=.5,
-                      facDOD=.1,
-                      scheme='euler_backward',
-                      method_moist='belly_johnson',
-                      max_error=1e-6,
-                      max_iter=1000,
-                      accfac=1.)
-
-#: Required model configuration paramaters
-REQUIRED_CONFIG = ['nx', 'ny']
+from constants import *
 
 
 def read_configfile(configfile, parse_files=True):
