@@ -1,0 +1,1271 @@
+import os
+import imp
+import time
+import logging
+import numpy as np
+import scipy.sparse
+import scipy.sparse.linalg
+from bmi.api import IBmi
+
+# package modules
+import io, bed, wind, threshold, transport, hydro, netcdf, log
+from utils import *
+
+
+class AeoLiS(IBmi):
+    '''AeoLiS model class
+
+    AeoLiS is a process-based model for simulating supply-limited
+    aeolian sediment transport. This model class is compatible with
+    the Basic Model Interface (BMI) and provides basic model
+    operations, like initialization, time stepping, finalization and
+    data exchange. For higher level operations, like a progress
+    indicator and netCDF4 output is refered to the AeoLiS model
+    wrapper class, see :class:`aeolis.model.AeoLiSWrapper()`.
+
+    Examples
+    --------
+    >>> with AeoLiS(configfile='aeolis.txt') as model:
+    >>>     while model.get_current_time() <= model.get_end_time():
+    >>>         model.update()
+
+    >>> model = AeoLiS(configfile='aeolis.txt')
+    >>> model.initialize()
+    >>> zb = model.get_var('zb')
+    >>> model.set_var('zb', zb + 1)
+    >>> for i in range(10):
+    >>>     model.update(60.) # step 60 seconds forward
+    >>> model.finalize()
+
+    '''
+
+
+    s = {} # spatial grids
+    p = {} # parameters
+    c = {} # counters
+    
+    
+    def __init__(self, configfile):
+        '''Initialize class
+
+        Parameters
+        ----------
+        configfile : str
+            Model configuration file. See :func:`aeolis.io.read_configfile()`.
+
+        '''
+        
+        self.configfile = configfile
+
+
+    def __enter__(self):
+        self.initialize()
+        return self
+
+
+    def __exit__(self, *args):
+        self.finalize()
+
+    
+    def initialize(self):
+        '''Initialize model
+
+        Read model configuration file and initialize parameters and
+        spatial grids dictionary and load bathymetry and bed
+        composition.
+
+        '''
+
+        # read configuration file
+        self.p = io.read_configfile(self.configfile)
+        io.check_configuration(self.p)
+
+        # initialize time
+        self.t = self.p['tstart']
+
+        # get model dimensions
+        nx = self.p['nx']
+        ny = self.p['ny']
+        nl = self.p['nlayers']
+        nf = self.p['nfractions']
+
+        # initialize spatial grids
+        for var, dims in self.dimensions().iteritems():
+            self.s[var] = np.zeros(self._dims2shape(dims))
+
+        # initialize bed composition
+        self.s = bed.initialize(self.s, self.p)
+
+        
+    def update(self, dt=-1):
+        '''Time stepping function
+
+        Takes a single step in time. Interpolates wind and
+        hydrodynamic time series to the current time, updates the soil
+        moisture, mixes the bed due to wave action, computes wind
+        velocity threshold and the equilibrium sediment transport
+        concentration. Subsequently runs one of the available
+        numerical schemes to compute the instantaneous sediment
+        concentration and pickup for the next time step and updates
+        the bed accordingly.
+
+        For explicit schemes the time step is maximized by the
+        Courant-Friedrichs-Lewy (CFL) condition. See
+        :func:`aeolis.model.AeoLiS.set_timestep()`.
+
+        Parameters
+        ----------
+        dt : float, optional
+            Time step in seconds. The time step specified in the model
+            configuration file is used in case dt is smaller than
+            zero. For explicit numerical schemes the time step is
+            maximized by the CFL confition.
+
+        '''
+        
+        # interpolate wind time series
+        self.s = wind.interpolate(self.s, self.p, self.t)
+        
+        # determine optimal time step
+        if not self.set_timestep(dt):
+            return
+
+        # interpolate hydrodynamic time series
+        self.s = hydro.interpolate(self.s, self.p, self.t)
+        self.s = hydro.update(self.s, self.p, self.dt)
+
+        # mix top layer
+        self.s = bed.mixtoplayer(self.s, self.p)
+
+        # compute threshold
+        self.s = threshold.compute(self.s, self.p)
+
+        # compute equilibrium transport
+        self.s = transport.equilibrium(self.s, self.p)
+
+        # compute instantaneous transport
+        if self.p['scheme'] == 'euler_forward':
+            self.s.update(self.euler_forward())
+        elif self.p['scheme'] == 'euler_backward':
+            self.s.update(self.euler_backward())
+        elif self.p['scheme'] == 'crank_nicolson':
+            s1 = self.euler_forward()
+            s2 = self.euler_backward()
+            self.s.update({k:(s1[k]+s2[k])/2. for k in s1.iterkeys()})
+        else:
+            log.error('Unknown scheme [%s]' % self.p['scheme'])
+
+        # update bed
+        self.s = bed.update(self.s, self.p)
+
+        # increment time
+        self.t += self.dt
+        self._count('time')
+
+
+    def finalize(self):
+        '''Finalize model'''
+        
+        pass
+    
+        
+    def get_current_time(self):
+        '''
+        Returns
+        -------
+        float
+            Current simulation time
+
+        '''
+        
+        return self.t
+    
+        
+    def get_end_time(self):
+        '''
+        Returns
+        -------
+        float
+            Final simulation time
+
+        '''
+
+        return self.p['tstop']
+    
+        
+    def get_start_time(self):
+        '''
+        Returns
+        -------
+        float
+            Initial simulation time
+
+        '''
+
+        return self.p['tstart']
+    
+        
+    def get_var(self, var):
+        '''Returns spatial grid or model configuration parameter
+
+        If the given variable name matches with a spatial grid, the
+        spatial grid is returned. If not, the given variable name is
+        matched with a model configuration parameter. If a match is
+        found, the parameter value is returned. Otherwise, nothing is
+        returned.
+
+        Parameters
+        ----------
+        var : str
+            Name of spatial grid or model configuration parameter
+
+        Returns
+        -------
+        np.ndarray or int, float, str or list
+            Spatial grid or model configuration parameter
+
+        Examples
+        --------
+        >>> # returns bathymetry grid
+        ... model.get_var('zb')
+
+        >>> # returns simulation duration
+        ... model.get_var('tstop')
+
+        See Also
+        --------
+        aeolis.model.AeoLiS.set_var
+
+        '''
+
+        if self.s.has_key(var):
+            return self.s[var]
+        elif self.p.has_key(var):
+            return self.p[var]
+        else:
+            return None
+    
+        
+    def get_var_count(self):
+        '''
+        Returns
+        -------
+        int
+            Number of spatial grids
+
+        '''
+        
+        return len(self.s)
+    
+        
+    def get_var_name(self, i):
+        '''Returns name of spatial grid by index (in alphabetical order)
+
+        Parameters
+        ----------
+        i : int
+            Index of spatial grid
+
+        Returns
+        -------
+        str or -1
+            Name of spatial grid or -1 in case index exceeds the number of grids
+
+        '''
+        
+        if len(self.s) > i:
+            return sorted(self.s.keys())[i]
+        else:
+            return -1
+    
+        
+    def get_var_rank(self, var):
+        '''Returns rank of spatial grid
+
+        Parameters
+        ----------
+        var : str
+            Name of spatial grid
+
+        Returns
+        -------
+        int
+            Rank of spatial grid or -1 if not found
+
+        '''
+        
+        if self.s.has_key(var):
+            return len(self.s[var].shape)
+        else:
+            return -1
+    
+        
+    def get_var_shape(self, var):
+        '''Returns shape of spatial grid
+
+        Parameters
+        ----------
+        var : str
+            Name of spatial grid
+
+        Returns
+        -------
+        tuple or int
+            Dimensions of spatial grid or -1 if not found
+
+        '''
+        
+        if self.s.has_key(var):
+            return self.s[var].shape
+        else:
+            return -1
+    
+        
+    def get_var_type(self, var):
+        '''Returns variable type of spatial grid
+
+        Parameters
+        ----------
+        var : str
+            Name of spatial grid
+
+        Returns
+        -------
+        str or int
+            Variable type of spatial grid or -1 if not found
+
+        '''
+
+        if self.s.has_key(var):
+            return 'double'
+        else:
+            return -1
+    
+        
+    def inq_compound(self):
+        raise NotImplementedError('Method not yet implemented [inq_compound]')
+    
+        
+    def inq_compound_field(self):
+        raise NotImplementedError('Method not yet implemented [inq_compound_field]')
+    
+        
+    def set_var(self, var, val):
+        '''Sets spatial grid or model configuration parameter
+
+        If the given variable name matches with a spatial grid, the
+        spatial grid is set. If not, the given variable name is
+        matched with a model configuration parameter. If a match is
+        found, the parameter value is set. Otherwise, nothing is set.
+
+        Parameters
+        ----------
+        var : str
+            Name of spatial grid or model configuration parameter
+        val : np.ndarray or int, float, str or list
+            Spatial grid or model configuration parameter
+
+        Examples
+        --------
+        >>> # set bathymetry grid
+        ... model.set_var('zb', np.array([[0.,0., ... ,0.]]))
+
+        >>> # set simulation duration
+        ... model.set_var('tstop', 3600.)
+
+        See Also
+        --------
+        aeolis.model.AeoLiS.get_var
+
+        '''
+        
+        if self.s.has_key(var):
+            self.s[var] = val
+        elif self.p.has_key(var):
+            self.p[var] = val
+    
+        
+    def set_var_index(self, i, val):
+        '''Set spatial grid by index (in alphabetical order)
+
+        Parameters
+        ----------
+        i : int
+            Index of spatial grid
+        val : np.ndarray
+            Spatial grid
+
+        '''
+        
+        var = self.get_var_name(i)
+        self.set_var(var, val)
+    
+        
+    def set_var_slice(self):
+        raise NotImplementedError('Method not yet implemented [set_var_slice]')
+
+
+    def set_timestep(self, dt=-1.):
+        '''Determine optimal time step
+
+        If no time step is given the optimal time step is
+        determined. For explicit numerical schemes the time step is
+        based in the Courant-Frierichs-Lewy (CFL) condition. For
+        implicit numerical schemes the time step specified in the
+        model configuration file is used. Alternatively, a preferred
+        time step is given that is maximized by the CFL condition in
+        case of an explicit numerical scheme.
+
+        Returns True except when no time step could be
+        determined. This can be the case for explicit numerical
+        schemes when there is no wind. In this case the time step is
+        set arbitrarily to one second.
+
+        Parameters
+        ----------
+        df : float, optional
+            Preferred time step
+
+        Returns
+        -------
+        bool
+            False if determination of time step was unsuccessful, True otherwise
+
+        '''
+
+        if dt > 0.:
+            self.dt = dt
+        else:
+            self.dt = self.p['dt']
+
+        if self.p['scheme'] == 'euler_forward':
+            if self.p['CFL'] > 0.:
+                dtref = np.max(np.abs(self.s['uws']) / self.s['ds']) + \
+                        np.max(np.abs(self.s['uwn']) / self.s['dn'])
+                if dtref > 0.:
+                    self.dt = np.minimum(self.dt, self.p['CFL'] / dtref)
+                else:
+                    self.dt = np.minimum(self.dt, 1.)
+                    return False
+
+        return True
+
+                
+    def euler_forward(self):
+        '''Implements the explicit Euler forward numerical scheme
+
+        Determines weights of sediment fractions, sediment pickup and
+        instantaneous sediment concentration. Returns a partial
+        spatial grid dictionary that can be used to update the global
+        spatial grid dictionary.
+        
+        The instantaneous sediment concentration
+        :math:`\widehat{C}_t` is solved by solving the advection
+        equation explicitly:
+
+        .. math::
+
+            \\frac{\\partial \\widehat{C}_t}{\\partial t} 
+                + u_w \\frac{\\partial \\widehat{C}_t}{\\partial x}
+                = \\min \\left ( \\frac{\\partial S_e}{\\partial t} \\quad ; \\quad
+                                 \\frac{w \cdot \\widehat{C}_u - \\widehat{C}_t}{T} \\right )
+
+        Returns
+        -------
+        dict
+            Partial spatial grid dictionary
+
+        Examples
+        --------
+        >>> model.s.update(model.euler_forward())
+
+        See Also
+        --------
+        aeolis.model.AeoLiS.euler_backward
+        aeolis.transport.compute_weights
+        aeolis.transport.renormalize_weights
+
+        '''
+
+        s = self.s
+        p = self.p
+        
+        # get model dimensions
+        nx = p['nx']
+        ny = p['ny']
+        nf = p['nfractions']
+
+        # compute pickup
+        Ct = s['Ct'].copy()
+        w = transport.compute_weights(s, p)
+        pickup = np.zeros(s['pickup'].shape)
+        for i in range(nf):
+            w = transport.renormalize_weights(w, i)
+        
+            pickup[:,:,i] = (s['Cu'][:,:,i] * w[:,:,i] - s['Ct'][:,:,i]) \
+                            / p['T'] * self.dt
+            deficit_i = pickup[:,:,i] - s['mass'][:,:,0,i]
+            ix = (deficit_i > p['max_error']) \
+                 & (w[:,:,i] * s['Cu'][:,:,i] > 0.)
+
+            if np.any(ix):
+                w[ix,i] = (s['mass'][ix,0,i] * p['T'] / self.dt \
+                           + s['Ct'][ix,i]) / s['Cu'][ix,i]
+
+        # compute transport
+        for i in range(nf):
+            Ct[:,1:,i] = s['Ct'][:,1:,i] - s['uw'][:,1:] * self.dt \
+                         * s['ds'][:,1:] * s['dsdni'][:,1:] \
+                         * (Ct[:,1:,i] - Ct[:,:-1,i]) + pickup[:,1:,i]
+        
+#        j = 0
+#        for i in range(1, nx+1):
+#            Ct[j,i,:] = s['Ct'][j,i,:] - s['uw'][j,i] \
+#                        * self.dt * s['ds'][j,i] * s['dsdni'][j,i] \
+#                        * (Ct[j,i,:] - Ct[j,i-1,:]) + pickup[j,i,:]
+
+        return dict(Ct=Ct,
+                    pickup=pickup,
+                    w=w)
+
+
+    def euler_backward(self):
+        '''Implements the implicit Euler backward numerical scheme
+
+        Determines weights of sediment fractions, sediment pickup and
+        instantaneous sediment concentration. Returns a partial
+        spatial grid dictionary that can be used to update the global
+        spatial grid dictionary.
+
+        The instantaneous sediment concentration :math:`\widehat{C}_t`
+        is solved by solving a linear system of equations based on the
+        advection equation:
+
+        .. math::
+
+            \\frac{\\partial \\widehat{C}_t}{\\partial t} 
+                + u_w \\frac{\\partial \\widehat{C}_t}{\\partial x}
+                = \\frac{w \cdot \\widehat{C}_u - \\widehat{C}_t}{T}
+
+        The corresponding solution is exact, but may violate the
+        availability of sediment in the bed:
+
+        .. math::
+
+            \\frac{w \cdot \\widehat{C}_u - \\widehat{C}_t}{T} \\le \\frac{\\partial S_e}{\\partial t}
+
+        If this is the case, the weights :math:`w` for the sediment
+        fractions for which a deficit exists are lowered to match
+        supply. The weights for other fractions are increased to
+        ensure that the sum of all weights remains one (see
+        :func:`aeolis.transport.renormalize_weights()`). Only in case
+        all sediment fractions are in deficit, the total pickup of
+        sediment is reduced.
+
+        Returns
+        -------
+        dict
+            Partial spatial grid dictionary
+
+        Examples
+        --------
+        >>> model.s.update(model.euler_backward())
+
+        See Also
+        --------
+        aeolis.model.AeoLiS.euler_forward
+        aeolis.transport.compute_weights
+        aeolis.transport.renormalize_weights
+
+        '''
+
+        s = self.s
+        p = self.p
+
+        Ct = s['Ct'].copy()
+        pickup = s['pickup'].copy()
+
+        # compute transport weights for all sediment fractions
+        w = transport.compute_weights(s, p)
+
+        # create sparse matrix to solve linear system of equations
+        A1 = -s['uw'] * self.dt * s['ds'] * s['dsdni']
+        A0 = 1. + s['uw'] * self.dt * s['ds'] * s['dsdni'] + self.dt / p['T']
+        A = scipy.sparse.diags((A1[0,1:].flatten(),
+                                A0[0,:].flatten()), (-1,0), format='csr')
+
+        # solve transport for each fraction separately using latest
+        # available weights
+        nf = p['nfractions']
+        for i in range(nf):
+
+            # renormalize weights for all fractions equal or larger
+            # than the current one such that the sum of all weights is
+            # unity
+            w = transport.renormalize_weights(w, i)
+
+            # create the right hand side of the linear system
+            y_i = w[0,:,i] * s['Cu'][0,:,i] * self.dt / p['T'] + s['Ct'][0,:,i]
+
+            # iteratively find a solution of the linear system that
+            # does not violate the availability of sediment in the bed
+            for n in range(p['max_iter']):
+                
+                self._count('matrixsolve')
+
+                # solve system with current weights, determine pickup
+                # and deficit for current fraction
+                Ct_i = scipy.sparse.linalg.spsolve(A, y_i)
+                pickup_i = (w[0,:,i] * s['Cu'][0,:,i] - Ct_i) / p['T'] * self.dt
+                deficit_i = pickup_i - s['mass'][0,:,0,i]
+                ix = (deficit_i > p['max_error']) \
+                     & (w[0,:,i] * s['Cu'][0,:,i] > 0.)
+
+                # quit the iteration if there is no deficit, otherwise
+                # back-compute the maximum weight allowed to get zero
+                # deficit fo r the current fraction and progress to
+                # the next iteration step
+                if ~np.any(ix):
+                    break
+                else:
+                    w[0,ix,i] = (s['mass'][0,ix,0,i] * p['T'] / self.dt \
+                                 + Ct_i[ix]) / s['Cu'][0,ix,i]
+
+            # throw warning if the maximum number of iterations was
+            # reached
+            if n == p['max_iter']-1:
+                logging.warn('Iteration not converged (t=%0.1f, fraction=%d)' % (self.t, i))
+
+            Ct[0,:,i] = Ct_i
+            pickup[0,:,i] = pickup_i
+
+        # check if there are any cells where the sum of all weights is
+        # smaller than unity. these cells are supply-limited for all
+        # fractions and the sediment concentration and pickup should
+        # be recomputed once with the grain size distribution in the
+        # top layer of the bed.
+        if 1. - np.any(np.sum(w, axis=2)) > p['max_error']:
+            w = transport.renormalize_weights(w, nf)
+            for i in range(nf):
+                self._count('matrixsolve')
+                y_i = s['mass'][0,:,0,i] * self.dt / p['T'] + s['Ct'][0,:,i]
+                Ct_i = scipy.sparse.linalg.spsolve(A, y_i)
+                pickup_i = (w[0,:,i] * s['Cu'][0,:,i] - Ct_i) / p['T'] * self.dt
+
+                Ct[0,:,i] = Ct_i
+                pickup[0,:,i] = pickup_i
+
+        return dict(Ct=Ct,
+                    pickup=pickup,
+                    w=w)
+
+
+    def _count(self, name, n=1):
+        '''Increase counter
+
+        Parameters
+        ----------
+        name : str
+            Name of counter
+        n : int, optional
+            Increment of counter (default: 1)
+
+        '''
+        
+        if not self.c.has_key(name):
+            self.c[name] = 0
+        self.c[name] += n
+
+
+    def _dims2shape(self, dims):
+        '''Converts named dimensions to numbered shape
+
+        Supports only dimension names that can be found in the model
+        parameters dictionary. The dimensions ``nx`` and ``ny`` are
+        increased by one, so they match the size of the spatial grids
+        rather than the number of spatial cells in the model.
+
+        Parameters
+        ----------
+        dims : iterable
+            Iterable with strings specifying dimension names
+
+        Returns
+        -------
+        tuple
+            Shape of spatial grid
+
+        '''
+        
+        shape = []
+        for dim in dims:
+            shape.append(self.p[dim])
+            if dim in ['nx', 'ny']:
+                shape[-1] += 1
+        return tuple(shape)
+    
+
+    @staticmethod
+    def dimensions(var=None):
+        '''Static method that returns named dimensions of all spatial grids
+
+        Parameters
+        ----------
+        var : str, optional
+            Name of spatial grid
+
+        Returns
+        -------
+        tuple or dict
+            Tuple with named dimensions of requested spatial grid or
+            dictionary with all named dimensions of all spatial
+            grids. Returns nothing if requested spatial grid is not
+            defined.
+
+        '''
+        
+        dims = {}
+        
+        dims.update({v:('ny','nx')
+                     for v in ['x', 'y', 'zb', 'ds', 'dn', 'dsdn', 'dsdni',
+                               'alfa', 'uw', 'uws', 'uwn', 'udir', 'zs', 'Hs']})
+        dims.update({v:('ny','nx','nfractions')
+                     for v in ['Cu', 'Ct', 'pickup', 'w', 'uth']})
+        dims.update({v:('ny','nx','nlayers')
+                     for v in ['thlyr', 'moist']})
+        dims.update({v:('ny','nx','nlayers','nfractions')
+                     for v in ['mass']})
+
+        if var is not None:
+            if dims.has_key(var):
+                return dims[var]
+            else:
+                return None
+        else:
+            return dims
+        
+
+class AeoLiSWrapper():
+    '''AeoLiS model wrapper class
+
+    This wrapper class is a convenience wrapper for the BMI-compatible
+    AeoLiS model class (:class:`aeolis.model.AeoLiS()`). It implements
+    a time loop, a progress indicator and netCDF4 output. It also
+    provides the definition of a callback function that can be used to
+    interact with the AeoLiS model during runtime.
+
+    The command-line function ``aeolis`` is available that uses this
+    class to start an AeoLiS model run.
+
+    Examples
+    --------
+    >>> AeoLiSWrapper(configfile='aeolis.txt').run()
+
+    >>> model = AeoLiSWrapper(configfile='aeolis.txt')
+    >>> model.run(callback=lambda model: model.set_var('zb', zb))
+
+    See Also
+    --------
+    aeolis.cmd.aeolis
+
+    '''
+    
+
+    t0 = None
+    tout = 0.
+    tlog = 0.
+    plog = -1.
+
+    n = 0 # time step counter
+    o = {} # output stats
+
+    
+    def __init__(self, configfile):
+        '''Initialize class
+
+        Reads model configuration file without parsing all referenced
+        files for the progress indicator and netCDF output.
+        
+        Parameters
+        ----------
+        configfile : str
+            Model configuration file. See :func:`aeolis.io.read_configfile()`.
+
+        '''
+        
+        self.configfile = os.path.abspath(configfile)
+        self.p = io.read_configfile(configfile, parse_files=False)
+
+
+    def run(self, callback=None):
+        '''Start model time loop
+
+        Changes current working directory to the model directory,
+        prints model configuration parameters and progress indicator
+        to the screen, writes netCDF4 output and calls a callback
+        function upon request.
+
+        Parameters
+        ----------
+        callback : str or function
+            The callback function is called at the start of every
+            single time step and takes the AeoLiS model object as
+            input. The callback function can be used to interact with
+            the model during simulation (e.g. update the bed with new
+            measurements). See for syntax :func:`parse_callback`.
+
+        See Also
+        --------
+        aeolis.model.AeoLiSWrapper.parse_callback
+
+        '''
+
+        # http://www.patorjk.com/software/taag/
+        # font: Colossal
+
+        print '**********************************************************'
+        print ' '
+        print '         d8888                   888      d8b  .d8888b.   ' 
+        print '        d88888                   888      Y8P d88P  Y88b  ' 
+        print '       d88P888                   888          Y88b.       ' 
+        print '      d88P 888  .d88b.   .d88b.  888      888  "Y888b.    ' 
+        print '     d88P  888 d8P  Y8b d88""88b 888      888     "Y88b.  ' 
+        print '    d88P   888 88888888 888  888 888      888       "888  ' 
+        print '   d8888888888 Y8b.     Y88..88P 888      888 Y88b  d88P  ' 
+        print '  d88P     888  "Y8888   "Y88P"  88888888 888  "Y8888P"   '
+        print ' '
+
+        # set working directory
+        fpath, fname = os.path.split(self.configfile)
+        if fpath != os.getcwd():
+            os.chdir(fpath)
+            print '  Changed working directory to: %s' % fpath
+            print ''
+
+        # print settings
+        self.print_params()
+
+        # parse callback
+        callback = self.parse_callback(callback)
+
+        # initialize model
+        with AeoLiS(configfile=fname) as self.engine:
+
+            # start model loop
+            self.t0 = time.time()
+            self.t = self.engine.get_current_time()
+            self.tstop = self.engine.get_end_time()
+            self.output_init()
+            while self.t <= self.tstop:
+                if callback is not None:
+                    callback(self.engine)
+                self.engine.update()
+                self.output_update()
+                self.output_write()
+                self.t = self.engine.get_current_time()
+                self.print_progress()
+
+            self.print_stats()
+
+
+    def output_init(self):
+        '''Initialize netCDF4 output file and output statistics dictionary'''
+        
+        netcdf.initialize(self.p['outputfile'],
+                          self.p['outputvars'],
+                          self.p['outputtypes'],
+                          self.engine.s,
+                          self.engine.p,
+                          self.engine.dimensions())
+
+        self.output_clear()
+
+
+    def output_clear(self):
+        '''Clears output statistics dictionary
+
+        Creates a matrix for minimum, maximum, variance and summed
+        values for each output variable and sets the time step counter
+        to zero.
+
+        '''
+        
+        for k in self.p['outputvars']:
+            s = self.engine.get_var_shape(k)
+            self.o[k] = dict(min=np.zeros(s) + np.inf,
+                             max=np.zeros(s) - np.inf,
+                             var=np.zeros(s),
+                             avg=np.zeros(s),
+                             sum=np.zeros(s))
+
+        self.n = 0
+
+
+    def output_update(self):
+        '''Updates output statistics dictionary
+
+        Updates matrices with minimum, maximum, variance and summed
+        values for each output variable with current spatial grid
+        values and increases time step counter with one.
+
+        '''
+        
+        for k in self.p['outputvars']:
+            v = self.engine.get_var(k).copy()
+            if 'min' in self.p['outputtypes']:
+                self.o[k]['min'] = np.minimum(self.o[k]['min'], v)
+            if 'max' in self.p['outputtypes']:
+                self.o[k]['max'] = np.minimum(self.o[k]['max'], v)
+            if 'sum' in self.p['outputtypes'] or \
+               'avg' in self.p['outputtypes'] or \
+               'var' in self.p['outputtypes']:
+                self.o[k]['sum'] = self.o[k]['sum'] + v
+            if 'var' in self.p['outputtypes']:
+                self.o[k]['var'] = self.o[k]['var'] + v**2
+            
+        self.n += 1
+
+
+    def output_write(self):
+        '''Appends output to netCDF4 output file
+
+        If the time since the last output is equal or larger than the
+        set output interval, append current output to the netCDF4
+        output file. Computes the average and variance values based on
+        available output statistics and clear output statistics
+        dictionary.
+
+        '''
+        
+        if self.t - self.tout >= self.p['outputtimes']:
+            
+            variables = {}
+            for k in self.p['outputvars']:
+                variables['time'] = self.t
+                variables[k] = self.engine.get_var(k).copy()
+                for t in ['min', 'max', 'sum', 'var']:
+                    if t in self.p['outputtypes']:
+                        variables['%s.%s' % (k, t)] = self.o[k][t]
+                if 'avg' in self.p['outputtypes']:
+                    variables['%s.avg' % k] = self.o[k]['sum'] / self.n
+                if 'var' in self.p['outputtypes']:
+                    variables['%s.var' % k] = (self.o[k]['var'] - self[k]['sum']**2 / self.n) / (self.n - 1)
+
+            netcdf.append(self.p['outputfile'], variables)
+        
+            self.output_clear()
+            self.tout = self.t
+
+
+    def parse_callback(self, callback):
+        '''Parses callback definition and returns function
+
+        The callback function can be specified in two formats:
+
+        - As a native Python function
+        - As a string refering to a Python script and function,
+          separated by a colon (e.g. ``example/callback.py:function``)
+
+        Parameters
+        ----------
+        callback : str or function
+            Callback definition
+
+        Returns
+        -------
+        function
+            Python callback function
+
+        '''
+
+        if type(callback) is str:
+            if ':' in callback:
+                fname, func = callback.split(':')
+                if os.path.exists(fname):
+                    mod = imp.load_source('callback', fname)
+                    if hasattr(mod, func):
+                        return getattr(mod, func)
+        elif hasattr(callback, '__call__'):
+            return callback
+        elif callback is None:
+            return callback
+
+        log.warn('Invalid callback definition [%s]' % callback)
+        return None
+
+                        
+    def print_progress(self, fraction=.1, min_interval=1., max_interval=60.):
+        '''Print progress to screen
+
+        Parameters
+        ----------
+        fraction : float, optional
+            Fraction of simulation at which to print progress (default: 10%)
+        min_interval : float, optional
+            Minimum time in seconds between subsequent progress prints (default: 1s)
+        max_interval : float, optional
+            Maximum time in seconds between subsequent progress prints (default: 60s)
+
+        '''
+        
+        p = self.t / self.tstop
+        pr = np.round(p/fraction)*fraction
+        
+        t = time.time()
+        interval = t - self.tlog
+
+        if (np.mod(p, fraction) < .01 and self.plog != pr) or interval > max_interval:
+            t1 = time.strftime('%H:%M:%S', time.gmtime(t-self.t0))
+            t2 = time.strftime('%H:%M:%S', time.gmtime((t-self.t0) / p))
+            t3 = time.strftime('%H:%M:%S', time.gmtime((t-self.t0) * (1. - p) / p))
+            print '[%5.1f%%] %s / %s / %s' % (p * 100., t1, t2, t3)
+            self.tlog = time.time()
+            self.plog = pr
+            
+        
+    def print_params(self):
+        '''Print model configuration parameters to screen'''
+        
+        maxl = np.max([len(par) for par in self.p.iterkeys()])
+        fmt1 = '  %-%%ds = %%s' % maxl
+        fmt2 = '  %-%%ds   %%s' % maxl
+
+        print '**********************************************************'
+        print 'PARAMETER SETTINGS'
+        print '**********************************************************'
+
+        for par, val in sorted(self.p.iteritems()):
+            if isiterable(val):
+                print fmt1 % (par, self.print_value(val[0]))
+                for v in val[1:]:
+                    print fmt2 % ('', self.print_value(v))
+            else:
+                print fmt1 % (par, self.print_value(val))
+
+        print '**********************************************************'
+        print ''
+
+
+    def print_stats(self):
+        '''Print model run statistics to screen'''
+        
+        c = self.engine.c
+
+        print ''
+        print '**********************************************************'
+
+        fmt = '%-20s : %s'
+        print fmt % ('# time steps', self.print_value(c['time']))
+        print fmt % ('# matrix solves', self.print_value(c['matrixsolve']))
+        print fmt % ('avg. solves per step',
+                     self.print_value(float(c['matrixsolve']) / c['time']))
+        print fmt % ('avg. time step',
+                     self.print_value(float(self.p['tstop']) / c['time']))
+
+        print '**********************************************************'
+        print ''
+
+        
+    @staticmethod
+    def print_value(val):
+        '''Get string representation of arbitrary value
+
+        Parameters
+        ----------
+        val : misc
+            Value to be converted to string
+
+        Returns:
+        str
+            String representation of value
+
+        '''
+        
+        if val is None:
+            return '<novalue>'
+        elif isinstance(val, float):
+            return '%0.6f' % val
+        elif isinstance(val, int):
+            return '%0d' % val
+        else:
+            return str(val)
+
+
+class WindGenerator():
+    '''Wind velocity time series generator
+
+    Generates a random wind velocity time series with given mean and
+    maximum wind speed, duration and time resolution. The wind
+    velocity time series is generated using a Markov Chain Monte Carlo
+    (MCMC) approach based on a Weibull distribution. The wind time
+    series can be written to an AeoLiS-compatible wind input file
+    assuming a constant wind direction of zero degrees.
+
+    The command-line function ``aeolis-wind`` is available that uses
+    this class to generate AeoLiS wind input files.
+
+    Examples
+    --------
+    >>> wind = WindGenerator(mean_speed=10.).generate(duration=24*3600.)
+    >>> wind.write_time_series('wind.txt')
+    >>> wind.plot()
+    >>> wind.hist()
+
+    See Also
+    --------
+    aeolis.cmd.wind
+
+    '''
+    
+    # source:
+    # http://www.lutralutra.co.uk/2012/07/02/simulating-a-wind-speed-time-series-in-python/
+
+
+    def __init__(self,
+                 mean_speed=9.0,
+                 max_speed=30.0,
+                 dt=60.,
+                 n_states=30,
+                 shape=2.,
+                 scale=2.):
+        
+        self.mean_speed=mean_speed
+        self.max_speed=max_speed
+        self.n_states=n_states
+
+        self.t=0.
+        self.dt=dt
+        
+        # setup matrix
+        n_rows = n_columns = n_states                             
+        self.bin_size = float(max_speed)/n_states
+        
+        # weibull parameters
+        weib_shape=shape
+        weib_scale=scale*float(mean_speed)/np.sqrt(np.pi);
+        
+        # wind speed bins
+        self.bins = np.arange(self.bin_size/2.0,
+                              float(max_speed) + self.bin_size/2.0,
+                              self.bin_size)
+        
+        # distribution of probabilities, normalised
+        fdpWind = self.weibullpdf(self.bins, weib_scale, weib_shape)
+        fdpWind = fdpWind / sum(fdpWind)
+        
+        # decreasing function
+        G = np.empty((n_rows, n_columns,))
+        for x in range(n_rows):
+            for y in range(n_columns):
+                G[x][y] = 2.0**float(-abs(x-y))
+            
+        # initial value of the P matrix
+        P0 = np.diag(fdpWind)
+        
+        # initital value of the p vector
+        p0 = fdpWind
+        
+        P, p = P0, p0
+        rmse = np.inf
+        while rmse > 1e-10:
+            pp = p
+            r = self.matmult4(P,self.matmult4(G,p))
+            r = r/sum(r)
+            p = p+0.5*(p0-r)
+            P = np.diag(p)
+            
+            rmse = np.sqrt(np.mean((p - pp)**2))
+            
+        N=np.diag([1.0/i for i in self.matmult4(G,p)])
+        MTM=self.matmult4(N,self.matmult4(G,P))
+        self.MTMcum = np.cumsum(MTM,1)
+        
+        
+    def __getitem__(self, s):
+        return np.asarray(self.wind_speeds[s])
+        
+        
+    def generate(self, duration=3600.):
+        
+        # initialise series
+        self.state = 0
+        self.states = []
+        self.wind_speeds = []
+        self.randoms1 = []
+        self.randoms2 = []
+
+        self.update()
+        self.t = 0.
+        
+        while self.t < duration:
+            self.update()
+
+        return self
+
+
+    def update(self):
+        r1 = np.random.uniform(0,1)
+        r2 = np.random.uniform(0,1)
+        
+        self.randoms1.append(r1)
+        self.randoms2.append(r2)
+        
+        self.state = next(j for j,v in enumerate(self.MTMcum[self.state]) if v > r1)
+        self.states.append(self.state)
+        self.wind_speeds.append(self.bins[self.state] - 0.5 + r2 * self.bin_size)
+        
+        self.t += self.dt
+        
+        
+    def get_time_series(self):
+        u = np.asarray(self.wind_speeds)
+        t = np.arange(len(u)) * self.dt
+        
+        return t, u
+
+
+    def write_time_series(self, fname):
+        t, u = self.get_time_series()
+        M = np.concatenate((np.asmatrix(t),
+                            np.asmatrix(u),
+                            np.zeros((1, len(t)))), axis=0).T
+
+        np.savetxt(fname, M)
+
+    
+    def plot(self):
+        t, u = self.get_time_series()
+        
+        fig, axs = plt.subplots(figsize=(10,4))
+        axs.plot(t, u
+
+    , '-k')
+        axs.set_ylabel('wind speed [m/s]')
+        axs.set_xlabel('time [s]')
+        axs.set_xlim((0, np.max(t)))
+        axs.grid()
+
+        return fig, axs
+    
+    
+    def hist(self):
+        fig, axs = plt.subplots(figsize=(10,4))
+        axs.hist(self.wind_speeds, bins=self.bins, normed=True, color='k')
+        axs.set_xlabel('wind speed [m/s]')
+        axs.set_ylabel('occurence [-]')
+        axs.grid()
+
+        return fig, axs    
+
+
+    @staticmethod
+    def weibullpdf(data, scale, shape):
+        return [(shape/scale)
+                * ((x/scale)**(shape-1))
+                * np.exp(-1*(x/scale)**shape)
+                for x in data]
+
+
+    @staticmethod
+    def matmult4(m, v):
+        return [reduce(operator.add, map(operator.mul,r,v)) for r in m]

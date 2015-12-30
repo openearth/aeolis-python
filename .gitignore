@@ -1,0 +1,6 @@
+*.egg-info
+*.pyc
+*.nc
+*.log
+*.png
+_build
