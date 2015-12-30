@@ -193,6 +193,6 @@ pseudoxml:
 	@echo "Build finished. The pseudo-XML files are in $(BUILDDIR)/pseudoxml."
 
 commit:
-	@cd $(BUILDDIR)/html
-	@git commit -a -m "Updated docs"
-	@git push
+	@git --git-dir=$(BUILDDIR)/html/.git --work-tree=$(BUILDDIR)/html add .
+	@git --git-dir=$(BUILDDIR)/html/.git --work-tree=$(BUILDDIR)/html commit -a -m "Updated docs"
+	@git --git-dir=$(BUILDDIR)/html/.git --work-tree=$(BUILDDIR)/html push
