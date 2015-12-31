@@ -39,6 +39,9 @@ class AeoLiS(IBmi):
 
     '''
 
+    t = 0.
+    dt = 0.
+    configfile = ''
 
     s = {} # spatial grids
     p = {} # parameters
@@ -416,10 +419,16 @@ class AeoLiS(IBmi):
         time step is given that is maximized by the CFL condition in
         case of an explicit numerical scheme.
 
-        Returns True except when no time step could be
-        determined. This can be the case for explicit numerical
-        schemes when there is no wind. In this case the time step is
-        set arbitrarily to one second.
+        Returns True except when:
+
+        1. No time step could be determined, for example when there is
+        no wind and the numerical scheme is explicit. In this case the
+        time step is set arbitrarily to one second.
+
+        2. Or when the time step is smaller than -1. In this case the
+        time is updated with the absolute value of the time step, but
+        no model execution is performed. This funcionality can be used
+        to skip fast-forward in time.
 
         Parameters
         ----------
@@ -435,6 +444,10 @@ class AeoLiS(IBmi):
 
         if dt > 0.:
             self.dt = dt
+        elif dt < -1:
+            self.dt = dt
+            self.t += np.abs(dt)
+            return False
         else:
             self.dt = self.p['dt']
 
@@ -745,7 +758,7 @@ class AeoLiS(IBmi):
             return dims
         
 
-class AeoLiSWrapper():
+class AeoLiSWrapper(AeoLiS):
     '''AeoLiS model wrapper class
 
     This wrapper class is a convenience wrapper for the BMI-compatible
@@ -781,6 +794,8 @@ class AeoLiSWrapper():
 
     n = 0 # time step counter
     o = {} # output stats
+
+    clear = False
 
     
     def __init__(self, configfile='aeolis.txt'):
@@ -871,23 +886,23 @@ class AeoLiSWrapper():
             print ''
 
         # initialize model
-        with AeoLiS(configfile=fname) as self.engine:
+        self.initialize()
 
-            # start model loop
-            self.t0 = time.time()
-            self.t = self.engine.get_current_time()
-            self.tstop = self.engine.get_end_time()
-            self.output_init()
-            while self.t <= self.tstop:
-                if callback is not None:
-                    callback(self.engine)
-                self.engine.update()
-                self.output_update()
-                self.output_write()
-                self.t = self.engine.get_current_time()
-                self.print_progress()
+        # start model loop
+        self.t0 = time.time()
+        self.output_init()
+        while self.t <= self.p['tstop']:
+            if callback is not None:
+                callback(self)
+            self.update()
+            self.output_update()
+            self.output_write()
+            self.print_progress()
 
-            self.print_stats()
+        # finalize model
+        self.finalize()
+
+        self.print_stats()
 
 
     def set_configfile(self, configfile):
@@ -902,6 +917,96 @@ class AeoLiSWrapper():
         self.p.update(kwargs)
 
 
+    def get_statistic(self, var, stat='avg'):
+        '''Return statistic of spatial grid
+
+        Parameters
+        ----------
+        var : str
+            Name of spatial grid
+        stat : str
+            Name of statistic (avg, sum, var, min or max)
+
+        Returns
+        -------
+        numpy.ndarray
+            Statistic of spatial grid
+
+        '''
+        
+        if stat in ['min', 'max', 'sum', 'var']:
+            return self.o[var][stat]
+        if stat == 'avg':
+            return self.o[var]['sum'] / self.n
+        if stat == 'var':
+            return (self.o[var]['var'] - self[var]['sum']**2 / self.n) / (self.n - 1)
+
+        
+    def get_var(self, var):
+        '''Returns spatial grid, statistic or model configuration parameter
+
+        Overloads the :func:`aeolis.model.AeoLiS.get_var` function and
+        extends it with the functionality to return statistics on
+        spatial grids by adding a postfix to the variable name
+        (e.g. Ct.avg). Supported statistics are avg, sum, var, min and
+        max.
+
+        Parameters
+        ----------
+        var : str
+            Name of spatial grid or model configuration
+            parameter. Spatial grid name can be extended with a
+            postfix to request a statistic (.avg, .sum, .var, .min or
+            .max).
+
+        Returns
+        -------
+        np.ndarray or int, float, str or list
+            Spatial grid, statistic or model configuration parameter
+
+        Examples
+        --------
+        >>> # returns average sediment concentration
+        ... model.get_var('Ct.avg')
+
+        >>> # returns variance in wave height
+        ... model.get_var('Hs.var')
+
+        See Also
+        --------
+        aeolis.model.AeoLiS.get_var
+
+        '''
+
+        self.clear = True
+        
+        if '.' in var:
+            var, stat = var.split()
+            if self.o.has_key(var):
+                return self.get_statistic(var, stat)
+
+        return super(AeoLiSWrapper, self).get_var(var)
+
+    
+    def update(self, dt=-1):
+        '''Time stepping function
+
+        Overloads the :func:`aeolis.model.AeoLiS.update` function, but
+        clears output statistics upon request.
+
+        Parameters
+        ----------
+        dt : float, optional
+            Time step in seconds.
+
+        '''
+
+        if self.clear or self.dt < -1:
+            self.output_clear()
+            self.clear = False
+        super(AeoLiSWrapper, self).update(dt=dt)
+        
+                    
     def write_params(self):
         '''Write updated model configuration to configuration file
 
@@ -921,13 +1026,16 @@ class AeoLiSWrapper():
     def output_init(self):
 
         '''Initialize netCDF4 output file and output statistics dictionary'''
+
+        self.p['output_vars'] = makeiterable(self.p['output_vars'])
+        self.p['output_types'] = makeiterable(self.p['output_types'])
         
         netcdf.initialize(self.p['output_file'],
                           self.p['output_vars'],
                           self.p['output_types'],
-                          self.engine.s,
-                          self.engine.p,
-                          self.engine.dimensions())
+                          self.s,
+                          self.p,
+                          self.dimensions())
 
         self.output_clear()
 
@@ -942,7 +1050,7 @@ class AeoLiSWrapper():
         '''
         
         for k in self.p['output_vars']:
-            s = self.engine.get_var_shape(k)
+            s = self.get_var_shape(k)
             self.o[k] = dict(min=np.zeros(s) + np.inf,
                              max=np.zeros(s) - np.inf,
                              var=np.zeros(s),
@@ -962,7 +1070,7 @@ class AeoLiSWrapper():
         '''
         
         for k in self.p['output_vars']:
-            v = self.engine.get_var(k).copy()
+            v = self.get_var(k).copy()
             if 'min' in self.p['output_types']:
                 self.o[k]['min'] = np.minimum(self.o[k]['min'], v)
             if 'max' in self.p['output_types']:
@@ -993,14 +1101,9 @@ class AeoLiSWrapper():
             variables = {}
             for k in self.p['output_vars']:
                 variables['time'] = self.t
-                variables[k] = self.engine.get_var(k).copy()
-                for t in ['min', 'max', 'sum', 'var']:
-                    if t in self.p['output_types']:
-                        variables['%s.%s' % (k, t)] = self.o[k][t]
-                if 'avg' in self.p['output_types']:
-                    variables['%s.avg' % k] = self.o[k]['sum'] / self.n
-                if 'var' in self.p['output_types']:
-                    variables['%s.var' % k] = (self.o[k]['var'] - self[k]['sum']**2 / self.n) / (self.n - 1)
+                variables[k] = self.get_var(k).copy()
+                for t in self.p['output_types']:
+                    variables['%s.%s' % (k, t)] = self.get_statistic(k, t)
 
             netcdf.append(self.p['output_file'], variables)
         
@@ -1059,7 +1162,7 @@ class AeoLiSWrapper():
 
         '''
         
-        p = self.t / self.tstop
+        p = self.t / self.p['tstop']
         pr = np.round(p/fraction)*fraction
         
         t = time.time()
@@ -1105,7 +1208,7 @@ class AeoLiSWrapper():
     def print_stats(self):
         '''Print model run statistics to screen'''
         
-        c = self.engine.c
+        c = self.c
 
         print ''
         print '**********************************************************'

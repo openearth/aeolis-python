@@ -103,8 +103,8 @@ Command-line tools
 .. automodule:: aeolis.cmd
                 :members:
 
-Miscelaneous
-^^^^^^^^^^^^
+Miscellaneous
+^^^^^^^^^^^^^
 
 .. automodule:: aeolis.utils
                 :members:
