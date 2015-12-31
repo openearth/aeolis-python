@@ -1,3 +1,4 @@
+
 import os
 import imp
 import time
@@ -25,7 +26,7 @@ class AeoLiS(IBmi):
     operations, like initialization, time stepping, finalization and
     data exchange. For higher level operations, like a progress
     indicator and netCDF4 output is refered to the AeoLiS model
-    wrapper class, see :class:`~aeolis.model.AeoLiSWrapper()`.
+    wrapper class, see :class:`~aeolis.model.AeoLiSRunner()`.
 
     Examples
     --------
@@ -762,7 +763,7 @@ class AeoLiS(IBmi):
             return dims
         
 
-class AeoLiSWrapper(AeoLiS):
+class AeoLiSRunner(AeoLiS):
     '''AeoLiS model wrapper class
 
     This wrapper class is a convenience wrapper for the BMI-compatible
@@ -777,11 +778,11 @@ class AeoLiSWrapper(AeoLiS):
     Examples
     --------
     >>> # run with default settings
-    ... AeoLiSWrapper().run()
+    ... AeoLiSRunner().run()
 
-    >>> AeoLiSWrapper(configfile='aeolis.txt').run()
+    >>> AeoLiSRunner(configfile='aeolis.txt').run()
 
-    >>> model = AeoLiSWrapper(configfile='aeolis.txt')
+    >>> model = AeoLiSRunner(configfile='aeolis.txt')
     >>> model.run(callback=lambda model: model.set_var('zb', zb))
 
     See Also
@@ -848,11 +849,11 @@ class AeoLiSWrapper(AeoLiS):
             input. The callback function can be used to interact with
             the model during simulation (e.g. update the bed with new
             measurements). See for syntax
-            :func:`~aeolis.model.AeoLiSWrapper.parse_callback()`.
+            :func:`~aeolis.model.AeoLiSRunner.parse_callback()`.
 
         See Also
         --------
-        :func:`~aeolis.model.AeoLiSWrapper.parse_callback`
+        :func:`~aeolis.model.AeoLiSRunner.parse_callback`
 
         '''
 
@@ -990,7 +991,7 @@ class AeoLiSWrapper(AeoLiS):
             if self.o.has_key(var):
                 return self.get_statistic(var, stat)
 
-        return super(AeoLiSWrapper, self).get_var(var)
+        return super(AeoLiSRunner, self).get_var(var)
 
 
     def initialize(self):
@@ -1001,7 +1002,7 @@ class AeoLiSWrapper(AeoLiS):
 
         '''
         
-        super(AeoLiSWrapper, self).initialize()
+        super(AeoLiSRunner, self).initialize()
         self.output_init()
         
 
@@ -1023,7 +1024,7 @@ class AeoLiSWrapper(AeoLiS):
             self.output_clear()
             self.clear = False
             
-        super(AeoLiSWrapper, self).update(dt=dt)
+        super(AeoLiSRunner, self).update(dt=dt)
         self.output_update()
         
                     

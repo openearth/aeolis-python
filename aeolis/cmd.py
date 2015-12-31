@@ -1,6 +1,6 @@
 import docopt
 import numpy as np
-from model import AeoLiSWrapper, WindGenerator
+from model import AeoLiSRunner, WindGenerator
 import log
 
 
@@ -29,7 +29,7 @@ def aeolis():
         log.logging.root.setLevel(log.logging.NOTSET)
 
     # start model
-    AeoLiSWrapper(configfile=arguments['<config>']).run(callback=arguments['--callback'])
+    AeoLiSRunner(configfile=arguments['<config>']).run(callback=arguments['--callback'])
 
 
 def wind():

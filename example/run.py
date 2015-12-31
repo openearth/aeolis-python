@@ -1,4 +1,4 @@
-from aeolis.model import AeoLiSWrapper
+from aeolis.model import AeoLiSRunner
 
 for tide_var in [False, True]:
     for wind_var in [False, True]:
@@ -6,7 +6,7 @@ for tide_var in [False, True]:
 
             fname = 'aeolis_tide%d_wind%d_bar%d' % (tide_var, wind_var, bar)
             
-            model = AeoLiSWrapper('aeolis.txt')
+            model = AeoLiSRunner('aeolis.txt')
             model.set_configfile('%s.txt' % fname)
             model.set_params(output_file='%s.nc' % fname)
             model.set_params(tide_file='tide_sine.txt' if tide_var else 'tide.txt')
