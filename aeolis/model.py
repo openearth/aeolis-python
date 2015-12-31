@@ -12,6 +12,10 @@ import io, bed, wind, threshold, transport, hydro, netcdf, log, constants
 from utils import *
 
 
+# initialize log
+logger = logging.getLogger(__name__)
+
+
 class AeoLiS(IBmi):
     '''AeoLiS model class
 
@@ -21,7 +25,7 @@ class AeoLiS(IBmi):
     operations, like initialization, time stepping, finalization and
     data exchange. For higher level operations, like a progress
     indicator and netCDF4 output is refered to the AeoLiS model
-    wrapper class, see :class:`aeolis.model.AeoLiSWrapper()`.
+    wrapper class, see :class:`~aeolis.model.AeoLiSWrapper()`.
 
     Examples
     --------
@@ -54,7 +58,7 @@ class AeoLiS(IBmi):
         Parameters
         ----------
         configfile : str
-            Model configuration file. See :func:`aeolis.io.read_configfile()`.
+            Model configuration file. See :func:`~aeolis.io.read_configfile()`.
 
         '''
         
@@ -114,7 +118,7 @@ class AeoLiS(IBmi):
 
         For explicit schemes the time step is maximized by the
         Courant-Friedrichs-Lewy (CFL) condition. See
-        :func:`aeolis.model.AeoLiS.set_timestep()`.
+        :func:`~aeolis.model.AeoLiS.set_timestep()`.
 
         Parameters
         ----------
@@ -237,7 +241,7 @@ class AeoLiS(IBmi):
 
         See Also
         --------
-        aeolis.model.AeoLiS.set_var
+        :func:`~aeolis.model.AeoLiS.set_var`
 
         '''
 
@@ -378,7 +382,7 @@ class AeoLiS(IBmi):
 
         See Also
         --------
-        aeolis.model.AeoLiS.get_var
+        :func:`~aeolis.model.AeoLiS.get_var`
 
         '''
         
@@ -494,9 +498,9 @@ class AeoLiS(IBmi):
 
         See Also
         --------
-        aeolis.model.AeoLiS.euler_backward
-        aeolis.transport.compute_weights
-        aeolis.transport.renormalize_weights
+        :func:`~aeolis.model.AeoLiS.euler_backward`
+        :func:`aeolis.transport.compute_weights`
+        :func:`aeolis.transport.renormalize_weights`
 
         '''
 
@@ -571,7 +575,7 @@ class AeoLiS(IBmi):
         fractions for which a deficit exists are lowered to match
         supply. The weights for other fractions are increased to
         ensure that the sum of all weights remains one (see
-        :func:`aeolis.transport.renormalize_weights()`). Only in case
+        :func:`~aeolis.transport.renormalize_weights()`). Only in case
         all sediment fractions are in deficit, the total pickup of
         sediment is reduced.
 
@@ -586,9 +590,9 @@ class AeoLiS(IBmi):
 
         See Also
         --------
-        aeolis.model.AeoLiS.euler_forward
-        aeolis.transport.compute_weights
-        aeolis.transport.renormalize_weights
+        :func:`~aeolis.model.AeoLiS.euler_forward`
+        :func:`aeolis.transport.compute_weights`
+        :func:`aeolis.transport.renormalize_weights`
 
         '''
 
@@ -647,7 +651,7 @@ class AeoLiS(IBmi):
             # throw warning if the maximum number of iterations was
             # reached
             if n == p['max_iter']-1:
-                logging.warn('Iteration not converged (t=%0.1f, fraction=%d)' % (self.t, i))
+                logger.warn('Iteration not converged (t=%0.1f, fraction=%d)' % (self.t, i))
 
             Ct[0,:,i] = Ct_i
             pickup[0,:,i] = pickup_i
@@ -762,7 +766,7 @@ class AeoLiSWrapper(AeoLiS):
     '''AeoLiS model wrapper class
 
     This wrapper class is a convenience wrapper for the BMI-compatible
-    AeoLiS model class (:class:`aeolis.model.AeoLiS()`). It implements
+    AeoLiS model class (:class:`~aeolis.model.AeoLiS()`). It implements
     a time loop, a progress indicator and netCDF4 output. It also
     provides the definition of a callback function that can be used to
     interact with the AeoLiS model during runtime.
@@ -808,11 +812,11 @@ class AeoLiSWrapper(AeoLiS):
         Parameters
         ----------
         configfile : str, optional
-            Model configuration file. See :func:`aeolis.io.read_configfile()`.
+            Model configuration file. See :func:`~aeolis.io.read_configfile()`.
 
         '''
 
-        self.configfile = os.path.abspath(configfile)
+        self.set_configfile(configfile)
         if os.path.exists(self.configfile):
             self.p = io.read_configfile(configfile, parse_files=False)
         else:
@@ -843,11 +847,12 @@ class AeoLiSWrapper(AeoLiS):
             single time step and takes the AeoLiS model object as
             input. The callback function can be used to interact with
             the model during simulation (e.g. update the bed with new
-            measurements). See for syntax :func:`parse_callback`.
+            measurements). See for syntax
+            :func:`~aeolis.model.AeoLiSWrapper.parse_callback()`.
 
         See Also
         --------
-        aeolis.model.AeoLiSWrapper.parse_callback
+        :func:`~aeolis.model.AeoLiSWrapper.parse_callback`
 
         '''
 
@@ -890,12 +895,10 @@ class AeoLiSWrapper(AeoLiS):
 
         # start model loop
         self.t0 = time.time()
-        self.output_init()
         while self.t <= self.p['tstop']:
             if callback is not None:
                 callback(self)
             self.update()
-            self.output_update()
             self.output_write()
             self.print_progress()
 
@@ -933,19 +936,21 @@ class AeoLiSWrapper(AeoLiS):
             Statistic of spatial grid
 
         '''
-        
+
         if stat in ['min', 'max', 'sum', 'var']:
             return self.o[var][stat]
-        if stat == 'avg':
+        elif stat == 'avg':
             return self.o[var]['sum'] / self.n
-        if stat == 'var':
+        elif stat == 'var':
             return (self.o[var]['var'] - self[var]['sum']**2 / self.n) / (self.n - 1)
+        else:
+            return None
 
         
     def get_var(self, var):
         '''Returns spatial grid, statistic or model configuration parameter
 
-        Overloads the :func:`aeolis.model.AeoLiS.get_var` function and
+        Overloads the :func:`aeolis.model.AeoLiS.get_var()` function and
         extends it with the functionality to return statistics on
         spatial grids by adding a postfix to the variable name
         (e.g. Ct.avg). Supported statistics are avg, sum, var, min and
@@ -979,20 +984,33 @@ class AeoLiSWrapper(AeoLiS):
         '''
 
         self.clear = True
-        
+
         if '.' in var:
-            var, stat = var.split()
+            var, stat = var.split('.')
             if self.o.has_key(var):
                 return self.get_statistic(var, stat)
 
         return super(AeoLiSWrapper, self).get_var(var)
 
-    
+
+    def initialize(self):
+        '''Initialize model
+
+        Overloads the :func:`aeolis.model.AeoLiS.initialize()` function, but
+        also initializes output statistics.
+
+        '''
+        
+        super(AeoLiSWrapper, self).initialize()
+        self.output_init()
+        
+
     def update(self, dt=-1):
         '''Time stepping function
 
-        Overloads the :func:`aeolis.model.AeoLiS.update` function, but
-        clears output statistics upon request.
+        Overloads the :func:`aeolis.model.AeoLiS.update()` function,
+        but also updates output statistics and clears output
+        statistics upon request.
 
         Parameters
         ----------
@@ -1004,7 +1022,9 @@ class AeoLiSWrapper(AeoLiS):
         if self.clear or self.dt < -1:
             self.output_clear()
             self.clear = False
+            
         super(AeoLiSWrapper, self).update(dt=dt)
+        self.output_update()
         
                     
     def write_params(self):
@@ -1054,7 +1074,6 @@ class AeoLiSWrapper(AeoLiS):
             self.o[k] = dict(min=np.zeros(s) + np.inf,
                              max=np.zeros(s) - np.inf,
                              var=np.zeros(s),
-                             avg=np.zeros(s),
                              sum=np.zeros(s))
 
         self.n = 0

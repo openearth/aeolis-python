@@ -281,7 +281,7 @@ def append(outputfile, variables):
 
     See Also
     --------
-    aeolis.netcdf.set_bounds
+    :func:`~aeolis.netcdf.set_bounds`
 
     '''
 
