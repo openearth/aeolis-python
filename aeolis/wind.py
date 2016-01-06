@@ -45,6 +45,6 @@ def interpolate(s, p, t):
 
     if p['ny'] == 0:
        s['uw'] = np.maximum(0., s['uws']) # FIXME: offshore wind is instable
-       s['uwn'] = 0.
+       s['uwn'][:,:] = 0.
 
     return s

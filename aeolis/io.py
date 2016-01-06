@@ -138,8 +138,8 @@ def check_configuration(p):
 
     # check validity of configuration
     if not isarray(p['xgrid_file']) or \
-       not isarray(p['bed_file']) or (isarray(p['ygrid_file']) and p['ny'] > 0):
-        logger.error('Incomplete bathymerty definition')
+       not isarray(p['bed_file']) or (not isarray(p['ygrid_file']) and p['ny'] > 0):
+        logger.error('Incomplete bathymetry definition')
 
     if not isarray(p['wind_file']) or \
        p['wind_file'].ndim != 2 or p['wind_file'].shape[1] < 3:

@@ -29,7 +29,8 @@ def aeolis():
         log.logging.root.setLevel(log.logging.NOTSET)
 
     # start model
-    AeoLiSRunner(configfile=arguments['<config>']).run(callback=arguments['--callback'])
+    model = AeoLiSRunner(configfile=arguments['<config>'])
+    model.run(callback=arguments['--callback'])
 
 
 def wind():

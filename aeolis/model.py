@@ -26,7 +26,7 @@ class AeoLiS(IBmi):
     operations, like initialization, time stepping, finalization and
     data exchange. For higher level operations, like a progress
     indicator and netCDF4 output is refered to the AeoLiS model
-    wrapper class, see :class:`~aeolis.model.AeoLiSRunner()`.
+    runner class, see :class:`~aeolis.model.AeoLiSRunner()`.
 
     Examples
     --------
@@ -532,9 +532,12 @@ class AeoLiS(IBmi):
 
         # compute transport
         for i in range(nf):
-            Ct[:,1:,i] = s['Ct'][:,1:,i] - s['uw'][:,1:] * self.dt \
-                         * s['ds'][:,1:] * s['dsdni'][:,1:] \
-                         * (Ct[:,1:,i] - Ct[:,:-1,i]) + pickup[:,1:,i]
+            Ct[1:,1:,i] = s['Ct'][1:,1:,i] \
+                          - s['uws'][1:,1:] * s['dn'][1:,1:] * s['dsdni'][1:,1:] \
+                         * (Ct[1:,1:,i] - Ct[1:,:-1,i]) * self.dt \
+                         - s['uwn'][1:,1:] * s['ds'][1:,1:] * s['dsdni'][1:,1:] \
+                         * (Ct[1:,1:,i] - Ct[:-1,1:,i]) * self.dt \
+                         + pickup[1:,1:,i]
         
 #        j = 0
 #        for i in range(1, nx+1):
@@ -607,10 +610,21 @@ class AeoLiS(IBmi):
         w = transport.compute_weights(s, p)
 
         # create sparse matrix to solve linear system of equations
-        A1 = -s['uw'] * self.dt * s['ds'] * s['dsdni']
-        A0 = 1. + s['uw'] * self.dt * s['ds'] * s['dsdni'] + self.dt / p['T']
-        A = scipy.sparse.diags((A1[0,1:].flatten(),
-                                A0[0,:].flatten()), (-1,0), format='csr')
+        A0 = 1. + s['uws'] * s['dn'] * s['dsdni'] * self.dt \
+             + s['uwn'] * s['ds'] * s['dsdni'] * self.dt + self.dt / p['T']
+        Ax = -s['uwn'] * s['ds'] * s['dsdni'] * self.dt
+        A1 = -s['uws'] * s['dn'] * s['dsdni'] * self.dt
+        A1[:,0] = 0.
+        if p['ny'] > 0:
+            i = p['nx']+1
+            Ax = np.zeros(Ax.shape)
+            A = scipy.sparse.diags((Ax.flatten()[i:],
+                                    A1.flatten()[1:],
+                                    A0.flatten(),
+                                    Ax.flatten()[:i]), (-i,-1,0,i*p['ny']), format='csr')
+        else:
+            A = scipy.sparse.diags((A1.flatten()[1:],
+                                    A0.flatten()), (-1,0), format='csr')
 
         # solve transport for each fraction separately using latest
         # available weights
@@ -623,21 +637,26 @@ class AeoLiS(IBmi):
             w = transport.renormalize_weights(w, i)
 
             # create the right hand side of the linear system
-            y_i = w[0,:,i] * s['Cu'][0,:,i] * self.dt / p['T'] + s['Ct'][0,:,i]
+            y_i = w[:,:,i] * s['Cu'][:,:,i] * self.dt / p['T'] + s['Ct'][:,:,i]
 
             # iteratively find a solution of the linear system that
             # does not violate the availability of sediment in the bed
             for n in range(p['max_iter']):
-                
+
                 self._count('matrixsolve')
 
                 # solve system with current weights, determine pickup
                 # and deficit for current fraction
-                Ct_i = scipy.sparse.linalg.spsolve(A, y_i)
-                pickup_i = (w[0,:,i] * s['Cu'][0,:,i] - Ct_i) / p['T'] * self.dt
-                deficit_i = pickup_i - s['mass'][0,:,0,i]
+                Ct_i = scipy.sparse.linalg.spsolve(A, y_i.flatten())
+                Cu_i = s['Cu'][:,:,i].flatten()
+                mass_i = s['mass'][:,:,0,i].flatten()
+                w_i = w[:,:,i].flatten()
+                pickup_i = (w_i * Cu_i - Ct_i) / p['T'] * self.dt
+                deficit_i = pickup_i - mass_i
                 ix = (deficit_i > p['max_error']) \
-                     & (w[0,:,i] * s['Cu'][0,:,i] > 0.)
+                     & (w_i * Cu_i > 0.)
+
+                logger.debug('t = %0.3f, fraction = %d, iteration = %d, # deficit = %d, total deficit = %0.3f' % (self.t, i, n, np.sum(ix), np.sum(deficit_i[ix])))
 
                 # quit the iteration if there is no deficit, otherwise
                 # back-compute the maximum weight allowed to get zero
@@ -646,16 +665,17 @@ class AeoLiS(IBmi):
                 if ~np.any(ix):
                     break
                 else:
-                    w[0,ix,i] = (s['mass'][0,ix,0,i] * p['T'] / self.dt \
-                                 + Ct_i[ix]) / s['Cu'][0,ix,i]
+                    w_i[ix] = (mass_i[ix] * p['T'] / self.dt \
+                               + Ct_i[ix]) / Cu_i[ix]
 
             # throw warning if the maximum number of iterations was
             # reached
             if n == p['max_iter']-1:
                 logger.warn('Iteration not converged (t=%0.1f, fraction=%d)' % (self.t, i))
 
-            Ct[0,:,i] = Ct_i
-            pickup[0,:,i] = pickup_i
+            w[:,:,i] = w_i.reshape(y_i.shape)
+            Ct[:,:,i] = Ct_i.reshape(y_i.shape)
+            pickup[:,:,i] = pickup_i.reshape(y_i.shape)
 
         # check if there are any cells where the sum of all weights is
         # smaller than unity. these cells are supply-limited for all
@@ -666,12 +686,12 @@ class AeoLiS(IBmi):
             w = transport.renormalize_weights(w, nf)
             for i in range(nf):
                 self._count('matrixsolve')
-                y_i = s['mass'][0,:,0,i] * self.dt / p['T'] + s['Ct'][0,:,i]
-                Ct_i = scipy.sparse.linalg.spsolve(A, y_i)
-                pickup_i = (w[0,:,i] * s['Cu'][0,:,i] - Ct_i) / p['T'] * self.dt
+                y_i = s['mass'][:,:,0,i] * self.dt / p['T'] + s['Ct'][:,:,i]
+                Ct_i = scipy.sparse.linalg.spsolve(A, y_i.flatten()).reshape(y_i.shape)
+                pickup_i = (w[:,:,i] * s['Cu'][:,:,i] - Ct_i) / p['T'] * self.dt
 
-                Ct[0,:,i] = Ct_i
-                pickup[0,:,i] = pickup_i
+                Ct[:,:,i] = Ct_i
+                pickup[:,:,i] = pickup_i
 
         return dict(Ct=Ct,
                     pickup=pickup,
@@ -764,9 +784,9 @@ class AeoLiS(IBmi):
         
 
 class AeoLiSRunner(AeoLiS):
-    '''AeoLiS model wrapper class
+    '''AeoLiS model runner class
 
-    This wrapper class is a convenience wrapper for the BMI-compatible
+    This runner class is a convenience class for the BMI-compatible
     AeoLiS model class (:class:`~aeolis.model.AeoLiS()`). It implements
     a time loop, a progress indicator and netCDF4 output. It also
     provides the definition of a callback function that can be used to
@@ -785,6 +805,8 @@ class AeoLiSRunner(AeoLiS):
     >>> model = AeoLiSRunner(configfile='aeolis.txt')
     >>> model.run(callback=lambda model: model.set_var('zb', zb))
 
+    >>> model.run(callback='bar.py:add_bar')
+
     See Also
     --------
     aeolis.cmd.aeolis
@@ -801,6 +823,7 @@ class AeoLiSRunner(AeoLiS):
     o = {} # output stats
 
     clear = False
+    changed = False
 
     
     def __init__(self, configfile='aeolis.txt'):
@@ -820,6 +843,7 @@ class AeoLiSRunner(AeoLiS):
         self.set_configfile(configfile)
         if os.path.exists(self.configfile):
             self.p = io.read_configfile(configfile, parse_files=False)
+            self.changed = False
         else:
             self.p = constants.DEFAULT_CONFIG
 
@@ -912,13 +936,16 @@ class AeoLiSRunner(AeoLiS):
     def set_configfile(self, configfile):
         '''Set model configuration file name'''
 
+        self.changed = False
         self.configfile = os.path.abspath(configfile)
 
         
     def set_params(self, **kwargs):
         '''Set model configuration parameters'''
-        
-        self.p.update(kwargs)
+
+        if len(kwargs) > 0:
+            self.changed = True
+            self.p.update(kwargs)
 
 
     def get_statistic(self, var, stat='avg'):
@@ -1040,8 +1067,10 @@ class AeoLiSRunner(AeoLiS):
 
         '''
 
-        io.backup(self.configfile)
+        if self.changed:
+            io.backup(self.configfile)
         io.write_configfile(self.configfile, self.p)
+        self.changed = False
                             
         
     def output_init(self):

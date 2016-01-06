@@ -1,6 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% AeoLiS model configuration                                       %%
-%% Date: 2015-12-31 11:23:47                                        %%
+%% Date: 2016-01-06 09:51:23                                        %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
               A = 100.000000
@@ -10,11 +10,9 @@
               F = 0.000100
              Hs = 1.000000
               T = 1.000000
-             Tp = 1.000000
-             VS = 1.000000
          accfac = 1.000000
        bed_file = z.txt
-   bedcomp_file = bedcomp.txt
+   bedcomp_file = 
       bedupdate = F
              bi = 0.050000
              dt = 600.000000
@@ -43,7 +41,7 @@ layer_thickness = 0.005000
     output_file = aeolis.nc
    output_times = 3600.000000
    output_types = avg
-    output_vars = zb zs Ct Cu uw uth mass pickup
+    output_vars = zb zs Ct Cu uw udir uth mass pickup w
             phi = 40.000000
        porosity = 0.400000
            rhoa = 1.250000

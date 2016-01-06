@@ -44,8 +44,8 @@ def initialize(s, p):
         s['dn'][1:,:] = np.diff(s['y'], axis=0)
         s['dn'][0,:] = s['dn'][1,:]
 
-        s['alfa'][1:-1,:] = np.arctan2(s['y'][2:,:] - s['y'][:-2,:],
-                                       s['x'][2:,:] - s['x'][:-2,:])
+        s['alfa'][1:-1,:] = np.arctan2(s['x'][2:,:] - s['x'][:-2,:],
+                                       s['y'][2:,:] - s['y'][:-2,:])
         s['alfa'][0,:] = s['alfa'][1,:]
         s['alfa'][-1,:] = s['alfa'][-2,:]
 
@@ -64,7 +64,7 @@ def initialize(s, p):
         gs = makeiterable(p['grain_dist'])
         for i in range(nl):
             for j in range(nf):
-                s['mass'][:,:,i,j] = p['rhop'] * p['porosity'] * s['dsdn'] \
+                s['mass'][:,:,i,j] = p['rhop'] * p['porosity'] \
                                      * s['thlyr'][:,:,i] * gs[j]
     else:
         s['mass'][:,:,:,:] = p['bedcomp_file'].reshape(s['mass'].shape)                
@@ -133,7 +133,7 @@ def update(s, p):
 
     # update bathy
     if p['bedupdate']:
-        s['zb'] -= ero[:,0].reshape((ny+1,nx+1)) * s['dsdni'] / (p['rhop'] * p['porosity'])
+        s['zb'] -= ero[:,0].reshape((ny+1,nx+1)) / (p['rhop'] * p['porosity'])
 
     return s
 
