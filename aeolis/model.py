@@ -157,9 +157,7 @@ class AeoLiS(IBmi):
         elif self.p['scheme'] == 'euler_backward':
             self.s.update(self.euler_backward())
         elif self.p['scheme'] == 'crank_nicolson':
-            s1 = self.euler_forward()
-            s2 = self.euler_backward()
-            self.s.update({k:(s1[k]+s2[k])/2. for k in s1.iterkeys()})
+            self.s.update(self.crank_nicolson())
         else:
             log.error('Unknown scheme [%s]' % self.p['scheme'])
 
@@ -513,6 +511,10 @@ class AeoLiS(IBmi):
         ny = p['ny']
         nf = p['nfractions']
 
+        # compute coefficients
+        Cs = s['dn'] * s['dsdni'] * self.dt * s['uws']
+        Cn = s['ds'] * s['dsdni'] * self.dt * s['uwn']
+
         # compute pickup
         Ct = s['Ct'].copy()
         w = transport.compute_weights(s, p)
@@ -532,12 +534,10 @@ class AeoLiS(IBmi):
 
         # compute transport
         for i in range(nf):
-            Ct[1:,1:,i] = s['Ct'][1:,1:,i] \
-                          - s['uws'][1:,1:] * s['dn'][1:,1:] * s['dsdni'][1:,1:] \
-                         * (Ct[1:,1:,i] - Ct[1:,:-1,i]) * self.dt \
-                         - s['uwn'][1:,1:] * s['ds'][1:,1:] * s['dsdni'][1:,1:] \
-                         * (Ct[1:,1:,i] - Ct[:-1,1:,i]) * self.dt \
-                         + pickup[1:,1:,i]
+            Ct[:,1:,i] = s['Ct'][:,1:,i] \
+                         - Cs[:,1:] * (Ct[:,1:,i] - Ct[:,:-1,i]) \
+                         - Cn[:,1:] * (Ct[:,1:,i] - np.roll(Ct[:,1:,i], 1, axis=0)) \
+                         + pickup[:,1:,i]
         
 #        j = 0
 #        for i in range(1, nx+1):
@@ -551,6 +551,14 @@ class AeoLiS(IBmi):
 
 
     def euler_backward(self):
+        return self._implicit(method='euler_backward')
+
+    
+    def crank_nicolson(self):
+        return self._implicit(method='crank_nicolson')
+
+    
+    def _implicit(self, method):
         '''Implements the implicit Euler backward numerical scheme
 
         Determines weights of sediment fractions, sediment pickup and
@@ -607,17 +615,26 @@ class AeoLiS(IBmi):
         pickup = s['pickup'].copy()
 
         # compute transport weights for all sediment fractions
+        w0 = s['w'].copy()
         w = transport.compute_weights(s, p)
 
         # create sparse matrix to solve linear system of equations
-        A0 = 1. + s['uws'] * s['dn'] * s['dsdni'] * self.dt \
-             + s['uwn'] * s['ds'] * s['dsdni'] * self.dt + self.dt / p['T']
-        Ax = -s['uwn'] * s['ds'] * s['dsdni'] * self.dt
-        A1 = -s['uws'] * s['dn'] * s['dsdni'] * self.dt
-        A1[:,0] = 0.
+        Cs = s['dn'] * s['dsdni'] * self.dt * s['uws']
+        Cn = s['ds'] * s['dsdni'] * self.dt * s['uwn']
+        Ti = self.dt / p['T']
+
+        if method == 'crank_nicolson':
+            Cs = Cs / 2.
+            Cn = Cn / 2.
+            Ti = Ti / 2.
+
+        A0 = 1. + Cs + Cn + Ti
+        Ax = -Cn
+        A1 = -Cs
+        A1[:,0] = 0. # cross-shore not circular
+
         if p['ny'] > 0:
             i = p['nx']+1
-            Ax = np.zeros(Ax.shape)
             A = scipy.sparse.diags((Ax.flatten()[i:],
                                     A1.flatten()[1:],
                                     A0.flatten(),
@@ -637,12 +654,19 @@ class AeoLiS(IBmi):
             w = transport.renormalize_weights(w, i)
 
             # create the right hand side of the linear system
-            y_i = w[:,:,i] * s['Cu'][:,:,i] * self.dt / p['T'] + s['Ct'][:,:,i]
+            if method == 'euler_backward':
+                y_i = w[:,:,i] * s['Cu'][:,:,i] * Ti + s['Ct'][:,:,i]
+            elif method == 'crank_nicolson':
+                y_i = np.zeros(s['uw'].shape)
+                y_i[:,1:] = w[:,1:,i] * s['Cu'][:,1:,i] * Ti \
+                            + w0[:,1:,i] * s['Cu'][:,1:,i] * Ti \
+                            + (1. - Cs[:,1:] - Cn[:,1:] - Ti) * s['Ct'][:,1:,i] \
+                            + Cs[:,1:] * s['Ct'][:,:-1,i] \
+                            + Cn[:,1:] * np.roll(s['Ct'][:,1:,i], 1, axis=0)
 
             # iteratively find a solution of the linear system that
             # does not violate the availability of sediment in the bed
             for n in range(p['max_iter']):
-
                 self._count('matrixsolve')
 
                 # solve system with current weights, determine pickup
@@ -683,21 +707,38 @@ class AeoLiS(IBmi):
         # be recomputed once with the grain size distribution in the
         # top layer of the bed.
         if 1. - np.any(np.sum(w, axis=2)) > p['max_error']:
+            self._count('supplylim')
             w = transport.renormalize_weights(w, nf)
             for i in range(nf):
                 self._count('matrixsolve')
-                y_i = s['mass'][:,:,0,i] * self.dt / p['T'] + s['Ct'][:,:,i]
-                Ct_i = scipy.sparse.linalg.spsolve(A, y_i.flatten()).reshape(y_i.shape)
-                pickup_i = (w[:,:,i] * s['Cu'][:,:,i] - Ct_i) / p['T'] * self.dt
+                #y_i = s['mass'][:,:,0,i] * self.dt / p['T'] + s['Ct'][:,:,i]
+                #Ct_i = scipy.sparse.linalg.spsolve(A, y_i.flatten()).reshape(y_i.shape)
+                #pickup_i = (w[:,:,i] * s['Cu'][:,:,i] - Ct_i) / p['T'] * self.dt
 
-                Ct[:,:,i] = Ct_i
-                pickup[:,:,i] = pickup_i
+                #Ct[:,:,i] = Ct_i
+                #pickup[:,:,i] = pickup_i
 
         return dict(Ct=Ct,
                     pickup=pickup,
                     w=w)
 
 
+    def get_count(self, name):
+        '''Get counter value
+
+        Parameters
+        ----------
+        name : str
+            Name of counter
+
+        '''
+
+        if self.c.has_key(name):
+            return self.c[name]
+        else:
+            return 0
+
+        
     def _count(self, name, n=1):
         '''Increase counter
 
@@ -845,6 +886,7 @@ class AeoLiSRunner(AeoLiS):
             self.p = io.read_configfile(configfile, parse_files=False)
             self.changed = False
         else:
+            self.changed = True
             self.p = constants.DEFAULT_CONFIG
 
             # add default profile and time series
@@ -1069,8 +1111,8 @@ class AeoLiSRunner(AeoLiS):
 
         if self.changed:
             io.backup(self.configfile)
-        io.write_configfile(self.configfile, self.p)
-        self.changed = False
+            io.write_configfile(self.configfile, self.p)
+            self.changed = False
                             
         
     def output_init(self):
@@ -1256,19 +1298,22 @@ class AeoLiSRunner(AeoLiS):
 
     def print_stats(self):
         '''Print model run statistics to screen'''
-        
-        c = self.c
 
+        n_time = self.get_count('time')
+        n_matrixsolve = self.get_count('matrixsolve')
+        n_supplylim = self.get_count('supplylim')
+        
         print ''
         print '**********************************************************'
 
         fmt = '%-20s : %s'
-        print fmt % ('# time steps', io.print_value(c['time']))
-        print fmt % ('# matrix solves', io.print_value(c['matrixsolve']))
+        print fmt % ('# time steps', io.print_value(n_time))
+        print fmt % ('# matrix solves', io.print_value(n_matrixsolve))
+        print fmt % ('# supply lim', io.print_value(n_supplylim))
         print fmt % ('avg. solves per step',
-                     io.print_value(float(c['matrixsolve']) / c['time']))
+                     io.print_value(float(n_matrixsolve) / n_time))
         print fmt % ('avg. time step',
-                     io.print_value(float(self.p['tstop']) / c['time']))
+                     io.print_value(float(self.p['tstop']) / n_time))
 
         print '**********************************************************'
         print ''
