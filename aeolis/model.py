@@ -498,6 +498,7 @@ class AeoLiS(IBmi):
         See Also
         --------
         :func:`~aeolis.model.AeoLiS.euler_backward`
+        :func:`~aeolis.model.AeoLiS.crank_nicolson`
         :func:`aeolis.transport.compute_weights`
         :func:`aeolis.transport.renormalize_weights`
 
@@ -551,15 +552,31 @@ class AeoLiS(IBmi):
 
 
     def euler_backward(self):
-        return self._implicit(method='euler_backward')
+        '''Convenience function for implicit solver based on Euler backward scheme
+
+        See Also
+        --------
+        :func:`~aeolis.model.AeoLiS.implicit`
+
+        '''
+        
+        return self.implicit(method='euler_backward')
 
     
     def crank_nicolson(self):
-        return self._implicit(method='crank_nicolson')
+        '''Convenience function for implicit solver based on Crank-Nicolson scheme
+
+        See Also
+        --------
+        :func:`~aeolis.model.AeoLiS.implicit`
+
+        '''
+
+        return self.implicit(method='crank_nicolson')
 
     
-    def _implicit(self, method):
-        '''Implements the implicit Euler backward numerical scheme
+    def implicit(self, method):
+        '''Implements the implicit Euler backward and Crank-Nicolson numerical schemes
 
         Determines weights of sediment fractions, sediment pickup and
         instantaneous sediment concentration. Returns a partial
@@ -591,6 +608,113 @@ class AeoLiS(IBmi):
         all sediment fractions are in deficit, the total pickup of
         sediment is reduced.
 
+        The linear system of equation that is solved depends on the
+        selected numerical scheme. The lateral boundaries have
+        circular boundary conditions. Therefore the system for the
+        Euler backward method reads:
+
+        .. math::
+
+            \\left[ \\begin{array}{ccccc}
+            A_1         & \\textbf{0} & \\cdots     & \\textbf{0} & C_1         \\\\
+            C_2         & A_2         & \\ddots     &             & \\textbf{0} \\\\
+            \\textbf{0} & \\ddots     & \\ddots     & \\ddots     & \\vdots     \\\\
+            \\vdots     & \\ddots     & \\ddots     & \\ddots     & \\textbf{0} \\\\
+            \\textbf{0} & \\cdots     & \\textbf{0} & C_{ny+1}    & A_{ny+1}    \\\\
+            \\end{array} \\right]
+            \\left[ \\begin{array}{c}
+            x_1 \\\\ x_2 \\\\ \\vdots \\\\ \\vdots \\\\ x_{ny+1} \\\\
+            \\end{array} \\right]
+            =
+            \\left[ \\begin{array}{c}
+            y_1 \\\\ y_2 \\\\ \\vdots \\\\ \\vdots \\\\ y_{ny+1} \\\\
+            \\end{array} \\right]
+
+            \\text{where}
+
+            \\begin{array}{rclrcl}
+            A_i &=& 
+            \\left[ \\begin{array}{ccccccc}
+            a_{i,1} & 0       & \\cdots & \\cdots    & \\cdots    & \\cdots    & 0          \\\\
+            b_{i,2} & a_{i,2} & \\ddots &            &            &            & \\vdots    \\\\
+            0       & b_{i,3} & a_{i,3} & \\ddots    &            &            & \\vdots    \\\\
+            \\vdots & \\ddots & \\ddots & \\ddots    & \\ddots    &            & \\vdots    \\\\
+            \\vdots &         & \\ddots & b_{i,nx-1} & a_{i,nx-1} & \\ddots    & \\vdots    \\\\
+            \\vdots &         &         & \\ddots    & b_{i,nx}   & a_{i,nx}   & 0          \\\\
+            0       & \\cdots & \\cdots & \\cdots    & 0          & b_{i,nx+1} & a_{i,nx+1} \\\\
+            \\end{array} \\right] &
+            x_i &=& 
+            \\left[ \\begin{array}{c}
+            C_{t,i,1}^{t+1} \\\\
+            C_{t,i,2}^{t+1} \\\\
+            C_{t,i,3}^{t+1} \\\\
+            \\vdots \\\\
+            C_{t,i,nx-1}^{t+1} \\\\
+            C_{t,i,nx}^{t+1} \\\\
+            C_{t,i,nx+1}^{t+1} \\\\
+            \\end{array} \\right] \\\\
+            C_i &=&
+            \\left[ \\begin{array}{ccccccc}
+            c_{i,1} & 0       & \\cdots & \\cdots  & \\cdots    & \\cdots  & 0          \\\\
+            0       & c_{i,2} & \\ddots &          &            &          & \\vdots    \\\\
+            \\vdots & \\ddots & c_{i,3} & \\ddots  &            &          & \\vdots    \\\\
+            \\vdots &         & \\ddots & \\ddots  & \\ddots    &          & \\vdots    \\\\
+            \\vdots &         &         & \\ddots  & c_{i,nx-1} & \\ddots  & \\vdots    \\\\
+            \\vdots &         &         &          & \\ddots    & c_{i,nx} & 0          \\\\
+            0       & \\cdots & \\cdots & \\cdots  & \\cdots    & 0        & c_{i,nx+1} \\\\
+            \\end{array} \\right] &
+            y_i &=& 
+            \\left[ \\begin{array}{c}
+            \\frac{w_{i,1}}{T} C_{u,i,1} + C_{t,i,1}^t \\\\
+            \\frac{w_{i,2}}{T} C_{u,i,2} + C_{t,i,2}^t \\\\
+            \\frac{w_{i,3}}{T} C_{u,i,3} + C_{t,i,3}^t \\\\
+            \\vdots \\\\
+            \\frac{w_{i,nx-1}}{T} C_{u,i,nx-1} + C_{t,i,nx-1}^t \\\\
+            \\frac{w_{i,nx}}{T} C_{u,i,nx} + C_{t,i,nx}^t \\\\
+            \\frac{w_{i,nx+1}}{T} C_{u,i,nx+1} + C_{t,i,nx+1}^t \\\\
+            \\end{array} \\right] \\\\
+            \\end{array}
+
+            \\text{and where}
+
+            \\begin{array}{rcl}
+            a_{i,j} &=& 1 + u_{w,x,i,j} \\frac{\\Delta t}{\\Delta x_{i,j}} + u_{w,y,i,j} \\frac{\\Delta t}{\\Delta y_{i,j}} + \\frac{\\Delta t}{T} \\\\
+            b_{i,j} &=& -u_{w,x,i} \\frac{\\Delta t}{\\Delta x_i} \\\\
+            c_{i,j} &=& -u_{w,y,i} \\frac{\\Delta t}{\\Delta y_i} \\\\
+            \end{array}
+
+        The system for the Crank-Nicolson method is slightly
+        different. The implicit coefficients are divided by two
+        compared to the Euler backward method and the right hand side
+        is extended with explicit terms:
+
+        .. math::
+
+            y_i =
+            \\left[ \\begin{array}{c}
+            0 \\\\
+            \\frac{w_{0,i,2} + w_{i,2}}{2 T} C_{u,i,2} + (2 - a_{i,2}) C^t_{t,i,2} - b_{i,2} * C^t_{t,i,1} - c_{i,2} * C^t_{t,i-1,2} \\\\
+            \\frac{w_{0,i,3} + w_{i,3}}{2 T} C_{u,i,3} + (2 - a_{i,3}) C^t_{t,i,3} - b_{i,3} * C^t_{t,i,2} - c_{i,3} * C^t_{t,i-1,3} \\\\
+            \\vdots \\\\
+            \\frac{w_{0,i,nx-1} + w_{i,nx-1}}{2 T} C_{u,i,nx-1} + (2 - a_{i,nx-1}) C^t_{t,i,nx-1} - b_{i,nx-1} * C^t_{t,i,nx-2} - c_{i,nx-1} * C^t_{t,i-1,nx-1} \\\\
+            \\frac{w_{0,i,nx} + w_{i,nx}}{2 T} C_{u,i,nx} + (2 - a_{i,nx}) C^t_{t,i,nx} - b_{i,nx} * C^t_{t,i,nx-1} - c_{i,nx} * C^t_{t,i-1,nx} \\\\
+            \\frac{w_{0,i,nx+1} + w_{i,nx+1}}{2 T} C_{u,i,nx+1} + (2 - a_{i,nx+1}) C^t_{t,i,nx+1} - b_{i,nx+1} * C^t_{t,i,nx} - c_{i,nx+1} * C^t_{t,i-1,nx+1} \\\\
+            \\end{array} \\right]
+
+            \\text{and}
+
+            \\begin{array}{rcl}
+            a_{i,j} &=& 1 + u_{w,x,i,j} \\frac{\\Delta t}{2 \\Delta x_{i,j}} + u_{w,y,i,j} \\frac{\\Delta t}{2 \\Delta y_{i,j}} + \\frac{\\Delta t}{2 T} \\\\
+            b_{i,j} &=& -u_{w,x,i} \\frac{\\Delta t}{2 \\Delta x_i} \\\\
+            c_{i,j} &=& -u_{w,y,i} \\frac{\\Delta t}{2 \\Delta y_i} \\\\
+            \end{array}
+
+
+        Parameters
+        ----------
+        method : str
+            Numerical scheme (euler_backward or crank_nicolson)
+
         Returns
         -------
         dict
@@ -598,16 +722,22 @@ class AeoLiS(IBmi):
 
         Examples
         --------
-        >>> model.s.update(model.euler_backward())
+        >>> model.s.update(model.implicit(method='euler_backward'))
+
+        >>> model.s.update(model.implicit(method='crank_nicolson'))
 
         See Also
         --------
         :func:`~aeolis.model.AeoLiS.euler_forward`
+        :func:`~aeolis.model.AeoLiS.euler_backward`
+        :func:`~aeolis.model.AeoLiS.crank_nicolson`
         :func:`aeolis.transport.compute_weights`
         :func:`aeolis.transport.renormalize_weights`
 
         '''
 
+        f = 0.5 if method == 'crank_nicolson' else 1.0
+        
         s = self.s
         p = self.p
 
@@ -619,14 +749,9 @@ class AeoLiS(IBmi):
         w = transport.compute_weights(s, p)
 
         # create sparse matrix to solve linear system of equations
-        Cs = s['dn'] * s['dsdni'] * self.dt * s['uws']
-        Cn = s['ds'] * s['dsdni'] * self.dt * s['uwn']
-        Ti = self.dt / p['T']
-
-        if method == 'crank_nicolson':
-            Cs = Cs / 2.
-            Cn = Cn / 2.
-            Ti = Ti / 2.
+        Cs = s['dn'] * s['dsdni'] * self.dt * s['uws'] * f
+        Cn = s['ds'] * s['dsdni'] * self.dt * s['uwn'] * f
+        Ti = self.dt / p['T'] * f
 
         A0 = 1. + Cs + Cn + Ti
         Ax = -Cn
@@ -654,15 +779,14 @@ class AeoLiS(IBmi):
             w = transport.renormalize_weights(w, i)
 
             # create the right hand side of the linear system
-            if method == 'euler_backward':
-                y_i = w[:,:,i] * s['Cu'][:,:,i] * Ti + s['Ct'][:,:,i]
-            elif method == 'crank_nicolson':
-                y_i = np.zeros(s['uw'].shape)
-                y_i[:,1:] = w[:,1:,i] * s['Cu'][:,1:,i] * Ti \
-                            + w0[:,1:,i] * s['Cu'][:,1:,i] * Ti \
-                            + (1. - Cs[:,1:] - Cn[:,1:] - Ti) * s['Ct'][:,1:,i] \
-                            + Cs[:,1:] * s['Ct'][:,:-1,i] \
-                            + Cn[:,1:] * np.roll(s['Ct'][:,1:,i], 1, axis=0)
+            y_i = w[:,:,i] * s['Cu'][:,:,i] * Ti + s['Ct'][:,:,i]
+            
+            # add explicit terms in case of method == crank_nicolson
+            if method == 'crank_nicolson':
+                y_i[:,1:] += w0[:,1:,i] * s['Cu'][:,1:,i] * Ti \
+                             - (Cs[:,1:] + Cn[:,1:] + Ti) * s['Ct'][:,1:,i] \
+                             + Cs[:,1:] * s['Ct'][:,:-1,i] \
+                             + Cn[:,1:] * np.roll(s['Ct'][:,1:,i], 1, axis=0)
 
             # iteratively find a solution of the linear system that
             # does not violate the availability of sediment in the bed
