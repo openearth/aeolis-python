@@ -560,7 +560,7 @@ class AeoLiS(IBmi):
 
         '''
         
-        return self.implicit(method='euler_backward')
+        return self.implicit(alpha=1., beta=1.)
 
     
     def crank_nicolson(self):
@@ -572,11 +572,11 @@ class AeoLiS(IBmi):
 
         '''
 
-        return self.implicit(method='crank_nicolson')
+        return self.implicit(alpha=.5, beta=1.)
 
     
-    def implicit(self, method):
-        '''Implements the implicit Euler backward and Crank-Nicolson numerical schemes
+    def implicit(self, alpha=.5, beta=1.):
+        '''Implements the implicit Euler backward and semi-implicit Crank-Nicolson numerical schemes
 
         Determines weights of sediment fractions, sediment pickup and
         instantaneous sediment concentration. Returns a partial
@@ -608,112 +608,30 @@ class AeoLiS(IBmi):
         all sediment fractions are in deficit, the total pickup of
         sediment is reduced.
 
-        The linear system of equation that is solved depends on the
-        selected numerical scheme. The lateral boundaries have
-        circular boundary conditions. Therefore the system for the
-        Euler backward method reads:
+        The linear system of equations that is solved depends on the
+        selected numerical scheme. The offshore and onshore boundaries
+        are Neumann boundaries. The lateral boundaries have circular
+        boundary conditions. Therefore the system that is solved
+        reads:
 
-        .. math::
+        .. include:: ../docs/linear_system.inc
 
-            \\left[ \\begin{array}{ccccc}
-            A_1         & \\textbf{0} & \\cdots     & \\textbf{0} & C_1         \\\\
-            C_2         & A_2         & \\ddots     &             & \\textbf{0} \\\\
-            \\textbf{0} & \\ddots     & \\ddots     & \\ddots     & \\vdots     \\\\
-            \\vdots     & \\ddots     & \\ddots     & \\ddots     & \\textbf{0} \\\\
-            \\textbf{0} & \\cdots     & \\textbf{0} & C_{ny+1}    & A_{ny+1}    \\\\
-            \\end{array} \\right]
-            \\left[ \\begin{array}{c}
-            x_1 \\\\ x_2 \\\\ \\vdots \\\\ \\vdots \\\\ x_{ny+1} \\\\
-            \\end{array} \\right]
-            =
-            \\left[ \\begin{array}{c}
-            y_1 \\\\ y_2 \\\\ \\vdots \\\\ \\vdots \\\\ y_{ny+1} \\\\
-            \\end{array} \\right]
-
-            \\text{where}
-
-            \\begin{array}{rclrcl}
-            A_i &=& 
-            \\left[ \\begin{array}{ccccccc}
-            a_{i,1} & 0       & \\cdots & \\cdots    & \\cdots    & \\cdots    & 0          \\\\
-            b_{i,2} & a_{i,2} & \\ddots &            &            &            & \\vdots    \\\\
-            0       & b_{i,3} & a_{i,3} & \\ddots    &            &            & \\vdots    \\\\
-            \\vdots & \\ddots & \\ddots & \\ddots    & \\ddots    &            & \\vdots    \\\\
-            \\vdots &         & \\ddots & b_{i,nx-1} & a_{i,nx-1} & \\ddots    & \\vdots    \\\\
-            \\vdots &         &         & \\ddots    & b_{i,nx}   & a_{i,nx}   & 0          \\\\
-            0       & \\cdots & \\cdots & \\cdots    & 0          & b_{i,nx+1} & a_{i,nx+1} \\\\
-            \\end{array} \\right] &
-            x_i &=& 
-            \\left[ \\begin{array}{c}
-            C_{t,i,1}^{t+1} \\\\
-            C_{t,i,2}^{t+1} \\\\
-            C_{t,i,3}^{t+1} \\\\
-            \\vdots \\\\
-            C_{t,i,nx-1}^{t+1} \\\\
-            C_{t,i,nx}^{t+1} \\\\
-            C_{t,i,nx+1}^{t+1} \\\\
-            \\end{array} \\right] \\\\
-            C_i &=&
-            \\left[ \\begin{array}{ccccccc}
-            c_{i,1} & 0       & \\cdots & \\cdots  & \\cdots    & \\cdots  & 0          \\\\
-            0       & c_{i,2} & \\ddots &          &            &          & \\vdots    \\\\
-            \\vdots & \\ddots & c_{i,3} & \\ddots  &            &          & \\vdots    \\\\
-            \\vdots &         & \\ddots & \\ddots  & \\ddots    &          & \\vdots    \\\\
-            \\vdots &         &         & \\ddots  & c_{i,nx-1} & \\ddots  & \\vdots    \\\\
-            \\vdots &         &         &          & \\ddots    & c_{i,nx} & 0          \\\\
-            0       & \\cdots & \\cdots & \\cdots  & \\cdots    & 0        & c_{i,nx+1} \\\\
-            \\end{array} \\right] &
-            y_i &=& 
-            \\left[ \\begin{array}{c}
-            \\frac{w_{i,1}}{T} C_{u,i,1} + C_{t,i,1}^t \\\\
-            \\frac{w_{i,2}}{T} C_{u,i,2} + C_{t,i,2}^t \\\\
-            \\frac{w_{i,3}}{T} C_{u,i,3} + C_{t,i,3}^t \\\\
-            \\vdots \\\\
-            \\frac{w_{i,nx-1}}{T} C_{u,i,nx-1} + C_{t,i,nx-1}^t \\\\
-            \\frac{w_{i,nx}}{T} C_{u,i,nx} + C_{t,i,nx}^t \\\\
-            \\frac{w_{i,nx+1}}{T} C_{u,i,nx+1} + C_{t,i,nx+1}^t \\\\
-            \\end{array} \\right] \\\\
-            \\end{array}
-
-            \\text{and where}
-
-            \\begin{array}{rcl}
-            a_{i,j} &=& 1 + u_{w,x,i,j} \\frac{\\Delta t}{\\Delta x_{i,j}} + u_{w,y,i,j} \\frac{\\Delta t}{\\Delta y_{i,j}} + \\frac{\\Delta t}{T} \\\\
-            b_{i,j} &=& -u_{w,x,i} \\frac{\\Delta t}{\\Delta x_i} \\\\
-            c_{i,j} &=& -u_{w,y,i} \\frac{\\Delta t}{\\Delta y_i} \\\\
-            \end{array}
-
-        The system for the Crank-Nicolson method is slightly
-        different. The implicit coefficients are divided by two
-        compared to the Euler backward method and the right hand side
-        is extended with explicit terms:
-
-        .. math::
-
-            y_i =
-            \\left[ \\begin{array}{c}
-            0 \\\\
-            \\frac{w_{0,i,2} + w_{i,2}}{2 T} C_{u,i,2} + (2 - a_{i,2}) C^t_{t,i,2} - b_{i,2} * C^t_{t,i,1} - c_{i,2} * C^t_{t,i-1,2} \\\\
-            \\frac{w_{0,i,3} + w_{i,3}}{2 T} C_{u,i,3} + (2 - a_{i,3}) C^t_{t,i,3} - b_{i,3} * C^t_{t,i,2} - c_{i,3} * C^t_{t,i-1,3} \\\\
-            \\vdots \\\\
-            \\frac{w_{0,i,nx-1} + w_{i,nx-1}}{2 T} C_{u,i,nx-1} + (2 - a_{i,nx-1}) C^t_{t,i,nx-1} - b_{i,nx-1} * C^t_{t,i,nx-2} - c_{i,nx-1} * C^t_{t,i-1,nx-1} \\\\
-            \\frac{w_{0,i,nx} + w_{i,nx}}{2 T} C_{u,i,nx} + (2 - a_{i,nx}) C^t_{t,i,nx} - b_{i,nx} * C^t_{t,i,nx-1} - c_{i,nx} * C^t_{t,i-1,nx} \\\\
-            \\frac{w_{0,i,nx+1} + w_{i,nx+1}}{2 T} C_{u,i,nx+1} + (2 - a_{i,nx+1}) C^t_{t,i,nx+1} - b_{i,nx+1} * C^t_{t,i,nx} - c_{i,nx+1} * C^t_{t,i-1,nx+1} \\\\
-            \\end{array} \\right]
-
-            \\text{and}
-
-            \\begin{array}{rcl}
-            a_{i,j} &=& 1 + u_{w,x,i,j} \\frac{\\Delta t}{2 \\Delta x_{i,j}} + u_{w,y,i,j} \\frac{\\Delta t}{2 \\Delta y_{i,j}} + \\frac{\\Delta t}{2 T} \\\\
-            b_{i,j} &=& -u_{w,x,i} \\frac{\\Delta t}{2 \\Delta x_i} \\\\
-            c_{i,j} &=& -u_{w,y,i} \\frac{\\Delta t}{2 \\Delta y_i} \\\\
-            \end{array}
-
+        The coefficients :math:`\\alpha` and :math:`\\beta` are used
+        to respectively select the implicitness of the scheme in time
+        and the centralization in space. :math:`\\alpha = 1` results
+        in the fully implicit Euler backward scheme, while
+        :math:`\\alpha = 0.5` results in the semi-implicit
+        Crank-Nicolson scheme. :math:`\\beta = 1` results in an upwind
+        scheme for which the direction is adapted to the local wind
+        direction, while :math:`\\beta = 0.5` results in a central
+        difference scheme (which is instable!).
 
         Parameters
         ----------
-        method : str
-            Numerical scheme (euler_backward or crank_nicolson)
+        alpha : float, optional
+            Implicitness coefficient (1.0 for Euler backward or 0.5 for Crank-Nicolson, default=0.5)
+        beta : float, optional
+            Centralization coefficient (1.0 for upwind or 0.5 for centralized, default=1.0)
 
         Returns
         -------
@@ -736,8 +654,6 @@ class AeoLiS(IBmi):
 
         '''
 
-        f = 0.5 if method == 'crank_nicolson' else 1.0
-        
         s = self.s
         p = self.p
 
@@ -748,25 +664,77 @@ class AeoLiS(IBmi):
         w0 = s['w'].copy()
         w = transport.compute_weights(s, p)
 
-        # create sparse matrix to solve linear system of equations
-        Cs = s['dn'] * s['dsdni'] * self.dt * s['uws'] * f
-        Cn = s['ds'] * s['dsdni'] * self.dt * s['uwn'] * f
-        Ti = self.dt / p['T'] * f
+        # define matrix coefficients to solve linear system of equations
+        Cs = self.dt * s['dn'] * s['dsdni'] * s['uws']
+        Cn = self.dt * s['ds'] * s['dsdni'] * s['uwn']
+        Ti = self.dt / p['T']
 
-        A0 = 1. + Cs + Cn + Ti
-        Ax = -Cn
-        A1 = -Cs
-        A1[:,0] = 0. # cross-shore not circular
+        beta = abs(beta)
+        if beta >= 1.:
+            # define upwind direction
+            ixs = np.asarray(s['uws'] >= 0., dtype=np.float)
+            ixn = np.asarray(s['uwn'] >= 0., dtype=np.float)
+            sgs = 2. * ixs - 1.
+            sgn = 2. * ixn - 1.
+        else:
+            # or centralizing weights
+            ixs = beta + np.zeros(s['uw'])
+            ixn = beta + np.zeros(s['uw'])
+            sgs = np.zeros(s['uw'])
+            sgn = np.zeros(s['uw'])
 
+        # initialize matrix diagonals
+        A0 = np.zeros(s['uw'].shape)
+        Apx = np.zeros(s['uw'].shape)
+        Ap1 = np.zeros(s['uw'].shape)
+        Ap2 = np.zeros(s['uw'].shape)
+        Amx = np.zeros(s['uw'].shape)
+        Am1 = np.zeros(s['uw'].shape)
+        Am2 = np.zeros(s['uw'].shape)
+
+        # populate matrix diagonals
+        A0 = 1. + (sgs * Cs + sgn * Cn + Ti) * alpha
+        Apx = Cn * alpha * (1. - ixn)
+        Ap1 = Cs * alpha * (1. - ixs)
+        Amx = -Cn * alpha * ixn
+        Am1 = -Cs * alpha * ixs
+
+        # add neumann boundaries
+        A0[:,0] = 1.
+        Apx[:,0] = 0.
+        Ap2[:,0] = s['ds'][:,1] / s['ds'][:,2]
+        Ap1[:,0] = -1. - s['ds'][:,1] / s['ds'][:,2]
+        Amx[:,0] = 0.
+        Am2[:,0] = 0.
+        Am1[:,0] = 0.
+
+        A0[:,-1] = 1.
+        Apx[:,-1] = 0.
+        Ap1[:,-1] = 0.
+        Amx[:,-1] = 0.
+        Am2[:,-1] = s['ds'][:,-1] / s['ds'][:,-2]
+        Am1[:,-1] = -1. - s['ds'][:,-1] / s['ds'][:,-2]
+
+        # construct sparse matrix
         if p['ny'] > 0:
             i = p['nx']+1
-            A = scipy.sparse.diags((Ax.flatten()[i:],
-                                    A1.flatten()[1:],
+            A = scipy.sparse.diags((Apx.flatten()[:i],
+                                    Amx.flatten()[i:],
+                                    Am2.flatten()[2:],
+                                    Am1.flatten()[1:],
                                     A0.flatten(),
-                                    Ax.flatten()[:i]), (-i,-1,0,i*p['ny']), format='csr')
+                                    Ap1.flatten()[:-1],
+                                    Ap2.flatten()[:-2],
+                                    Apx.flatten()[i:],
+                                    Amx.flatten()[:i]),
+                                   (-i*p['ny'],-i,-2,-1,0,1,2,i,i*p['ny']), format='csr')
         else:
-            A = scipy.sparse.diags((A1.flatten()[1:],
-                                    A0.flatten()), (-1,0), format='csr')
+            A = scipy.sparse.diags((Am2.flatten()[2:],
+                                    Am1.flatten()[1:],
+                                    A0.flatten(),
+                                    Ap1.flatten()[:-1],
+                                    Ap2.flatten()[:-2]),
+                                   (-2,-1,0,1,2), format='csr')
 
         # solve transport for each fraction separately using latest
         # available weights
@@ -779,14 +747,17 @@ class AeoLiS(IBmi):
             w = transport.renormalize_weights(w, i)
 
             # create the right hand side of the linear system
-            y_i = w[:,:,i] * s['Cu'][:,:,i] * Ti + s['Ct'][:,:,i]
-            
-            # add explicit terms in case of method == crank_nicolson
-            if method == 'crank_nicolson':
-                y_i[:,1:] += w0[:,1:,i] * s['Cu'][:,1:,i] * Ti \
-                             - (Cs[:,1:] + Cn[:,1:] + Ti) * s['Ct'][:,1:,i] \
-                             + Cs[:,1:] * s['Ct'][:,:-1,i] \
-                             + Cn[:,1:] * np.roll(s['Ct'][:,1:,i], 1, axis=0)
+            y_i = np.zeros(s['uw'].shape)
+            y_i[:,1:-1] = s['Ct'][:,1:-1,i] \
+                + alpha * w[:,1:-1,i] * s['Cu'][:,1:-1,i] * Ti \
+                + (1. - alpha) * (
+                    w0[:,1:-1,i] * s['Cu'][:,1:-1,i] * Ti \
+                    - (sgs[:,1:-1] * Cs[:,1:-1] + \
+                       sgn[:,1:-1] * Cn[:,1:-1] + Ti) * s['Ct'][:,1:-1,i] \
+                    + ixs[:,1:-1] * Cs[:,1:-1] * s['Ct'][:,:-2,i] \
+                    - (1. - ixs[:,1:-1]) * Cs[:,1:-1] * s['Ct'][:,2:,i] \
+                    + ixn[:,1:-1] * Cn[:,1:-1] * np.roll(s['Ct'][:,1:-1,i], 1, axis=0) \
+                    - (1. - ixn[:,1:-1]) * Cn[:,1:-1] * np.roll(s['Ct'][:,1:-1,i], -1, axis=0))
 
             # iteratively find a solution of the linear system that
             # does not violate the availability of sediment in the bed

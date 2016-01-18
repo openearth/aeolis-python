@@ -22,7 +22,7 @@ def equilibrium(s, p):
     '''
     
     nf = p['nfractions']
-    uw = abs(s['uw'])[:,:,np.newaxis].repeat(nf, axis=2)
+    uw = s['uw'][:,:,np.newaxis].repeat(nf, axis=2)
     ix = uw != 0.
     
     alpha = (0.174 / np.log10(p['z0'] / p['k']))**3

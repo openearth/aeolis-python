@@ -12,7 +12,7 @@ like in coastal environments. Supply-limitations currently supported
 are soil moisture contents, sediment sorting and armouring, bed slope
 effects, air humidity and roughness elements.
 
-This documentation described the Python implementation of the AeoLiS
+This documentation describes the Python implementation of the AeoLiS
 model. Originally, the model was developed in Fortran and the Python
 version only functioned as sandbox for new feature
 development. However, the latest implementation of the numerical
