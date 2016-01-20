@@ -62,6 +62,7 @@ def initialize(s, p):
     # initialize bed composition
     if p['bedcomp_file'] is None:
         gs = makeiterable(p['grain_dist'])
+        gs = gs / np.sum(gs)
         for i in range(nl):
             for j in range(nf):
                 s['mass'][:,:,i,j] = p['rhop'] * p['porosity'] \
