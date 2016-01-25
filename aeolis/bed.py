@@ -181,10 +181,10 @@ def mixtoplayer(s, p):
         
         # average mass over layers
         if np.any(ix):
+            ix[:,:,0,:] = True # at least mix the top layer
             mass = s['mass'].copy()
             mass[~ix] = np.nan
-            mass[ix] = np.nanmean(mass, axis=2)[:,:,np.newaxis,:].repeat(nl, axis=2)[ix]
-
-            s['mass'] = mass
+            
+            s['mass'][ix] = np.nanmean(mass, axis=2)[:,:,np.newaxis,:].repeat(nl, axis=2)[ix]
         
     return s

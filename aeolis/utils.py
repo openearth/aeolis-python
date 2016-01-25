@@ -17,7 +17,10 @@ def makeiterable(x):
     '''Ensure that variable is iterable'''
     
     if not isiterable(x):
-        x = np.asarray([x])
+        if x is None:
+            x = np.asarray([])
+        else:
+            x = np.asarray([x])
     return x
 
 

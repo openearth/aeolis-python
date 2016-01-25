@@ -746,23 +746,25 @@ class AeoLiS(IBmi):
             # unity
             w = transport.renormalize_weights(w, i)
 
-            # create the right hand side of the linear system
-            y_i = np.zeros(s['uw'].shape)
-            y_i[:,1:-1] = s['Ct'][:,1:-1,i] \
-                + alpha * w[:,1:-1,i] * s['Cu'][:,1:-1,i] * Ti \
-                + (1. - alpha) * (
-                    w0[:,1:-1,i] * s['Cu'][:,1:-1,i] * Ti \
-                    - (sgs[:,1:-1] * Cs[:,1:-1] + \
-                       sgn[:,1:-1] * Cn[:,1:-1] + Ti) * s['Ct'][:,1:-1,i] \
-                    + ixs[:,1:-1] * Cs[:,1:-1] * s['Ct'][:,:-2,i] \
-                    - (1. - ixs[:,1:-1]) * Cs[:,1:-1] * s['Ct'][:,2:,i] \
-                    + ixn[:,1:-1] * Cn[:,1:-1] * np.roll(s['Ct'][:,1:-1,i], 1, axis=0) \
-                    - (1. - ixn[:,1:-1]) * Cn[:,1:-1] * np.roll(s['Ct'][:,1:-1,i], -1, axis=0))
-
             # iteratively find a solution of the linear system that
             # does not violate the availability of sediment in the bed
             for n in range(p['max_iter']):
                 self._count('matrixsolve')
+
+                # create the right hand side of the linear system
+                y_i = np.zeros(s['uw'].shape)
+                y_i[:,1:-1] = s['Ct'][:,1:-1,i] \
+                    + alpha * w[:,1:-1,i] * s['Cu'][:,1:-1,i] * Ti \
+                    + (1. - alpha) * (
+                        w0[:,1:-1,i] * s['Cu'][:,1:-1,i] * Ti \
+                        - (sgs[:,1:-1] * Cs[:,1:-1] + \
+                           sgn[:,1:-1] * Cn[:,1:-1] + Ti) * s['Ct'][:,1:-1,i] \
+                        + ixs[:,1:-1] * Cs[:,1:-1] * s['Ct'][:,:-2,i] \
+                        - (1. - ixs[:,1:-1]) * Cs[:,1:-1] * s['Ct'][:,2:,i] \
+                        + ixn[:,1:-1] * Cn[:,1:-1] * np.roll(s['Ct'][:,1:-1,i],
+                                                             1, axis=0) \
+                        - (1. - ixn[:,1:-1]) * Cn[:,1:-1] * np.roll(s['Ct'][:,1:-1,i],
+                                                                    -1, axis=0))
 
                 # solve system with current weights, determine pickup
                 # and deficit for current fraction
@@ -786,33 +788,26 @@ class AeoLiS(IBmi):
                 else:
                     w_i[ix] = (mass_i[ix] * p['T'] / self.dt \
                                + Ct_i[ix]) / Cu_i[ix]
+                    w[:,:,i] = w_i.reshape(y_i.shape)
 
             # throw warning if the maximum number of iterations was
             # reached
-            if n == p['max_iter']-1:
-                logger.warn('Iteration not converged (t=%0.1f, fraction=%d)' % (self.t, i))
+            if np.any(ix):
+                logger.warn('Iteration not converged (t=%0.1f, fraction=%d, n=%d)' % \
+                            (self.t, i, np.sum(ix)))
 
-            w[:,:,i] = w_i.reshape(y_i.shape)
             Ct[:,:,i] = Ct_i.reshape(y_i.shape)
             pickup[:,:,i] = pickup_i.reshape(y_i.shape)
 
         # check if there are any cells where the sum of all weights is
         # smaller than unity. these cells are supply-limited for all
-        # fractions and the sediment concentration and pickup should
-        # be recomputed once with the grain size distribution in the
-        # top layer of the bed.
-        if 1. - np.any(np.sum(w, axis=2)) > p['max_error']:
+        # fractions. Log these events.
+        ix = 1. - np.sum(w, axis=2) > p['max_error']
+        if np.any(ix):
             self._count('supplylim')
-            w = transport.renormalize_weights(w, nf)
-            for i in range(nf):
-                self._count('matrixsolve')
-                #y_i = s['mass'][:,:,0,i] * self.dt / p['T'] + s['Ct'][:,:,i]
-                #Ct_i = scipy.sparse.linalg.spsolve(A, y_i.flatten()).reshape(y_i.shape)
-                #pickup_i = (w[:,:,i] * s['Cu'][:,:,i] - Ct_i) / p['T'] * self.dt
-
-                #Ct[:,:,i] = Ct_i
-                #pickup[:,:,i] = pickup_i
-
+            logger.warn('Ran out of sediment (t=%0.1f, n=%d)' % \
+                        (self.t, np.sum(ix)))
+                            
         return dict(Ct=Ct,
                     pickup=pickup,
                     w=w)
