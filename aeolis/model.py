@@ -1,4 +1,3 @@
-
 import os
 import imp
 import time
@@ -48,6 +47,7 @@ class AeoLiS(IBmi):
     dt = 0.
     configfile = ''
 
+    l = {} # previous spatial grids
     s = {} # spatial grids
     p = {} # parameters
     c = {} # counters
@@ -100,6 +100,7 @@ class AeoLiS(IBmi):
         # initialize spatial grids
         for var, dims in self.dimensions().iteritems():
             self.s[var] = np.zeros(self._dims2shape(dims))
+            self.l[var] = self.s[var].copy()
 
         # initialize bed composition
         self.s = bed.initialize(self.s, self.p)
@@ -130,6 +131,9 @@ class AeoLiS(IBmi):
             maximized by the CFL confition.
 
         '''
+
+        # store previous state
+        self.l = self.s.copy()
         
         # interpolate wind time series
         self.s = wind.interpolate(self.s, self.p, self.t)
@@ -468,87 +472,15 @@ class AeoLiS(IBmi):
 
                 
     def euler_forward(self):
-        '''Implements the explicit Euler forward numerical scheme
-
-        Determines weights of sediment fractions, sediment pickup and
-        instantaneous sediment concentration. Returns a partial
-        spatial grid dictionary that can be used to update the global
-        spatial grid dictionary.
-        
-        The instantaneous sediment concentration
-        :math:`\widehat{C}_t` is solved by solving the advection
-        equation explicitly:
-
-        .. math::
-
-            \\frac{\\partial \\widehat{C}_t}{\\partial t} 
-                + u_w \\frac{\\partial \\widehat{C}_t}{\\partial x}
-                = \\min \\left ( \\frac{\\partial S_e}{\\partial t} \\quad ; \\quad
-                                 \\frac{w \cdot \\widehat{C}_u - \\widehat{C}_t}{T} \\right )
-
-        Returns
-        -------
-        dict
-            Partial spatial grid dictionary
-
-        Examples
-        --------
-        >>> model.s.update(model.euler_forward())
+        '''Convenience function for explicit solver based on Euler forward scheme
 
         See Also
         --------
-        :func:`~aeolis.model.AeoLiS.euler_backward`
-        :func:`~aeolis.model.AeoLiS.crank_nicolson`
-        :func:`aeolis.transport.compute_weights`
-        :func:`aeolis.transport.renormalize_weights`
+        :func:`~aeolis.model.AeoLiS.solve`
 
         '''
-
-        s = self.s
-        p = self.p
         
-        # get model dimensions
-        nx = p['nx']
-        ny = p['ny']
-        nf = p['nfractions']
-
-        # compute coefficients
-        Cs = s['dn'] * s['dsdni'] * self.dt * s['uws']
-        Cn = s['ds'] * s['dsdni'] * self.dt * s['uwn']
-
-        # compute pickup
-        Ct = s['Ct'].copy()
-        w = transport.compute_weights(s, p)
-        pickup = np.zeros(s['pickup'].shape)
-        for i in range(nf):
-            w = transport.renormalize_weights(w, i)
-        
-            pickup[:,:,i] = (s['Cu'][:,:,i] * w[:,:,i] - s['Ct'][:,:,i]) \
-                            / p['T'] * self.dt
-            deficit_i = pickup[:,:,i] - s['mass'][:,:,0,i]
-            ix = (deficit_i > p['max_error']) \
-                 & (w[:,:,i] * s['Cu'][:,:,i] > 0.)
-
-            if np.any(ix):
-                w[ix,i] = (s['mass'][ix,0,i] * p['T'] / self.dt \
-                           + s['Ct'][ix,i]) / s['Cu'][ix,i]
-
-        # compute transport
-        for i in range(nf):
-            Ct[:,1:,i] = s['Ct'][:,1:,i] \
-                         - Cs[:,1:] * (Ct[:,1:,i] - Ct[:,:-1,i]) \
-                         - Cn[:,1:] * (Ct[:,1:,i] - np.roll(Ct[:,1:,i], 1, axis=0)) \
-                         + pickup[:,1:,i]
-        
-#        j = 0
-#        for i in range(1, nx+1):
-#            Ct[j,i,:] = s['Ct'][j,i,:] - s['uw'][j,i] \
-#                        * self.dt * s['ds'][j,i] * s['dsdni'][j,i] \
-#                        * (Ct[j,i,:] - Ct[j,i-1,:]) + pickup[j,i,:]
-
-        return dict(Ct=Ct,
-                    pickup=pickup,
-                    w=w)
+        return self.solve(alpha=0., beta=1.)
 
 
     def euler_backward(self):
@@ -556,11 +488,11 @@ class AeoLiS(IBmi):
 
         See Also
         --------
-        :func:`~aeolis.model.AeoLiS.implicit`
+        :func:`~aeolis.model.AeoLiS.solve`
 
         '''
         
-        return self.implicit(alpha=1., beta=1.)
+        return self.solve(alpha=1., beta=1.)
 
     
     def crank_nicolson(self):
@@ -568,15 +500,15 @@ class AeoLiS(IBmi):
 
         See Also
         --------
-        :func:`~aeolis.model.AeoLiS.implicit`
+        :func:`~aeolis.model.AeoLiS.solve`
 
         '''
 
-        return self.implicit(alpha=.5, beta=1.)
+        return self.solve(alpha=.5, beta=1.)
 
     
-    def implicit(self, alpha=.5, beta=1.):
-        '''Implements the implicit Euler backward and semi-implicit Crank-Nicolson numerical schemes
+    def solve(self, alpha=.5, beta=1.):
+        '''Implements the explicit Euler forward, implicit Euler backward and semi-implicit Crank-Nicolson numerical schemes
 
         Determines weights of sediment fractions, sediment pickup and
         instantaneous sediment concentration. Returns a partial
@@ -618,8 +550,9 @@ class AeoLiS(IBmi):
 
         The coefficients :math:`\\alpha` and :math:`\\beta` are used
         to respectively select the implicitness of the scheme in time
-        and the centralization in space. :math:`\\alpha = 1` results
-        in the fully implicit Euler backward scheme, while
+        and the centralization in space. :math:`\\alpha = 0` results
+        in the fully explicit Euler forward scheme, :math:`\\alpha =
+        1` results in the fully implicit Euler backward scheme, while
         :math:`\\alpha = 0.5` results in the semi-implicit
         Crank-Nicolson scheme. :math:`\\beta = 1` results in an upwind
         scheme for which the direction is adapted to the local wind
@@ -629,7 +562,7 @@ class AeoLiS(IBmi):
         Parameters
         ----------
         alpha : float, optional
-            Implicitness coefficient (1.0 for Euler backward or 0.5 for Crank-Nicolson, default=0.5)
+            Implicitness coefficient (0.0 for Euler forward, 1.0 for Euler backward or 0.5 for Crank-Nicolson, default=0.5)
         beta : float, optional
             Centralization coefficient (1.0 for upwind or 0.5 for centralized, default=1.0)
 
@@ -640,9 +573,9 @@ class AeoLiS(IBmi):
 
         Examples
         --------
-        >>> model.s.update(model.implicit(method='euler_backward'))
+        >>> model.s.update(model.solve(alpha=1., beta=1.) # euler backward
 
-        >>> model.s.update(model.implicit(method='crank_nicolson'))
+        >>> model.s.update(model.solve(alpha=.5, beta=1.) # crank-nicolson
 
         See Also
         --------
@@ -654,6 +587,7 @@ class AeoLiS(IBmi):
 
         '''
 
+        l = self.l
         s = self.s
         p = self.p
 
@@ -661,7 +595,6 @@ class AeoLiS(IBmi):
         pickup = s['pickup'].copy()
 
         # compute transport weights for all sediment fractions
-        w0 = s['w'].copy()
         w = transport.compute_weights(s, p)
 
         # define matrix coefficients to solve linear system of equations
@@ -753,18 +686,19 @@ class AeoLiS(IBmi):
 
                 # create the right hand side of the linear system
                 y_i = np.zeros(s['uw'].shape)
-                y_i[:,1:-1] = s['Ct'][:,1:-1,i] \
+                y_i[:,1:-1] = l['Ct'][:,1:-1,i] \
                     + alpha * w[:,1:-1,i] * s['Cu'][:,1:-1,i] * Ti \
                     + (1. - alpha) * (
-                        w0[:,1:-1,i] * s['Cu'][:,1:-1,i] * Ti \
+                        l['w'][:,1:-1,i] * l['Cu'][:,1:-1,i] * Ti \
                         - (sgs[:,1:-1] * Cs[:,1:-1] + \
-                           sgn[:,1:-1] * Cn[:,1:-1] + Ti) * s['Ct'][:,1:-1,i] \
-                        + ixs[:,1:-1] * Cs[:,1:-1] * s['Ct'][:,:-2,i] \
-                        - (1. - ixs[:,1:-1]) * Cs[:,1:-1] * s['Ct'][:,2:,i] \
-                        + ixn[:,1:-1] * Cn[:,1:-1] * np.roll(s['Ct'][:,1:-1,i],
+                           sgn[:,1:-1] * Cn[:,1:-1] + Ti) * l['Ct'][:,1:-1,i] \
+                        + ixs[:,1:-1] * Cs[:,1:-1] * l['Ct'][:,:-2,i] \
+                        - (1. - ixs[:,1:-1]) * Cs[:,1:-1] * l['Ct'][:,2:,i] \
+                        + ixn[:,1:-1] * Cn[:,1:-1] * np.roll(l['Ct'][:,1:-1,i],
                                                              1, axis=0) \
-                        - (1. - ixn[:,1:-1]) * Cn[:,1:-1] * np.roll(s['Ct'][:,1:-1,i],
-                                                                    -1, axis=0))
+                        - (1. - ixn[:,1:-1]) * Cn[:,1:-1] * np.roll(l['Ct'][:,1:-1,i],
+                                                                    -1, axis=0) \
+                    )
 
                 # solve system with current weights, determine pickup
                 # and deficit for current fraction

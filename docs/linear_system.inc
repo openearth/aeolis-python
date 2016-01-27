@@ -81,15 +81,15 @@
      
     \begin{array}{rcll}
     a^{0,0}_{i,j} &=& 1 + \alpha \left( \delta_x u_{w,x,i,j} \frac{\Delta t}{\Delta x_{i,j}} + \delta_y u_{w,y,i,j} \frac{\Delta t}{\Delta y_{i,j}} + \frac{\Delta t}{T} \right) \\
-    a^{-1,0}_{i,j} &=& -\alpha u_{w,y,i,j} \frac{\Delta t}{2 \Delta y_i,j} \beta \\
-    a^{0,-1}_{i,j} &=& -\alpha u_{w,x,i,j} \frac{\Delta t}{2 \Delta x_i,j} \beta \\
-    a^{0,1}_{i,j} &=& \alpha u_{w,x,i,j} \frac{\Delta t}{2 \Delta x_i,j} \left( 1 - \beta \right) \\
-    a^{1,0}_{i,j} &=& \alpha u_{w,y,i,j} \frac{\Delta t}{2 \Delta y_i,j} \left( 1 - \beta \right) \\
+    a^{-1,0}_{i,j} &=& -\alpha u_{w,y,i,j} \frac{\Delta t}{\Delta y_i,j} \beta \\
+    a^{0,-1}_{i,j} &=& -\alpha u_{w,x,i,j} \frac{\Delta t}{\Delta x_i,j} \beta \\
+    a^{0,1}_{i,j} &=& \alpha u_{w,x,i,j} \frac{\Delta t}{\Delta x_i,j} \left( 1 - \beta \right) \\
+    a^{1,0}_{i,j} &=& \alpha u_{w,y,i,j} \frac{\Delta t}{\Delta y_i,j} \left( 1 - \beta \right) \\
     y_{i,j} &=& C^n_{t,i,j} + \alpha w_{i,j} \frac{\Delta t}{T} C_{u,i,j} + (1 - \alpha) \left[ \phantom{\frac{\Delta t}{T}} \right. & w_{0,i,j} \frac{\Delta t}{T} C_{u,i,j} \\
       & & & - \left( \delta_x u_{w,x,i,j} \frac{\Delta t}{\Delta x_{i,j}} + \delta_y u_{w,y,i,j} \frac{\Delta t}{\Delta y_{i,j}} + \frac{\Delta t}{T} \right) C_{t,i,j} \\
-      & & & + u_{w,x,i,j} \frac{\Delta t}{2 \Delta x_{i,j}} \beta C_{t,i-1,j} \\
-      & & & - u_{w,x,i,j} \frac{\Delta t}{2 \Delta x_{i,j}} \left( 1 - \beta \right) C_{t,i+1,j} \\
-      & & & + u_{w,y,i,j} \frac{\Delta t}{2 \Delta y_{i,j}} \beta C_{t,i,j-1} \\
-      & & & - u_{w,y,i,j} \frac{\Delta t}{2 \Delta y_{i,j}} \left( 1 - \beta \right) C_{t,i,j+1} \left. \phantom{\frac{\Delta t}{T}} \right] \\
+      & & & + u_{w,x,i,j} \frac{\Delta t}{\Delta x_{i,j}} \beta C_{t,i-1,j} \\
+      & & & - u_{w,x,i,j} \frac{\Delta t}{\Delta x_{i,j}} \left( 1 - \beta \right) C_{t,i+1,j} \\
+      & & & + u_{w,y,i,j} \frac{\Delta t}{\Delta y_{i,j}} \beta C_{t,i,j-1} \\
+      & & & - u_{w,y,i,j} \frac{\Delta t}{\Delta y_{i,j}} \left( 1 - \beta \right) C_{t,i,j+1} \left. \phantom{\frac{\Delta t}{T}} \right] \\
     \end{array}
 

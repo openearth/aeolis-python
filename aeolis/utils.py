@@ -62,7 +62,7 @@ def interp_array(x, xp, fp, **kwargs):
     return f
 
 
-def normalize(x, axis=0, fill=0.):
+def normalize(x, ref=None, axis=0, fill=0.):
     '''Normalize array
 
     Normalizes an array to make it sum to unity over a specific
@@ -73,6 +73,8 @@ def normalize(x, axis=0, fill=0.):
     ----------
     x : array_like
         The array to be normalized
+    ref : array_like, optional
+        Alternative normalization reference, if not specified, the sum of x is used
     axis : int, optional
         The normalization axis (default: 0)
     fill : float, optional
@@ -80,8 +82,9 @@ def normalize(x, axis=0, fill=0.):
 
     '''
 
-    s = np.sum(x, axis=axis, keepdims=True).repeat(x.shape[axis], axis=axis)
-    ix = s != 0.
+    if ref is None:
+        ref = np.sum(x, axis=axis, keepdims=True).repeat(x.shape[axis], axis=axis)
+    ix = ref != 0.
     y = np.zeros(x.shape) + fill
-    y[ix] = x[ix] / s[ix]
+    y[ix] = x[ix] / ref[ix]
     return y

@@ -58,11 +58,8 @@ def compute_weights(s, p):
 
     '''
 
-    ix = s['Cu'] > 0.
-    w_air = np.zeros(s['Cu'].shape)
-    w_air[ix] = s['Ct'][ix] / s['Cu'][ix]
-
-    w_bed = s['mass'][:,:,0,:] / np.sum(s['mass'][:,:,0,:], axis=2, keepdims=True)
+    w_air = normalize(s['Ct'], s['Cu'])
+    w_bed = normalize(s['mass'][:,:,0,:], axis=2)
 
     w = (1. - p['bi']) * w_air + w_bed * \
         (1. - np.minimum(1., (1. - p['bi']) * np.sum(w_air, axis=2, keepdims=True)))
