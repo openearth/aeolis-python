@@ -107,29 +107,40 @@ def update(s, p):
     nl = p['nlayers']
     nf = p['nfractions']
 
-    # get total erosion
+    # get total erosion/deposition
     pickup = s['pickup'].reshape((-1,nf))
-    ero = np.sum(pickup, axis=1, keepdims=True).repeat(nf, axis=1)
-
-    # get erosion and deposition cells
-    ix_ero = ero[:,0] > 0.
-    ix_dep = ero[:,0] < 0.
 
     # get sediment distribution in each cell
     m = s['mass'].reshape((-1,nl,nf))
     d = normalize(m, axis=2)
+    
+    # erosion
+    ero = np.maximum(0., pickup)
+    ero = np.sum(ero, axis=1, keepdims=True).repeat(nf, axis=1)
 
-    # move mass among layers
+    # deposition
+    dep = np.minimum(0., pickup)
+    dep = np.sum(dep, axis=1, keepdims=True).repeat(nf, axis=1)
+
+    # get erosion and deposition cells
+    ix_ero = ero[:,0] > 0.
+    ix_dep = dep[:,0] < 0.
+
+    # move mass upward through layers
     m[ix_ero,0,:] -= pickup[ix_ero,:]
     for i in range(1,nl):
         m[ix_ero,i-1,:] += ero[ix_ero,:] * d[ix_ero,i,:]
         m[ix_ero,i,  :] -= ero[ix_ero,:] * d[ix_ero,i,:]
-        m[ix_dep,i-1,:] += ero[ix_dep,:] * d[ix_dep,i-1,:]
-        m[ix_dep,i,  :] -= ero[ix_dep,:] * d[ix_dep,i-1,:]
-    m[ix_dep,0,:] -= pickup[ix_dep,:]
-    m[ix_dep,-1,:] += ero[ix_dep,:] * d[ix_dep,-1,:]
     m[ix_ero,-1,:] += ero[ix_ero,:] * makeiterable(p['grain_dist'])[np.newaxis,:].repeat(np.sum(ix_ero), axis=0)
 
+    # move mass downward through layers
+    for i in range(1,nl):
+        m[ix_dep,i-1,:] += dep[ix_dep,:] * d[ix_dep,i-1,:]
+        m[ix_dep,i,  :] -= dep[ix_dep,:] * d[ix_dep,i-1,:]
+    m[ix_dep,0,:] -= pickup[ix_dep,:]
+    m[ix_dep,-1,:] += dep[ix_dep,:] * d[ix_dep,-1,:]
+
+    # update mass
     s['mass'] = m.reshape((ny+1,nx+1,nl,nf))
 
     # update bathy
