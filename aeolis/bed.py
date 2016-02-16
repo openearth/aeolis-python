@@ -107,34 +107,118 @@ def update(s, p):
     nl = p['nlayers']
     nf = p['nfractions']
 
-    # get total erosion
+    # determine net erosion
     pickup = s['pickup'].reshape((-1,nf))
-    ero = np.sum(pickup, axis=1, keepdims=True).repeat(nf, axis=1)
-
+    dm = np.sum(pickup, axis=1, keepdims=True).repeat(nf, axis=1)
+    
     # get erosion and deposition cells
-    ix_ero = ero[:,0] > 0.
-    ix_dep = ero[:,0] < 0.
-
+    ix_ero = dm[:,0] > 0.
+    ix_dep = dm[:,0] < 0.
+    
     # get sediment distribution in each cell
     m = s['mass'].reshape((-1,nl,nf))
+    
+    ## START: HANDLING OF HIGH EXPLOSIVE CELLS
+    
+    if True:
+    
+            # determine erosion and deposition fractions per cell
+            ero =  np.maximum(0., pickup)
+            dep = -np.minimum(0., pickup)
+
+            # determine gross erosion
+            erog = np.sum(ero, axis=1, keepdims=True).repeat(nf, axis=1)
+
+            # determine net deposition cells with some erosional fractions
+            ix = ix_dep & (erog[:,0] > 0)
+
+            # determine distribution of deposition fractions
+            if np.any(ix):
+                d = normalize(dep, axis=1)
+                ddep = erog[ix,:] * d[ix,:]
+                pickup[ix,:] = -dep[ix,:] + ddep
+                dm[ix,:] = np.sum(pickup[ix,:], axis=1, keepdims=True).repeat(nf, axis=1)
+                m[ix,0,:] += -ero[ix,:] + ddep
+
+    ## END
+    
+    
+    # erode and deposit in echt cell (sierd has moved this step above the normalization.)
+ #   m[:,0,:] -= pickup[:,:]
+    # it can happen that pickup exceeds the available mass. Then set the mass to 0.    
+    #m[m<0]=0
+    #m[ix_dep,0,:] -= pickup[ix_dep,:] # here does the mass get negative
+    
+    # now detmine normalized mass (weighing factors)
     d = normalize(m, axis=2)
+    m[:,0,:] -= pickup
 
     # move mass among layers
-    m[ix_ero,0,:] -= pickup[ix_ero,:]
+    
+    if m.min()<0:
+        print 'before pick up'
+        print m.min()
+   
+    
+    if m.min()<0:
+        print 'after pick up'
+        print m.min()
+    
     for i in range(1,nl):
-        m[ix_ero,i-1,:] += ero[ix_ero,:] * d[ix_ero,i,:]
-        m[ix_ero,i,  :] -= ero[ix_ero,:] * d[ix_ero,i,:]
-        m[ix_dep,i-1,:] += ero[ix_dep,:] * d[ix_dep,i-1,:]
-        m[ix_dep,i,  :] -= ero[ix_dep,:] * d[ix_dep,i-1,:]
-    m[ix_dep,0,:] -= pickup[ix_dep,:]
-    m[ix_dep,-1,:] += ero[ix_dep,:] * d[ix_dep,-1,:]
-    m[ix_ero,-1,:] += ero[ix_ero,:] * makeiterable(p['grain_dist'])[np.newaxis,:].repeat(np.sum(ix_ero), axis=0)
+        m[ix_ero,i-1,:] += dm[ix_ero,:] * d[ix_ero,i,:]
+        if (m.min()<0): #&((np.abs(m.min()))<1e-6) :
+            m[m<0]=0
+            print 'in loop sand1'
+            print m.min()
+            print i
+
+        m[ix_ero,i,  :] -= dm[ix_ero,:] * d[ix_ero,i,:]
+        if (m.min()<0): #&((np.abs(m.min()))<1e-6) :
+            print 'in loop sand2'
+            m[m<0]=0
+            print m.min()
+            print i
+            
+            
+            
+        m[ix_dep,i-1,:] += dm[ix_dep,:] * d[ix_dep,i-1,:]
+        if m.min()<0:
+            print 'in loop sand3'
+            print m.min()
+            print i
+
+        m[ix_dep,i,  :] -= dm[ix_dep,:] * d[ix_dep,i-1,:]
+      
+
+    
+    if m.min()<0:
+        print 'after loop sand'
+        print m.min()
+    
+    
+    if m.min()<0:
+        print 'after loop sand2'
+        print m.min()
+        
+    m[ix_dep,-1,:] += dm[ix_dep,:] * d[ix_dep,-1,:]
+    
+    if m.min()<0:
+        print 'after loop sand3'
+        print m.min()
+        
+    m[ix_ero,-1,:] += dm[ix_ero,:] * makeiterable(p['grain_dist'])[np.newaxis,:].repeat(np.sum(ix_ero), axis=0)
+    
+    
+        
+    if m.min()<0:
+        print 'after moving sand'
+        print m.min()
 
     s['mass'] = m.reshape((ny+1,nx+1,nl,nf))
 
     # update bathy
     if p['bedupdate']:
-        s['zb'] -= ero[:,0].reshape((ny+1,nx+1)) / (p['rhop'] * p['porosity'])
+        s['zb'] -= dm[:,0].reshape((ny+1,nx+1)) / (p['rhop'] * p['porosity'])
 
     return s
 
