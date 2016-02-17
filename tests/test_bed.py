@@ -43,8 +43,12 @@ S = {
 
 
 def assert_continuity(s):
-    '''Convenience function to test whether sediment mass in bed layers is
-       positive and constant to ensure continuity
+    '''Convenience function to test whether sediment mass in bed layers is positive and constant to ensure continuity
+
+    Parameters
+    ----------
+    s : dict
+        Result structure from bed.update()
 
     '''
 
@@ -57,10 +61,7 @@ def assert_continuity(s):
 
     
 def test_trivial():
-    '''Test if zero pickup leads to no changes in bed composition and
-       level
-
-    '''
+    '''Test if zero pickup leads to no changes in bed composition and level'''
 
     s = copy.deepcopy(S)
     s = aeolis.bed.update(s, P)
@@ -76,10 +77,7 @@ def test_trivial():
 
 
 def test_erosion_uniform():
-    '''Test if uniform erosion on a uniform bed leads to no changes in bed
-       composition and a decrease in bed level
-
-    '''
+    '''Test if uniform erosion on a uniform bed leads to no changes in bed composition and a decrease in bed level'''
 
     s = copy.deepcopy(S)
     s['pickup'][0,0,:] = .25 / 4.
@@ -96,10 +94,7 @@ def test_erosion_uniform():
 
 
 def test_erosion_singlefraction():
-    '''Test if erosion of a single fraction from a uniform bed leaves the
-       other fractions unaffected
-
-    '''
+    '''Test if erosion of a single fraction from a uniform bed leaves the other fractions unaffected'''
 
     s = copy.deepcopy(S)
     s['pickup'][0,0,0] = .25
@@ -112,10 +107,7 @@ def test_erosion_singlefraction():
     
 
 def test_erosion_mixed():
-    '''Test if continuity is ensured in a net erosion cell with a single
-       accretive fraction
-
-    '''
+    '''Test if continuity is ensured in a net erosion cell with a single accretive fraction'''
 
     s = copy.deepcopy(S)
     s['pickup'][:,:,:] = [.75, .75, -.75, 0.]
@@ -124,10 +116,7 @@ def test_erosion_mixed():
     
     
 def test_erosion_progressive():
-    '''Test if progressive erosion only affects top layer and continiously
-       decrease the bed level
-
-    '''
+    '''Test if progressive erosion only affects top layer and continiously decrease the bed level'''
 
     s = copy.deepcopy(S)
     s['pickup'][0,0,:] = .25 * np.asarray([.6, .3, .1, 0.]) # sum: .25
@@ -146,10 +135,7 @@ def test_erosion_progressive():
 
 
 def test_deposition_uniform():
-    '''Test if uniform deposition on a uniform bed leads to no changes in bed
-       composition and an increase in bed level
-
-    '''
+    '''Test if uniform deposition on a uniform bed leads to no changes in bed composition and an increase in bed level'''
 
     s = copy.deepcopy(S)
     s['pickup'][0,0,:] = .25 / 4.
@@ -166,10 +152,7 @@ def test_deposition_uniform():
 
 
 def test_deposition_huge():
-    '''Test if continuity is ensured if an amount of sediment larger than
-       the total contents of a bed composition layer is deposited
-
-    '''
+    '''Test if continuity is ensured if an amount of sediment larger than the total contents of a bed composition layer is deposited'''
 
     s = copy.deepcopy(S)
     s['mass'][:,:,:,0] /= 2.
@@ -179,10 +162,7 @@ def test_deposition_huge():
 
 
 def test_deposition_mixed():
-    '''Test if continuity is ensured in a net deposition cell with a
-       single erosive fraction
-
-    '''
+    '''Test if continuity is ensured in a net deposition cell with a single erosive fraction'''
 
     s = copy.deepcopy(S)
     s['pickup'][:,:,:] = [-.75, -.75, .75, 0.]
@@ -191,10 +171,7 @@ def test_deposition_mixed():
     
     
 def test_deposition_progressive():
-    '''Test if progressive deposition only affects an increasing number of
-       top layer and continiously increase the bed level
-
-    '''
+    '''Test if progressive deposition only affects an increasing number of top layer and continiously increase the bed level'''
 
     s = copy.deepcopy(S)
     s['pickup'][0,0,:] = -.25 * np.asarray([.6, .3, .1, 0.]) # sum: -.25
