@@ -138,7 +138,7 @@ def test_deposition_uniform():
     '''Test if uniform deposition on a uniform bed leads to no changes in bed composition and an increase in bed level'''
 
     s = copy.deepcopy(S)
-    s['pickup'][0,0,:] = .25 / 4.
+    s['pickup'][0,0,:] = -.25 / 4.
     s = aeolis.bed.update(s, P)
     assert_continuity(s)
 
