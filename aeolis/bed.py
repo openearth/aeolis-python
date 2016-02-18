@@ -276,7 +276,6 @@ def prevent_negative_mass(m, dm, pickup):
 
 
 def mixtoplayer(s, p):
-
     '''Mix grain size distribution in top layer of the bed
 
     Simulates mixing of the top layers of the bed by wave action. The
