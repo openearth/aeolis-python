@@ -1336,9 +1336,9 @@ class AeoLiSRunner(AeoLiS):
         print fmt % ('# time steps', io.print_value(n_time))
         print fmt % ('# matrix solves', io.print_value(n_matrixsolve))
         print fmt % ('# supply lim', io.print_value(n_supplylim))
-        print fmt % ('avg. solves per step' %
+        print fmt % ('avg. solves per step',
                            io.print_value(float(n_matrixsolve) / n_time))
-        print fmt % ('avg. time step' %
+        print fmt % ('avg. time step',
                            io.print_value(float(self.p['tstop']) / n_time))
 
         print '**********************************************************'
