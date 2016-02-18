@@ -13,6 +13,7 @@ setup(
         'scipy',
         'docopt',
         'bmi',
+        'netCDF4',
     ],
     setup_requires=[
         'sphinx',
