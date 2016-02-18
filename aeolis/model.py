@@ -8,11 +8,11 @@ import scipy.sparse.linalg
 from bmi.api import IBmi
 
 # package modules
-import io, bed, wind, threshold, transport, hydro, netcdf, log, constants
+import io, bed, wind, threshold, transport, hydro, netcdf, constants
 from utils import *
 
 
-# initialize log
+# initialize logger
 logger = logging.getLogger(__name__)
 
 
@@ -163,7 +163,7 @@ class AeoLiS(IBmi):
         elif self.p['scheme'] == 'crank_nicolson':
             self.s.update(self.crank_nicolson())
         else:
-            log.error('Unknown scheme [%s]' % self.p['scheme'])
+            raise ValueError('Unknown scheme [%s]' % self.p['scheme'])
 
         # update bed
         self.s = bed.update(self.s, self.p)
@@ -711,13 +711,12 @@ class AeoLiS(IBmi):
                 ix = (deficit_i > p['max_error']) \
                      & (w_i * Cu_i > 0.)
 
-                logger.debug('t = %0.3f, fraction = %d, iteration = %d, # deficit = %d, total deficit = %0.3f' % (self.t, i, n, np.sum(ix), np.sum(deficit_i[ix])))
-
                 # quit the iteration if there is no deficit, otherwise
                 # back-compute the maximum weight allowed to get zero
                 # deficit fo r the current fraction and progress to
                 # the next iteration step
                 if not np.any(ix):
+                    logger.debug('Iteration converged [steps: %d, fraction: %d, time: %0.1f]' % (n, i, self.t))
                     pickup_i = np.minimum(pickup_i, mass_i)
                     break
                 else:
@@ -728,8 +727,8 @@ class AeoLiS(IBmi):
             # throw warning if the maximum number of iterations was
             # reached
             if np.any(ix):
-                logger.warn('Iteration not converged (t=%0.1f, fraction=%d, n=%d)' % \
-                            (self.t, i, np.sum(ix)))
+                logger.warn('Iteration not converged [fraction: %d, # cells: %d, time: %0.1f]' % \
+                            (i, np.sum(ix), self.t))
 
             Ct[:,:,i] = Ct_i.reshape(y_i.shape)
             pickup[:,:,i] = pickup_i.reshape(y_i.shape)
@@ -740,8 +739,8 @@ class AeoLiS(IBmi):
         ix = 1. - np.sum(w, axis=2) > p['max_error']
         if np.any(ix):
             self._count('supplylim')
-            logger.warn('Ran out of sediment (t=%0.1f, n=%d)' % \
-                        (self.t, np.sum(ix)))
+            logger.warn('Ran out of sediment [# cells: %d, time: %0.1f]' % (np.sum(ix), self.t))
+            logger.debug('Minimum sum of weights is %0.4f' % np.sum(w, axis=2)[ix].min())
                             
         return dict(Ct=Ct,
                     pickup=pickup,
@@ -923,7 +922,7 @@ class AeoLiSRunner(AeoLiS):
                                wind_file  = np.asarray([[0.,10.,0.],
                                                         [3601.,10.,0.]])))
         else:
-            raise ValueError('Configuration file not found [%s]' % self.configfile)
+            raise IOError('Configuration file not found [%s]' % self.configfile)
 
 
     def run(self, callback=None):
@@ -954,23 +953,22 @@ class AeoLiSRunner(AeoLiS):
         # font: Colossal
 
         print '**********************************************************'
-        print ' '
-        print '         d8888                   888      d8b  .d8888b.   ' 
-        print '        d88888                   888      Y8P d88P  Y88b  ' 
-        print '       d88P888                   888          Y88b.       ' 
-        print '      d88P 888  .d88b.   .d88b.  888      888  "Y888b.    ' 
-        print '     d88P  888 d8P  Y8b d88""88b 888      888     "Y88b.  ' 
-        print '    d88P   888 88888888 888  888 888      888       "888  ' 
-        print '   d8888888888 Y8b.     Y88..88P 888      888 Y88b  d88P  ' 
+        print '                                                          '
+        print '         d8888                   888      d8b  .d8888b.   '
+        print '        d88888                   888      Y8P d88P  Y88b  '
+        print '       d88P888                   888          Y88b.       '
+        print '      d88P 888  .d88b.   .d88b.  888      888  "Y888b.    '
+        print '     d88P  888 d8P  Y8b d88""88b 888      888     "Y88b.  '
+        print '    d88P   888 88888888 888  888 888      888       "888  '
+        print '   d8888888888 Y8b.     Y88..88P 888      888 Y88b  d88P  '
         print '  d88P     888  "Y8888   "Y88P"  88888888 888  "Y8888P"   '
-        print ' '
+        print '                                                          '
 
         # set working directory
         fpath, fname = os.path.split(self.configfile)
         if fpath != os.getcwd():
             os.chdir(fpath)
-            print '  Changed working directory to: %s' % fpath
-            print ''
+            logger.info('  Changed working directory to: %s\n' % fpath)
 
         # print settings
         self.print_params()
@@ -981,8 +979,7 @@ class AeoLiSRunner(AeoLiS):
         # parse callback
         callback = self.parse_callback(callback)
         if callback is not None:
-            print '  Applying callback function: %s()' % callback.__name__
-            print ''
+            logger.info('  Applying callback function: %s()\n' % callback.__name__)
 
         # initialize model
         self.initialize()
@@ -1262,7 +1259,7 @@ class AeoLiSRunner(AeoLiS):
         elif callback is None:
             return callback
 
-        log.warn('Invalid callback definition [%s]' % callback)
+        logger.warn('Invalid callback definition [%s]' % callback)
         return None
 
                         
@@ -1290,7 +1287,7 @@ class AeoLiSRunner(AeoLiS):
             t1 = time.strftime('%H:%M:%S', time.gmtime(t-self.t0))
             t2 = time.strftime('%H:%M:%S', time.gmtime((t-self.t0) / p))
             t3 = time.strftime('%H:%M:%S', time.gmtime((t-self.t0) * (1. - p) / p))
-            print '[%5.1f%%] %s / %s / %s' % (p * 100., t1, t2, t3)
+            logger.info('%s / %s / %s [%5.1f%%]' % (t1, t2, t3, p * 100.))
             self.tlog = time.time()
             self.plog = pr
             
@@ -1303,7 +1300,7 @@ class AeoLiSRunner(AeoLiS):
         fmt2 = '  %-%%ds   %%s' % maxl
 
         print '**********************************************************'
-        print 'PARAMETER SETTINGS'
+        print 'PARAMETER SETTINGS                                        '
         print '**********************************************************'
 
         for par, val in sorted(self.p.iteritems()):
@@ -1329,7 +1326,7 @@ class AeoLiSRunner(AeoLiS):
         n_time = self.get_count('time')
         n_matrixsolve = self.get_count('matrixsolve')
         n_supplylim = self.get_count('supplylim')
-        
+
         print ''
         print '**********************************************************'
 
@@ -1337,10 +1334,10 @@ class AeoLiSRunner(AeoLiS):
         print fmt % ('# time steps', io.print_value(n_time))
         print fmt % ('# matrix solves', io.print_value(n_matrixsolve))
         print fmt % ('# supply lim', io.print_value(n_supplylim))
-        print fmt % ('avg. solves per step',
-                     io.print_value(float(n_matrixsolve) / n_time))
-        print fmt % ('avg. time step',
-                     io.print_value(float(self.p['tstop']) / n_time))
+        print fmt % ('avg. solves per step' %
+                           io.print_value(float(n_matrixsolve) / n_time))
+        print fmt % ('avg. time step' %
+                           io.print_value(float(self.p['tstop']) / n_time))
 
         print '**********************************************************'
         print ''

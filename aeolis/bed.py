@@ -5,6 +5,10 @@ import numpy as np
 from utils import *
 
 
+# initialize logger
+logger = logging.getLogger(__name__)
+
+
 def initialize(s, p):
     '''Initialize bathymetry and bed composition
 
@@ -139,7 +143,7 @@ def update(s, p):
     m[ix_ero,-1,:] -= dm[ix_ero,:] * normalize(p['grain_dist'])[np.newaxis,:].repeat(np.sum(ix_ero), axis=0)
 
     if m.min() < 0:
-        logging.warn('Negative mass in %d cells, minimum value is %0.4 kg/m^2' % (np.sum(np.any(m<0., axis=-1)), m.min()))
+        logger.warn('Negative mass [# cells: %d, min. value: %f]' % (np.sum(np.any(m<0., axis=-1)), m.min()))
         
     # remove tiny negatives
     ix = (m < 0.) & (m > -p['max_error'])

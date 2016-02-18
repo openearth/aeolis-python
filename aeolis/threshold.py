@@ -1,7 +1,5 @@
+import logging
 import numpy as np
-
-# package modules
-import log
 
 
 def compute(s, p):
@@ -122,7 +120,7 @@ def compute_moisture(s, p):
     elif p['method_moist'] == 'hotta':
         s['uth'][ix] += 7.5 * mg[ix]
     else:
-        log.error('Unknown moisture formulation [%s]' % p['method_moist'])
+        raise ValuerError('Unknown moisture formulation [%s]' % p['method_moist'])
 
     # should be .04 according to Pye and Tsoar
     # should be .64 according to Delgado-Fernandez (10% vol.)
