@@ -31,7 +31,7 @@ P = {
     'nfractions':NF,
     'rhop':2650.,
     'porosity':.4,
-    'grain_dist':np.asarray([.25,.25,.25,.25]),
+    'grain_dist':np.ones((NF,)),
 }
 
 # variables
@@ -42,7 +42,7 @@ S = {
 }
 
 
-def assert_continuity(s):
+def assert_continuity(s1, s2=S):
     '''Convenience function to test whether sediment mass in bed layers is positive and constant to ensure continuity
 
     Parameters
@@ -52,11 +52,13 @@ def assert_continuity(s):
 
     '''
 
-    assert_true(np.all(s['mass'] >= 0.),
+    print s1['mass']
+    
+    assert_true(np.all(s1['mass'] >= 0.),
                 msg='Layer mass is negative')
 
-    assert_almost_equal_array(s['mass'].sum(axis=3),
-                              S['mass'].sum(axis=3),
+    assert_almost_equal_array(s1['mass'].sum(axis=3),
+                              s2['mass'].sum(axis=3),
                               msg='Layer mass not constant')
 
     
@@ -110,7 +112,7 @@ def test_erosion_mixed():
     '''Test if continuity is ensured in a net erosion cell with a single accretive fraction'''
 
     s = copy.deepcopy(S)
-    s['pickup'][:,:,:] = [.75, .75, -.75, 0.]
+    s['pickup'][:,:,:] = [.95, .95, -.95, 0.]
     s = aeolis.bed.update(s, P)
     assert_continuity(s)
     
@@ -154,18 +156,19 @@ def test_deposition_uniform():
 def test_deposition_huge():
     '''Test if continuity is ensured if an amount of sediment larger than the total contents of a bed composition layer is deposited'''
 
-    s = copy.deepcopy(S)
-    s['mass'][:,:,:,0] /= 2.
-    s['pickup'][:,:,:] = 2. * s['mass'][:,:,0,:].sum(axis=2) / NF
-    s = aeolis.bed.update(s, P)
-    assert_continuity(s)
+    s1 = copy.deepcopy(S)
+    s1['mass'][:,:,:,0] -= .5
+    s1['mass'][:,:,:,-1] += .5
+    s1['pickup'][:,:,:] = -10. * s1['mass'][:,:,0,:].sum(axis=2) / NF
+    s2 = aeolis.bed.update(copy.deepcopy(s1), P)
+    assert_continuity(s2, s1)
 
 
 def test_deposition_mixed():
     '''Test if continuity is ensured in a net deposition cell with a single erosive fraction'''
 
     s = copy.deepcopy(S)
-    s['pickup'][:,:,:] = [-.75, -.75, .75, 0.]
+    s['pickup'][:,:,:] = [-.95, -.95, .95, 0.]
     s = aeolis.bed.update(s, P)
     assert_continuity(s)
     
