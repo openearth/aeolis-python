@@ -23,6 +23,7 @@ bedcomp_file    = None,               # Filename of ASCII file with initial bed 
 nx              = 0,                  # [-] Number of grid cells in x-dimension
 ny              = 0,                  # [-] Number of grid cells in y-dimension
 dt              = 60.,                # [s] Time step size
+CFL             = 1.,                 # [-] CFL number to determine time step in explicit scheme    
 tstart          = 0.,                 # [s] Start time of simulation
 tstop           = 3600.,              # [s] End time of simulation
 output_times    = 60.,                # [s] Output interval in seconds of simulation time

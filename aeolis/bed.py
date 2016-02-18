@@ -144,7 +144,7 @@ def update(s, p):
 
     if m.min() < 0:
         logger.warn('Negative mass [# cells: %d, min. value: %f, time: %0.1f]' % \
-                    (np.sum(np.any(m<0., axis=-1)), m.min(), self.p['_time']))
+                    (np.sum(np.any(m<0., axis=-1)), m.min(), p['_time']))
         
     # remove tiny negatives
     ix = (m < 0.) & (m > -p['max_error'])
