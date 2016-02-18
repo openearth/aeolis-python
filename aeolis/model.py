@@ -132,6 +132,8 @@ class AeoLiS(IBmi):
 
         '''
 
+        self.p['_time'] = self.t
+
         # store previous state
         self.l = self.s.copy()
         
@@ -1287,7 +1289,7 @@ class AeoLiSRunner(AeoLiS):
             t1 = time.strftime('%H:%M:%S', time.gmtime(t-self.t0))
             t2 = time.strftime('%H:%M:%S', time.gmtime((t-self.t0) / p))
             t3 = time.strftime('%H:%M:%S', time.gmtime((t-self.t0) * (1. - p) / p))
-            logger.info('%s / %s / %s [%5.1f%%]' % (t1, t2, t3, p * 100.))
+            print '%5.1f%%   %s / %s / %s' % (p * 100., t1, t2, t3)
             self.tlog = time.time()
             self.plog = pr
             

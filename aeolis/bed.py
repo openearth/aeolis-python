@@ -143,7 +143,8 @@ def update(s, p):
     m[ix_ero,-1,:] -= dm[ix_ero,:] * normalize(p['grain_dist'])[np.newaxis,:].repeat(np.sum(ix_ero), axis=0)
 
     if m.min() < 0:
-        logger.warn('Negative mass [# cells: %d, min. value: %f]' % (np.sum(np.any(m<0., axis=-1)), m.min()))
+        logger.warn('Negative mass [# cells: %d, min. value: %f, time: %0.1f]' % \
+                    (np.sum(np.any(m<0., axis=-1)), m.min(), self.p['_time']))
         
     # remove tiny negatives
     ix = (m < 0.) & (m > -p['max_error'])
