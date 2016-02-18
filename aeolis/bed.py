@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 
 # package modules
@@ -137,6 +138,14 @@ def update(s, p):
     m[ix_dep,-1,:] -= dm[ix_dep,:] * d[ix_dep,-1,:]
     m[ix_ero,-1,:] -= dm[ix_ero,:] * normalize(p['grain_dist'])[np.newaxis,:].repeat(np.sum(ix_ero), axis=0)
 
+    if m.min() < 0:
+        logging.warn('Negative mass in %d cells, minimum value is %0.4 kg/m^2' % (np.sum(np.any(m<0., axis=-1)), m.min()))
+        
+    # remove tiny negatives
+    ix = m < 0. & m > -p['max_error']
+    m[ix] = 0.
+
+    # reshape mass matrix
     s['mass'] = m.reshape((ny+1,nx+1,nl,nf))
 
     # update bathy

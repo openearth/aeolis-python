@@ -908,9 +908,9 @@ class AeoLiSRunner(AeoLiS):
 
         self.set_configfile(configfile)
         if os.path.exists(self.configfile):
-            self.p = io.read_configfile(configfile, parse_files=False)
+            self.p = io.read_configfile(self.configfile, parse_files=False)
             self.changed = False
-        else:
+        elif self.configfile.upper() == 'DEFAULT':
             self.changed = True
             self.p = constants.DEFAULT_CONFIG
 
@@ -922,6 +922,8 @@ class AeoLiSRunner(AeoLiS):
                                bed_file   = np.linspace(-5.,5.,100.),
                                wind_file  = np.asarray([[0.,10.,0.],
                                                         [3601.,10.,0.]])))
+        else:
+            raise ValueError('Configuration file not found [%s]' % self.configfile)
 
 
     def run(self, callback=None):
