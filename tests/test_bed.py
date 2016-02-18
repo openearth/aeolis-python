@@ -32,6 +32,7 @@ P = {
     'rhop':2650.,
     'porosity':.4,
     'grain_dist':np.ones((NF,)),
+    'max_error':1e-6,
 }
 
 # variables

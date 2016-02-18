@@ -142,7 +142,7 @@ def update(s, p):
         logging.warn('Negative mass in %d cells, minimum value is %0.4 kg/m^2' % (np.sum(np.any(m<0., axis=-1)), m.min()))
         
     # remove tiny negatives
-    ix = m < 0. & m > -p['max_error']
+    ix = (m < 0.) & (m > -p['max_error'])
     m[ix] = 0.
 
     # reshape mass matrix
