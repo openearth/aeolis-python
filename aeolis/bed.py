@@ -109,121 +109,174 @@ def update(s, p):
 
     # determine net erosion
     pickup = s['pickup'].reshape((-1,nf))
-    dm = np.sum(pickup, axis=1, keepdims=True).repeat(nf, axis=1)
+
+    # determine total mass that should be exchanged between layers
+    dm = -np.sum(pickup, axis=-1, keepdims=True).repeat(nf, axis=-1)
     
     # get erosion and deposition cells
-    ix_ero = dm[:,0] > 0.
-    ix_dep = dm[:,0] < 0.
+    ix_ero = dm[:,0] < 0.
+    ix_dep = dm[:,0] > 0.
     
-    # get sediment distribution in each cell
+    # reshape mass matrix
     m = s['mass'].reshape((-1,nl,nf))
-    
-    ## START: HANDLING OF HIGH EXPLOSIVE CELLS
-    
-    if True:
-    
-            # determine erosion and deposition fractions per cell
-            ero =  np.maximum(0., pickup)
-            dep = -np.minimum(0., pickup)
 
-            # determine gross erosion
-            erog = np.sum(ero, axis=1, keepdims=True).repeat(nf, axis=1)
-
-            # determine net deposition cells with some erosional fractions
-            ix = ix_dep & (erog[:,0] > 0)
-
-            # determine distribution of deposition fractions
-            if np.any(ix):
-                d = normalize(dep, axis=1)
-                ddep = erog[ix,:] * d[ix,:]
-                pickup[ix,:] = -dep[ix,:] + ddep
-                dm[ix,:] = np.sum(pickup[ix,:], axis=1, keepdims=True).repeat(nf, axis=1)
-                m[ix,0,:] += -ero[ix,:] + ddep
-
-    ## END
+    # negative mass may occur in case of deposition due to numerics,
+    # which should be prevented
+    m, dm, pickup = prevent_negative_mass(m, dm, pickup)
     
-    
-    # erode and deposit in echt cell (sierd has moved this step above the normalization.)
- #   m[:,0,:] -= pickup[:,:]
-    # it can happen that pickup exceeds the available mass. Then set the mass to 0.    
-    #m[m<0]=0
-    #m[ix_dep,0,:] -= pickup[ix_dep,:] # here does the mass get negative
-    
-    # now detmine normalized mass (weighing factors)
+    # determine weighing factors
     d = normalize(m, axis=2)
-    m[:,0,:] -= pickup
-
+    
     # move mass among layers
-    
-    if m.min()<0:
-        print 'before pick up'
-        print m.min()
-   
-    
-    if m.min()<0:
-        print 'after pick up'
-        print m.min()
-    
+    m[:,0,:] -= pickup
     for i in range(1,nl):
-        m[ix_ero,i-1,:] += dm[ix_ero,:] * d[ix_ero,i,:]
-        if (m.min()<0): #&((np.abs(m.min()))<1e-6) :
-            m[m<0]=0
-            print 'in loop sand1'
-            print m.min()
-            print i
-
-        m[ix_ero,i,  :] -= dm[ix_ero,:] * d[ix_ero,i,:]
-        if (m.min()<0): #&((np.abs(m.min()))<1e-6) :
-            print 'in loop sand2'
-            m[m<0]=0
-            print m.min()
-            print i
-            
-            
-            
-        m[ix_dep,i-1,:] += dm[ix_dep,:] * d[ix_dep,i-1,:]
-        if m.min()<0:
-            print 'in loop sand3'
-            print m.min()
-            print i
-
-        m[ix_dep,i,  :] -= dm[ix_dep,:] * d[ix_dep,i-1,:]
-      
-
-    
-    if m.min()<0:
-        print 'after loop sand'
-        print m.min()
-    
-    
-    if m.min()<0:
-        print 'after loop sand2'
-        print m.min()
-        
-    m[ix_dep,-1,:] += dm[ix_dep,:] * d[ix_dep,-1,:]
-    
-    if m.min()<0:
-        print 'after loop sand3'
-        print m.min()
-        
-    m[ix_ero,-1,:] += dm[ix_ero,:] * makeiterable(p['grain_dist'])[np.newaxis,:].repeat(np.sum(ix_ero), axis=0)
-    
-    
-        
-    if m.min()<0:
-        print 'after moving sand'
-        print m.min()
+        m[ix_ero,i-1,:] -= dm[ix_ero,:] * d[ix_ero,i,:]
+        m[ix_ero,i,  :] += dm[ix_ero,:] * d[ix_ero,i,:]
+        m[ix_dep,i-1,:] -= dm[ix_dep,:] * d[ix_dep,i-1,:]
+        m[ix_dep,i,  :] += dm[ix_dep,:] * d[ix_dep,i-1,:]
+    m[ix_dep,-1,:] -= dm[ix_dep,:] * d[ix_dep,-1,:]
+    m[ix_ero,-1,:] -= dm[ix_ero,:] * normalize(p['grain_dist'])[np.newaxis,:].repeat(np.sum(ix_ero), axis=0)
 
     s['mass'] = m.reshape((ny+1,nx+1,nl,nf))
 
     # update bathy
     if p['bedupdate']:
-        s['zb'] -= dm[:,0].reshape((ny+1,nx+1)) / (p['rhop'] * p['porosity'])
+        s['zb'] += dm[:,0].reshape((ny+1,nx+1)) / (p['rhop'] * p['porosity'])
 
     return s
 
 
+def prevent_negative_mass(m, dm, pickup):
+    '''Handle situations in which negative mass may occur due to numerics
+
+    Negative mass may occur by moving sediment to lower layers down to
+    accomodate deposition of sediments. In particular two cases are
+    important:
+
+    #. A net deposition cell has some erosional fractions.
+
+       In this case the top layer mass is reduced according to the
+       existing sediment distribution in the layer to accomodate
+       deposition of fresh sediment. If the erosional fraction is
+       subtracted afterwards, negative values may occur. Therefore the
+       erosional fractions are subtracted from the top layer
+       beforehand in this function. An equal mass of deposition
+       fractions is added to the top layer in order to keep the total
+       layer mass constant. Subsequently, the distribution of the
+       sediment to be moved to lower layers is determined and the
+       remaining deposits are accomodated.
+
+    #. Deposition is larger than the total mass in a layer.
+
+       In this case a non-uniform distribution in the bed may also
+       lead to negative values as the abundant fractions are reduced
+       disproportionally as sediment is moved to lower layers to
+       accomodate the deposits. This function fills the top layers
+       entirely with fresh deposits and moves the existing sediment
+       down such that the remaining deposits have a total mass less
+       than the total bed layer mass. Only the remaining deposits are
+       fed to the routine that moves sediment through the layers.
+
+    Parameters
+    ----------
+    m : np.ndarray
+        Sediment mass in bed (nx*ny, nl, nf)
+    dm : np.ndarray
+        Total sediment mass exchanged between layers (nx*ny, nf)
+    pickup : np.ndarray
+        Sediment pickup (nx*ny, nf)
+
+    Returns
+    -------
+    np.ndarray
+        Sediment mass in bed (nx*ny, nl, nf)
+    np.ndarray
+        Total sediment mass exchanged between layers (nx*ny, nf)
+    np.ndarray
+        Sediment pickup (nx*ny, nf)
+
+    Note
+    ----
+    The situations handled in this function can also be prevented by
+    reducing the time step, increasing the layer mass or increasing
+    the adaptation time scale.
+
+    '''
+
+    nl = m.shape[1]
+    nf = m.shape[2]
+
+    ###
+    ### case #1: deposition cells with some erosional fractions
+    ###
+    
+    ix_dep = dm[:,0] > 0.
+    
+    # determine erosion and deposition fractions per cell
+    ero =  np.maximum(0., pickup)
+    dep = -np.minimum(0., pickup)
+
+    # determine gross erosion
+    erog = np.sum(ero, axis=1, keepdims=True).repeat(nf, axis=1)
+
+    # determine net deposition cells with some erosional fractions
+    ix = ix_dep & (erog[:,0] > 0)
+
+    # remove erosional fractions from pickup and remove an equal mass
+    # of accretive fractions from the pickup, adapt sediment exchange
+    # mass and bed composition accordingly
+    if np.any(ix):
+        d = normalize(dep, axis=1)
+        ddep = erog[ix,:] * d[ix,:]
+        pickup[ix,:] = -dep[ix,:] + ddep
+        dm[ix,:] = -np.sum(pickup[ix,:], axis=-1, keepdims=True).repeat(nf, axis=-1)
+        m[ix,0,:] -= ero[ix,:] - ddep # FIXME: do not use deposition in normalization
+
+    ###
+    ### case #2: deposition cells with deposition larger than the mass present in the top layer
+    ###
+
+    mx = m[:,0,:].sum(axis=-1, keepdims=True)
+
+    # determine deposition in terms of layer mass (round down)
+    n = dm[:,:1] // mx
+
+    # determine if deposition is larger than a sinle layer mass
+    if np.any(n > 0):
+
+        # determine distribution of deposition
+        d = normalize(pickup, axis=1)
+
+        # walk through layers from top to bottom
+        for i in range(nl):
+
+            ix = (n > i).flatten()
+            if not np.any(ix):
+                break
+
+            # move all sediment below current layer down one layer
+            m[ix,(i+1):,:] = m[ix,i:-1,:]
+
+            # fill current layer with deposited sediment
+            m[ix,i,:] = mx[ix,:].repeat(nf, axis=1) * d[ix,:]
+
+            # remove deposited sediment from pickup
+            pickup[ix,:] -= m[ix,i,:]
+
+        # discard any remaining deposits at locations where all layers
+        # are filled with fresh deposits
+        ix = (dm[:,:1] > mx).flatten()
+        if np.any(ix):
+            pickup[ix,:] = 0.
+
+        # recompute sediment exchange mass
+        dm[ix,:] = -np.sum(pickup[ix,:], axis=-1, keepdims=True).repeat(nf, axis=-1)
+
+    return m, dm, pickup
+
+
 def mixtoplayer(s, p):
+
     '''Mix grain size distribution in top layer of the bed
 
     Simulates mixing of the top layers of the bed by wave action. The

@@ -717,7 +717,8 @@ class AeoLiS(IBmi):
                 # back-compute the maximum weight allowed to get zero
                 # deficit fo r the current fraction and progress to
                 # the next iteration step
-                if ~np.any(ix):
+                if not np.any(ix):
+                    pickup_i = np.minimum(pickup_i, mass_i)
                     break
                 else:
                     w_i[ix] = (mass_i[ix] * p['T'] / self.dt \

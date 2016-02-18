@@ -56,6 +56,10 @@ def read_configfile(configfile, parse_files=True):
         log.logging.error(err)
         raise IOError(err)
 
+    # normalize grain size distribution
+    if p.has_key('grain_dist'):
+        p['grain_dist'] = normalize(p['grain_dist'])
+
     return p
 
 

@@ -82,6 +82,7 @@ def normalize(x, ref=None, axis=0, fill=0.):
 
     '''
 
+    x = makeiterable(x)
     if ref is None:
         ref = np.sum(x, axis=axis, keepdims=True).repeat(x.shape[axis], axis=axis)
     ix = ref != 0.
