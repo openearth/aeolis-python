@@ -4,15 +4,16 @@ import time
 import logging
 import numpy as np
 import scipy.sparse
+import cPickle as pickle
 import scipy.sparse.linalg
 from bmi.api import IBmi
 
 # package modules
-import io, bed, wind, threshold, transport, hydro, netcdf, log, constants
+import io, bed, wind, threshold, transport, hydro, netcdf, constants
 from utils import *
 
 
-# initialize log
+# initialize logger
 logger = logging.getLogger(__name__)
 
 
@@ -132,6 +133,8 @@ class AeoLiS(IBmi):
 
         '''
 
+        self.p['_time'] = self.t
+
         # store previous state
         self.l = self.s.copy()
         
@@ -163,7 +166,7 @@ class AeoLiS(IBmi):
         elif self.p['scheme'] == 'crank_nicolson':
             self.s.update(self.crank_nicolson())
         else:
-            log.error('Unknown scheme [%s]' % self.p['scheme'])
+            raise ValueError('Unknown scheme [%s]' % self.p['scheme'])
 
         # update bed
         self.s = bed.update(self.s, self.p)
@@ -597,6 +600,11 @@ class AeoLiS(IBmi):
         # compute transport weights for all sediment fractions
         w = transport.compute_weights(s, p)
 
+        # set model state properties that are added to warnings and errors
+        logprops = dict(minwind=s['uw'].min(),
+                        maxdrop=(l['uw']-s['uw']).max(),
+                        time=self.t)
+
         # define matrix coefficients to solve linear system of equations
         Cs = self.dt * s['dn'] * s['dsdni'] * s['uws']
         Cn = self.dt * s['ds'] * s['dsdni'] * s['uwn']
@@ -700,9 +708,22 @@ class AeoLiS(IBmi):
                                                                     -1, axis=0) \
                     )
 
-                # solve system with current weights, determine pickup
-                # and deficit for current fraction
+                # solve system with current weights
                 Ct_i = scipy.sparse.linalg.spsolve(A, y_i.flatten())
+                Ct_i = prevent_tiny_negatives(Ct_i, p['max_error'])
+                
+                # check for negative values
+                if Ct_i.min() < 0.:
+                    logger.debug(format_log('Removing negative concentrations',
+                                            nrcells=np.sum(Ct_i<0.),
+                                            fraction=i,
+                                            iteration=n,
+                                            minvalue=Ct_i.min(),
+                                            **logprops))
+                                            
+                    Ct_i = np.maximum(0., Ct_i)
+                
+                # determine pickup and deficit for current fraction
                 Cu_i = s['Cu'][:,:,i].flatten()
                 mass_i = s['mass'][:,:,0,i].flatten()
                 w_i = w[:,:,i].flatten()
@@ -710,14 +731,17 @@ class AeoLiS(IBmi):
                 deficit_i = pickup_i - mass_i
                 ix = (deficit_i > p['max_error']) \
                      & (w_i * Cu_i > 0.)
-
-                logger.debug('t = %0.3f, fraction = %d, iteration = %d, # deficit = %d, total deficit = %0.3f' % (self.t, i, n, np.sum(ix), np.sum(deficit_i[ix])))
-
+                     
                 # quit the iteration if there is no deficit, otherwise
                 # back-compute the maximum weight allowed to get zero
                 # deficit fo r the current fraction and progress to
                 # the next iteration step
-                if ~np.any(ix):
+                if not np.any(ix):
+                    logger.debug(format_log('Iteration not converged',
+                                            steps=n,
+                                            fraction=i,
+                                            **logprops))
+                    pickup_i = np.minimum(pickup_i, mass_i)
                     break
                 else:
                     w_i[ix] = (mass_i[ix] * p['T'] / self.dt \
@@ -727,8 +751,24 @@ class AeoLiS(IBmi):
             # throw warning if the maximum number of iterations was
             # reached
             if np.any(ix):
-                logger.warn('Iteration not converged (t=%0.1f, fraction=%d, n=%d)' % \
-                            (self.t, i, np.sum(ix)))
+                logger.warn(format_log('Iteration not converged',
+                                       nrcells=np.sum(ix),
+                                       fraction=i,
+                                       **logprops))
+            
+            # check for unexpected negative values
+            if Ct_i.min() < 0:
+                logger.warn(format_log('Negative concentrations',
+                                       nrcells=np.sum(Ct_i<0.),
+                                       fraction=i,
+                                       minvalue=Ct_i.min(),
+                                       **logprops))
+            if w_i.min() < 0:
+                logger.warn(format_log('Negative weights',
+                                       nrcells=np.sum(w_i<0),
+                                       fraction=i,
+                                       minvalue=w_i.min(),
+                                       **logprops))
 
             Ct[:,:,i] = Ct_i.reshape(y_i.shape)
             pickup[:,:,i] = pickup_i.reshape(y_i.shape)
@@ -739,8 +779,10 @@ class AeoLiS(IBmi):
         ix = 1. - np.sum(w, axis=2) > p['max_error']
         if np.any(ix):
             self._count('supplylim')
-            logger.warn('Ran out of sediment (t=%0.1f, n=%d)' % \
-                        (self.t, np.sum(ix)))
+            logger.warn(format_log('Ran out of sediment',
+                                   nrcells=np.sum(ix),
+                                   minweight=np.sum(w, axis=-1).min(),
+                                   **logprops))
                             
         return dict(Ct=Ct,
                     pickup=pickup,
@@ -883,6 +925,7 @@ class AeoLiSRunner(AeoLiS):
     tout = 0.
     tlog = 0.
     plog = -1.
+    trestart = 0.
 
     n = 0 # time step counter
     o = {} # output stats
@@ -907,9 +950,9 @@ class AeoLiSRunner(AeoLiS):
 
         self.set_configfile(configfile)
         if os.path.exists(self.configfile):
-            self.p = io.read_configfile(configfile, parse_files=False)
+            self.p = io.read_configfile(self.configfile, parse_files=False)
             self.changed = False
-        else:
+        elif self.configfile.upper() == 'DEFAULT':
             self.changed = True
             self.p = constants.DEFAULT_CONFIG
 
@@ -921,9 +964,11 @@ class AeoLiSRunner(AeoLiS):
                                bed_file   = np.linspace(-5.,5.,100.),
                                wind_file  = np.asarray([[0.,10.,0.],
                                                         [3601.,10.,0.]])))
+        else:
+            raise IOError('Configuration file not found [%s]' % self.configfile)
 
 
-    def run(self, callback=None):
+    def run(self, callback=None, restartfile=None):
         '''Start model time loop
 
         Changes current working directory to the model directory,
@@ -940,6 +985,9 @@ class AeoLiSRunner(AeoLiS):
             the model during simulation (e.g. update the bed with new
             measurements). See for syntax
             :func:`~aeolis.model.AeoLiSRunner.parse_callback()`.
+        restartfile : str
+            Path to previously written restartfile. The model state is
+            loaded from this file after initialization of the model.
 
         See Also
         --------
@@ -951,23 +999,22 @@ class AeoLiSRunner(AeoLiS):
         # font: Colossal
 
         print '**********************************************************'
-        print ' '
-        print '         d8888                   888      d8b  .d8888b.   ' 
-        print '        d88888                   888      Y8P d88P  Y88b  ' 
-        print '       d88P888                   888          Y88b.       ' 
-        print '      d88P 888  .d88b.   .d88b.  888      888  "Y888b.    ' 
-        print '     d88P  888 d8P  Y8b d88""88b 888      888     "Y88b.  ' 
-        print '    d88P   888 88888888 888  888 888      888       "888  ' 
-        print '   d8888888888 Y8b.     Y88..88P 888      888 Y88b  d88P  ' 
+        print '                                                          '
+        print '         d8888                   888      d8b  .d8888b.   '
+        print '        d88888                   888      Y8P d88P  Y88b  '
+        print '       d88P888                   888          Y88b.       '
+        print '      d88P 888  .d88b.   .d88b.  888      888  "Y888b.    '
+        print '     d88P  888 d8P  Y8b d88""88b 888      888     "Y88b.  '
+        print '    d88P   888 88888888 888  888 888      888       "888  '
+        print '   d8888888888 Y8b.     Y88..88P 888      888 Y88b  d88P  '
         print '  d88P     888  "Y8888   "Y88P"  88888888 888  "Y8888P"   '
-        print ' '
+        print '                                                          '
 
         # set working directory
         fpath, fname = os.path.split(self.configfile)
         if fpath != os.getcwd():
             os.chdir(fpath)
-            print '  Changed working directory to: %s' % fpath
-            print ''
+            logger.info('Changed working directory to: %s\n', fpath)
 
         # print settings
         self.print_params()
@@ -978,11 +1025,14 @@ class AeoLiSRunner(AeoLiS):
         # parse callback
         callback = self.parse_callback(callback)
         if callback is not None:
-            print '  Applying callback function: %s()' % callback.__name__
-            print ''
+            logger.info('Applying callback function: %s()\n', callback.__name__)
 
         # initialize model
         self.initialize()
+
+        # load restartfile
+        if self.load_restartfile(restartfile):
+            logger.info('Loaded model state from restart file: %s\n', restartfile)
 
         # start model loop
         self.t0 = time.time()
@@ -1224,6 +1274,54 @@ class AeoLiSRunner(AeoLiS):
         
             self.output_clear()
             self.tout = self.t
+            
+        if self.p['restart'] and self.t - self.trestart >= self.p['restart']:
+            self.dump_restartfile()
+            self.trestart = self.t
+
+
+    def load_restartfile(self, restartfile):
+        '''Load model state from restart file
+
+        Parameters
+        ----------
+        restartfile : str
+            Path to previously written restartfile.
+
+        '''
+        
+        if restartfile:
+            if os.path.exists(restartfile):
+                with open(restartfile, 'r') as fp:
+                    state = pickle.load(fp)
+                
+                    self.t = state['t']
+                    self.p = state['p']
+                    self.s = state['s']
+                    self.l = state['l']
+                    self.c = state['c']
+
+                    self.trestart = self.t
+
+                    return True
+            else:
+                raise IOError('Restart file not found [%s]' % restartfile)
+            
+        return False
+        
+                
+    def dump_restartfile(self):
+        '''Dump model state to restart file'''
+
+        restartfile = 'restart_%d.pkl' % int(self.t)
+        with open(restartfile, 'w') as fp:
+            pickle.dump({'t':self.t,
+                         'p':self.p,
+                         's':self.s,
+                         'l':self.l,
+                         'c':self.c}, fp)
+
+        logger.info('Written restart file [%s]' % restartfile)
 
 
     def parse_callback(self, callback):
@@ -1259,7 +1357,7 @@ class AeoLiSRunner(AeoLiS):
         elif callback is None:
             return callback
 
-        log.warn('Invalid callback definition [%s]' % callback)
+        logger.warn('Invalid callback definition [%s]', callback)
         return None
 
                         
@@ -1287,7 +1385,7 @@ class AeoLiSRunner(AeoLiS):
             t1 = time.strftime('%H:%M:%S', time.gmtime(t-self.t0))
             t2 = time.strftime('%H:%M:%S', time.gmtime((t-self.t0) / p))
             t3 = time.strftime('%H:%M:%S', time.gmtime((t-self.t0) * (1. - p) / p))
-            print '[%5.1f%%] %s / %s / %s' % (p * 100., t1, t2, t3)
+            print '%05.1f%%   %s / %s / %s' % (p * 100., t1, t2, t3)
             self.tlog = time.time()
             self.plog = pr
             
@@ -1300,7 +1398,7 @@ class AeoLiSRunner(AeoLiS):
         fmt2 = '  %-%%ds   %%s' % maxl
 
         print '**********************************************************'
-        print 'PARAMETER SETTINGS'
+        print 'PARAMETER SETTINGS                                        '
         print '**********************************************************'
 
         for par, val in sorted(self.p.iteritems()):
@@ -1326,7 +1424,7 @@ class AeoLiSRunner(AeoLiS):
         n_time = self.get_count('time')
         n_matrixsolve = self.get_count('matrixsolve')
         n_supplylim = self.get_count('supplylim')
-        
+
         print ''
         print '**********************************************************'
 
@@ -1335,9 +1433,9 @@ class AeoLiSRunner(AeoLiS):
         print fmt % ('# matrix solves', io.print_value(n_matrixsolve))
         print fmt % ('# supply lim', io.print_value(n_supplylim))
         print fmt % ('avg. solves per step',
-                     io.print_value(float(n_matrixsolve) / n_time))
+                           io.print_value(float(n_matrixsolve) / n_time))
         print fmt % ('avg. time step',
-                     io.print_value(float(self.p['tstop']) / n_time))
+                           io.print_value(float(self.p['tstop']) / n_time))
 
         print '**********************************************************'
         print ''

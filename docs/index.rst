@@ -34,6 +34,7 @@ Contents
 
    sourcecode
    defaults
+   installation
    
 
 Acknowledgements

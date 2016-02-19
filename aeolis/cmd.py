@@ -1,14 +1,14 @@
 import docopt
+import logging
 import numpy as np
 from model import AeoLiSRunner, WindGenerator
-import log
 
 
 def aeolis():
     '''aeolis : a process-based model for simulating supply-limited aeolian sediment transport
 
     Usage:
-        aeolis <config> [--callback=FUNC] [--verbose=LEVEL]
+        aeolis <config> [--callback=FUNC] [--restart=FILE] [--verbose=LEVEL]
 
     Positional arguments:
         config             configuration file
@@ -16,21 +16,28 @@ def aeolis():
     Options:
         -h, --help         show this help message and exit
         --callback=FUNC    reference to callback function (e.g. example/callback.py:callback)
-        --verbose=LEVEL    write logging messages
+        --restart=FILE     model restart file
+        --verbose=LEVEL    write logging messages [default: 20]
 
     '''
     
     arguments = docopt.docopt(aeolis.__doc__)
 
-    # initialize logger
-    if arguments['--verbose'] is not None:
-        log.logging.root.setLevel(int(arguments['--verbose']))
-    else:
-        log.logging.root.setLevel(log.logging.NOTSET)
+    # initialize file logger
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(asctime)-15s %(name)-8s %(levelname)-8s %(message)s',
+                        filename='aeolis.log')
+
+    # initialize console logger
+    console = logging.StreamHandler()
+    console.setLevel(int(arguments['--verbose']))
+    console.setFormatter(logging.Formatter('%(levelname)-8s %(message)s'))
+    logging.getLogger('').addHandler(console)
 
     # start model
     model = AeoLiSRunner(configfile=arguments['<config>'])
-    model.run(callback=arguments['--callback'])
+    model.run(callback=arguments['--callback'],
+              restartfile=arguments['--restart'])
 
 
 def wind():

@@ -5,7 +5,6 @@ import shutil
 import numpy as np
 
 # package modules
-import log
 from utils import *
 from constants import *
 
@@ -52,9 +51,11 @@ def read_configfile(configfile, parse_files=True):
                     key, val = line.split('=')[:2]
                     p[key.strip()] = parse_value(val, parse_files=parse_files)
     else:
-        err = 'File not found [%s]' % configfile
-        log.logging.error(err)
-        raise IOError(err)
+        raise IOError('File not found [%s]' % configfile)
+
+    # normalize grain size distribution
+    if p.has_key('grain_dist'):
+        p['grain_dist'] = normalize(p['grain_dist'])
 
     return p
 
@@ -128,41 +129,38 @@ def check_configuration(p):
     :func:`~aeolis.io.read_configfile`
 
     '''
-    
-    logger = log.Logger()
-    
+
     # check for missing parameters
     missing = [k for k in REQUIRED_CONFIG if not p.has_key(k)]
     if len(missing) > 0:
-        log.error('Missing required parameters [%s]' % ', '.join(missing))
+        raise ValueError('Missing required parameters [%s]' % ', '.join(missing))
+        
 
     # check validity of configuration
     if not isarray(p['xgrid_file']) or \
        not isarray(p['bed_file']) or (not isarray(p['ygrid_file']) and p['ny'] > 0):
-        logger.error('Incomplete bathymetry definition')
+        raise ValueError('Incomplete bathymetry definition')
 
     if not isarray(p['wind_file']) or \
        p['wind_file'].ndim != 2 or p['wind_file'].shape[1] < 3:
-        logger.error('Invalid wind definition file')
+        raise ValueError('Invalid wind definition file')
 
     if p['wind_file'][-1,0] < p['tstop']:
-        logger.error('Wind definition file too short')
+        raise ValueError('Wind definition file too short')
 
     if isarray(p['tide_file']):
         if p['tide_file'].ndim != 2 or p['tide_file'].shape[1] < 2:
-            logger.error('Invalid tide definition file')
+            raise ValueError('Invalid tide definition file')
             
         if p['tide_file'][-1,0] < p['tstop']:
-            logger.error('Tide definition file too short')
+            raise ValueError('Tide definition file too short')
 
     if isarray(p['meteo_file']):
         if p['meteo_file'].ndim != 2 or p['meteo_file'].shape[1] < 7:
-            logger.error('Invalid meteo definition file')
+            raise ValueError('Invalid meteo definition file')
             
         if p['meteo_file'][-1,0] < p['tstop']:
-            logger.error('Meteo definition file too short')
-
-    logger.flush(exception=ValueError('Invalid model configuration'))
+            raise ValueError('Meteo definition file too short')
 
 
 def parse_value(val, parse_files=True, force_list=False):
@@ -230,37 +228,6 @@ def parse_value(val, parse_files=True, force_list=False):
         return None
     else:
         return val
-
-                           
-def print_value(val, fill='<novalue>'):
-    '''Construct a string representation from an arbitrary value
-
-    Parameters
-    ----------
-    val : misc
-        Value to be represented as string
-    fill : str, optional
-        String representation used in case no value is given
-
-    Returns
-    -------
-    str
-        String representation of value
-
-    '''
-
-    if isiterable(val):
-        return ' '.join([print_value(x) for x in val])
-    elif val is None:
-        return fill
-    elif isinstance(val, bool):
-        return 'T' if val else 'F'
-    elif isinstance(val, int):
-        return '%d' % val
-    elif isinstance(val, float):
-        return '%0.6f' % val
-    else:
-        return str(val)
 
 
 def backup(fname):
