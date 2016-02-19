@@ -26,6 +26,7 @@ dt              = 60.,                # [s] Time step size
 CFL             = 1.,                 # [-] CFL number to determine time step in explicit scheme    
 tstart          = 0.,                 # [s] Start time of simulation
 tstop           = 3600.,              # [s] End time of simulation
+restart         = None,               # [s] Interval for which to write restart files
 output_times    = 60.,                # [s] Output interval in seconds of simulation time
 output_file     = 'aeolis.nc',        # Filename of netCDF4 output file
 output_vars     = ['zb', 'zs',

@@ -8,7 +8,7 @@ def aeolis():
     '''aeolis : a process-based model for simulating supply-limited aeolian sediment transport
 
     Usage:
-        aeolis <config> [--callback=FUNC] [--verbose=LEVEL]
+        aeolis <config> [--callback=FUNC] [--restart=FILE] [--verbose=LEVEL]
 
     Positional arguments:
         config             configuration file
@@ -16,6 +16,7 @@ def aeolis():
     Options:
         -h, --help         show this help message and exit
         --callback=FUNC    reference to callback function (e.g. example/callback.py:callback)
+        --restart=FILE     model restart file
         --verbose=LEVEL    write logging messages [default: 20]
 
     '''
@@ -35,7 +36,8 @@ def aeolis():
 
     # start model
     model = AeoLiSRunner(configfile=arguments['<config>'])
-    model.run(callback=arguments['--callback'])
+    model.run(callback=arguments['--callback'],
+              restartfile=arguments['--restart'])
 
 
 def wind():

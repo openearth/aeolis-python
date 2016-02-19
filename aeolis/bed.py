@@ -150,6 +150,8 @@ def update(s, p):
         logger.warn(format_log('Negative mass',
                                nrcells=np.sum(np.any(m<0., axis=-1)),
                                minvalue=m.min(),
+                               minwind=s['uw'].min(),
+                               maxdrop=(l['uw']-s['uw']).max(),
                                time=p['_time']))
         
     # reshape mass matrix

@@ -173,9 +173,9 @@ def format_log(msg, ncolumns=2, **props):
         
     Note
     ----
-    Properties names starting with ``min`` or ``nr`` are
-    respectively replaced by ``min. `` and ``# ``.
-        
+    Properties names starting with ``min``, ``max`` or ``nr`` are
+    respectively replaced by ``min.``, ``max.`` or ``#``.
+
     '''
             
     fmt = []
@@ -184,6 +184,7 @@ def format_log(msg, ncolumns=2, **props):
     i = 0
     for k, v in sorted(props.iteritems()):
         k = re.sub('^min', 'min. ', k)
+        k = re.sub('^max', 'max. ', k)
         k = re.sub('^nr', '# ', k)
     
         fmt.append('%-15s: %-10s ' % (k.ljust(15, '.'),

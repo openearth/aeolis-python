@@ -4,6 +4,7 @@ import time
 import logging
 import numpy as np
 import scipy.sparse
+import cPickle as pickle
 import scipy.sparse.linalg
 from bmi.api import IBmi
 
@@ -599,6 +600,11 @@ class AeoLiS(IBmi):
         # compute transport weights for all sediment fractions
         w = transport.compute_weights(s, p)
 
+        # set model state properties that are added to warnings and errors
+        logprops = dict(minwind=s['uw'].min(),
+                        maxdrop=(l['uw']-s['uw']).max(),
+                        time=self.t)
+
         # define matrix coefficients to solve linear system of equations
         Cs = self.dt * s['dn'] * s['dsdni'] * s['uws']
         Cn = self.dt * s['ds'] * s['dsdni'] * s['uwn']
@@ -713,7 +719,7 @@ class AeoLiS(IBmi):
                                             fraction=i,
                                             iteration=n,
                                             minvalue=Ct_i.min(),
-                                            time=self.t))
+                                            **logprops))
                                             
                     Ct_i = np.maximum(0., Ct_i)
                 
@@ -734,7 +740,7 @@ class AeoLiS(IBmi):
                     logger.debug(format_log('Iteration not converged',
                                             steps=n,
                                             fraction=i,
-                                            time=self.t))
+                                            **logprops))
                     pickup_i = np.minimum(pickup_i, mass_i)
                     break
                 else:
@@ -748,7 +754,7 @@ class AeoLiS(IBmi):
                 logger.warn(format_log('Iteration not converged',
                                        nrcells=np.sum(ix),
                                        fraction=i,
-                                       time=self.t))
+                                       **logprops))
             
             # check for unexpected negative values
             if Ct_i.min() < 0:
@@ -756,13 +762,13 @@ class AeoLiS(IBmi):
                                        nrcells=np.sum(Ct_i<0.),
                                        fraction=i,
                                        minvalue=Ct_i.min(),
-                                       time=self.t))
+                                       **logprops))
             if w_i.min() < 0:
                 logger.warn(format_log('Negative weights',
                                        nrcells=np.sum(w_i<0),
                                        fraction=i,
                                        minvalue=w_i.min(),
-                                       time=self.t))
+                                       **logprops))
 
             Ct[:,:,i] = Ct_i.reshape(y_i.shape)
             pickup[:,:,i] = pickup_i.reshape(y_i.shape)
@@ -776,7 +782,7 @@ class AeoLiS(IBmi):
             logger.warn(format_log('Ran out of sediment',
                                    nrcells=np.sum(ix),
                                    minweight=np.sum(w, axis=-1).min(),
-                                   time=self.t))
+                                   **logprops))
                             
         return dict(Ct=Ct,
                     pickup=pickup,
@@ -919,6 +925,7 @@ class AeoLiSRunner(AeoLiS):
     tout = 0.
     tlog = 0.
     plog = -1.
+    trestart = 0.
 
     n = 0 # time step counter
     o = {} # output stats
@@ -961,7 +968,7 @@ class AeoLiSRunner(AeoLiS):
             raise IOError('Configuration file not found [%s]' % self.configfile)
 
 
-    def run(self, callback=None):
+    def run(self, callback=None, restartfile=None):
         '''Start model time loop
 
         Changes current working directory to the model directory,
@@ -978,6 +985,9 @@ class AeoLiSRunner(AeoLiS):
             the model during simulation (e.g. update the bed with new
             measurements). See for syntax
             :func:`~aeolis.model.AeoLiSRunner.parse_callback()`.
+        restartfile : str
+            Path to previously written restartfile. The model state is
+            loaded from this file after initialization of the model.
 
         See Also
         --------
@@ -1004,7 +1014,7 @@ class AeoLiSRunner(AeoLiS):
         fpath, fname = os.path.split(self.configfile)
         if fpath != os.getcwd():
             os.chdir(fpath)
-            logger.info('  Changed working directory to: %s\n', fpath)
+            logger.info('Changed working directory to: %s\n', fpath)
 
         # print settings
         self.print_params()
@@ -1015,10 +1025,14 @@ class AeoLiSRunner(AeoLiS):
         # parse callback
         callback = self.parse_callback(callback)
         if callback is not None:
-            logger.info('  Applying callback function: %s()\n', callback.__name__)
+            logger.info('Applying callback function: %s()\n', callback.__name__)
 
         # initialize model
         self.initialize()
+
+        # load restartfile
+        if self.load_restartfile(restartfile):
+            logger.info('Loaded model state from restart file: %s\n', restartfile)
 
         # start model loop
         self.t0 = time.time()
@@ -1260,6 +1274,54 @@ class AeoLiSRunner(AeoLiS):
         
             self.output_clear()
             self.tout = self.t
+            
+        if self.p['restart'] and self.t - self.trestart >= self.p['restart']:
+            self.dump_restartfile()
+            self.trestart = self.t
+
+
+    def load_restartfile(self, restartfile):
+        '''Load model state from restart file
+
+        Parameters
+        ----------
+        restartfile : str
+            Path to previously written restartfile.
+
+        '''
+        
+        if restartfile:
+            if os.path.exists(restartfile):
+                with open(restartfile, 'r') as fp:
+                    state = pickle.load(fp)
+                
+                    self.t = state['t']
+                    self.p = state['p']
+                    self.s = state['s']
+                    self.l = state['l']
+                    self.c = state['c']
+
+                    self.trestart = self.t
+
+                    return True
+            else:
+                raise IOError('Restart file not found [%s]' % restartfile)
+            
+        return False
+        
+                
+    def dump_restartfile(self):
+        '''Dump model state to restart file'''
+
+        restartfile = 'restart_%d.pkl' % int(self.t)
+        with open(restartfile, 'w') as fp:
+            pickle.dump({'t':self.t,
+                         'p':self.p,
+                         's':self.s,
+                         'l':self.l,
+                         'c':self.c}, fp)
+
+        logger.info('Written restart file [%s]' % restartfile)
 
 
     def parse_callback(self, callback):
