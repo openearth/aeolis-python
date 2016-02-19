@@ -143,13 +143,14 @@ def update(s, p):
     m[ix_ero,-1,:] -= dm[ix_ero,:] * normalize(p['grain_dist'])[np.newaxis,:].repeat(np.sum(ix_ero), axis=0)
 
     # remove tiny negatives
-    ix = (m < 0.) & (m > -p['max_error'])
-    m[ix] = 0.
+    m = prevent_tiny_negatives(m, p['max_error'])
 
     # warn if not all negatives are gone
     if m.min() < 0:
-        logger.warn('Negative mass [# cells: %d, min. value: %f, time: %0.1f]' % \
-                    (np.sum(np.any(m<0., axis=-1)), m.min(), p['_time']))
+        logger.warn(format_log('Negative mass',
+                               nrcells=np.sum(np.any(m<0., axis=-1)),
+                               minvalue=m.min(),
+                               time=p['_time']))
         
     # reshape mass matrix
     s['mass'] = m.reshape((ny+1,nx+1,nl,nf))

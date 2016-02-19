@@ -229,37 +229,6 @@ def parse_value(val, parse_files=True, force_list=False):
     else:
         return val
 
-                           
-def print_value(val, fill='<novalue>'):
-    '''Construct a string representation from an arbitrary value
-
-    Parameters
-    ----------
-    val : misc
-        Value to be represented as string
-    fill : str, optional
-        String representation used in case no value is given
-
-    Returns
-    -------
-    str
-        String representation of value
-
-    '''
-
-    if isiterable(val):
-        return ' '.join([print_value(x) for x in val])
-    elif val is None:
-        return fill
-    elif isinstance(val, bool):
-        return 'T' if val else 'F'
-    elif isinstance(val, int):
-        return '%d' % val
-    elif isinstance(val, float):
-        return '%0.6f' % val
-    else:
-        return str(val)
-
 
 def backup(fname):
     '''Creates a backup file of the provided file, if it exists'''

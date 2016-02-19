@@ -1,3 +1,4 @@
+import re
 import numpy as np
 
 
@@ -89,3 +90,111 @@ def normalize(x, ref=None, axis=0, fill=0.):
     y = np.zeros(x.shape) + fill
     y[ix] = x[ix] / ref[ix]
     return y
+
+
+def prevent_tiny_negatives(x, max_error=1e-10, replacement=0.):
+    '''Replace tiny negative values in array
+    
+    Parameters
+    ----------
+    x : np.ndarray
+        Array with potential tiny negative values
+    max_error : float
+        Maximum absolute value to be replaced
+    replacement : float
+        Replacement value
+        
+    Returns
+    -------
+    np.ndarray
+        Array with tiny negative values removed
+        
+    '''
+    
+    ix = (x < 0.) & (x > -max_error)
+    x[ix] = replacement
+    
+    return x
+
+                           
+def print_value(val, fill='<novalue>'):
+    '''Construct a string representation from an arbitrary value
+
+    Parameters
+    ----------
+    val : misc
+        Value to be represented as string
+    fill : str, optional
+        String representation used in case no value is given
+
+    Returns
+    -------
+    str
+        String representation of value
+
+    '''
+
+    if isiterable(val):
+        return ' '.join([print_value(x) for x in val])
+    elif val is None:
+        return fill
+    elif isinstance(val, bool):
+        return 'T' if val else 'F'
+    elif isinstance(val, int):
+        return '%d' % val
+    elif isinstance(val, float):
+        if val < 1.:
+            return '%0.6f' % val
+        else:
+            return '%0.1f' % val
+    else:
+        return str(val)
+
+
+def format_log(msg, ncolumns=2, **props):
+    '''Format log message into columns
+    
+    Prints log message and additional data into a column format
+    that fits into a 70 character terminal.
+    
+    Parameters
+    ----------
+    msg : str
+        Main log message
+    ncolumns : int
+        Number of columns
+    props : key/value pairs
+        Properties to print in column format
+        
+    Returns
+    -------
+    str
+        Formatted log message
+        
+    Note
+    ----
+    Properties names starting with ``min`` or ``nr`` are
+    respectively replaced by ``min. `` and ``# ``.
+        
+    '''
+            
+    fmt = []
+    fmt.append('%s\n         ' % msg)
+
+    i = 0
+    for k, v in sorted(props.iteritems()):
+        k = re.sub('^min', 'min. ', k)
+        k = re.sub('^nr', '# ', k)
+    
+        fmt.append('%-15s: %-10s ' % (k.ljust(15, '.'),
+                                      print_value(v)))
+        i += 1
+
+        if i == ncolumns:
+            fmt.append('\n         ')
+            i = 0
+            
+    fmt.append('\n')
+            
+    return ''.join(fmt)
+    

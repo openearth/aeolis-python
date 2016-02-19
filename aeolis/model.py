@@ -702,9 +702,22 @@ class AeoLiS(IBmi):
                                                                     -1, axis=0) \
                     )
 
-                # solve system with current weights, determine pickup
-                # and deficit for current fraction
+                # solve system with current weights
                 Ct_i = scipy.sparse.linalg.spsolve(A, y_i.flatten())
+                Ct_i = prevent_tiny_negatives(Ct_i, p['max_error'])
+                
+                # check for negative values
+                if Ct_i.min() < 0.:
+                    logger.debug(format_log('Removing negative concentrations',
+                                            nrcells=np.sum(Ct_i<0.),
+                                            fraction=i,
+                                            iteration=n,
+                                            minvalue=Ct_i.min(),
+                                            time=self.t))
+                                            
+                    Ct_i = np.maximum(0., Ct_i)
+                
+                # determine pickup and deficit for current fraction
                 Cu_i = s['Cu'][:,:,i].flatten()
                 mass_i = s['mass'][:,:,0,i].flatten()
                 w_i = w[:,:,i].flatten()
@@ -712,13 +725,16 @@ class AeoLiS(IBmi):
                 deficit_i = pickup_i - mass_i
                 ix = (deficit_i > p['max_error']) \
                      & (w_i * Cu_i > 0.)
-
+                     
                 # quit the iteration if there is no deficit, otherwise
                 # back-compute the maximum weight allowed to get zero
                 # deficit fo r the current fraction and progress to
                 # the next iteration step
                 if not np.any(ix):
-                    logger.debug('Iteration converged [steps: %d, fraction: %d, time: %0.1f]' % (n, i, self.t))
+                    logger.debug(format_log('Iteration not converged',
+                                            steps=n,
+                                            fraction=i,
+                                            time=self.t))
                     pickup_i = np.minimum(pickup_i, mass_i)
                     break
                 else:
@@ -729,8 +745,24 @@ class AeoLiS(IBmi):
             # throw warning if the maximum number of iterations was
             # reached
             if np.any(ix):
-                logger.warn('Iteration not converged [fraction: %d, # cells: %d, time: %0.1f]' % \
-                            (i, np.sum(ix), self.t))
+                logger.warn(format_log('Iteration not converged',
+                                       nrcells=np.sum(ix),
+                                       fraction=i,
+                                       time=self.t))
+            
+            # check for unexpected negative values
+            if Ct_i.min() < 0:
+                logger.warn(format_log('Negative concentrations',
+                                       nrcells=np.sum(Ct_i<0.),
+                                       fraction=i,
+                                       minvalue=Ct_i.min(),
+                                       time=self.t))
+            if w_i.min() < 0:
+                logger.warn(format_log('Negative weights',
+                                       nrcells=np.sum(w_i<0),
+                                       fraction=i,
+                                       minvalue=w_i.min(),
+                                       time=self.t))
 
             Ct[:,:,i] = Ct_i.reshape(y_i.shape)
             pickup[:,:,i] = pickup_i.reshape(y_i.shape)
@@ -741,13 +773,10 @@ class AeoLiS(IBmi):
         ix = 1. - np.sum(w, axis=2) > p['max_error']
         if np.any(ix):
             self._count('supplylim')
-            logger.warn('Ran out of sediment [# cells: %d, min. weight: %0.4f, time: %0.1f]' % \
-                        (np.sum(ix), np.sum(w, axis=-1).min(), self.t))
-
-        # warn if weights are negative for some reason
-        if w.min() < 0:
-            logger.warn('Negative weights [# cells: %d, min. value: %f, time: %0.1f]' % \
-                        (np.sum(np.any(w<0., axis=-1)), w.min(), self.t))
+            logger.warn(format_log('Ran out of sediment',
+                                   nrcells=np.sum(ix),
+                                   minweight=np.sum(w, axis=-1).min(),
+                                   time=self.t))
                             
         return dict(Ct=Ct,
                     pickup=pickup,
@@ -975,7 +1004,7 @@ class AeoLiSRunner(AeoLiS):
         fpath, fname = os.path.split(self.configfile)
         if fpath != os.getcwd():
             os.chdir(fpath)
-            logger.info('  Changed working directory to: %s\n' % fpath)
+            logger.info('  Changed working directory to: %s\n', fpath)
 
         # print settings
         self.print_params()
@@ -986,7 +1015,7 @@ class AeoLiSRunner(AeoLiS):
         # parse callback
         callback = self.parse_callback(callback)
         if callback is not None:
-            logger.info('  Applying callback function: %s()\n' % callback.__name__)
+            logger.info('  Applying callback function: %s()\n', callback.__name__)
 
         # initialize model
         self.initialize()
@@ -1266,7 +1295,7 @@ class AeoLiSRunner(AeoLiS):
         elif callback is None:
             return callback
 
-        logger.warn('Invalid callback definition [%s]' % callback)
+        logger.warn('Invalid callback definition [%s]', callback)
         return None
 
                         
@@ -1294,7 +1323,7 @@ class AeoLiSRunner(AeoLiS):
             t1 = time.strftime('%H:%M:%S', time.gmtime(t-self.t0))
             t2 = time.strftime('%H:%M:%S', time.gmtime((t-self.t0) / p))
             t3 = time.strftime('%H:%M:%S', time.gmtime((t-self.t0) * (1. - p) / p))
-            print '%5.1f%%   %s / %s / %s' % (p * 100., t1, t2, t3)
+            print '%05.1f%%   %s / %s / %s' % (p * 100., t1, t2, t3)
             self.tlog = time.time()
             self.plog = pr
             
