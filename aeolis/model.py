@@ -741,8 +741,13 @@ class AeoLiS(IBmi):
         ix = 1. - np.sum(w, axis=2) > p['max_error']
         if np.any(ix):
             self._count('supplylim')
-            logger.warn('Ran out of sediment [# cells: %d, time: %0.1f]' % (np.sum(ix), self.t))
-            logger.debug('Minimum sum of weights is %0.4f' % np.sum(w, axis=2)[ix].min())
+            logger.warn('Ran out of sediment [# cells: %d, min. weight: %0.4f, time: %0.1f]' % \
+                        (np.sum(ix), np.sum(w, axis=-1).min(), self.t))
+
+        # warn if weights are negative for some reason
+        if w.min() < 0:
+            logger.warn('Negative weights [# cells: %d, min. value: %f, time: %0.1f]' % \
+                        (np.sum(np.any(w<0., axis=-1)), w.min(), self.t))
                             
         return dict(Ct=Ct,
                     pickup=pickup,
