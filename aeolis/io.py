@@ -57,6 +57,10 @@ def read_configfile(configfile, parse_files=True):
     if p.has_key('grain_dist'):
         p['grain_dist'] = normalize(p['grain_dist'])
 
+    # set default output file, if not given
+    if not p['output_file']:
+        p['output_file'] = '%s.nc' % os.path.splitext(configfile)[0]
+
     return p
 
 

@@ -1,3 +1,4 @@
+import os
 import docopt
 import logging
 import numpy as np
@@ -26,7 +27,7 @@ def aeolis():
     # initialize file logger
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)-15s %(name)-8s %(levelname)-8s %(message)s',
-                        filename='aeolis.log')
+                        filename='%s.log' % os.path.splitext(arguments['<config>'])[0])
 
     # initialize console logger
     console = logging.StreamHandler()

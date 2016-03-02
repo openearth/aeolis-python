@@ -28,7 +28,7 @@ tstart          = 0.,                 # [s] Start time of simulation
 tstop           = 3600.,              # [s] End time of simulation
 restart         = None,               # [s] Interval for which to write restart files
 output_times    = 60.,                # [s] Output interval in seconds of simulation time
-output_file     = 'aeolis.nc',        # Filename of netCDF4 output file
+output_file     = None,               # Filename of netCDF4 output file
 output_vars     = ['zb', 'zs',
                    'Ct', 'Cu',
                    'uw', 'uth',
@@ -58,7 +58,8 @@ scheme          = 'crank_nicolson',   # Name of numerical scheme (euler_forward,
 method_moist    = 'belly_johnson',    # Name of method to compute wind velocity threshold based on soil moisture content
 max_error       = 1e-6,               # [-] Maximum error at which to quit iterative solution in implicit numerical schemes
 max_iter        = 1000,               # [-] Maximum number of iterations at which to quit iterative solution in implicit numerical schemes
-
+callback        = None,               # Reference to callback function (e.g. example/callback.py:callback)
+    
 )
 
 

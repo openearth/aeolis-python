@@ -737,7 +737,7 @@ class AeoLiS(IBmi):
                 # deficit fo r the current fraction and progress to
                 # the next iteration step
                 if not np.any(ix):
-                    logger.debug(format_log('Iteration not converged',
+                    logger.debug(format_log('Iteration converged',
                                             steps=n,
                                             fraction=i,
                                             **logprops))
@@ -1023,7 +1023,10 @@ class AeoLiSRunner(AeoLiS):
         self.write_params()
 
         # parse callback
-        callback = self.parse_callback(callback)
+        if callback is not None:
+            callback = self.parse_callback(callback)
+        else:
+            callback = self.parse_callback(self.p['callback'])
         if callback is not None:
             logger.info('Applying callback function: %s()\n', callback.__name__)
 
@@ -1313,7 +1316,7 @@ class AeoLiSRunner(AeoLiS):
     def dump_restartfile(self):
         '''Dump model state to restart file'''
 
-        restartfile = 'restart_%d.pkl' % int(self.t)
+        restartfile = '%s.r%010d' % (os.path.splitext(self.p['output_file'])[0], int(self.t))
         with open(restartfile, 'w') as fp:
             pickle.dump({'t':self.t,
                          'p':self.p,
