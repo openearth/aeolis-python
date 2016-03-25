@@ -56,6 +56,7 @@ def read_configfile(configfile, parse_files=True):
     # normalize grain size distribution
     if p.has_key('grain_dist'):
         p['grain_dist'] = normalize(p['grain_dist'])
+        p['grain_size'] = makeiterable(p['grain_size'])
 
     # set default output file, if not given
     if not p['output_file']:

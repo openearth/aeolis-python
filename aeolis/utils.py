@@ -22,7 +22,7 @@ def makeiterable(x):
             x = np.asarray([])
         else:
             x = np.asarray([x])
-    return x
+    return np.asarray(x)
 
 
 def isarray(x):
@@ -146,7 +146,7 @@ def print_value(val, fill='<novalue>'):
         if val < 1.:
             return '%0.6f' % val
         else:
-            return '%0.1f' % val
+            return '%0.2f' % val
     else:
         return str(val)
 
