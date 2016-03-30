@@ -94,10 +94,12 @@ def update(s, p, dt):
 
     '''
 
+    F = -np.log(.05) / p['Tdry']
+    
     # infiltration using Darcy
     ix = s['zs'] - s['zb'] > p['eps']
     s['moist'][ ix,:] = p['porosity']
-    s['moist'][~ix,:] *= np.exp(-p['F'] * dt)
+    s['moist'][~ix,:] *= np.exp(-F * dt)
 
     # evaporation using Penman
     if s.has_key('meteo'):
@@ -122,6 +124,7 @@ def update(s, p, dt):
 
     return s
 
+
 def vaporation_pressure_slope(T):
     '''Compute vaporation pressure slope based on air temperature
 
@@ -141,7 +144,8 @@ def vaporation_pressure_slope(T):
     s = 4098. * 0.6108 * np.exp((17.27 * T) / (T - 237.3)) / (T + 237.3)**2 # [kPa/K]
 
     return s
-    
+
+
 def saturation_pressure(T):
     '''Compute saturation pressure based on air temperature
 

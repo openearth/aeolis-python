@@ -325,7 +325,7 @@ def mixtoplayer(s, p):
         nf = p['nfractions']
 
         # compute depth of disturbence for each cell and repeat for each layer
-        DOD = np.minimum(s['Hs'], (s['zs'] - s['zb']) * p['gamma']) * p['facDOD']
+        DOD = p['facDOD'] * s['Hs']
         DOD = DOD[:,:,np.newaxis].repeat(nl, axis=2)
         
         # determine what layers are above the depth of disturbance

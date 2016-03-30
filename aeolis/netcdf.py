@@ -40,8 +40,8 @@ def initialize(outputfile, outputvars, outputtypes, s, p, dimensions):
     with netCDF4.Dataset(outputfile, 'w') as nc:
 
         # add dimensions
-        nc.createDimension('x', p['nx']+1)
-        nc.createDimension('y', p['ny']+1)
+        nc.createDimension('s', p['nx']+1)
+        nc.createDimension('n', p['ny']+1)
         nc.createDimension('time', 0)
         nc.createDimension('nv', 2)
         nc.createDimension('nv2', 4)
@@ -100,7 +100,29 @@ def initialize(outputfile, outputvars, outputtypes, s, p, dimensions):
         nc.metadata_link = '0'
             
         # add variables
-        nc.createVariable('x', 'float32', (u'y', u'x'))
+        nc.createVariable('s', 'float32', (u's'))
+        nc.variables['s'].long_name = 's-coordinate'
+        nc.variables['s'].standard_name = ''
+        nc.variables['s'].units = ''
+        nc.variables['s'].axis = 'X'
+        nc.variables['s'].valid_min = 0
+        nc.variables['s'].valid_max = 0
+        nc.variables['s'].bounds = ''
+        nc.variables['s'].grid_mapping = ''
+        nc.variables['s'].comment = ''
+        
+        nc.createVariable('n', 'float32', (u'n'))
+        nc.variables['n'].long_name = 'n-coordinate'
+        nc.variables['n'].standard_name = ''
+        nc.variables['n'].units = ''
+        nc.variables['n'].axis = 'Y'
+        nc.variables['n'].valid_min = 0
+        nc.variables['n'].valid_max = 0
+        nc.variables['n'].bounds = ''
+        nc.variables['n'].grid_mapping = ''
+        nc.variables['n'].comment = ''
+        
+        nc.createVariable('x', 'float32', (u'n', u's'))
         nc.variables['x'].long_name = 'x-coordinate'
         nc.variables['x'].standard_name = 'projection_x_coordinate'
         nc.variables['x'].units = 'm'
@@ -111,7 +133,7 @@ def initialize(outputfile, outputvars, outputtypes, s, p, dimensions):
         nc.variables['x'].grid_mapping = 'crs'
         nc.variables['x'].comment = ''
         
-        nc.createVariable('y', 'float32', (u'y', u'x'))
+        nc.createVariable('y', 'float32', (u'n', u's'))
         nc.variables['y'].long_name = 'y-coordinate'
         nc.variables['y'].standard_name = 'projection_y_coordinate'
         nc.variables['y'].units = 'm'
@@ -138,7 +160,7 @@ def initialize(outputfile, outputvars, outputtypes, s, p, dimensions):
         nc.variables['fractions'].valid_max = 0
         nc.variables['fractions'].comment = ''
         
-        nc.createVariable('lat', 'float32', (u'y', u'x'))
+        nc.createVariable('lat', 'float32', (u'n', u's'))
         nc.variables['lat'].long_name = 'latitude'
         nc.variables['lat'].standard_name = 'latitude'
         nc.variables['lat'].units = 'degrees_north'
@@ -148,7 +170,7 @@ def initialize(outputfile, outputvars, outputtypes, s, p, dimensions):
         nc.variables['lat'].ancillary_variables = ''
         nc.variables['lat'].comment = ''
         
-        nc.createVariable('lon', 'float32', (u'y', u'x'))
+        nc.createVariable('lon', 'float32', (u'n', u's'))
         nc.variables['lon'].long_name = 'longitude'
         nc.variables['lon'].standard_name = 'longitude'
         nc.variables['lon'].units = 'degrees_east'
@@ -168,26 +190,26 @@ def initialize(outputfile, outputvars, outputtypes, s, p, dimensions):
         nc.variables['time'].ancillary_variables = ''
         nc.variables['time'].comment = ''
             
-        nc.createVariable('x_bounds', 'float32', (u'y', u'x', u'nv'))
+        nc.createVariable('x_bounds', 'float32', (u's', u'n', u'nv'))
         nc.variables['x_bounds'].units = 'm'
         nc.variables['x_bounds'].comment = 'x-coordinate values at the upper and lower bounds of each pixel.'
             
-        nc.createVariable('y_bounds', 'float32', (u'y', u'x', u'nv'))
+        nc.createVariable('y_bounds', 'float32', (u's', u'n', u'nv'))
         nc.variables['y_bounds'].units = 'm'
         nc.variables['y_bounds'].comment = 'y-coordinate values at the left and right bounds of each pixel.'
             
-        nc.createVariable('lat_bounds', 'float32', (u'y', u'x', u'nv2'))
+        nc.createVariable('lat_bounds', 'float32', (u's', u'n', u'nv2'))
         nc.variables['lat_bounds'].units = 'degrees_north'
         nc.variables['lat_bounds'].comment = 'latitude values at the north and south bounds of each pixel.'
             
-        nc.createVariable('lon_bounds', 'float32', (u'y', u'x', u'nv2'))
+        nc.createVariable('lon_bounds', 'float32', (u's', u'n', u'nv2'))
         nc.variables['lon_bounds'].units = 'degrees_east'
         nc.variables['lon_bounds'].comment = 'longitude values at the west and east bounds of each pixel.'
             
         nc.createVariable('time_bounds', 'float32', (u'time', u'nv'))
         nc.variables['time_bounds'].units = 'seconds since 1970-01-01 00:00:00 0:00'
         nc.variables['time_bounds'].comment = 'time bounds for each time value'
-        
+
         for var in outputvars:
 
             if not s.has_key(var):
@@ -197,6 +219,8 @@ def initialize(outputfile, outputvars, outputtypes, s, p, dimensions):
                 continue
 
             dims = ['time'] + [d[1:] for d in dimensions[var]]
+            dims = ['s' if d == 'x' else d for d in dims]
+            dims = ['n' if d == 'y' else d for d in dims]
             
             for postfix in [None] + list(makeiterable(outputtypes)):
 
@@ -204,7 +228,7 @@ def initialize(outputfile, outputvars, outputtypes, s, p, dimensions):
                     var = '%s.%s' % (var, postfix)
                 else:
                     var = var
-                        
+
                 nc.createVariable(var, 'float32', dims)
                 nc.variables[var].long_name = var
                 nc.variables[var].standard_name = ''
@@ -235,6 +259,8 @@ def initialize(outputfile, outputvars, outputtypes, s, p, dimensions):
         nc.variables['crs'].proj4_params = '+proj=sterea +lat_0=52.15616055555555 +lon_0=5.38763888888889 +k=0.999908 +x_0=155000 +y_0=463000 +ellps=bessel +units=m +towgs84=565.4174,50.3319,465.5542,-0.398957388243134,0.343987817378283,-1.87740163998045,4.0725 +no_defs'
 
         # store static data
+        nc.variables['s'][:] = np.arange(p['nx']+1)
+        nc.variables['n'][:] = np.arange(p['ny']+1)
         nc.variables['x'][:,:] = s['x']
         nc.variables['y'][:,:] = s['y']
         nc.variables['layers'][:] = np.arange(p['nlayers'])
