@@ -216,9 +216,9 @@ class WindShear:
             return
                                 
         ny, nx = g['z'].shape
-        kx, ky = np.meshgrid(np.fft.fftfreq(nx+1, 2 * np.pi / (g['dx']*nx))[1:],
-                             np.fft.fftfreq(ny+1, 2 * np.pi / (g['dy']*ny))[1:])
-        hs = -np.fft.fft2(g['z']);
+        kx, ky = np.meshgrid(2. * np.pi * np.fft.fftfreq(nx+1, g['dx'])[1:],
+                             2. * np.pi * np.fft.fftfreq(ny+1, g['dy'])[1:])
+        hs = np.fft.fft2(g['z'])
         hs = self.filter_highfrequenies(kx, ky, hs, nfilter)
         
         k = np.sqrt(kx**2 + ky**2)
@@ -226,9 +226,9 @@ class WindShear:
         
         dtaux_t = hs * kx**2 / k * 2 / u0**2 * \
                   (-1 + (2 * np.log(self.l/self.z0) + k**2/kx**2) * sigma * \
-                   scipy.special.jn(1, 2 * sigma) / scipy.special.jn(0, 2 * sigma))
+                   scipy.special.kv(1, 2 * sigma) / scipy.special.kv(0, 2 * sigma))
         dtauy_t = hs * kx * ky / k * 2 / u0**2 * \
-                  2 * np.sqrt(2) * sigma * scipy.special.jn(1, 2 * np.sqrt(2) * sigma)
+                  2 * np.sqrt(2) * sigma * scipy.special.kv(1, 2 * np.sqrt(2) * sigma)
         
         self.cgrid['dtaux'] = np.real(np.fft.ifft2(dtaux_t))
         self.cgrid['dtauy'] = np.real(np.fft.ifft2(dtauy_t))
