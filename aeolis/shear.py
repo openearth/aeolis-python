@@ -1,5 +1,6 @@
-import scipy.interpolate
+import numpy as np
 import scipy.special
+import scipy.interpolate
 
 
 class WindShear:
@@ -11,11 +12,19 @@ class WindShear:
     conditions that is aligned with the wind direction, a rotating
     computational grid is automatically defined for the computation.
     The computational grid is extended in all directions using a
-    sigmoid function as to ensure full coverage of the input grid for
-    all wind directions and a circular boundaries.  An extra buffer
-    distance can be used as to minimize the disturbence from the
-    borders in the input grid.  The results are interpolated back to
-    the input grid when necessary.
+    logistic sigmoid function as to ensure full coverage of the input
+    grid for all wind directions, circular boundaries and preservation
+    of the alongshore uniformity.  An extra buffer distance can be
+    used as to minimize the disturbence from the borders in the input
+    grid.  The results are interpolated back to the input grid when
+    necessary.
+
+    Frequencies related to wave lengths smaller than a computational
+    grid cell are filtered from the 2D spectrum of the topography
+    using a logistic sigmoid tapering. The filtering aims to minimize
+    the disturbance as a result of discontinuities in the topography
+    that may physically exists, but cannot be solved for in the
+    computational grid used.
 
     '''
 
@@ -148,33 +157,55 @@ class WindShear:
         gi = self.igrid
         
         xc, yc = self.rotate(gc['xi'], gc['yi'], alpha, origin=(self.x0, self.y0))
-        self.cgrid['z'] = interpolate_grid(gi['x'], gi['y'], gi['z'], xc, yc)
+        zc = self.interpolate(gi['x'], gi['y'], gi['z'], xc, yc)
+        self.cgrid['z'] = zc
         self.cgrid['x'] = xc
         self.cgrid['y'] = yc
         
-        px = self.get_borders(gi['x'])
-        py = self.get_borders(gi['y'])
-        pz = self.get_borders(gi['z'])
-        
-        ix = np.isnan(gc['z'])
-        argmin = lambda x: np.argmin(x), np.min(x)
-        i, d = zip(*[argmin(np.sqrt((px - xn)**2 + (py - yn)**2))
-                     for xn, yn in zip(xc[ix], yc[ix])])
+        bx = self.get_borders(gi['x'])
+        by = self.get_borders(gi['y'])
+        bz = self.get_borders(gi['z'])
+
+        ix = np.isnan(zc)
+        if np.any(ix):
             
-        i = np.asarray(i)
-        d = np.asarray(d)
-                     
-        self.cgrid['z'][ix] = pz[i] * self.get_sigmoid(d)
+            d = np.zeros((np.sum(ix),))
+            z = np.zeros((np.sum(ix),))
+            
+            for i, (xn, yn) in enumerate(zip(xc[ix], yc[ix])):
+                
+                distances = np.hypot(bx - xn, by - yn)
+                idx = np.argmin(distances)
+                d[i] = np.min(distances)
+                z[i] = bz[idx]
+                
+                for j in range(2):
+                    i1 = idx+j-1
+                    i2 = idx+j
+                    
+                    k = self.interpolate_projected_point((bx[i1], by[i1], bz[i1]),
+                                                         (bx[i2], by[i2], bz[i2]),
+                                                         (xn, yn))
+                    
+                    if k:
+                        d[i] = k[0]
+                        z[i] = k[1]
+                        break
+                    
+            self.cgrid['z'][ix] = z * self.get_sigmoid(d)
 
         
-    def compute_shear(self, u0):
+    def compute_shear(self, u0, nfilter=(1.,2.)):
         '''Compute wind shear perturbation for given free-flow wind speed on computational grid
         
         Parameters
         ----------
         u0 : float
             Free-flow wind speed
-        
+        nfilter : 2-tuple
+            Wavenumber range used for logistic sigmoid filter. See
+            :func:`filter_highfrequencies`
+
         '''
             
         g = self.cgrid
@@ -188,7 +219,8 @@ class WindShear:
         kx, ky = np.meshgrid(np.fft.fftfreq(nx+1, 2 * np.pi / (g['dx']*nx))[1:],
                              np.fft.fftfreq(ny+1, 2 * np.pi / (g['dy']*ny))[1:])
         hs = -np.fft.fft2(g['z']);
-                                            
+        hs = self.filter_highfrequenies(kx, ky, hs, nfilter)
+        
         k = np.sqrt(kx**2 + ky**2)
         sigma = np.sqrt(1j * self.L / 4. * kx * self.z0 / self.l)
         
@@ -221,9 +253,9 @@ class WindShear:
                          (g['y'].max() - g['y'].min())**2) + 2 * self.buffer_width
                         
         # determine equidistant, square grid
-        xc, yc = get_exact_grid(x0 - self.D/2., x0 + self.D/2.,
-                                y0 - self.D/2., y0 + self.D/2.,
-                                self.cgrid['dx'], self.cgrid['dy'])
+        xc, yc = self.get_exact_grid(x0 - self.D/2., x0 + self.D/2.,
+                                     y0 - self.D/2., y0 + self.D/2.,
+                                     self.cgrid['dx'], self.cgrid['dy'])
         
         self.x0 = x0
         self.y0 = y0
@@ -251,8 +283,53 @@ class WindShear:
             
         return 1. / (1. + np.exp(-(self.buffer_width-x) / self.buffer_relaxation))
         
-        
+
+    def filter_highfrequenies(self, kx, ky, hs, nfilter=(1., 2,), p=.01):
+        '''Filter high frequencies from a 2D spectrum
+
+        A logistic sigmoid filter is used to taper higher frequencies
+        from the 2D spectrum. The range over which the sigmoid runs
+        from 0 to 1 with a precision ``p`` is given by the 2-tuple
+        ``nfilter``. The range is defined as wavenumbers in terms of
+        gridcells, i.e. a value 1 corresponds to a wave with length
+        ``dx``.
+
+        Parameters
+        ----------
+        kx : numpy.ndarray
+            Wavenumbers in x-direction
+        ky : numpy.ndarray
+            Wavenumbers in y-direction
+        hs : numpy.ndarray
+            2D spectrum
+        nfilter : 2-tuple
+            Wavenumber range used for logistic sigmoid filter
+        p : float
+            Precision of sigmoid range definition
+
+        Returns
+        -------
+        hs : numpy.ndarray
+            Filtered 2D spectrum
+
+        '''
+
+        if nfilter is not None:
+            n1 = np.min(nfilter)
+            n2 = np.max(nfilter)
+            px = 2 * np.pi / self.cgrid['dx'] / np.abs(kx)
+            py = 2 * np.pi / self.cgrid['dy'] / np.abs(ky)
+            s1 =  n1 / np.log(1. / .01 - 1.)
+            s2 = -n2 / np.log(1. / .99 - 1.)
+            f1 = 1. / (1. + np.exp(-(px + n1 - n2) / s1))
+            f2 = 1. / (1. + np.exp(-(py + n1 - n2) / s2))
+            hs *= f1 * f2
+
+        return hs
+    
+                                                                                                                                
     def plot(self, ax=None, cmap='Reds', stride=10, computational_grid=False, **kwargs):
+
         '''Plot wind shear perturbation
             
         Parameters
@@ -352,3 +429,45 @@ class WindShear:
         z = scipy.interpolate.griddata(xy, z.reshape((-1,1)), xyi, method='cubic').reshape(xi.shape)
                              
         return z
+
+
+    @staticmethod
+    def interpolate_projected_point(a, b, p):
+        '''Project point to line segment and return distance and interpolated value
+        
+        Parameters
+        ----------
+        a : iterable
+            Start vector for line segment
+        b : iterable
+            End vector for line segment
+        p : iterable
+            Point vector to be projected
+            
+        Returns
+        -------
+        d : numpy.ndarray
+            Distance from point p to projected point q
+        z : float
+            Interpolated value at projected point q
+            
+        '''
+        
+        a = np.asarray(a)
+        b = np.asarray(b)
+        p = np.asarray(p)
+        
+        ab = b[:-1]-a[:-1]                     # line segment
+        ab2 = np.dot(ab, ab)                   # length of line segment squared
+        
+        if ab2 > 0.:
+            ap = p[:-1]-a[:-1]
+            t = np.dot(ap, ab) / ab2           # location of projected point along line segment as fraction of its length
+            if t >= 0. and t <= 1.:
+                q = a[:-1] + t * ab            # projected point
+                pq = p-q                       # vector from original to projected point
+                d = np.sqrt(np.dot(pq, pq))    # distance from original to projected point
+                z = a[-1] * (1.-t) + b[-1] * t # linearly interpolated height of projected point
+                return d, z
+            
+        return
