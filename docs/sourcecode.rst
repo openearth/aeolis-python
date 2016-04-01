@@ -52,6 +52,9 @@ Wind velocity and direction
 .. automodule:: aeolis.wind
                 :members:
 
+.. automodule:: aeolis.shear
+                :members:
+
 Wind velocity threshold
 ^^^^^^^^^^^^^^^^^^^^^^^
 

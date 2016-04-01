@@ -26,6 +26,11 @@ class WindShear:
     that may physically exists, but cannot be solved for in the
     computational grid used.
 
+    Example
+    -------
+    >>> w = WindShear(x, y, z)
+    >>> w(u0=10., udir=30.).add_shear(taux, tauy)
+
     '''
 
     
@@ -106,25 +111,17 @@ class WindShear:
                             
         dtaux, dtauy = self.rotate(gc['dtaux'], gc['dtauy'], udir)
                                 
-        #taux = 1.25 * .001 * u0**2 * (1. + gc['dtaux'])
-        #tauy = 1.25 * .001 * u0**2 * (0. + gc['dtauy'])
-        #taux, tauy = self.rotate(taux, tauy, udir)
-                                
         self.cgrid['dtaux'] = dtaux
         self.cgrid['dtauy'] = dtauy
-        #self.cgrid['taux'] = taux
-        #self.cgrid['tauy'] = tauy
                                         
         self.igrid['dtaux'] = self.interpolate(gc['x'], gc['y'], dtaux, gi['x'], gi['y'])
         self.igrid['dtauy'] = self.interpolate(gc['x'], gc['y'], dtauy, gi['x'], gi['y'])
-        #self.igrid['taux'] = self.interpolate(gc['x'], gc['y'], taux, gi['x'], gi['y'])
-        #self.igrid['tauy'] = self.interpolate(gc['x'], gc['y'], tauy, gi['x'], gi['y'])
         
         return self
 
 
     def get_shear(self):
-        '''Returns wind shear perturbation
+        '''Returns wind shear perturbation field
         
         Returns
         -------
@@ -137,6 +134,30 @@ class WindShear:
             
         return self.igrid['dtaux'], self.igrid['dtauy']
         
+        
+    def add_shear(self, taux, tauy):
+        '''Add wind shear perturbations to a given wind shear field
+        
+        Parameters
+        ----------
+        taux : numpy.ndarray
+            Wind shear in x-direction
+        tauy : numpy.ndarray
+            Wind shear in y-direction
+
+        Returns
+        -------
+        taux : numpy.ndarray
+            Wind shear including perturbations in x-direction
+        tauy : numpy.ndarray
+            Wind shear including perturbations in y-direction
+        
+        '''
+
+        tau = np.sqrt(taux**2 + tauy**2)
+        return (tau * (taux / tau + dtaux),
+                tau * (tauy / tau + dtauy))
+
         
     def populate_computational_grid(self, alpha):
         '''Interpolate input topography to computational grid
@@ -329,7 +350,6 @@ class WindShear:
     
                                                                                                                                 
     def plot(self, ax=None, cmap='Reds', stride=10, computational_grid=False, **kwargs):
-
         '''Plot wind shear perturbation
             
         Parameters
@@ -343,7 +363,7 @@ class WindShear:
         computational_grid : bool, optional
             Plot on computational grid rather than input grid
             (default: False)
-        **kwargs : dict
+        kwargs : dict
             Additional arguments to :func:`matplotlib.pyplot.quiver`
             
         Returns
