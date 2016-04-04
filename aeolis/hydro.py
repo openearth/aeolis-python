@@ -29,18 +29,18 @@ def interpolate(s, p, t):
 
     if p['tide_file'] is not None:
     
-        s['zs'][:,:] = np.interp(t,
-                                 p['tide_file'][:,0],
-                                 p['tide_file'][:,1])
+        s['zs'][:,:] = interp_circular(t,
+                                       p['tide_file'][:,0],
+                                       p['tide_file'][:,1])
 
         # ensure compatibility with XBeach: zs >= zb
         s['zs'] = np.maximum(s['zs'], s['zb'])
 
     if p['wave_file'] is not None:
     
-        s['Hs'][:,:] = np.interp(t,
-                                 p['wave_file'][:,0],
-                                 p['wave_file'][:,1])
+        s['Hs'][:,:] = interp_circular(t,
+                                       p['wave_file'][:,0],
+                                       p['wave_file'][:,1])
 
         # maximize wave height by depth ratio ``gamma``
         s['Hs'] = np.minimum((s['zs'] - s['zb']) * p['gamma'], s['Hs'])
@@ -49,7 +49,7 @@ def interpolate(s, p, t):
 
         m = interp_array(t,
                          p['meteo_file'][:,0],
-                         p['meteo_file'][:,1:])
+                         p['meteo_file'][:,1:], circular=True)
 
         s['meteo'] = dict(zip(('S','T','R','s','p','l') , m))
 

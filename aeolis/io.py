@@ -150,22 +150,22 @@ def check_configuration(p):
        p['wind_file'].ndim != 2 or p['wind_file'].shape[1] < 3:
         raise ValueError('Invalid wind definition file')
 
-    if p['wind_file'][-1,0] < p['tstop']:
-        raise ValueError('Wind definition file too short')
+#    if p['wind_file'][-1,0] < p['tstop']:
+#        raise ValueError('Wind definition file too short')
 
     if isarray(p['tide_file']):
         if p['tide_file'].ndim != 2 or p['tide_file'].shape[1] < 2:
             raise ValueError('Invalid tide definition file')
             
-        if p['tide_file'][-1,0] < p['tstop']:
-            raise ValueError('Tide definition file too short')
+#        if p['tide_file'][-1,0] < p['tstop']:
+#            raise ValueError('Tide definition file too short')
 
     if isarray(p['meteo_file']):
         if p['meteo_file'].ndim != 2 or p['meteo_file'].shape[1] < 7:
             raise ValueError('Invalid meteo definition file')
             
-        if p['meteo_file'][-1,0] < p['tstop']:
-            raise ValueError('Meteo definition file too short')
+#        if p['meteo_file'][-1,0] < p['tstop']:
+#            raise ValueError('Meteo definition file too short')
 
 
 def parse_value(val, parse_files=True, force_list=False):

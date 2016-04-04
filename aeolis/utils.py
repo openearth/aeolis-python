@@ -36,7 +36,7 @@ def isarray(x):
         return False
 
 
-def interp_array(x, xp, fp, **kwargs):
+def interp_array(x, xp, fp, circular=False, **kwargs):
     '''Interpolate multiple time series at once
 
     Parameters
@@ -47,8 +47,11 @@ def interp_array(x, xp, fp, **kwargs):
         The x-coordinates of the data points, must be increasing.
     fp : 2-D sequence of floats
         The y-coordinates of the data points, same length as ``xp``.
+    circular : bool
+        Use the :func:`interp_circular` function rather than the 
+        :func:`numpy.interp` function.
     kwargs : dict
-        Keyword options to the numpy.interp function
+        Keyword options to the :func:`numpy.interp` function
 
     Returns
     -------
@@ -59,8 +62,51 @@ def interp_array(x, xp, fp, **kwargs):
     
     f = np.zeros((1,fp.shape[1]))
     for i in range(fp.shape[1]):
-        f[i] = np.interp(x, xp, fp[:,i], **kwargs)
+        if circular:
+            f[i] = interp_circular(x, xp, fp[:,i], **kwargs)
+        else:
+            f[i] = np.interp(x, xp, fp[:,i], **kwargs)
     return f
+
+
+def interp_circular(x, xp, fp, **kwargs):
+    '''One-dimensional linear interpolation.
+
+    Returns the one-dimensional piecewise linear interpolant to a
+    function with given values at discrete data-points. Values beyond
+    the limits of ``x`` are interpolated in circular manner. For
+    example, a value of ``x > x.max()`` evaluates as ``f(x-x.max())``
+    assuming that ``x.max() - x < x.max()``.
+
+    Parameters
+    ----------
+    x : array_like
+        The x-coordinates of the interpolated values.
+    xp : 1-D sequence of floats
+        The x-coordinates of the data points, must be increasing.
+    fp : 1-D sequence of floats
+        The y-coordinates of the data points, same length as ``xp``.
+    kwargs : dict
+        Keyword options to the :func:`numpy.interp` function
+
+    Returns
+    -------
+    y : {float, ndarray}
+        The interpolated values, same shape as ``x``.
+
+    Raises
+    ------
+    ValueError
+        If ``xp`` and ``fp`` have different length
+
+    '''
+    
+    xmin = xp.min()
+    xmax = xp.max()
+    xrng = xmax - xmin
+    
+    x = xmin + np.mod(x - xmax - 1., xrng + 1.)
+    return np.interp(x, xp, fp, **kwargs)
 
 
 def normalize(x, ref=None, axis=0, fill=0.):
