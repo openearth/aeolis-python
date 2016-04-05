@@ -30,6 +30,7 @@ def equilibrium(s, p):
     s['Cu'] = np.zeros(uw.shape)
     s['Cu'][ix] = np.maximum(0., alpha * p['Cb'] * p['rhoa'] / p['g'] \
                              * (uw[ix] - s['uth'][ix])**3 / uw[ix])
+    s['Cu'] *= p['accfac']
 
     return s
 

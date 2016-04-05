@@ -172,7 +172,7 @@ class AeoLiS(IBmi):
         self.s = bed.update(self.s, self.p)
 
         # increment time
-        self.t += self.dt
+        self.t += self.dt * self.p['accfac']
         self._count('time')
 
 
@@ -252,7 +252,10 @@ class AeoLiS(IBmi):
         '''
 
         if self.s.has_key(var):
-            return self.s[var]
+            if var in ['Ct', 'Cu']:
+                return self.s[var] / self.p['accfac']
+            else:
+                return self.s[var]
         elif self.p.has_key(var):
             return self.p[var]
         else:
@@ -603,7 +606,8 @@ class AeoLiS(IBmi):
         # set model state properties that are added to warnings and errors
         logprops = dict(minwind=s['uw'].min(),
                         maxdrop=(l['uw']-s['uw']).max(),
-                        time=self.t)
+                        time=self.t,
+                        dt=self.dt)
 
         # define matrix coefficients to solve linear system of equations
         Cs = self.dt * s['dn'] * s['dsdni'] * s['uws']
@@ -714,12 +718,12 @@ class AeoLiS(IBmi):
                 
                 # check for negative values
                 if Ct_i.min() < 0.:
-                    logger.debug(format_log('Removing negative concentrations',
-                                            nrcells=np.sum(Ct_i<0.),
-                                            fraction=i,
-                                            iteration=n,
-                                            minvalue=Ct_i.min(),
-                                            **logprops))
+                    logger.warn(format_log('Removing negative concentrations',
+                                           nrcells=np.sum(Ct_i<0.),
+                                           fraction=i,
+                                           iteration=n,
+                                           minvalue=Ct_i.min(),
+                                           **logprops))
                                             
                     Ct_i = np.maximum(0., Ct_i)
                 
