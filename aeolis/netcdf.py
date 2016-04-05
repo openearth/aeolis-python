@@ -210,24 +210,24 @@ def initialize(outputfile, outputvars, outputtypes, s, p, dimensions):
         nc.variables['time_bounds'].units = 'seconds since 1970-01-01 00:00:00 0:00'
         nc.variables['time_bounds'].comment = 'time bounds for each time value'
 
-        for var in outputvars:
+        for var0 in outputvars:
 
-            if not s.has_key(var):
+            if not s.has_key(var0):
                 continue
 
-            if not dimensions.has_key(var):
+            if not dimensions.has_key(var0):
                 continue
 
-            dims = ['time'] + [d[1:] for d in dimensions[var]]
+            dims = ['time'] + [d[1:] for d in dimensions[var0]]
             dims = ['s' if d == 'x' else d for d in dims]
             dims = ['n' if d == 'y' else d for d in dims]
             
             for postfix in [None] + list(makeiterable(outputtypes)):
 
                 if postfix:
-                    var = '%s.%s' % (var, postfix)
+                    var = '%s.%s' % (var0, postfix)
                 else:
-                    var = var
+                    var = var0
 
                 nc.createVariable(var, 'float32', dims)
                 nc.variables[var].long_name = var
