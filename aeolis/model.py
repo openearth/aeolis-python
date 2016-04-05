@@ -544,10 +544,10 @@ class AeoLiS(IBmi):
         sediment is reduced.
 
         The linear system of equations that is solved depends on the
-        selected numerical scheme. The offshore and onshore boundaries
-        are Neumann boundaries. The lateral boundaries have circular
-        boundary conditions. Therefore the system that is solved
-        reads:
+        selected numerical scheme. The offshore boundary is a
+        zero-flux boundary, the onshore boundary is a zero-gradient
+        boundariy. The lateral boundaries have circular boundary
+        conditions. Therefore the system that is solved reads:
 
         .. include:: ../docs/linear_system.inc
 
@@ -643,8 +643,8 @@ class AeoLiS(IBmi):
         # add neumann boundaries
         A0[:,0] = 1.
         Apx[:,0] = 0.
-        Ap2[:,0] = s['ds'][:,1] / s['ds'][:,2]
-        Ap1[:,0] = -1. - s['ds'][:,1] / s['ds'][:,2]
+        Ap2[:,0] = 0. #s['ds'][:,1] / s['ds'][:,2]
+        Ap1[:,0] = 0. #-1. - s['ds'][:,1] / s['ds'][:,2]
         Amx[:,0] = 0.
         Am2[:,0] = 0.
         Am1[:,0] = 0.
