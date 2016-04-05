@@ -167,6 +167,19 @@ def compute_roughness(s, p):
 
     '''
 
+    # TODO: these are shape dependent constants and should be
+    # configurable
+    m = 1.
+    sigma = 3.
+    beta = 45.
+
+    # TODO: now only the largest fraction is taken into account and
+    # assumed to be non-eridible, this should be configurable
+    lmb = s['mass'][:,:,0,-1:] / s['mass'][:,:,0,:].sum(axis=-1, keepdims=True)
+    lmb = lmb.repeat(p['nfractions'], axis=2)
+    
+    s['uth'] *= np.sqrt((1. - m * sigma * lmb) * (1 + m * beta * lmb))
+    
     return s
 
 
