@@ -354,7 +354,7 @@ def mixtoplayer(s, p):
         # compute depth of disturbence for each cell and repeat for each layer
         DOD = p['facDOD'] * s['Hs']
         DOD = DOD[:,:,np.newaxis].repeat(nl, axis=2)
-        
+
         # determine what layers are above the depth of disturbance
         ix = (s['thlyr'].cumsum(axis=2) <= DOD) & (DOD > 0.)
         ix = ix[:,:,:,np.newaxis].repeat(nf, axis=3)

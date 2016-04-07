@@ -58,6 +58,14 @@ class WindShear:
     >>> w = WindShear(x, y, z)
     >>> w(u0=10., udir=30.).add_shear(taux, tauy)
 
+    Notes
+    -----
+    To do:
+    - Actual resulting values are still to be compared with the results
+      from Kroy et al. (2002)
+    - Grid interpolation can still be optimized
+    - Separation bubble is still to be implemented
+
     '''
 
     
@@ -182,10 +190,23 @@ class WindShear:
         '''
 
         tau = np.sqrt(taux**2 + tauy**2)
-        return (tau * (taux / tau + dtaux),
-                tau * (tauy / tau + dtauy))
+        return (tau * (taux / tau + self.igrid['dtaux']),
+                tau * (tauy / tau + self.igrid['dtauy']))
 
+
+    def set_topo(self, z):
+        '''Update topography
+
+        Parameters
+        ----------
+        z : numpy.ndarray
+            2D array with topography of input grid
+
+        '''
+
+        self.igrid['z'] = z
         
+
     def populate_computational_grid(self, alpha):
         '''Interpolate input topography to computational grid
             
