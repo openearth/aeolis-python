@@ -61,10 +61,11 @@ class WindShear:
     Notes
     -----
     To do:
-    - Actual resulting values are still to be compared with the results
-      from Kroy et al. (2002)
-    - Grid interpolation can still be optimized
-    - Separation bubble is still to be implemented
+
+    * Actual resulting values are still to be compared with the results
+       from Kroy et al. (2002)
+    * Grid interpolation can still be optimized
+    * Separation bubble is still to be implemented
 
     '''
 
@@ -289,7 +290,7 @@ class WindShear:
                              2. * np.pi * np.fft.fftfreq(ny+1, g['dy'])[1:])
         hs = np.fft.fft2(g['z'])
         hs = self.filter_highfrequenies(kx, ky, hs, nfilter)
-        
+
         k = np.sqrt(kx**2 + ky**2)
         sigma = np.sqrt(1j * self.L / 4. * kx * self.z0 / self.l)
         
