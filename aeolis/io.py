@@ -36,7 +36,7 @@ from utils import *
 from constants import *
 
 
-def read_configfile(configfile, parse_files=True):
+def read_configfile(configfile, parse_files=True, load_defaults=True):
     '''Read model configuration file
 
     Updates default model configuration based on a model configuration
@@ -56,6 +56,9 @@ def read_configfile(configfile, parse_files=True):
         Model configuration file
     parse_files : bool
         If True, files referred to by string parameters are parsed
+    load_defaults : bool
+        If True, default settings are loaded and overwritten by the
+        settings from the configuration file
 
     Returns
     -------
@@ -67,9 +70,13 @@ def read_configfile(configfile, parse_files=True):
     --------
     :func:`~aeolis.io.write_configfile`
     :func:`~aeolis.io.check_configuration`
+
     '''
 
-    p = DEFAULT_CONFIG.copy()
+    if load_defaults:
+        p = DEFAULT_CONFIG.copy()
+    else:
+        p = {}
     
     if os.path.exists(configfile):
         with open(configfile, 'r') as fp:
@@ -86,7 +93,7 @@ def read_configfile(configfile, parse_files=True):
         p['grain_size'] = makeiterable(p['grain_size'])
 
     # set default output file, if not given
-    if not p['output_file']:
+    if p.has_key('output_file') and not p['output_file']:
         p['output_file'] = '%s.nc' % os.path.splitext(configfile)[0]
 
     return p
