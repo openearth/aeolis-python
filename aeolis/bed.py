@@ -348,16 +348,27 @@ def mixtoplayer(s, p):
     if p['mixtoplayer']:
         
         # get model dimensions
+        nx = p['nx']+1
+        ny = p['ny']+1
         nl = p['nlayers']
         nf = p['nfractions']
 
         # compute depth of disturbence for each cell and repeat for each layer
         DOD = p['facDOD'] * s['Hs']
+
+        # compute ratio total layer thickness and depth of disturbance 
+        ix = DOD > 0.
+        f = np.ones(DOD.shape)
+        f[ix] = np.minimum(1., s['thlyr'].sum(axis=2)[ix] / DOD[ix])
+
+        # correct shapes
         DOD = DOD[:,:,np.newaxis].repeat(nl, axis=2)
+        f = f[:,:,np.newaxis].repeat(nl, axis=2)
 
         # determine what layers are above the depth of disturbance
         ix = (s['thlyr'].cumsum(axis=2) <= DOD) & (DOD > 0.)
         ix = ix[:,:,:,np.newaxis].repeat(nf, axis=3)
+        f = f[:,:,:,np.newaxis].repeat(nf, axis=3)
         
         # average mass over layers
         if np.any(ix):
@@ -365,6 +376,8 @@ def mixtoplayer(s, p):
             mass = s['mass'].copy()
             mass[~ix] = np.nan
             
-            s['mass'][ix] = np.nanmean(mass, axis=2)[:,:,np.newaxis,:].repeat(nl, axis=2)[ix]
+            gd = normalize(p['grain_dist']).reshape((1,1,1,-1)).repeat(ny, axis=0).repeat(nx, axis=1)
+            mass = np.nanmean(mass, axis=2, keepdims=True) * f + gd * (1. - f)
+            s['mass'][ix] = mass.repeat(nl, axis=2)[ix]
         
     return s
