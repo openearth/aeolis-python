@@ -94,7 +94,7 @@ def compute_grainsize(s, p):
     '''
 
     s['uth'][:,:,:] = 1.
-    s['uth'][:,:,:] *= p['A'] * np.sqrt(((p['rhop'] - p['rhoa']) * p['g'] * p['grain_size']) / p['rhop'])
+    s['uth'][:,:,:] *= p['A'] * np.sqrt((p['rhop'] - p['rhoa']) / p['rhoa'] * p['g'] * p['grain_size'])
     return s
 
 
@@ -142,9 +142,9 @@ def compute_moisture(s, p):
     mg = (s['moist'][:,:,:1] * p['rhow'] / (p['rhop'] * (1. - p['porosity']))).repeat(nf, axis=2)
     ix = mg > 0.005
     
-    if p['method_moist'] == 'belly_johnson':
+    if p['method_moist'].lower() == 'belly_johnson':
         s['uth'][ix] *= np.maximum(1., 1.8+0.6*np.log10(mg[ix]))
-    elif p['method_moist'] == 'hotta':
+    elif p['method_moist'].lower() == 'hotta':
         s['uth'][ix] += 7.5 * mg[ix]
     else:
         raise ValuerError('Unknown moisture formulation [%s]' % p['method_moist'])
@@ -180,6 +180,61 @@ def compute_humidity(s, p):
 def compute_roughness(s, p):
     '''Modify wind velocity threshold based on the presence of roughness elements following Raupach (1993)
 
+    Raupach (1993) presents the following amplification factor for the
+    shear velocity threshold due to the presence of roughness
+    elements.
+
+    .. math::
+    
+        R_t = \\frac{u_{*,th,s}}{u_{*,th,r}} 
+            = \\sqrt{\\frac{\\tau_s''}{\\tau}} 
+            = \\frac{1}{\\sqrt{\\left( 1 - m \\sigma \\lambda \\right)
+                               \\left( 1 + m \\beta \\lambda \\right)}}
+
+    :math:`m` is a constant smaller or equal to unity that accounts
+    for the difference between the average stress on the bed surface
+    :math:`\\tau_s` and the maximum stress on the bed surface
+    :math:`\\tau_s''`.
+
+    :math:`\\beta` is the stress partition coefficient defined as the
+    ratio between the drag coefficient of the roughness element itself
+    :math:`C_r` and the drag coefficient of the bare surface without
+    roughness elements :math:`C_s`.
+
+    :math:`\\sigma` is the shape coefficient defined as the basal area
+    divided by the frontal area: :math:`\\frac{A_b}{A_f}`. For
+    hemispheres :math:`\\sigma = 2`, for spheres :math:`\\sigma = 1`.
+
+    :math:`\\lambda` is the roughness density defined as the number of
+    elements per surface area :math:`\\frac{n}{S}` multiplied by the
+    frontal area of a roughness element :math:`A_f`, also known as the
+    frontal area index:
+
+    .. math::
+
+        \\lambda = \\frac{n b h}{S} = \\frac{n A_f}{S}
+
+    If multiplied by :math:`\\sigma` the equation simplifies to the
+    mass fraction of non-erodible elements:
+
+    .. math::
+    
+        \\sigma \\lambda = \\frac{n A_b}{S} = \\sum_{j=n}^N m_j
+
+    where :math:`j` is the fraction index, :math:`n` is the smallest
+    non-erodible fraction, :math:`N` is the largest non-erodible
+    fraction and :math:`m_j` is the mass fraction of sediment fraction
+    :math:`j`. It is assumed that the fractions are ordered by
+    increasing size.
+
+    Substituting the derivation in the Raupach (1993) equation gives
+    the formulation implemented in this function:
+
+    .. math::
+    
+        u_{*,th,r} = u_{*,th,s} * \\sqrt{\\left( 1 - m \\sum_{j=n}^N m_j \\right)
+                                         \\left( 1 + m \\frac{\\beta}{\\sigma} \\sum_{j=n}^N m_j \\right)}
+
     Parameters
     ----------
     s : dict
@@ -194,18 +249,23 @@ def compute_roughness(s, p):
 
     '''
 
-    # TODO: these are shape dependent constants and should be
-    # configurable
-    m = 1.
-    sigma = 3.
-    beta = 45.
+    nx = p['nx']+1
+    ny = p['ny']+1
+    nf = p['nfractions']
 
-    # TODO: now only the largest fraction is taken into account and
-    # assumed to be non-eridible, this should be configurable
-    lmb = s['mass'][:,:,0,-1:] / s['mass'][:,:,0,:].sum(axis=-1, keepdims=True)
-    lmb = lmb.repeat(p['nfractions'], axis=2)
-    
-    s['uth'] *= np.sqrt((1. - m * sigma * lmb) * (1 + m * beta * lmb))
+    # mass fraction of non-erodible fractions used as roughness measure
+    mass = s['mass'][:,:,0,:].reshape((-1,nf))
+    gd = np.zeros((nx*ny,))
+    for i in range(nf):
+        ix = (s['tau'] <= s['uth'][:,:,i]).flatten()
+        gd[ix] += mass[ix,i]
+    gd /= mass.sum(axis=-1)
+
+    # compute inverse of shear stress ratio
+    Rti = np.sqrt((1. - p['m'] * gd) * (1. + p['m'] * p['beta'] / p['sigma'] * gd))
+
+    # modify shear velocity threshold
+    s['uth'] *= Rti.reshape((ny,nx,1)).repeat(nf, axis=-1)
     
     return s
 
