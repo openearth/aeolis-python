@@ -29,6 +29,7 @@ import os
 import imp
 import time
 import logging
+import operator
 import numpy as np
 import scipy.sparse
 import cPickle as pickle
@@ -628,7 +629,15 @@ class AeoLiS(IBmi):
         pickup = s['pickup'].copy()
 
         # compute transport weights for all sediment fractions
-        w = transport.compute_weights(s, p)
+        w_init, w_air, w_bed = transport.compute_weights(s, p)
+
+        if self.t == 0.:
+            # use initial guess for first time step
+            w = p['grain_dist'].reshape((1,1,-1))
+            w = w.repeat(p['ny']+1, axis=0)
+            w = w.repeat(p['nx']+1, axis=1)
+        else:
+            w = w_init.copy()
 
         # set model state properties that are added to warnings and errors
         logprops = dict(minwind=s['uw'].min(),
@@ -671,11 +680,9 @@ class AeoLiS(IBmi):
         Amx = -Cn * alpha * ixn
         Am1 = -Cs * alpha * ixs
 
-        # add neumann boundaries
+        # add boundaries
         A0[:,0] = 1.
         Apx[:,0] = 0.
-        Ap2[:,0] = 0. #s['ds'][:,1] / s['ds'][:,2]
-        Ap1[:,0] = 0. #-1. - s['ds'][:,1] / s['ds'][:,2]
         Amx[:,0] = 0.
         Am2[:,0] = 0.
         Am1[:,0] = 0.
@@ -684,8 +691,33 @@ class AeoLiS(IBmi):
         Apx[:,-1] = 0.
         Ap1[:,-1] = 0.
         Amx[:,-1] = 0.
-        Am2[:,-1] = s['ds'][:,-1] / s['ds'][:,-2]
-        Am1[:,-1] = -1. - s['ds'][:,-1] / s['ds'][:,-2]
+        
+        if p['boundary_offshore'] == 'noflux':
+            Ap2[:,0] = 0.
+            Ap1[:,0] = 0.
+        elif p['boundary_offshore'] == 'gradient':
+            Ap2[:,0] = s['ds'][:,1] / s['ds'][:,2]
+            Ap1[:,0] = -1. - s['ds'][:,1] / s['ds'][:,2]
+        else:
+            raise ValueError('Unknown offshore boundary condition [%s]' % self.p['boundary_offshore'])
+            
+        if p['boundary_onshore'] == 'noflux':
+            Am2[:,-1] = 0.
+            Am1[:,-1] = 0.
+        elif p['boundary_onshore'] == 'gradient':
+            Am2[:,-1] = s['ds'][:,-1] / s['ds'][:,-2]
+            Am1[:,-1] = -1. - s['ds'][:,-1] / s['ds'][:,-2]
+        else:
+            raise ValueError('Unknown onshore boundary condition [%s]' % self.p['boundary_onshore'])
+
+        if p['boundary_lateral'] == 'noflux':
+            raise NotImplementedError('Lateral no-flux boundary condition not yet implemented')
+        elif p['boundary_lateral'] == 'gradient':
+            raise NotImplementedError('Lateral gradient boundary condition not yet implemented')
+        elif p['boundary_lateral'] == 'circular':
+            pass
+        else:
+            raise ValueError('Unknown lateral boundary condition [%s]' % self.p['boundary_lateral'])
 
         # construct sparse matrix
         if p['ny'] > 0:
@@ -817,7 +849,10 @@ class AeoLiS(IBmi):
                             
         return dict(Ct=Ct,
                     pickup=pickup,
-                    w=w)
+                    w=w,
+                    w_init=w_init,
+                    w_air=w_air,
+                    w_bed=w_bed)
 
 
     def get_count(self, name):
@@ -904,9 +939,9 @@ class AeoLiS(IBmi):
         
         dims.update({v:('ny','nx')
                      for v in ['x', 'y', 'zb', 'ds', 'dn', 'dsdn', 'dsdni',
-                               'alfa', 'uw', 'uws', 'uwn', 'udir', 'zs', 'Hs']})
+                               'alfa', 'uw', 'uws', 'uwn', 'tau', 'taus', 'taun', 'udir', 'zs', 'Hs']})
         dims.update({v:('ny','nx','nfractions')
-                     for v in ['Cu', 'Ct', 'pickup', 'w', 'uth']})
+                     for v in ['Cu', 'Ct', 'pickup', 'w', 'w_init', 'w_air', 'w_bed', 'uth']})
         dims.update({v:('ny','nx','nlayers')
                      for v in ['thlyr', 'moist']})
         dims.update({v:('ny','nx','nlayers','nfractions')
@@ -1596,7 +1631,9 @@ class WindGenerator():
         
         self.state = next(j for j,v in enumerate(self.MTMcum[self.state]) if v > r1)
         self.states.append(self.state)
-        self.wind_speeds.append(self.bins[self.state] - 0.5 + r2 * self.bin_size)
+
+        u = np.maximum(0., self.bins[self.state] - 0.5 + r2 * self.bin_size)
+        self.wind_speeds.append(u)
         
         self.t += self.dt
         

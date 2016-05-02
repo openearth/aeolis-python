@@ -47,16 +47,26 @@ def equilibrium(s, p):
         Spatial grids
 
     '''
-    
+
     nf = p['nfractions']
     uw = s['uw'][:,:,np.newaxis].repeat(nf, axis=2)
-    ix = uw != 0.
-    
-    alpha = (0.174 / np.log10(p['z0'] / p['k']))**3
+    tau = s['tau'][:,:,np.newaxis].repeat(nf, axis=2)
+    ix = tau != 0.
 
     s['Cu'] = np.zeros(uw.shape)
-    s['Cu'][ix] = np.maximum(0., alpha * p['Cb'] * p['rhoa'] / p['g'] \
-                             * (uw[ix] - s['uth'][ix])**3 / uw[ix])
+
+    if p['method_transport'].lower() == 'bagnold':
+        s['Cu'][ix] = np.maximum(0., p['Cb'] * p['rhoa'] / p['g'] \
+                                 * (tau[ix] - s['uth'][ix])**3 / uw[ix])
+    elif p['method_transport'].lower() == 'kawamura':
+        s['Cu'][ix] = np.maximum(0., p['Cb'] * p['rhoa'] / p['g'] \
+                                 * (tau[ix] + s['uth'][ix])**2 * (tau[ix] - s['uth'][ix]) / uw[ix])
+    elif p['method_transport'].lower() == 'lettau':
+        s['Cu'][ix] = np.maximum(0., p['Cb'] * p['rhoa'] / p['g'] \
+                                 * (tau[ix] - s['uth'][ix]) * tau[ix]**2 / uw[ix])
+    else:
+        raise ValuerError('Unknown transport formulation [%s]' % p['method_transport'])
+
     s['Cu'] *= p['accfac']
 
     return s
@@ -93,7 +103,7 @@ def compute_weights(s, p):
         (1. - np.minimum(1., (1. - p['bi']) * np.sum(w_air, axis=2, keepdims=True)))
     w = normalize(w, axis=2)
     
-    return w
+    return w, w_air, w_bed
 
 
 def renormalize_weights(w, ix):

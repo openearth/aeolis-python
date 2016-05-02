@@ -70,9 +70,37 @@ def interpolate(s, p, t):
     s['uwn'] = s['uw'] * np.sin(s['alfa'] + s['udir'] / 180. * np.pi)
 
     if p['ny'] == 0:
-       s['uw'] = s['uws']
-       s['uwn'][:,:] = 0.
+        s['uw'] = s['uws']
+        s['uwn'][:,:] = 0.
 
     s['uw'] = np.abs(s['uw'])
+
+    s = compute_shear(s, p)
+
+    return s
+
+
+def compute_shear(s, p):
+    '''Compute shear velocity from wind velocity following Law of the Wall
+
+    Parameters
+    ----------
+    uw : numpy.ndarray
+        Spatial wind field
+    p : dict
+        Model configuration parameters
+
+    Returns
+    -------
+    dict
+        Spatial grids
+
+    '''
+
+    alpha = .174 / np.log10(p['z'] / p['k'])
+
+    s['tau'] = alpha * s['uw']
+    s['taun'] = alpha * s['uwn']
+    s['taus'] = alpha * s['uws']
 
     return s
