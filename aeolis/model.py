@@ -1264,10 +1264,21 @@ class AeoLiSRunner(AeoLiS):
 
         self.p['output_vars'] = makeiterable(self.p['output_vars'])
         self.p['output_types'] = makeiterable(self.p['output_types'])
+
+        # determine unique combinations of variables and types
+        self.p['_output_vars'] = []
+        for var in self.p['output_vars']:
+            if '.' in var:
+                var0, ext = var.split('.')
+            else:
+                var0, ext = var, None
+            self.p['_output_vars'].append((var0, ext))
+            for ext in self.p['output_types']:
+                self.p['_output_vars'].append((var0, ext))
+        self.p['_output_vars'] = np.unique(self.p['_output_vars'])
         
         netcdf.initialize(self.p['output_file'],
-                          self.p['output_vars'],
-                          self.p['output_types'],
+                          self.p['_output_vars'],
                           self.s,
                           self.p,
                           self.dimensions())
@@ -1283,8 +1294,8 @@ class AeoLiSRunner(AeoLiS):
         to zero.
 
         '''
-        
-        for k in self.p['output_vars']:
+
+        for k in np.unique(self.p['_output_vars'][:,0]):
             s = self.get_var_shape(k)
             self.o[k] = dict(min=np.zeros(s) + np.inf,
                              max=np.zeros(s) - np.inf,
@@ -1303,17 +1314,16 @@ class AeoLiSRunner(AeoLiS):
 
         '''
         
-        for k in self.p['output_vars']:
+        for k, ext in self.p['_output_vars']:
+
             v = self.get_var(k).copy()
-            if 'min' in self.p['output_types']:
+            if ext == 'min':
                 self.o[k]['min'] = np.minimum(self.o[k]['min'], v)
-            if 'max' in self.p['output_types']:
+            if ext == 'max':
                 self.o[k]['max'] = np.minimum(self.o[k]['max'], v)
-            if 'sum' in self.p['output_types'] or \
-               'avg' in self.p['output_types'] or \
-               'var' in self.p['output_types']:
+            if ext in ['sum', 'avg', 'var']:
                 self.o[k]['sum'] = self.o[k]['sum'] + v
-            if 'var' in self.p['output_types']:
+            if ext == 'var':
                 self.o[k]['var'] = self.o[k]['var'] + v**2
             
         self.n += 1
@@ -1333,11 +1343,12 @@ class AeoLiSRunner(AeoLiS):
         if self.t - self.tout >= self.p['output_times']:
             
             variables = {}
-            for k in self.p['output_vars']:
-                variables['time'] = self.t
-                variables[k] = self.get_var(k).copy()
-                for t in self.p['output_types']:
-                    variables['%s.%s' % (k, t)] = self.get_statistic(k, t)
+            variables['time'] = self.t
+            for k, ext in self.p['_output_vars']:
+                if ext is None:
+                    variables[k] = self.get_var(k).copy()
+                else:
+                    variables['%s.%s' % (k, ext)] = self.get_statistic(k, ext)
 
             netcdf.append(self.p['output_file'], variables)
         

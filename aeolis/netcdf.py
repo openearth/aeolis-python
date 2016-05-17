@@ -32,7 +32,7 @@ from datetime import datetime
 from utils import *
 
 
-def initialize(outputfile, outputvars, outputtypes, s, p, dimensions):
+def initialize(outputfile, outputvars, s, p, dimensions):
     '''Create empty CF-compatible netCDF4 output file
 
     Parameters
@@ -41,10 +41,6 @@ def initialize(outputfile, outputvars, outputtypes, s, p, dimensions):
         Name of netCDF4 output file
     outputvars : array_like
         Spatial grids to be written to netCDF4 output file
-    outputtypes : array_like
-        Apart from the instantaneous spatial grids, statistics on each
-        grid can be written to the netCDF4 output file as well by
-        specifying them in this list (avg, sum, var, min or max)
     s : dict
         Spatial grids
     p : dict
@@ -237,7 +233,7 @@ def initialize(outputfile, outputvars, outputtypes, s, p, dimensions):
         nc.variables['time_bounds'].units = 'seconds since 1970-01-01 00:00:00 0:00'
         nc.variables['time_bounds'].comment = 'time bounds for each time value'
 
-        for var0 in outputvars:
+        for var0, ext in outputvars:
 
             if not s.has_key(var0):
                 continue
@@ -248,29 +244,27 @@ def initialize(outputfile, outputvars, outputtypes, s, p, dimensions):
             dims = ['time'] + [d[1:] for d in dimensions[var0]]
             dims = ['s' if d == 'x' else d for d in dims]
             dims = ['n' if d == 'y' else d for d in dims]
+
+            if ext is None:
+                var = var0
+            else:
+                var = '%s.%s' % (var0, ext)
             
-            for postfix in [None] + list(makeiterable(outputtypes)):
-
-                if postfix:
-                    var = '%s.%s' % (var0, postfix)
-                else:
-                    var = var0
-
-                nc.createVariable(var, 'float32', dims)
-                nc.variables[var].long_name = var
-                nc.variables[var].standard_name = ''
-                nc.variables[var].units = ''
-                nc.variables[var].scale_factor = 1.0
-                nc.variables[var].add_offset = 0.0
-                nc.variables[var].valid_min = 0
-                nc.variables[var].valid_max = 0
-                nc.variables[var].coordinates = ' '.join(dims)
-                nc.variables[var].grid_mapping = 'crs'
-                nc.variables[var].source = ''
-                nc.variables[var].references = ''
-                nc.variables[var].cell_methods = ''
-                nc.variables[var].ancillary_variables = ''
-                nc.variables[var].comment = ''
+            nc.createVariable(var, 'float32', dims)
+            nc.variables[var].long_name = var
+            nc.variables[var].standard_name = ''
+            nc.variables[var].units = ''
+            nc.variables[var].scale_factor = 1.0
+            nc.variables[var].add_offset = 0.0
+            nc.variables[var].valid_min = 0
+            nc.variables[var].valid_max = 0
+            nc.variables[var].coordinates = ' '.join(dims)
+            nc.variables[var].grid_mapping = 'crs'
+            nc.variables[var].source = ''
+            nc.variables[var].references = ''
+            nc.variables[var].cell_methods = ''
+            nc.variables[var].ancillary_variables = ''
+            nc.variables[var].comment = ''
             
         nc.createVariable('crs', 'int32', ())
         nc.variables['crs'].grid_mapping_name = 'oblique_stereographic'
@@ -303,6 +297,8 @@ def initialize(outputfile, outputvars, outputtypes, s, p, dimensions):
         # store model settings
         grp = nc.createGroup('settings')
         for k, v in p.iteritems():
+            if k.startswith('_'):
+                continue
             if v is None:
                 grp.setncattr(k, -1)
             elif isinstance(v, bool):
