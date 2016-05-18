@@ -1275,7 +1275,7 @@ class AeoLiSRunner(AeoLiS):
             self.p['_output_vars'].append((var0, ext))
             for ext in self.p['output_types']:
                 self.p['_output_vars'].append((var0, ext))
-        self.p['_output_vars'] = np.unique(self.p['_output_vars'])
+        self.p['_output_vars'] = np.asarray(list(set(self.p['_output_vars'])))
         
         netcdf.initialize(self.p['output_file'],
                           self.p['_output_vars'],
