@@ -34,6 +34,7 @@ import numpy as np
 import scipy.sparse
 import cPickle as pickle
 import scipy.sparse.linalg
+from datetime import timedelta
 from bmi.api import IBmi
 
 # package modules
@@ -1462,9 +1463,9 @@ class AeoLiSRunner(AeoLiS):
         interval = t - self.tlog
 
         if (np.mod(p, fraction) < .01 and self.plog != pr) or interval > max_interval:
-            t1 = time.strftime('%H:%M:%S', time.gmtime(t-self.t0))
-            t2 = time.strftime('%H:%M:%S', time.gmtime((t-self.t0) / p))
-            t3 = time.strftime('%H:%M:%S', time.gmtime((t-self.t0) * (1. - p) / p))
+            t1 = timedelta(0, round(t-self.t0))
+            t2 = timedelta(0, round((t-self.t0)/p))
+            t3 = timedelta(0, round((t-self.t0)*(1.-p)/p))
             print '%05.1f%%   %s / %s / %s' % (p * 100., t1, t2, t3)
             self.tlog = time.time()
             self.plog = pr
