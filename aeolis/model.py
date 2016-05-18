@@ -1151,7 +1151,7 @@ class AeoLiSRunner(AeoLiS):
 
         '''
 
-        if stat in ['min', 'max', 'sum', 'var']:
+        if stat in ['min', 'max', 'sum']:
             return self.o[var][stat]
         elif stat == 'avg':
             return self.o[var]['sum'] / self.n
@@ -1161,7 +1161,7 @@ class AeoLiSRunner(AeoLiS):
             return None
 
         
-    def get_var(self, var):
+    def get_var(self, var, clear=True):
         '''Returns spatial grid, statistic or model configuration parameter
 
         Overloads the :func:`aeolis.model.AeoLiS.get_var()` function and
@@ -1177,6 +1177,8 @@ class AeoLiSRunner(AeoLiS):
             parameter. Spatial grid name can be extended with a
             postfix to request a statistic (.avg, .sum, .var, .min or
             .max).
+        clear : bool
+            Clear output statistics afterwards.
 
         Returns
         -------
@@ -1197,7 +1199,7 @@ class AeoLiSRunner(AeoLiS):
 
         '''
 
-        self.clear = True
+        self.clear = clear
 
         if '.' in var:
             var, stat = var.split('.')
@@ -1317,7 +1319,7 @@ class AeoLiSRunner(AeoLiS):
         
         for k, ext in self.p['_output_vars']:
 
-            v = self.get_var(k).copy()
+            v = self.get_var(k, clear=False).copy()
             if ext == 'min':
                 self.o[k]['min'] = np.minimum(self.o[k]['min'], v)
             if ext == 'max':
@@ -1347,12 +1349,12 @@ class AeoLiSRunner(AeoLiS):
             variables['time'] = self.t
             for k, ext in self.p['_output_vars']:
                 if ext is None:
-                    variables[k] = self.get_var(k).copy()
+                    variables[k] = self.get_var(k, clear=False).copy()
                 else:
                     variables['%s.%s' % (k, ext)] = self.get_statistic(k, ext)
 
             netcdf.append(self.p['output_file'], variables)
-        
+
             self.output_clear()
             self.tout = self.t
             
