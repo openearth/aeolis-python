@@ -35,6 +35,7 @@ th_grainsize      = True,               # Enable wind velocity threshold based o
 th_bedslope       = False,              # Enable wind velocity threshold baded on bed slopes
 th_moisture       = True,               # Enable wind velocity threshold baded on soil moisture content
 th_humidity       = False,              # Enable wind velocity threshold baded on air humidity
+th_salt           = False,              # Enable wind velocity threshold baded on salt content
 th_roughness      = True,               # Enable wind velocity threshold baded on bed roughness elements
 mixtoplayer       = True,               # Enable mixing of top bed layer by waves
 bedupdate         = True,               # Enable bed update

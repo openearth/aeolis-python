@@ -70,6 +70,8 @@ def compute(s, p):
         s = compute_moisture(s, p)
     if p['th_humidity']:
         s = compute_humidity(s, p)
+    if p['th_salt']:
+        s = compute_salt(s, p)
     if p['th_roughness']:
         s = compute_roughness(s, p)
 
@@ -173,6 +175,46 @@ def compute_humidity(s, p):
         Spatial grids
 
     '''
+
+    nx = p['nx']+1
+    ny = p['ny']+1
+    nf = p['nfractions']
+
+    # compute effect of salt content on shear velocity threshold
+    H = 5.45 * (1. + .17 * (1. + np.cos(s['udir'])) - 2.11/100. + 2.11/(100. - s['meteo']['R']))
+    
+    # modify shear velocity threshold
+    s['uth'] += H.reshape((ny,nx,1)).repeat(nf, axis=-1) # TODO: probably incorrect
+
+    return s
+
+
+def compute_salt(s, p):
+    '''Modify wind velocity threshold based on salt content humidity following Nickling and Ecclestone (1981)
+
+    Parameters
+    ----------
+    s : dict
+        Spatial grids
+    p : dict
+        Model configuration parameters
+
+    Returns
+    -------
+    dict
+        Spatial grids
+
+    '''
+
+    nx = p['nx']+1
+    ny = p['ny']+1
+    nf = p['nfractions']
+
+    # compute effect of salt content on shear velocity threshold
+    S = .207 * np.exp(.1027 * s['c_salt'])
+    
+    # modify shear velocity threshold
+    s['uth'] *= S.reshape((ny,nx,1)).repeat(nf, axis=-1)
 
     return s
 

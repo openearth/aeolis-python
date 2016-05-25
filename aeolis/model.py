@@ -940,7 +940,8 @@ class AeoLiS(IBmi):
         
         dims.update({v:('ny','nx')
                      for v in ['x', 'y', 'zb', 'ds', 'dn', 'dsdn', 'dsdni',
-                               'alfa', 'uw', 'uws', 'uwn', 'tau', 'taus', 'taun', 'udir', 'zs', 'Hs']})
+                               'alfa', 'uw', 'uws', 'uwn', 'tau', 'taus', 'taun', 'udir',
+                               'zs', 'Hs', 'c_salt']})
         dims.update({v:('ny','nx','nfractions')
                      for v in ['Cu', 'Ct', 'pickup', 'w', 'w_init', 'w_air', 'w_bed', 'uth']})
         dims.update({v:('ny','nx','nlayers')
