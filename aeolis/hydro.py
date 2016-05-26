@@ -60,7 +60,7 @@ def interpolate(s, p, t):
                                        p['tide_file'][:,0],
                                        p['tide_file'][:,1])
 
-        # apply tidal damping
+        # apply damping mask
         s['zs'] *= p['tide_mask']
 
         # ensure compatibility with XBeach: zs >= zb
@@ -72,6 +72,9 @@ def interpolate(s, p, t):
                                        p['wave_file'][:,0],
                                        p['wave_file'][:,1])
 
+        # apply damping mask
+        s['Hs'] *= p['tide_mask']
+        
         # maximize wave height by depth ratio ``gamma``
         s['Hs'] = np.minimum((s['zs'] - s['zb']) * p['gamma'], s['Hs'])
         
