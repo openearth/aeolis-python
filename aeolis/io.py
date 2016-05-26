@@ -29,11 +29,15 @@ import os
 import re
 import time
 import shutil
+import logging
 import numpy as np
 
 # package modules
 from utils import *
 from constants import *
+
+# initialize logger
+logger = logging.getLogger(__name__)
 
 
 def read_configfile(configfile, parse_files=True, load_defaults=True):
@@ -184,24 +188,23 @@ def check_configuration(p):
        p['wind_file'].ndim != 2 or p['wind_file'].shape[1] < 3:
         raise ValueError('Invalid wind definition file')
 
-#    if p['wind_file'][-1,0] < p['tstop']:
-#        raise ValueError('Wind definition file too short')
-
     if isarray(p['tide_file']):
         if p['tide_file'].ndim != 2 or p['tide_file'].shape[1] < 2:
             raise ValueError('Invalid tide definition file')
             
-#        if p['tide_file'][-1,0] < p['tstop']:
-#            raise ValueError('Tide definition file too short')
-
     if isarray(p['meteo_file']):
         if p['meteo_file'].ndim != 2 or p['meteo_file'].shape[1] < 7:
             raise ValueError('Invalid meteo definition file')
             
-#        if p['meteo_file'][-1,0] < p['tstop']:
-#            raise ValueError('Meteo definition file too short')
+    if p['th_humidity']:
+        logger.warn('Wind velocity threshold based on air humidity following Arens (1996)'
+                    'is implemented for testing only. Use with care.')
 
+    if p['th_salt']:
+        logger.warn('Wind velocity threshold based on salt content following Nickling and'
+                    'Ecclestone (1981) is implemented for testing only. Use with care.')
 
+        
 def parse_value(val, parse_files=True, force_list=False):
     '''Casts a string to the most appropriate variable type
 

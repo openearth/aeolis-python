@@ -190,7 +190,7 @@ def compute_humidity(s, p):
 
 
 def compute_salt(s, p):
-    '''Modify wind velocity threshold based on salt content humidity following Nickling and Ecclestone (1981)
+    '''Modify wind velocity threshold based on salt content following Nickling and Ecclestone (1981)
 
     Parameters
     ----------

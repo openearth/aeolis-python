@@ -60,6 +60,9 @@ def interpolate(s, p, t):
                                        p['tide_file'][:,0],
                                        p['tide_file'][:,1])
 
+        # apply tidal damping
+        s['zs'] *= p['tide_mask']
+
         # ensure compatibility with XBeach: zs >= zb
         s['zs'] = np.maximum(s['zs'], s['zb'])
 

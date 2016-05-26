@@ -45,6 +45,7 @@ ygrid_file        = None,               # Filename of ASCII file with y-coordina
 bed_file          = None,               # Filename of ASCII file with bed level heights of grid cells
 wind_file         = None,               # Filename of ASCII file with time series of wind velocity and direction
 tide_file         = None,               # Filename of ASCII file with time series of water levels
+tide_mask         = None,               # Filename of ASCII file with tidal mask
 wave_file         = None,               # Filename of ASCII file with time series of wave heights
 meteo_file        = None,               # Filename of ASCII file with time series of meteorlogical conditions
 bedcomp_file      = None,               # Filename of ASCII file with initial bed composition
