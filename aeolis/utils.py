@@ -86,8 +86,8 @@ def interp_array(x, xp, fp, circular=False, **kwargs):
         The interpolated values, same length as second dimension of ``fp``.
 
     '''
-    
-    f = np.zeros((1,fp.shape[1]))
+
+    f = np.zeros((fp.shape[1],))
     for i in range(fp.shape[1]):
         if circular:
             f[i] = interp_circular(x, xp, fp[:,i], **kwargs)

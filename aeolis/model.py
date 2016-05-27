@@ -941,11 +941,11 @@ class AeoLiS(IBmi):
         dims.update({v:('ny','nx')
                      for v in ['x', 'y', 'zb', 'ds', 'dn', 'dsdn', 'dsdni',
                                'alfa', 'uw', 'uws', 'uwn', 'tau', 'taus', 'taun', 'udir',
-                               'zs', 'Hs', 'c_salt']})
+                               'zs', 'Hs']})
         dims.update({v:('ny','nx','nfractions')
                      for v in ['Cu', 'Ct', 'pickup', 'w', 'w_init', 'w_air', 'w_bed', 'uth']})
         dims.update({v:('ny','nx','nlayers')
-                     for v in ['thlyr', 'moist']})
+                     for v in ['thlyr', 'moist', 'salt']})
         dims.update({v:('ny','nx','nlayers','nfractions')
                      for v in ['mass']})
 

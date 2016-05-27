@@ -193,7 +193,7 @@ def check_configuration(p):
             raise ValueError('Invalid tide definition file')
             
     if isarray(p['meteo_file']):
-        if p['meteo_file'].ndim != 2 or p['meteo_file'].shape[1] < 7:
+        if p['meteo_file'].ndim != 2 or p['meteo_file'].shape[1] < 6:
             raise ValueError('Invalid meteo definition file')
             
     if p['th_humidity']:

@@ -84,7 +84,10 @@ def interpolate(s, p, t):
                          p['meteo_file'][:,0],
                          p['meteo_file'][:,1:], circular=True)
 
-        s['meteo'] = dict(zip(('S','T','R','s','p','l') , m))
+        # Symbols according to KNMI files: T = temperature [oC], RH =
+        # precipitation [mm/hr], U = relative humidity [%], Q = global
+        # radiation [J/m2], P = air pressure [kPa]
+        s['meteo'] = dict(zip(('T','RH','U','Q','P') , m))
 
     return s
 
@@ -127,33 +130,44 @@ def update(s, p, dt):
 
     '''
 
-    F = -np.log(.05) / p['Tdry']
+    F1 = -np.log(.05) / p['Tdry']
+    F2 = -np.log(.05) / p['Tsalt']
     
     # infiltration using Darcy
     ix = s['zs'] - s['zb'] > p['eps']
-    s['moist'][ ix,:] = p['porosity']
-    s['moist'][~ix,:] *= np.exp(-F * dt)
+    s['moist'][ ix,0] = p['porosity']
+    s['moist'][~ix,0] *= np.exp(-F1 * dt)
+
+    # salinitation
+    s['salt'][ ix,0] = 0.
+    s['salt'][~ix,0] *= np.exp(-F2 * dt)
 
     # evaporation using Penman
     if s.has_key('meteo'):
 
-        m = s['meteo']
-
-        # conversion from J/m2 to MJ/m2/day
-        rad = m['S'] / 1e6 / dt * 3600. * 24.
+        met = s['meteo']
         
-        m = vaporation_pressure_slope(m['T']) # [kPa/K]
-        delta = saturation_pressure(m['T']) * (1. - m['R']) # [kPa]
-        gamma = (m['s'] * m['p']) / (.622 * m['l']) # [kPa/K]
+        # convert radiation from J/m2 to MJ/m2/day
+        rad = met['Q'] / 1e6 / dt * 3600. * 24.
+
+        l = 2.26
+        m = vaporation_pressure_slope(met['T']) # [kPa/K]
+        delta = saturation_pressure(met['T']) * (1. - met['RH']) # [kPa]
+        gamma = (p['cpair'] * met['P']) / (.622 * l) # [kPa/K]
    
         evo = np.maximum(0., (m * rad \
                               + gamma * 6.43 * (1. + 0.536 * s['uw']) * delta) \
-                         / (m['l'] * (m + gamma)))
+                         / (l * (m + gamma)))
 
-        # conversion from mm/day to m/s
+        # convert evaporation from mm/day to m/s
         evo = evo / 24. / 3600. / 1000.
 
-        s['moist'] = np.maximum(0., s['moist'] - evo * dt / p['layer_thickness'])
+        # convert precipitation from mm/hr to m/s
+        pcp = met['RH'] / 3600. / 1000.
+
+        # update moisture and salt content
+        s['moist'][:,:,0] = np.maximum(0., s['moist'][:,:,0] + (pcp - evo) * dt / p['layer_thickness'])
+        s['salt'][:,:,0] = np.maximum(0., s['salt'][:,:,0] - pcp * dt / p['layer_thickness'])
 
     return s
 
