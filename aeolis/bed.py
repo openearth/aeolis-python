@@ -102,6 +102,12 @@ def initialize(s, p):
     else:
         s['mass'][:,:,:,:] = p['bedcomp_file'].reshape(s['mass'].shape)                
 
+    # initialize mask
+    if p['mask_file'] is None:
+        s['mask'] = 1.
+    else:
+        s['mask'] = p['mask_file']
+        
     return s
 
 
