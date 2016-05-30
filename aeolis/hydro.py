@@ -139,7 +139,7 @@ def update(s, p, dt):
     s['moist'][~ix,0] *= np.exp(-F1 * dt)
 
     # salinitation
-    s['salt'][ ix,0] = 0.
+    s['salt'][ ix,0] = 1.
     s['salt'][~ix,0] *= np.exp(-F2 * dt)
 
     # evaporation using Penman
@@ -167,7 +167,7 @@ def update(s, p, dt):
 
         # update moisture and salt content
         s['moist'][:,:,0] = np.maximum(0., s['moist'][:,:,0] + (pcp - evo) * dt / p['layer_thickness'])
-        s['salt'][:,:,0] = np.maximum(0., s['salt'][:,:,0] - pcp * dt / p['layer_thickness'])
+        s['salt'][:,:,0] = np.minimum(1., s['salt'][:,:,0] + pcp * dt / p['layer_thickness'])
 
     return s
 
