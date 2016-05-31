@@ -847,10 +847,13 @@ class AeoLiS(IBmi):
                                    nrcells=np.sum(ix),
                                    minweight=np.sum(w, axis=-1).min(),
                                    **logprops))
-                            
+
+        qs = Ct * s['uws'].reshape(Ct[:,:,:1].shape).repeat(p['nfractions'], axis=-1)
+        qn = Ct * s['uwn'].reshape(Ct[:,:,:1].shape).repeat(p['nfractions'], axis=-1)
+                    
         return dict(Ct=Ct,
-                    qs=Ct*s['uws'],
-                    qn=Ct*s['uwn'],
+                    qs=qs,
+                    qn=qn,
                     pickup=pickup,
                     w=w,
                     w_init=w_init,
@@ -945,7 +948,8 @@ class AeoLiS(IBmi):
                                'alfa', 'uw', 'uws', 'uwn', 'tau', 'taus', 'taun', 'udir',
                                'zs', 'Hs']})
         dims.update({v:('ny','nx','nfractions')
-                     for v in ['Cu', 'Ct', 'qs', 'qn', 'pickup', 'w', 'w_init', 'w_air', 'w_bed', 'uth']})
+                     for v in ['Cu', 'Ct', 'qs', 'qn', 'pickup',
+                               'w', 'w_init', 'w_air', 'w_bed', 'uth']})
         dims.update({v:('ny','nx','nlayers')
                      for v in ['thlyr', 'moist', 'salt']})
         dims.update({v:('ny','nx','nlayers','nfractions')
