@@ -849,6 +849,8 @@ class AeoLiS(IBmi):
                                    **logprops))
                             
         return dict(Ct=Ct,
+                    qs=Ct*s['uws'],
+                    qn=Ct*s['uwn'],
                     pickup=pickup,
                     w=w,
                     w_init=w_init,
@@ -943,7 +945,7 @@ class AeoLiS(IBmi):
                                'alfa', 'uw', 'uws', 'uwn', 'tau', 'taus', 'taun', 'udir',
                                'zs', 'Hs']})
         dims.update({v:('ny','nx','nfractions')
-                     for v in ['Cu', 'Ct', 'pickup', 'w', 'w_init', 'w_air', 'w_bed', 'uth']})
+                     for v in ['Cu', 'Ct', 'qs', 'qn', 'pickup', 'w', 'w_init', 'w_air', 'w_bed', 'uth']})
         dims.update({v:('ny','nx','nlayers')
                      for v in ['thlyr', 'moist', 'salt']})
         dims.update({v:('ny','nx','nlayers','nfractions')
