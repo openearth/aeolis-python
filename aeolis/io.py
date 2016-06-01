@@ -197,11 +197,11 @@ def check_configuration(p):
             raise ValueError('Invalid meteo definition file')
             
     if p['th_humidity']:
-        logger.warn('Wind velocity threshold based on air humidity following Arens (1996)'
+        logger.warn('Wind velocity threshold based on air humidity following Arens (1996) '
                     'is implemented for testing only. Use with care.')
 
     if p['th_salt']:
-        logger.warn('Wind velocity threshold based on salt content following Nickling and'
+        logger.warn('Wind velocity threshold based on salt content following Nickling and '
                     'Ecclestone (1981) is implemented for testing only. Use with care.')
 
         

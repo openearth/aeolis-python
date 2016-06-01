@@ -39,7 +39,7 @@ def initialize(outputfile, outputvars, s, p, dimensions):
     ----------
     outputfile : str
         Name of netCDF4 output file
-    outputvars : array_like
+    outputvars : dictionary
         Spatial grids to be written to netCDF4 output file
     s : dict
         Spatial grids
@@ -233,7 +233,7 @@ def initialize(outputfile, outputvars, s, p, dimensions):
         nc.variables['time_bounds'].units = 'seconds since 1970-01-01 00:00:00 0:00'
         nc.variables['time_bounds'].comment = 'time bounds for each time value'
 
-        for var0, ext in outputvars:
+        for var0, exts in outputvars.iteritems():
 
             if not s.has_key(var0):
                 continue
@@ -245,26 +245,27 @@ def initialize(outputfile, outputvars, s, p, dimensions):
             dims = ['s' if d == 'x' else d for d in dims]
             dims = ['n' if d == 'y' else d for d in dims]
 
-            if ext is None:
-                var = var0
-            else:
-                var = '%s.%s' % (var0, ext)
+            for ext in exts:
+                if ext is None:
+                    var = var0
+                else:
+                    var = '%s.%s' % (var0, ext)
             
-            nc.createVariable(var, 'float32', dims)
-            nc.variables[var].long_name = var
-            nc.variables[var].standard_name = ''
-            nc.variables[var].units = ''
-            nc.variables[var].scale_factor = 1.0
-            nc.variables[var].add_offset = 0.0
-            nc.variables[var].valid_min = 0
-            nc.variables[var].valid_max = 0
-            nc.variables[var].coordinates = ' '.join(dims)
-            nc.variables[var].grid_mapping = 'crs'
-            nc.variables[var].source = ''
-            nc.variables[var].references = ''
-            nc.variables[var].cell_methods = ''
-            nc.variables[var].ancillary_variables = ''
-            nc.variables[var].comment = ''
+                nc.createVariable(var, 'float32', dims)
+                nc.variables[var].long_name = var
+                nc.variables[var].standard_name = ''
+                nc.variables[var].units = ''
+                nc.variables[var].scale_factor = 1.0
+                nc.variables[var].add_offset = 0.0
+                nc.variables[var].valid_min = 0
+                nc.variables[var].valid_max = 0
+                nc.variables[var].coordinates = ' '.join(dims)
+                nc.variables[var].grid_mapping = 'crs'
+                nc.variables[var].source = ''
+                nc.variables[var].references = ''
+                nc.variables[var].cell_methods = ''
+                nc.variables[var].ancillary_variables = ''
+                nc.variables[var].comment = ''
             
         nc.createVariable('crs', 'int32', ())
         nc.variables['crs'].grid_mapping_name = 'oblique_stereographic'
