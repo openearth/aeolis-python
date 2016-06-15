@@ -305,7 +305,7 @@ def initialize(outputfile, outputvars, s, p, dimensions):
             elif isinstance(v, bool):
                 grp.setncattr(k, int(v))
             else:
-                grp.setncattr(k, v)
+                grp.setncattr(k, np.real(v))
 
 
 def append(outputfile, variables):

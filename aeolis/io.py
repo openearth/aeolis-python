@@ -262,10 +262,13 @@ def parse_value(val, parse_files=True, force_list=False):
     elif re.match('^-?[\d\.]+$', val):
         return float(val)
     elif os.path.isfile(val) and parse_files:
-        try:
-            return np.loadtxt(val)
-        except:
-            return val
+        for dtype in [np.float, np.complex]:
+            try:
+                val = np.loadtxt(val, dtype=dtype)
+                break
+            except:
+                pass
+        return val
     elif val == '':
         return None
     else:
