@@ -180,7 +180,7 @@ def compute_humidity(s, p):
     ny = p['ny']+1
     nf = p['nfractions']
 
-    # compute effect of salt content on shear velocity threshold
+    # compute effect of humidity on shear velocity threshold
     H = 5.45 * (1. + .17 * (1. + np.cos(s['udir'])) - 2.11/100. + 2.11/(100. - s['meteo']['R']))
     
     # modify shear velocity threshold

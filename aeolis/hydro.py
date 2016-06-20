@@ -167,7 +167,7 @@ def update(s, p, dt):
         pcp = met['RH'] / 3600. / 1000.
 
         # update moisture and salt content
-        s['moist'][:,:,0] = np.maximum(0., s['moist'][:,:,0] + (pcp - evo) * dt / p['layer_thickness'])
+        s['moist'][:,:,0] = np.maximum(0., np.minimum(p['porosity'], s['moist'][:,:,0] + (pcp - evo) * dt / p['layer_thickness']))
         s['salt'][:,:,0] = np.minimum(1., s['salt'][:,:,0] + pcp * dt / p['layer_thickness'])
 
     return s
