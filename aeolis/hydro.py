@@ -131,8 +131,8 @@ def update(s, p, dt):
 
     '''
 
-    F1 = -np.log(.05) / p['Tdry']
-    F2 = -np.log(.05) / p['Tsalt']
+    F1 = -np.log(.5) / p['Tdry']
+    F2 = -np.log(.5) / p['Tsalt']
     
     # infiltration using Darcy
     ix = s['zs'] - s['zb'] > p['eps']
