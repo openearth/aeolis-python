@@ -11,7 +11,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
    
 You should have received a copy of the GNU General Public License
-along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
+along with AeoLiS.  If not, see <http://www.gnu.org/licenses/>.
    
 AeoLiS  Copyright (C) 2015 Bas Hoonhout
 
@@ -167,7 +167,11 @@ def update(s, p, dt):
         pcp = met['RH'] / 3600. / 1000.
 
         # update moisture and salt content
-        s['moist'][:,:,0] = np.maximum(0., np.minimum(p['porosity'], s['moist'][:,:,0] + (pcp - evo) * dt / p['layer_thickness']))
+        s['moist'][:,:,:] = np.maximum(0.,
+                                       np.minimum(p['porosity'],
+                                                  s['moist'][:,:,:] \
+                                                  + (pcp - evo) * dt \
+                                                  / p['layer_thickness'] / p['nlayers']))
         s['salt'][:,:,0] = np.minimum(1., s['salt'][:,:,0] + pcp * dt / p['layer_thickness'])
 
     return s
