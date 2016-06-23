@@ -25,11 +25,25 @@ The Netherlands                  The Netherlands
 '''
 
 
-import netCDF4
+import logging
 from datetime import datetime
+
 
 # package modules
 from utils import *
+
+
+# initialize logger
+logger = logging.getLogger(__name__)
+
+
+# check if netCDF4 is available
+try:
+    import netCDF4
+    HAVE_NETCDF = True
+except ImportError:
+    HAVE_NETCDF = False
+    logger.warn('No netCDF4 available, output is disabled')
 
 
 def initialize(outputfile, outputvars, s, p, dimensions):
@@ -60,6 +74,10 @@ def initialize(outputfile, outputvars, s, p, dimensions):
 
     '''
 
+    # abort if netCDF4 is not available
+    if not HAVE_NETCDF:
+        return
+        
     with netCDF4.Dataset(outputfile, 'w') as nc:
 
         # add dimensions
@@ -335,6 +353,10 @@ def append(outputfile, variables):
 
     '''
 
+    # abort if netCDF4 is not available
+    if not HAVE_NETCDF:
+        return
+
     with netCDF4.Dataset(outputfile, 'a') as nc:
         i = nc.variables['time'].shape[0]
         nc.variables['time'][i] = variables['time']
@@ -356,6 +378,10 @@ def set_bounds(outputfile):
 
     '''
     
+    # abort if netCDF4 is not available
+    if not HAVE_NETCDF:
+        return
+
     with netCDF4.Dataset(outputfile, 'a') as nc:
         i = nc.variables['time'].shape[0] - 1
         nc.variables['time_bounds'][i,0] = 0 if i == 0 else nc.variables['time'][i-1]
@@ -388,6 +414,10 @@ def dump(outputfile, dumpfile, var='mass', ix=-1):
     ... netcdf.dump('aeolis.nc', 'bedcomp.txt', var='mass')
 
     '''
+
+    # abort if netCDF4 is not available
+    if not HAVE_NETCDF:
+        return
 
     with netCDF4.Dataset(outputfile, 'r') as ds:
         m = ds.variables[var][ix,...]
