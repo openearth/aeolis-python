@@ -27,9 +27,4 @@ setup(
         'aeolis = aeolis.cmd:aeolis',
         'aeolis-wind = aeolis.cmd:wind',
     ]},
-    data_files=[
-        ('example', [
-            "examples/",
-        ])
-    ],
 )
