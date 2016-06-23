@@ -29,7 +29,7 @@ setup(
     ]},
     data_files=[
         ('example', [
-            "example/",
+            "examples/",
         ])
     ],
 )
