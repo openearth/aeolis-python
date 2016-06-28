@@ -155,9 +155,10 @@ def update(s, p, dt):
         m = vaporation_pressure_slope(met['T']) # [kPa/K]
         delta = saturation_pressure(met['T']) * (1. - met['RH']) # [kPa]
         gamma = (p['cpair'] * met['P']) / (.622 * l) # [kPa/K]
+        u2 = .174 / np.log10(p['z'] / 2.) * s['uw'] # [m/s]
    
         evo = np.maximum(0., (m * rad \
-                              + gamma * 6.43 * (1. + 0.536 * s['uw']) * delta) \
+                              + gamma * 6.43 * (1. + 0.536 * u2) * delta) \
                          / (l * (m + gamma)))
 
         # convert evaporation from mm/day to m/s
