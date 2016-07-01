@@ -64,10 +64,10 @@ def interpolate(s, p, t):
         s['zs'] *= np.real(s['mask'])
         s['zs'] += np.imag(s['mask'])
 
-        # ensure compatibility with XBeach: zs >= zb
-        s['zs'] = np.maximum(s['zs'], s['zb'])
-
     if p['wave_file'] is not None:
+
+        # determine water depth
+        h = np.maximum(0., s['zs'] - s['zb'])
     
         s['Hs'][:,:] = interp_circular(t,
                                        p['wave_file'][:,0],
@@ -75,9 +75,15 @@ def interpolate(s, p, t):
 
         # apply mask
         s['Hs'] *= np.real(s['mask'])
+
+        # add wave runup
+        if p['runup']:
+            ix = s['Hs'] > 0.
+            R = p['xi'] * s['Hs']
+            s['zs'][ix] += R[ix] * (1. - np.minimum(1., h[ix] * p['gamma'] / s['Hs'][ix]))
         
         # maximize wave height by depth ratio ``gamma``
-        s['Hs'] = np.minimum((s['zs'] - s['zb']) * p['gamma'], s['Hs'])
+        s['Hs'] = np.minimum(h * p['gamma'], s['Hs'])
         
     if p['meteo_file'] is not None:
 
@@ -89,6 +95,9 @@ def interpolate(s, p, t):
         # precipitation [mm/hr], U = relative humidity [%], Q = global
         # radiation [J/m2], P = air pressure [kPa]
         s['meteo'] = dict(zip(('T','RH','U','Q','P') , m))
+
+    # ensure compatibility with XBeach: zs >= zb
+    s['zs'] = np.maximum(s['zs'], s['zb'])
 
     return s
 
