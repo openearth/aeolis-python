@@ -28,6 +28,51 @@ The Netherlands                  The Netherlands
 import numpy as np
 
 
+#: Aeolis model state variables
+MODEL_STATE = dict(
+    ('ny', 'nx') = (
+        'x',                                # [m] Real-world x-coordinate of grid cell center
+        'y',                                # [m] Real-world y-coordinate of grid cell center
+        'ds',                               # [m] Real-world grid cell size in x-direction
+        'dn',                               # [m] Real-world grid cell size in y-direction
+        'dsdn',                             # [m^2] Real-world grid cell surface area
+        'dsdni',                            # [m^-2] Inverse of real-world grid cell surface area
+        'alfa',                             # [rad] Real-world grid cell orientation
+        'uw',                               # [m/s] Wind velocity
+        'uws',                              # [m/s] Component of wind velocity in x-direction
+        'uwn',                              # [m/s] Component of wind velocity in y-direction
+        'tau',                              # [m/s] Wind shear velocity
+        'taus',                             # [m/s] Component of wind shear velocity in x-direction
+        'taun',                             # [m/s] Component of wind shear velocity in x-direction
+        'udir',                             # [rad] Wind direction
+        'zb',                               # [m] Bed level above reference
+        'zs',                               # [m] Water level above reference
+        'Hs',                               # [m] Wave height
+    ),
+    ('ny','nx','nfractions') = (
+        'Cu',                               # [kg/m^2] Equilibrium sediment concentration integrated over saltation height
+        'Ct',                               # [kg/m^2] Instantaneous sediment concentration integrated over saltation height
+        'q',                                # [kg/m/s] Instantaneous sediment flux
+        'qs',                               # [kg/m/s] Instantaneous sediment flux in x-direction
+        'qn',                               # [kg/m/s] Instantaneous sediment flux in y-direction
+        'pickup',                           # [kg/m^2] Sediment entrainment
+        'w',                                # [-] Weights of sediment fractions
+        'w_init',                           # [-] Initial guess for ``w''
+        'w_air',                            # [-] Weights of sediment fractions based on grain size distribution in the air
+        'w_bed',                            # [-] Weights of sediment fractions based on grain size distribution in the bed
+        'uth',                              # [m/s] Shear velocity threshold
+    ),
+    ('ny','nx','nlayers') = (
+        'thlyr',                            # [m] Bed composition layer thickness
+        'moist',                            # [-] Moisure content
+        'salt',                             # [-] Salt content
+    ),
+    ('ny','nx','nlayers','nfractions') = (
+        'mass',                             # [kg/m^2] Sediment mass in bed
+    )
+)
+
+
 #: AeoLiS model default configuration
 DEFAULT_CONFIG = dict(
     
