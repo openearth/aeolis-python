@@ -1163,7 +1163,11 @@ class AeoLiSRunner(AeoLiS):
         elif stat == 'avg':
             return self.o[var]['sum'] / self.n
         elif stat == 'var':
-            return (self.o[var]['var'] - self.o[var]['sum']**2 / self.n) / (self.n - 1)
+            if self.n > 1:
+                return (self.o[var]['var'] - self.o[var]['sum']**2 / self.n) \
+                    / (self.n - 1)
+            else:
+                return np.zeros(self.o[var]['var'].shape)
         else:
             return None
 
