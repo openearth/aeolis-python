@@ -100,6 +100,10 @@ def read_configfile(configfile, parse_files=True, load_defaults=True):
     if p.has_key('output_file') and not p['output_file']:
         p['output_file'] = '%s.nc' % os.path.splitext(configfile)[0]
 
+    # set default value for h, if not given
+    if p.has_key('h') and not p['h']:
+        p['h'] = p['z']
+        
     return p
 
 

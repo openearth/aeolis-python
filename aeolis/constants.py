@@ -118,6 +118,7 @@ DEFAULT_CONFIG = {
     'porosity'          : .4,                 # [-] Sediment porosity
     'A'                 : .085,               # [-] Constant in formulation for wind velocity threshold based on grain size
     'z'                 : 10.,                # [m] Measurement height of wind velocity
+    'h'                 : None,               # [m] Representative height of saltation layer
     'k'                 : 0.01,               # [m] Bed roughness
     'Cb'                : 1.5,                # [-] Constant in formulation for equilibrium sediment concentration
     'm'                 : .5,                 # [-] Factor to account for difference between average and maximum shear stress

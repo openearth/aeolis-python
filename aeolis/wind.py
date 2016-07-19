@@ -70,37 +70,48 @@ def interpolate(s, p, t):
     s['uwn'] = s['uw'] * np.sin(s['alfa'] + s['udir'] / 180. * np.pi)
 
     if p['ny'] == 0:
-        s['uw'] = s['uws']
         s['uwn'][:,:] = 0.
 
     s['uw'] = np.abs(s['uw'])
 
-    s = compute_shear(s, p)
+    # compute saltation velocity
+    s['uw'] = get_velocity_at_height(s['uw'], p['z'], p['k'], p['h'])
+    s['uws'] = get_velocity_at_height(s['uws'], p['z'], p['k'], p['h'])
+    s['uwn'] = get_velocity_at_height(s['uwn'], p['z'], p['k'], p['h'])
+
+    # compute shear velocity
+    s['tau'] = get_velocity_at_height(s['uw'], p['h'], p['k'])
+    s['taus'] = get_velocity_at_height(s['uws'], p['h'], p['k'])
+    s['taun'] = get_velocity_at_height(s['uwn'], p['h'], p['k'])
 
     return s
 
 
-def compute_shear(s, p):
-    '''Compute shear velocity from wind velocity following Law of the Wall
+def get_velocity_at_height(u, z, z0, z1=None):
+    '''Compute shear velocity from wind velocity following Prandl-Karman's Law of the Wall
 
     Parameters
     ----------
-    uw : numpy.ndarray
+    u : numpy.ndarray
         Spatial wind field
-    p : dict
-        Model configuration parameters
+    z : float
+        Height above bed where ``u'' is measured
+    z0 : float
+        Roughness length
+    z1 : float, optional
+        Height above bed for which to return wind speeds.
+        Returns wind shear if not given.
 
     Returns
     -------
-    dict
-        Spatial grids
+    numpy.ndarray
+        Array of size ``u'' with wind speeds at height ``z1''
 
     '''
 
-    alpha = .174 / np.log10(p['z'] / p['k'])
+    tau = .41 / np.log(z / z0) * u
 
-    s['tau'] = alpha * s['uw']
-    s['taun'] = alpha * s['uwn']
-    s['taus'] = alpha * s['uws']
-
-    return s
+    if z1 is None:
+        return tau
+    else:
+        return tau * np.log(z1 / z0) / .41
