@@ -91,6 +91,7 @@ DEFAULT_CONFIG = {
     'meteo_file'        : None,               # Filename of ASCII file with time series of meteorlogical conditions
     'bedcomp_file'      : None,               # Filename of ASCII file with initial bed composition
     'mask_file'         : None,               # Filename of ASCII file with mask for tides and waves
+    'threshold_file'    : None,               # Filename of ASCII file with shear velocity threshold
     'nx'                : 0,                  # [-] Number of grid cells in x-dimension
     'ny'                : 0,                  # [-] Number of grid cells in y-dimension
     'dt'                : 60.,                # [s] Time step size

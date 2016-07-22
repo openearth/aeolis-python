@@ -62,18 +62,20 @@ def compute(s, p):
 
     '''
 
-    if p['th_grainsize']:
-        s = compute_grainsize(s, p)
-    if p['th_bedslope']:
-        s = compute_bedslope(s, p)
-    if p['th_moisture']:
-        s = compute_moisture(s, p)
-    if p['th_humidity']:
-        s = compute_humidity(s, p)
-    if p['th_salt']:
-        s = compute_salt(s, p)
-    if p['th_roughness']:
-        s = compute_roughness(s, p)
+    if p['threshold_file'] is None:
+        
+        if p['th_grainsize']:
+            s = compute_grainsize(s, p)
+        if p['th_bedslope']:
+            s = compute_bedslope(s, p)
+        if p['th_moisture']:
+            s = compute_moisture(s, p)
+        if p['th_humidity']:
+            s = compute_humidity(s, p)
+        if p['th_salt']:
+            s = compute_salt(s, p)
+        if p['th_roughness']:
+            s = compute_roughness(s, p)
 
     return s
 

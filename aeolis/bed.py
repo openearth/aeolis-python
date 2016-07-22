@@ -107,6 +107,10 @@ def initialize(s, p):
         s['mask'] = 1.
     else:
         s['mask'] = p['mask_file']
+
+    # initialize threshold
+    if p['threshold_file'] is not None:
+        s['uth'] = p['threshold_file'][:,:,np.newaxis].repeat(nf, axis=-1)
         
     return s
 
