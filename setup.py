@@ -12,7 +12,6 @@ setup(
         'numpy',
         'scipy',
         'docopt',
-        'bmi',
     ],
     #setup_requires=[
     #    'sphinx',
