@@ -14,16 +14,16 @@ setup(
         'docopt',
         'bmi',
     ],
-    setup_requires=[
-        'sphinx',
-        'sphinx_rtd_theme'
-    ],
+    #setup_requires=[
+    #    'sphinx',
+    #    'sphinx_rtd_theme'
+    #],
     tests_require=[
         'nose'
     ],
     test_suite='nose.collector',
     entry_points={'console_scripts': [
-        'aeolis = aeolis.cmd:aeolis',
-        'aeolis-wind = aeolis.cmd:wind',
+        'aeolis = aeolis.console:aeolis',
+        'aeolis-wind = aeolis.console:wind',
     ]},
 )

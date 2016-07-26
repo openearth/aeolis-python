@@ -95,7 +95,7 @@ def get_velocity_at_height(u, z, z0, z1=None):
     u : numpy.ndarray
         Spatial wind field
     z : float
-        Height above bed where ``u'' is measured
+        Height above bed where ``u`` is measured
     z0 : float
         Roughness length
     z1 : float, optional
@@ -105,7 +105,7 @@ def get_velocity_at_height(u, z, z0, z1=None):
     Returns
     -------
     numpy.ndarray
-        Array of size ``u'' with wind speeds at height ``z1''
+        Array of size ``u`` with wind speeds at height ``z1``
 
     '''
 

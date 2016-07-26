@@ -103,7 +103,7 @@ Plotting
 Command-line tools
 ^^^^^^^^^^^^^^^^^^
 
-.. automodule:: aeolis.cmd
+.. automodule:: aeolis.console
                 :members:
 
 Miscellaneous
