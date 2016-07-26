@@ -40,7 +40,6 @@ sys.path.insert(0, os.path.abspath('../aeolis'))
 extensions = [
     'sphinx.ext.autodoc',
     'sphinxcontrib.napoleon',
-    'sphinx.ext.doctest',
     'sphinx.ext.intersphinx',
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
