@@ -5,35 +5,35 @@ Model classes
 -------------
 
 The AeoLiS model is based on two main model classes:
-:class:`~aeolis.model.AeoLiS` and
-:class:`~aeolis.model.AeoLiSRunner`. The former is the actual,
+:class:`~model.AeoLiS` and
+:class:`~model.AeoLiSRunner`. The former is the actual,
 low-level, BMI-compatible class that implements the basic model
 functions and numerical schemes. The latter is a convenience class
 that implements a time loop, netCDF4 output, a progress indicator and
 a callback function that allows the used to interact with the model
 during runtime.
 
-The additional :class:`~aeolis.model.WindGenerator` class to generate
+The additional :class:`~model.WindGenerator` class to generate
 realistic wind time series is available from the same module.
 
 AeoLiS
 ^^^^^^
 
-.. autoclass:: aeolis.model.AeoLiS
+.. autoclass:: model.AeoLiS
                :special-members:
                :members:
 
 AeoLiSRunner
 ^^^^^^^^^^^^^
 
-.. autoclass:: aeolis.model.AeoLiSRunner
+.. autoclass:: model.AeoLiSRunner
                :special-members:
                :members:
 
 WindGenerator
 ^^^^^^^^^^^^^
 
-.. autoclass:: aeolis.model.WindGenerator
+.. autoclass:: model.WindGenerator
                :special-members:
                :members:
 
@@ -43,34 +43,34 @@ Physics modules
 Bathymetry and bed composition
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. automodule:: aeolis.bed
+.. automodule:: bed
                 :members:
 
 Wind velocity and direction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. automodule:: aeolis.wind
+.. automodule:: wind
                 :members:
 
-.. automodule:: aeolis.shear
+.. automodule:: shear
                 :members:
 
 Wind velocity threshold
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-.. automodule:: aeolis.threshold
+.. automodule:: threshold
                 :members:
 
 Tides, meteorology and soil moisture content
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. automodule:: aeolis.hydro
+.. automodule:: hydro
                 :members:
 
 Sediment transport
 ^^^^^^^^^^^^^^^^^^
 
-.. automodule:: aeolis.transport
+.. automodule:: transport
                 :members:
 
 Helper modules
@@ -79,36 +79,36 @@ Helper modules
 Input/Output
 ^^^^^^^^^^^^
 
-.. automodule:: aeolis.io
+.. automodule:: io
                 :members:
 
 netCDF4 output
 ^^^^^^^^^^^^^^
 
-.. automodule:: aeolis.netcdf
+.. automodule:: netcdf
                 :members:
 
 Logging
 ^^^^^^^
 
-.. automodule:: aeolis.log
+.. automodule:: log
                 :members:
 
 Plotting
 ^^^^^^^^
 
-.. automodule:: aeolis.plot
+.. automodule:: plot
                 :members:
 
 Command-line tools
 ^^^^^^^^^^^^^^^^^^
 
-.. automodule:: aeolis.console
+.. automodule:: console
                 :members:
 
 Miscellaneous
 ^^^^^^^^^^^^^
 
-.. automodule:: aeolis.utils
+.. automodule:: utils
                 :members:
                    
