@@ -79,19 +79,13 @@ Helper modules
 Input/Output
 ^^^^^^^^^^^^
 
-.. automodule:: io
+.. automodule:: inout
                 :members:
 
 netCDF4 output
 ^^^^^^^^^^^^^^
 
 .. automodule:: netcdf
-                :members:
-
-Logging
-^^^^^^^
-
-.. automodule:: log
                 :members:
 
 Plotting

@@ -38,7 +38,7 @@ from datetime import timedelta
 from bmi.api import IBmi
 
 # package modules
-import io, bed, wind, threshold, transport, hydro, netcdf, constants
+import inout, bed, wind, threshold, transport, hydro, netcdf, constants
 from utils import *
 
 
@@ -55,7 +55,7 @@ class AeoLiS(IBmi):
     operations, like initialization, time stepping, finalization and
     data exchange. For higher level operations, like a progress
     indicator and netCDF4 output is refered to the AeoLiS model
-    runner class, see :class:`~aeolis.model.AeoLiSRunner()`.
+    runner class, see :class:`~model.AeoLiSRunner`.
 
     Examples
     --------
@@ -89,7 +89,7 @@ class AeoLiS(IBmi):
         Parameters
         ----------
         configfile : str
-            Model configuration file. See :func:`~aeolis.io.read_configfile()`.
+            Model configuration file. See :func:`~inout.read_configfile()`.
 
         '''
         
@@ -115,8 +115,8 @@ class AeoLiS(IBmi):
         '''
 
         # read configuration file
-        self.p = io.read_configfile(self.configfile)
-        io.check_configuration(self.p)
+        self.p = inout.read_configfile(self.configfile)
+        inout.check_configuration(self.p)
 
         # initialize time
         self.t = self.p['tstart']
@@ -150,7 +150,7 @@ class AeoLiS(IBmi):
 
         For explicit schemes the time step is maximized by the
         Courant-Friedrichs-Lewy (CFL) condition. See
-        :func:`~aeolis.model.AeoLiS.set_timestep()`.
+        :func:`~model.AeoLiS.set_timestep()`.
 
         Parameters
         ----------
@@ -276,7 +276,7 @@ class AeoLiS(IBmi):
 
         See Also
         --------
-        :func:`~aeolis.model.AeoLiS.set_var`
+        model.AeoLiS.set_var
 
         '''
 
@@ -420,7 +420,7 @@ class AeoLiS(IBmi):
 
         See Also
         --------
-        :func:`~aeolis.model.AeoLiS.get_var`
+        model.AeoLiS.get_var
 
         '''
         
@@ -511,7 +511,7 @@ class AeoLiS(IBmi):
 
         See Also
         --------
-        :func:`~aeolis.model.AeoLiS.solve`
+        model.AeoLiS.solve
 
         '''
         
@@ -523,7 +523,7 @@ class AeoLiS(IBmi):
 
         See Also
         --------
-        :func:`~aeolis.model.AeoLiS.solve`
+        model.AeoLiS.solve
 
         '''
         
@@ -535,7 +535,7 @@ class AeoLiS(IBmi):
 
         See Also
         --------
-        :func:`~aeolis.model.AeoLiS.solve`
+        model.AeoLiS.solve
 
         '''
 
@@ -571,8 +571,8 @@ class AeoLiS(IBmi):
         fractions for which a deficit exists are lowered to match
         supply. The weights for other fractions are increased to
         ensure that the sum of all weights remains one (see
-        :func:`~aeolis.transport.renormalize_weights()`). Only in case
-        all sediment fractions are in deficit, the total pickup of
+        :func:`~transport.renormalize_weights()`). Only in case all
+        sediment fractions are in deficit, the total pickup of
         sediment is reduced.
 
         The linear system of equations that is solved depends on the
@@ -614,11 +614,11 @@ class AeoLiS(IBmi):
 
         See Also
         --------
-        :func:`~aeolis.model.AeoLiS.euler_forward`
-        :func:`~aeolis.model.AeoLiS.euler_backward`
-        :func:`~aeolis.model.AeoLiS.crank_nicolson`
-        :func:`aeolis.transport.compute_weights`
-        :func:`aeolis.transport.renormalize_weights`
+        model.AeoLiS.euler_forward
+        model.AeoLiS.euler_backward
+        model.AeoLiS.crank_nicolson
+        transport.compute_weights
+        transport.renormalize_weights
 
         '''
 
@@ -968,8 +968,8 @@ class AeoLiSRunner(AeoLiS):
     '''AeoLiS model runner class
 
     This runner class is a convenience class for the BMI-compatible
-    AeoLiS model class (:class:`~aeolis.model.AeoLiS()`). It implements
-    a time loop, a progress indicator and netCDF4 output. It also
+    AeoLiS model class (:class:`~model.AeoLiS()`). It implements a
+    time loop, a progress indicator and netCDF4 output. It also
     provides the definition of a callback function that can be used to
     interact with the AeoLiS model during runtime.
 
@@ -990,7 +990,7 @@ class AeoLiSRunner(AeoLiS):
 
     See Also
     --------
-    aeolis.cmd.aeolis
+    console.aeolis
 
     '''
     
@@ -1018,13 +1018,13 @@ class AeoLiSRunner(AeoLiS):
         Parameters
         ----------
         configfile : str, optional
-            Model configuration file. See :func:`~aeolis.io.read_configfile()`.
+            Model configuration file. See :func:`~inout.read_configfile()`.
 
         '''
 
         self.set_configfile(configfile)
         if os.path.exists(self.configfile):
-            self.p = io.read_configfile(self.configfile, parse_files=False)
+            self.p = inout.read_configfile(self.configfile, parse_files=False)
             self.changed = False
         elif self.configfile.upper() == 'DEFAULT':
             self.changed = True
@@ -1058,14 +1058,14 @@ class AeoLiSRunner(AeoLiS):
             input. The callback function can be used to interact with
             the model during simulation (e.g. update the bed with new
             measurements). See for syntax
-            :func:`~aeolis.model.AeoLiSRunner.parse_callback()`.
+            :func:`~model.AeoLiSRunner.parse_callback()`.
         restartfile : str
             Path to previously written restartfile. The model state is
             loaded from this file after initialization of the model.
 
         See Also
         --------
-        :func:`~aeolis.model.AeoLiSRunner.parse_callback`
+        model.AeoLiSRunner.parse_callback
 
         '''
 
@@ -1175,7 +1175,7 @@ class AeoLiSRunner(AeoLiS):
     def get_var(self, var, clear=True):
         '''Returns spatial grid, statistic or model configuration parameter
 
-        Overloads the :func:`aeolis.model.AeoLiS.get_var()` function and
+        Overloads the :func:`~model.AeoLiS.get_var()` function and
         extends it with the functionality to return statistics on
         spatial grids by adding a postfix to the variable name
         (e.g. Ct.avg). Supported statistics are avg, sum, var, min and
@@ -1206,7 +1206,7 @@ class AeoLiSRunner(AeoLiS):
 
         See Also
         --------
-        aeolis.model.AeoLiS.get_var
+        model.AeoLiS.get_var
 
         '''
 
@@ -1223,7 +1223,7 @@ class AeoLiSRunner(AeoLiS):
     def initialize(self):
         '''Initialize model
 
-        Overloads the :func:`aeolis.model.AeoLiS.initialize()` function, but
+        Overloads the :func:`~model.AeoLiS.initialize()` function, but
         also initializes output statistics.
 
         '''
@@ -1235,7 +1235,7 @@ class AeoLiSRunner(AeoLiS):
     def update(self, dt=-1):
         '''Time stepping function
 
-        Overloads the :func:`aeolis.model.AeoLiS.update()` function,
+        Overloads the :func:`~model.AeoLiS.update()` function,
         but also updates output statistics and clears output
         statistics upon request.
 
@@ -1262,13 +1262,13 @@ class AeoLiSRunner(AeoLiS):
 
         See Also
         --------
-        aeolis.io.backup
+        inout.backup
 
         '''
 
         if self.changed:
-            io.backup(self.configfile)
-            io.write_configfile(self.configfile, self.p)
+            inout.backup(self.configfile)
+            inout.write_configfile(self.configfile, self.p)
             self.changed = False
                             
         
@@ -1502,13 +1502,13 @@ class AeoLiSRunner(AeoLiS):
                 if par.endswith('_file'):
                     print fmt1 % (par, '%s.txt' % par.replace('_file', ''))
                 elif len(val) > 0:
-                    print fmt1 % (par, io.print_value(val[0]))
+                    print fmt1 % (par, inout.print_value(val[0]))
                     for v in val[1:]:
-                        print fmt2 % ('', io.print_value(v))
+                        print fmt2 % ('', inout.print_value(v))
                 else:
                     print fmt1 % (par, '')
             else:
-                print fmt1 % (par, io.print_value(val))
+                print fmt1 % (par, inout.print_value(val))
 
         print '**********************************************************'
         print ''
@@ -1525,13 +1525,13 @@ class AeoLiSRunner(AeoLiS):
         print '**********************************************************'
 
         fmt = '%-20s : %s'
-        print fmt % ('# time steps', io.print_value(n_time))
-        print fmt % ('# matrix solves', io.print_value(n_matrixsolve))
-        print fmt % ('# supply lim', io.print_value(n_supplylim))
+        print fmt % ('# time steps', inout.print_value(n_time))
+        print fmt % ('# matrix solves', inout.print_value(n_matrixsolve))
+        print fmt % ('# supply lim', inout.print_value(n_supplylim))
         print fmt % ('avg. solves per step',
-                           io.print_value(float(n_matrixsolve) / n_time))
+                           inout.print_value(float(n_matrixsolve) / n_time))
         print fmt % ('avg. time step',
-                           io.print_value(float(self.p['tstop']) / n_time))
+                           inout.print_value(float(self.p['tstop']) / n_time))
 
         print '**********************************************************'
         print ''
@@ -1559,7 +1559,7 @@ class WindGenerator():
 
     See Also
     --------
-    aeolis.cmd.wind
+    console.wind
 
     '''
     

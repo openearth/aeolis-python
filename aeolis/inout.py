@@ -72,8 +72,8 @@ def read_configfile(configfile, parse_files=True, load_defaults=True):
 
     See Also
     --------
-    :func:`~aeolis.io.write_configfile`
-    :func:`~aeolis.io.check_configuration`
+    write_configfile
+    check_configuration
 
     '''
 
@@ -132,7 +132,7 @@ def write_configfile(configfile, p=None):
 
     See Also
     --------
-    :func:`~aeolis.io.read_configuration`
+    read_configfile
 
     '''
 
@@ -173,7 +173,7 @@ def check_configuration(p):
 
     See Also
     --------
-    :func:`~aeolis.io.read_configfile`
+    read_configfile
 
     '''
 

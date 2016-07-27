@@ -349,7 +349,7 @@ def append(outputfile, variables):
 
     See Also
     --------
-    :func:`~aeolis.netcdf.set_bounds`
+    set_bounds
 
     '''
 

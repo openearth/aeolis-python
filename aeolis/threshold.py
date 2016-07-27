@@ -54,11 +54,11 @@ def compute(s, p):
 
     See Also
     --------
-    :func:`~aeolis.threshold.compute_grainsize`
-    :func:`~aeolis.threshold.compute_bedslope`
-    :func:`~aeolis.threshold.compute_moisture`
-    :func:`~aeolis.threshold.compute_humidity`
-    :func:`~aeolis.threshold.compute_roughness`
+    compute_grainsize
+    compute_bedslope
+    compute_moisture
+    compute_humidity
+    compute_roughness
 
     '''
 
