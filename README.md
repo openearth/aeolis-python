@@ -7,7 +7,7 @@ effects, air humidity and roughness elements.
 
 AeoLiS is developed and maintained by [Bas
 Hoonhout](b.m.hoonhout@tudelft.nl). Documentation can be found at
-(http://openearth.github.io/aeolis-python/).
+http://aeolis.readthedocs.io/.
 
 AeoLiS is developed at [Delft University of
 Technology](http://www.tudelft.nl) with support from the ERC-Advanced
@@ -15,3 +15,9 @@ Grant 291206 Nearshore Monitoring and Modeling
 ([NEMO](http://nemo.citg.tudelft.nl>)) and
 [Deltares](http://www.deltares.nl>).
 
+## Examples
+
+```
+aeolis params.txt
+aeolis-wind wind.txt --mean=6 --duration=3600
+```
