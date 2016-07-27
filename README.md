@@ -19,4 +19,5 @@ Grant 291206 Nearshore Monitoring and Modeling
 
 ```
 aeolis params.txt
+aeolis-wind wind.txt --mean=6 --duration=3600
 ```
