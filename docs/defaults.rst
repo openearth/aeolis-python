@@ -10,4 +10,3 @@ configuration is listed below.
 .. literalinclude:: ../aeolis/constants.py
    :language: python
    :lines: 75-146
-   :columns: 5-10
