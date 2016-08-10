@@ -41,6 +41,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinxcontrib.napoleon',
     'sphinx.ext.mathjax',
+    'sphinxcontrib.bibtex',
     'sphinx.ext.viewcode',
 ]
 
@@ -299,3 +300,5 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}
+
+numfig = True

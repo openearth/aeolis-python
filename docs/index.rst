@@ -30,8 +30,10 @@ Contents
 --------
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
 
+   model
+   implementation
    sourcecode
    defaults
    output
