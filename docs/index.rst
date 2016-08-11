@@ -28,6 +28,7 @@ Contents
    defaults
    output
    installation
+   bibliography
    
 
 Acknowledgements

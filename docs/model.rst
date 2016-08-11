@@ -398,9 +398,3 @@ exponential decay function that is governed by a drying time scale
 of the Penman-Monteith equation (:cite:`Shuttleworth1993`) that is
 governed by meteorological time series of solar radiation, temperature
 and humidity.
-
-.. rubric:: Bibliography
-
-.. bibliography:: aeolis.bib
-   :cited:
-   :style: alpha
