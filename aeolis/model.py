@@ -550,50 +550,6 @@ class AeoLiS(IBmi):
         spatial grid dictionary that can be used to update the global
         spatial grid dictionary.
 
-        The instantaneous sediment concentration :math:`\widehat{C}_t`
-        is solved by solving a linear system of equations based on the
-        advection equation:
-
-        .. math::
-
-            \\frac{\\partial \\widehat{C}_t}{\\partial t} 
-                + u_w \\frac{\\partial \\widehat{C}_t}{\\partial x}
-                = \\frac{w \cdot \\widehat{C}_u - \\widehat{C}_t}{T}
-
-        The corresponding solution is exact, but may violate the
-        availability of sediment in the bed:
-
-        .. math::
-
-            \\frac{w \cdot \\widehat{C}_u - \\widehat{C}_t}{T} \\le \\frac{\\partial S_e}{\\partial t}
-
-        If this is the case, the weights :math:`w` for the sediment
-        fractions for which a deficit exists are lowered to match
-        supply. The weights for other fractions are increased to
-        ensure that the sum of all weights remains one (see
-        :func:`~transport.renormalize_weights()`). Only in case all
-        sediment fractions are in deficit, the total pickup of
-        sediment is reduced.
-
-        The linear system of equations that is solved depends on the
-        selected numerical scheme. The offshore boundary is a
-        zero-flux boundary, the onshore boundary is a zero-gradient
-        boundariy. The lateral boundaries have circular boundary
-        conditions. Therefore the system that is solved reads:
-
-        .. include:: ../docs/linear_system.inc
-
-        The coefficients :math:`\\alpha` and :math:`\\beta` are used
-        to respectively select the implicitness of the scheme in time
-        and the centralization in space. :math:`\\alpha = 0` results
-        in the fully explicit Euler forward scheme, :math:`\\alpha =
-        1` results in the fully implicit Euler backward scheme, while
-        :math:`\\alpha = 0.5` results in the semi-implicit
-        Crank-Nicolson scheme. :math:`\\beta = 1` results in an upwind
-        scheme for which the direction is adapted to the local wind
-        direction, while :math:`\\beta = 0.5` results in a central
-        difference scheme (which is instable!).
-
         Parameters
         ----------
         alpha : float, optional

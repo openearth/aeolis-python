@@ -264,21 +264,21 @@ def compute_roughness(s, p):
 
     .. math::
     
-        \\sigma \\lambda = \\frac{n A_b}{S} = \\sum_{j=n}^N m_j
+        \\sigma \\lambda = \\frac{n A_b}{S} = \\sum_{k=n_0}^{n_k} \hat{w}^{\mathrm{bed}}_k
 
-    where :math:`j` is the fraction index, :math:`n` is the smallest
-    non-erodible fraction, :math:`N` is the largest non-erodible
-    fraction and :math:`m_j` is the mass fraction of sediment fraction
-    :math:`j`. It is assumed that the fractions are ordered by
-    increasing size.
+    where :math:`k` is the fraction index, :math:`n_0` is the smallest
+    non-erodible fraction, :math:`n_k` is the largest non-erodible
+    fraction and :math:`\hat{w}^{\mathrm{bed}}_k` is the mass fraction
+    of sediment fraction :math:`k`. It is assumed that the fractions
+    are ordered by increasing size.
 
     Substituting the derivation in the Raupach (1993) equation gives
     the formulation implemented in this function:
 
     .. math::
     
-        u_{*,th,r} = u_{*,th,s} * \\sqrt{\\left( 1 - m \\sum_{j=n}^N m_j \\right)
-                                         \\left( 1 + m \\frac{\\beta}{\\sigma} \\sum_{j=n}^N m_j \\right)}
+        u_{*,th,r} = u_{*,th,s} * \\sqrt{\\left( 1 - m \\sum_{k=n_0}^{n_k} \hat{w}^{\mathrm{bed}}_k \\right)
+                                         \\left( 1 + m \\frac{\\beta}{\\sigma} \\sum_{k=n_0}^{n_k} \hat{w}^{\mathrm{bed}}_k \\right)}
 
     Parameters
     ----------
