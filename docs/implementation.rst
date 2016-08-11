@@ -573,3 +573,9 @@ input file or through the model command-line options as
      val_new = val.copy()
      val_new[:,:] = np.loadtxt('measured_topography.txt')
      model.set_var('zb', val_new)
+
+
+.. rubric:: Bibliography
+
+.. bibliography:: aeolis.bib
+   :cited:
