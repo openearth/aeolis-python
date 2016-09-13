@@ -6,7 +6,9 @@ are soil moisture contents, sediment sorting and armouring, bed slope
 effects, air humidity and roughness elements.
 
 AeoLiS is developed and maintained by [Bas
-Hoonhout](b.m.hoonhout@tudelft.nl). Documentation can be found at
+Hoonhout](b.m.hoonhout@tudelft.nl) at Deltares and [Sierd de Vries](Sierd.deVries@tudelft.nl) at Delft University of Technology. 
+
+Documentation can be found at
 http://aeolis.readthedocs.io/.
 
 AeoLiS is developed at [Delft University of
