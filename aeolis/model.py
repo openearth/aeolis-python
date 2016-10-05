@@ -962,6 +962,7 @@ class AeoLiSRunner(AeoLiS):
 
     clear = False
     changed = False
+    cwd = None
 
     
     def __init__(self, configfile='aeolis.txt'):
@@ -1043,6 +1044,7 @@ class AeoLiSRunner(AeoLiS):
         # set working directory
         fpath, fname = os.path.split(self.configfile)
         if fpath != os.getcwd():
+            self.cwd = os.getcwd()
             os.chdir(fpath)
             logger.info('Changed working directory to: %s\n', fpath)
 
@@ -1080,6 +1082,9 @@ class AeoLiSRunner(AeoLiS):
         self.finalize()
 
         self.print_stats()
+
+        if self.cwd is not None:
+            os.chdir(self.cwd)
 
 
     def set_configfile(self, configfile):
