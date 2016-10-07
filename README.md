@@ -8,13 +8,13 @@ roughness elements.
 Documentation can be found at
 http://aeolis.readthedocs.io/.
 
-AeoLiS is initially developed by [Bas Hoonhout](b.m.hoonhout@tudelft.nl)
+AeoLiS is initially developed by [Bas Hoonhout](mailto:b.m.hoonhout@tudelft.nl)
 at Delft University of Technology with support from the ERC-Advanced
 Grant 291206 Nearshore Monitoring and Modeling
 ([NEMO](http://nemo.citg.tudelft.nl>)) and
 [Deltares](http://www.deltares.nl>). AeoLiS is currently maintained by
-[Bas Hoonhout](bas.hoonhout@deltares.nl) at Deltares and
-[Sierd de Vries](Sierd.deVries@tudelft.nl) at Delft University of Technology.
+[Bas Hoonhout](mailto:bas.hoonhout@deltares.nl) at Deltares and
+[Sierd de Vries](mailto:Sierd.deVries@tudelft.nl) at Delft University of Technology.
 
 ## Examples
 
