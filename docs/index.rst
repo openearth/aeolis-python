@@ -33,9 +33,6 @@ Contents
 Acknowledgements
 ================
 
-AeoLiS is initially developed by Bas Hoonhout at Delft University of Technology with support from the ERC-Advanced Grant 291206 Nearshore Monitoring and Modeling (NEMO) and Deltares. 
-
-
 AeoLiS is initially developed by `Bas Hoonhout
 <b.m.hoonhout@tudelft.nl>`_ at `Delft University of Technology
 <http://www.tudelft.nl>`_ with support from the ERC-Advanced Grant
