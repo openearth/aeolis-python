@@ -97,7 +97,7 @@ def initialize(s, p):
         gs = gs / np.sum(gs)
         for i in range(nl):
             for j in range(nf):
-                s['mass'][:,:,i,j] = p['rhop'] * p['porosity'] \
+                s['mass'][:,:,i,j] = p['rhop'] * (1. - p['porosity']) \
                                      * s['thlyr'][:,:,i] * gs[j]
     else:
         s['mass'][:,:,:,:] = p['bedcomp_file'].reshape(s['mass'].shape)                
@@ -195,7 +195,8 @@ def update(s, p):
 
     # update bathy
     if p['bedupdate']:
-        s['zb'] += dm[:,0].reshape((ny+1,nx+1)) / (p['rhop'] * p['porosity'])
+        s['zb'] += dm[:,0].reshape((ny+1,nx+1)) / (p['rhop'] * (1. - p['porosity']))
+        s['zs'] += dm[:,0].reshape((ny+1,nx+1)) / (p['rhop'] * (1. - p['porosity']))
 
     return s
 
