@@ -985,13 +985,13 @@ class AeoLiSRunner(AeoLiS):
             self.changed = False
         elif self.configfile.upper() == 'DEFAULT':
             self.changed = True
+            self.configfile = os.path.abspath('aeolis.txt')
             self.p = constants.DEFAULT_CONFIG
 
             # add default profile and time series
             self.p.update(dict(nx         = 99,
                                ny         = 0,
                                xgrid_file = np.arange(0.,100.,1.),
-                               ygrid_file = np.zeros((1,100)),
                                bed_file   = np.linspace(-5.,5.,100.),
                                wind_file  = np.asarray([[0.,10.,0.],
                                                         [3601.,10.,0.]])))
@@ -1091,7 +1091,10 @@ class AeoLiSRunner(AeoLiS):
         '''Set model configuration file name'''
 
         self.changed = False
-        self.configfile = os.path.abspath(configfile)
+        if os.path.exists(configfile):
+            self.configfile = os.path.abspath(configfile)
+        else:
+            self.configfile = configfile
 
         
     def set_params(self, **kwargs):
