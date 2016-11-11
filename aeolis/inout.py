@@ -221,7 +221,7 @@ def parse_value(val, parse_files=True, force_list=False):
         ``numpy.loadtxt``
     force_list:
         If True, interpret the value as a list, even if it consists of
-        a single valye
+        a single value
 
     Returns
     -------
