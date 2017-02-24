@@ -90,8 +90,10 @@ DEFAULT_CONFIG = {
     'wave_file'         : None,               # Filename of ASCII file with time series of wave heights
     'meteo_file'        : None,               # Filename of ASCII file with time series of meteorlogical conditions
     'bedcomp_file'      : None,               # Filename of ASCII file with initial bed composition
-    'mask_file'         : None,               # Filename of ASCII file with mask for tides and waves
     'threshold_file'    : None,               # Filename of ASCII file with shear velocity threshold
+    'wave_mask'         : None,               # Filename of ASCII file with mask for wave height
+    'tide_mask'         : None,               # Filename of ASCII file with mask for tidal elevation
+    'threshold_mask'    : None,               # Filename of ASCII file with mask for the shear velocity threshold
     'nx'                : 0,                  # [-] Number of grid cells in x-dimension
     'ny'                : 0,                  # [-] Number of grid cells in y-dimension
     'dt'                : 60.,                # [s] Time step size

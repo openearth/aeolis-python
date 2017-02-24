@@ -272,3 +272,39 @@ def format_log(msg, ncolumns=2, **props):
             
     return ''.join(fmt)
     
+
+def apply_mask(arr, mask):
+    '''Apply complex mask
+
+    The real part of the complex mask is multiplied with the input
+    array. Subsequently the imaginary part is added and the result
+    returned.
+
+    The shape of the mask is assumed to match the first few dimensions
+    of the input array. If the input array is larger than the mask,
+    the mask is repeated for any additional dimensions.
+
+    Parameters
+    ----------
+    arr : numpy.ndarray
+        Array or matrix to which the mask needs to be applied
+    mask : numpy.ndarray
+        Array or matrix with complex mask values
+
+    Returns
+    -------
+    arr : numpy.ndarray
+        Array or matrix to which the mask is applied
+
+    '''
+
+    # repeat mask to match shape of input array
+    shp = arr.shape[mask.ndim:]
+    for d in shp:
+        mask = mask.reshape(mask.shape + tuple([1])).repeat(d, axis=-1)
+
+    # apply mask
+    arr *= np.real(mask)
+    arr += np.imag(mask)
+
+    return arr

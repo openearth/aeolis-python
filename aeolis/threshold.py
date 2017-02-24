@@ -77,6 +77,9 @@ def compute(s, p):
         if p['th_roughness']:
             s = compute_roughness(s, p)
 
+        # apply complex mask
+        s['uth'] = apply_mask(s['uth'], s['threshold_mask'])
+
     return s
 
 

@@ -61,8 +61,7 @@ def interpolate(s, p, t):
                                        p['tide_file'][:,1])
 
         # apply complex mask
-        s['zs'] *= np.real(s['mask'])
-        s['zs'] += np.imag(s['mask'])
+        s['zs'] = apply_mask(s['zs'], s['tide_mask'])
 
     if p['wave_file'] is not None:
 
@@ -73,8 +72,8 @@ def interpolate(s, p, t):
                                        p['wave_file'][:,0],
                                        p['wave_file'][:,1])
 
-        # apply mask
-        s['Hs'] *= np.real(s['mask'])
+        # apply complex mask
+        s['Hs'] = apply_mask(s['Hs'], s['wave_mask'])
 
         # add wave runup
         if p['runup']:
