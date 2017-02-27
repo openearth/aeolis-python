@@ -29,6 +29,10 @@ import logging
 import numpy as np
 
 
+# package modules
+from utils import *
+
+
 def compute(s, p):
     '''Compute wind velocity threshold based on bed surface properties
 

@@ -299,6 +299,7 @@ def apply_mask(arr, mask):
     '''
 
     # repeat mask to match shape of input array
+    mask = np.asarray(mask)
     shp = arr.shape[mask.ndim:]
     for d in shp:
         mask = mask.reshape(mask.shape + tuple([1])).repeat(d, axis=-1)
