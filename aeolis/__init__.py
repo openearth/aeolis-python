@@ -25,11 +25,13 @@ The Netherlands                  The Netherlands
 '''
 
 
-import inout
-import model
-import wind
-import bed
-import hydro
-import threshold
-import transport
-import netcdf
+from __future__ import absolute_import
+
+import aeolis.inout
+import aeolis.model
+import aeolis.wind
+import aeolis.bed
+import aeolis.hydro
+import aeolis.threshold
+import aeolis.transport
+import aeolis.netcdf

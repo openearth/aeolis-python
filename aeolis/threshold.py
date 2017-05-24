@@ -25,12 +25,13 @@ The Netherlands                  The Netherlands
 '''
 
 
+from __future__ import absolute_import, division
+
 import logging
 import numpy as np
 
-
 # package modules
-from utils import *
+from aeolis.utils import *
 
 
 def compute(s, p):

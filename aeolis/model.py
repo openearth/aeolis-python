@@ -25,6 +25,8 @@ The Netherlands                  The Netherlands
 '''
 
 
+from __future__ import absolute_import, division
+
 import os
 import imp
 import time
@@ -32,14 +34,22 @@ import logging
 import operator
 import numpy as np
 import scipy.sparse
-import cPickle as pickle
+import pickle
 import scipy.sparse.linalg
 from datetime import timedelta
 from bmi.api import IBmi
 
 # package modules
-import inout, bed, wind, threshold, transport, hydro, netcdf, constants
-from utils import *
+import aeolis.inout
+import aeolis.bed
+import aeolis.wind
+import aeolis.threshold
+import aeolis.transport
+import aeolis.hydro
+import aeolis.netcdf
+import aeolis.constants
+
+from aeolis.utils import *
 
 
 # initialize logger
@@ -115,8 +125,8 @@ class AeoLiS(IBmi):
         '''
 
         # read configuration file
-        self.p = inout.read_configfile(self.configfile)
-        inout.check_configuration(self.p)
+        self.p = aeolis.inout.read_configfile(self.configfile)
+        aeolis.inout.check_configuration(self.p)
 
         # initialize time
         self.t = self.p['tstart']
@@ -128,12 +138,12 @@ class AeoLiS(IBmi):
         nf = self.p['nfractions']
 
         # initialize spatial grids
-        for var, dims in self.dimensions().iteritems():
+        for var, dims in self.dimensions().items():
             self.s[var] = np.zeros(self._dims2shape(dims))
             self.l[var] = self.s[var].copy()
 
         # initialize bed composition
-        self.s = bed.initialize(self.s, self.p)
+        self.s = aeolis.bed.initialize(self.s, self.p)
 
         
     def update(self, dt=-1):
@@ -168,24 +178,24 @@ class AeoLiS(IBmi):
         self.l = self.s.copy()
         
         # interpolate wind time series
-        self.s = wind.interpolate(self.s, self.p, self.t)
+        self.s = aeolis.wind.interpolate(self.s, self.p, self.t)
         
         # determine optimal time step
         if not self.set_timestep(dt):
             return
 
         # interpolate hydrodynamic time series
-        self.s = hydro.interpolate(self.s, self.p, self.t)
-        self.s = hydro.update(self.s, self.p, self.dt)
+        self.s = aeolis.hydro.interpolate(self.s, self.p, self.t)
+        self.s = aeolis.hydro.update(self.s, self.p, self.dt)
 
         # mix top layer
-        self.s = bed.mixtoplayer(self.s, self.p)
+        self.s = aeolis.bed.mixtoplayer(self.s, self.p)
 
         # compute threshold
-        self.s = threshold.compute(self.s, self.p)
+        self.s = aeolis.threshold.compute(self.s, self.p)
 
         # compute equilibrium transport
-        self.s = transport.equilibrium(self.s, self.p)
+        self.s = aeolis.transport.equilibrium(self.s, self.p)
 
         # compute instantaneous transport
         if self.p['scheme'] == 'euler_forward':
@@ -198,7 +208,7 @@ class AeoLiS(IBmi):
             raise ValueError('Unknown scheme [%s]' % self.p['scheme'])
 
         # update bed
-        self.s = bed.update(self.s, self.p)
+        self.s = aeolis.bed.update(self.s, self.p)
 
         # increment time
         self.t += self.dt * self.p['accfac']
@@ -280,12 +290,12 @@ class AeoLiS(IBmi):
 
         '''
 
-        if self.s.has_key(var):
+        if var in self.s:
             if var in ['Ct', 'Cu']:
                 return self.s[var] / self.p['accfac']
             else:
                 return self.s[var]
-        elif self.p.has_key(var):
+        elif var in self.p:
             return self.p[var]
         else:
             return None
@@ -339,7 +349,7 @@ class AeoLiS(IBmi):
 
         '''
         
-        if self.s.has_key(var):
+        if var in self.s:
             return len(self.s[var].shape)
         else:
             return -1
@@ -360,7 +370,7 @@ class AeoLiS(IBmi):
 
         '''
         
-        if self.s.has_key(var):
+        if var in self.s:
             return self.s[var].shape
         else:
             return -1
@@ -381,7 +391,7 @@ class AeoLiS(IBmi):
 
         '''
 
-        if self.s.has_key(var):
+        if var in self.s:
             return 'double'
         else:
             return -1
@@ -424,9 +434,9 @@ class AeoLiS(IBmi):
 
         '''
         
-        if self.s.has_key(var):
+        if var in self.s:
             self.s[var] = val
-        elif self.p.has_key(var):
+        elif var in self.p:
             self.p[var] = val
     
         
@@ -586,7 +596,7 @@ class AeoLiS(IBmi):
         pickup = s['pickup'].copy()
 
         # compute transport weights for all sediment fractions
-        w_init, w_air, w_bed = transport.compute_weights(s, p)
+        w_init, w_air, w_bed = aeolis.transport.compute_weights(s, p)
 
         if self.t == 0.:
             # use initial guess for first time step
@@ -705,7 +715,7 @@ class AeoLiS(IBmi):
             # renormalize weights for all fractions equal or larger
             # than the current one such that the sum of all weights is
             # unity
-            w = transport.renormalize_weights(w, i)
+            w = aeolis.transport.renormalize_weights(w, i)
 
             # iteratively find a solution of the linear system that
             # does not violate the availability of sediment in the bed
@@ -827,7 +837,7 @@ class AeoLiS(IBmi):
 
         '''
 
-        if self.c.has_key(name):
+        if name in self.c:
             return self.c[name]
         else:
             return 0
@@ -845,7 +855,7 @@ class AeoLiS(IBmi):
 
         '''
         
-        if not self.c.has_key(name):
+        if name not in self.c:
             self.c[name] = 0
         self.c[name] += n
 
@@ -912,7 +922,7 @@ class AeoLiS(IBmi):
                      for v in ['mass']})
 
         if var is not None:
-            if dims.has_key(var):
+            if var in dims:
                 return dims[var]
             else:
                 return None
@@ -981,7 +991,7 @@ class AeoLiSRunner(AeoLiS):
 
         self.set_configfile(configfile)
         if os.path.exists(self.configfile):
-            self.p = inout.read_configfile(self.configfile, parse_files=False)
+            self.p = aeolis.inout.read_configfile(self.configfile, parse_files=False)
             self.changed = False
         elif self.configfile.upper() == 'DEFAULT':
             self.changed = True
@@ -1029,17 +1039,17 @@ class AeoLiSRunner(AeoLiS):
         # http://www.patorjk.com/software/taag/
         # font: Colossal
 
-        print '**********************************************************'
-        print '                                                          '
-        print '         d8888                   888      d8b  .d8888b.   '
-        print '        d88888                   888      Y8P d88P  Y88b  '
-        print '       d88P888                   888          Y88b.       '
-        print '      d88P 888  .d88b.   .d88b.  888      888  "Y888b.    '
-        print '     d88P  888 d8P  Y8b d88""88b 888      888     "Y88b.  '
-        print '    d88P   888 88888888 888  888 888      888       "888  '
-        print '   d8888888888 Y8b.     Y88..88P 888      888 Y88b  d88P  '
-        print '  d88P     888  "Y8888   "Y88P"  88888888 888  "Y8888P"   '
-        print '                                                          '
+        print('**********************************************************')
+        print('                                                          ')
+        print('         d8888                   888      d8b  .d8888b.   ')
+        print('        d88888                   888      Y8P d88P  Y88b  ')
+        print('       d88P888                   888          Y88b.       ')
+        print('      d88P 888  .d88b.   .d88b.  888      888  "Y888b.    ')
+        print('     d88P  888 d8P  Y8b d88""88b 888      888     "Y88b.  ')
+        print('    d88P   888 88888888 888  888 888      888       "888  ')
+        print('   d8888888888 Y8b.     Y88..88P 888      888 Y88b  d88P  ')
+        print('  d88P     888  "Y8888   "Y88P"  88888888 888  "Y8888P"   ')
+        print('                                                          ')
 
         # set working directory
         fpath, fname = os.path.split(self.configfile)
@@ -1178,7 +1188,7 @@ class AeoLiSRunner(AeoLiS):
 
         if '.' in var:
             var, stat = var.split('.')
-            if self.o.has_key(var):
+            if var in self.o:
                 return self.get_statistic(var, stat)
 
         return super(AeoLiSRunner, self).get_var(var)
@@ -1231,8 +1241,8 @@ class AeoLiSRunner(AeoLiS):
         '''
 
         if self.changed:
-            inout.backup(self.configfile)
-            inout.write_configfile(self.configfile, self.p)
+            aeolis.inout.backup(self.configfile)
+            aeolis.inout.write_configfile(self.configfile, self.p)
             self.changed = False
                             
         
@@ -1250,18 +1260,18 @@ class AeoLiSRunner(AeoLiS):
                 var0, ext = var.split('.')
             else:
                 var0, ext = var, None
-            if not self.p['_output_vars'].has_key(var0):
+            if var0 not in self.p['_output_vars']:
                 self.p['_output_vars'][var0] = []
             self.p['_output_vars'][var0].append(ext)
             for ext in self.p['output_types']:
                 if ext not in self.p['_output_vars'][var0]:
                     self.p['_output_vars'][var0].append(ext)
         
-        netcdf.initialize(self.p['output_file'],
-                          self.p['_output_vars'],
-                          self.s,
-                          self.p,
-                          self.dimensions())
+        aeolis.netcdf.initialize(self.p['output_file'],
+                                 self.p['_output_vars'],
+                                 self.s,
+                                 self.p,
+                                 self.dimensions())
 
         self.output_clear()
 
@@ -1275,7 +1285,7 @@ class AeoLiSRunner(AeoLiS):
 
         '''
 
-        for k in self.p['_output_vars'].iterkeys():
+        for k in self.p['_output_vars'].keys():
             s = self.get_var_shape(k)
             self.o[k] = dict(min=np.zeros(s) + np.inf,
                              max=np.zeros(s) - np.inf,
@@ -1294,7 +1304,7 @@ class AeoLiSRunner(AeoLiS):
 
         '''
 
-        for k, exts in self.p['_output_vars'].iteritems():
+        for k, exts in self.p['_output_vars'].items():
             v = self.get_var(k, clear=False).copy()
             if 'min' in exts:
                 self.o[k]['min'] = np.minimum(self.o[k]['min'], v)
@@ -1323,14 +1333,14 @@ class AeoLiSRunner(AeoLiS):
             
             variables = {}
             variables['time'] = self.t
-            for k, exts in self.p['_output_vars'].iteritems():
+            for k, exts in self.p['_output_vars'].items():
                 for ext in exts:
                     if ext is None:
                         variables[k] = self.get_var(k, clear=False).copy()
                     else:
                         variables['%s.%s' % (k, ext)] = self.get_statistic(k, ext)
 
-            netcdf.append(self.p['output_file'], variables)
+            aeolis.netcdf.append(self.p['output_file'], variables)
 
             self.output_clear()
             self.tout = self.t
@@ -1445,7 +1455,7 @@ class AeoLiSRunner(AeoLiS):
             t1 = timedelta(0, round(t-self.t0))
             t2 = timedelta(0, round((t-self.t0)/p))
             t3 = timedelta(0, round((t-self.t0)*(1.-p)/p))
-            print '%05.1f%%   %s / %s / %s' % (p * 100., t1, t2, t3)
+            print('%05.1f%%   %s / %s / %s' % (p * 100., t1, t2, t3))
             self.tlog = time.time()
             self.plog = pr
             
@@ -1453,29 +1463,29 @@ class AeoLiSRunner(AeoLiS):
     def print_params(self):
         '''Print model configuration parameters to screen'''
         
-        maxl = np.max([len(par) for par in self.p.iterkeys()])
+        maxl = np.max([len(par) for par in self.p.keys()])
         fmt1 = '  %-%%ds = %%s' % maxl
         fmt2 = '  %-%%ds   %%s' % maxl
 
-        print '**********************************************************'
-        print 'PARAMETER SETTINGS                                        '
-        print '**********************************************************'
+        print('**********************************************************')
+        print('PARAMETER SETTINGS                                        ')
+        print('**********************************************************')
 
-        for par, val in sorted(self.p.iteritems()):
+        for par, val in sorted(self.p.items()):
             if isiterable(val):
                 if par.endswith('_file'):
-                    print fmt1 % (par, '%s.txt' % par.replace('_file', ''))
+                    print(fmt1 % (par, '%s.txt' % par.replace('_file', '')))
                 elif len(val) > 0:
-                    print fmt1 % (par, inout.print_value(val[0]))
+                    print(fmt1 % (par, aeolis.inout.print_value(val[0])))
                     for v in val[1:]:
-                        print fmt2 % ('', inout.print_value(v))
+                        print(fmt2 % ('', aeolis.inout.print_value(v)))
                 else:
-                    print fmt1 % (par, '')
+                    print(fmt1 % (par, ''))
             else:
-                print fmt1 % (par, inout.print_value(val))
+                print(fmt1 % (par, aeolis.inout.print_value(val)))
 
-        print '**********************************************************'
-        print ''
+        print('**********************************************************')
+        print('')
 
 
     def print_stats(self):
@@ -1485,20 +1495,20 @@ class AeoLiSRunner(AeoLiS):
         n_matrixsolve = self.get_count('matrixsolve')
         n_supplylim = self.get_count('supplylim')
 
-        print ''
-        print '**********************************************************'
+        print('')
+        print('**********************************************************')
 
         fmt = '%-20s : %s'
-        print fmt % ('# time steps', inout.print_value(n_time))
-        print fmt % ('# matrix solves', inout.print_value(n_matrixsolve))
-        print fmt % ('# supply lim', inout.print_value(n_supplylim))
-        print fmt % ('avg. solves per step',
-                           inout.print_value(float(n_matrixsolve) / n_time))
-        print fmt % ('avg. time step',
-                           inout.print_value(float(self.p['tstop']) / n_time))
+        print(fmt % ('# time steps', aeolis.inout.print_value(n_time)))
+        print(fmt % ('# matrix solves', aeolis.inout.print_value(n_matrixsolve)))
+        print(fmt % ('# supply lim', aeolis.inout.print_value(n_supplylim)))
+        print(fmt % ('avg. solves per step',
+                           aeolis.inout.print_value(float(n_matrixsolve) / n_time)))
+        print(fmt % ('avg. time step',
+                           aeolis.inout.print_value(float(self.p['tstop']) / n_time)))
 
-        print '**********************************************************'
-        print ''
+        print('**********************************************************')
+        print('')
 
 
 class WindGenerator():

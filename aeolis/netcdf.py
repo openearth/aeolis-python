@@ -25,12 +25,13 @@ The Netherlands                  The Netherlands
 '''
 
 
+from __future__ import absolute_import, division
+
 import logging
 from datetime import datetime
 
-
 # package modules
-from utils import *
+from aeolis.utils import *
 
 
 # initialize logger

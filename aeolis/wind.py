@@ -25,11 +25,13 @@ The Netherlands                  The Netherlands
 '''
 
 
+from __future__ import absolute_import, division
+
 import numpy as np
 import operator
 
 # package modules
-from utils import *
+from aeolis.utils import *
 
 
 def interpolate(s, p, t):

@@ -25,11 +25,13 @@ The Netherlands                  The Netherlands
 '''
 
 
+from __future__ import absolute_import, division
+
 import os
 import docopt
 import logging
 import numpy as np
-from model import AeoLiSRunner, WindGenerator
+from aeolis.model import AeoLiSRunner, WindGenerator
 
 
 def aeolis():
@@ -102,17 +104,17 @@ def wind():
     u = generator.get_time_series()[1]
     
     fmt = '%-4s : %6.3f m/s'
-    print fmt % ('min', np.min(u))
-    print fmt % ('mean', np.mean(u))
-    print fmt % ('max', np.max(u))
+    print(fmt % ('min', np.min(u)))
+    print(fmt % ('mean', np.mean(u)))
+    print(fmt % ('max', np.max(u)))
 
 
 def print_license():
-    print 'AeoLiS  Copyright (C) 2015  Bas Hoonhout'
-    print 'This program comes with ABSOLUTELY NO WARRANTY.'
-    print 'This is free software, and you are welcome to redistribute it'
-    print 'under certain conditions; See LICENSE for details.'
-    print ''
+    print('AeoLiS  Copyright (C) 2015  Bas Hoonhout')
+    print('This program comes with ABSOLUTELY NO WARRANTY.')
+    print('This is free software, and you are welcome to redistribute it')
+    print('under certain conditions; See LICENSE for details.')
+    print('')
 
     
 if __name__ == '__main__':
