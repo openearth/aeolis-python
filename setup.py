@@ -9,14 +9,14 @@ setup(
     description='A process-based model for simulating supply-limited aeolian sediment transport',
     long_description=open('README.txt').read(),
     install_requires=[
-        'numpy',
+        'bmi',
         'scipy',
+        'numpy',
         'docopt',
     ],
-    #setup_requires=[
-    #    'sphinx',
-    #    'sphinx_rtd_theme'
-    #],
+    dependency_links=[
+        'git+https://github.com/openearth/bmi-python.git#egg=bmi',
+    ],
     tests_require=[
         'nose'
     ],

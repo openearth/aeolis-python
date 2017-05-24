@@ -25,6 +25,8 @@ The Netherlands                  The Netherlands
 '''
 
 
+from __future__ import absolute_import, division
+
 import os
 import re
 import time
@@ -33,8 +35,8 @@ import logging
 import numpy as np
 
 # package modules
-from utils import *
-from constants import *
+from aeolis.utils import *
+from aeolis.constants import *
 
 # initialize logger
 logger = logging.getLogger(__name__)
@@ -92,16 +94,16 @@ def read_configfile(configfile, parse_files=True, load_defaults=True):
         raise IOError('File not found [%s]' % configfile)
 
     # normalize grain size distribution
-    if p.has_key('grain_dist'):
+    if 'grain_dist' in p:
         p['grain_dist'] = normalize(p['grain_dist'])
         p['grain_size'] = makeiterable(p['grain_size'])
 
     # set default output file, if not given
-    if p.has_key('output_file') and not p['output_file']:
+    if 'output_file' in p and not p['output_file']:
         p['output_file'] = '%s.nc' % os.path.splitext(configfile)[0]
 
     # set default value for h, if not given
-    if p.has_key('h') and not p['h']:
+    if 'h' in p and not p['h']:
         p['h'] = p['z']
         
     return p
@@ -178,7 +180,7 @@ def check_configuration(p):
     '''
 
     # check for missing parameters
-    missing = [k for k in REQUIRED_CONFIG if not p.has_key(k)]
+    missing = [k for k in REQUIRED_CONFIG if k not in p]
     if len(missing) > 0:
         raise ValueError('Missing required parameters [%s]' % ', '.join(missing))
         

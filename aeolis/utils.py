@@ -255,7 +255,7 @@ def format_log(msg, ncolumns=2, **props):
     fmt.append('%s\n         ' % msg)
 
     i = 0
-    for k, v in sorted(props.iteritems()):
+    for k, v in sorted(props.items()):
         k = re.sub('^min', 'min. ', k)
         k = re.sub('^max', 'max. ', k)
         k = re.sub('^nr', '# ', k)

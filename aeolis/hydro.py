@@ -25,10 +25,12 @@ The Netherlands                  The Netherlands
 '''
 
 
+from __future__ import absolute_import, division
+
 import numpy as np
 
 # package modules
-from utils import *
+from aeolis.utils import *
 
 
 def interpolate(s, p, t):
@@ -152,7 +154,7 @@ def update(s, p, dt):
     s['salt'][~ix,0] *= np.exp(-F2 * dt)
 
     # evaporation using Penman
-    if s.has_key('meteo'):
+    if 'meteo' in s:
 
         met = s['meteo']
         

@@ -25,11 +25,13 @@ The Netherlands                  The Netherlands
 '''
 
 
+from __future__ import absolute_import, division
+
 import logging
 import numpy as np
 
 # package modules
-from utils import *
+from aeolis.utils import *
 
 
 # initialize logger
@@ -103,7 +105,7 @@ def initialize(s, p):
         s['mass'][:,:,:,:] = p['bedcomp_file'].reshape(s['mass'].shape)                
 
     # initialize masks
-    for k, v in p.iteritems():
+    for k, v in p.items():
         if k.endswith('_mask'):
             if v is None:
                 s[k] = 1.
