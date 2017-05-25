@@ -34,6 +34,7 @@ P = {
     'porosity':.4,
     'grain_dist':np.ones((NF,)),
     'max_error':1e-6,
+    'facDOD':.1,
 }
 
 # variables
@@ -43,6 +44,8 @@ S = {
     'zs':np.zeros((NY+1, NX+1)),
     'pickup':np.zeros((NY+1, NX+1, NF)),
     'mass':100. * np.ones((NY+1, NX+1, NL, NF)),
+    'thlyr':.1 * np.ones((NY+1, NX+1, NL)),
+    'Hs':10. * np.ones((NY+1, NX+1)),
 }
 
 
@@ -196,3 +199,11 @@ def test_deposition_progressive():
         assert_greater_array(s['zb'],
                              S['zb'],
                              msg='Bed level did not increase')
+
+
+def test_mixtoplayer():
+    '''Test if mixing of top layers is mass conservative'''
+
+    s = copy.deepcopy(S)
+    s = aeolis.bed.mixtoplayer(s, P)
+    assert_continuity(s)
