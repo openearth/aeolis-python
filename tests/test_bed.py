@@ -8,7 +8,7 @@ unbounded and the most complex of the two phenomena.
 '''
 
 from nose.tools import *
-from tools import *
+from .tools import *
 
 import numpy as np
 import copy
@@ -24,6 +24,7 @@ NF = 4
 
 # parameters
 P = {
+    '_time':0.,
     'bedupdate':True,
     'nx':NX,
     'ny':NY,
@@ -37,9 +38,11 @@ P = {
 
 # variables
 S = {
+    'uw':np.ones((NY+1, NX+1)),
     'zb':np.zeros((NY+1, NX+1)),
+    'zs':np.zeros((NY+1, NX+1)),
     'pickup':np.zeros((NY+1, NX+1, NF)),
-    'mass':np.ones((NY+1, NX+1, NL, NF)),
+    'mass':100. * np.ones((NY+1, NX+1, NL, NF)),
 }
 
 
@@ -53,7 +56,7 @@ def assert_continuity(s1, s2=S):
 
     '''
 
-    print s1['mass']
+    print(s1['mass'])
     
     assert_true(np.all(s1['mass'] >= 0.),
                 msg='Layer mass is negative')
@@ -83,7 +86,7 @@ def test_erosion_uniform():
     '''Test if uniform erosion on a uniform bed leads to no changes in bed composition and a decrease in bed level'''
 
     s = copy.deepcopy(S)
-    s['pickup'][0,0,:] = .25 / 4.
+    s['pickup'][0,0,:] = 25. / NF
     s = aeolis.bed.update(s, P)
     assert_continuity(s)
 
@@ -100,7 +103,7 @@ def test_erosion_singlefraction():
     '''Test if erosion of a single fraction from a uniform bed leaves the other fractions unaffected'''
 
     s = copy.deepcopy(S)
-    s['pickup'][0,0,0] = .25
+    s['pickup'][0,0,0] = 25.
     s = aeolis.bed.update(s, P)
     assert_continuity(s)
 
@@ -113,7 +116,7 @@ def test_erosion_mixed():
     '''Test if continuity is ensured in a net erosion cell with a single accretive fraction'''
 
     s = copy.deepcopy(S)
-    s['pickup'][:,:,:] = [.95, .95, -.95, 0.]
+    s['pickup'][:,:,:] = [95., 95., -95., 0.]
     s = aeolis.bed.update(s, P)
     assert_continuity(s)
     
@@ -122,7 +125,7 @@ def test_erosion_progressive():
     '''Test if progressive erosion only affects top layer and continiously decrease the bed level'''
 
     s = copy.deepcopy(S)
-    s['pickup'][0,0,:] = .25 * np.asarray([.6, .3, .1, 0.]) # sum: .25
+    s['pickup'][0,0,:] = 25. * np.asarray([.6, .3, .1, 0.]) # sum: 25
 
     for i in range(NL):
         s = aeolis.bed.update(s, P)
@@ -141,7 +144,7 @@ def test_deposition_uniform():
     '''Test if uniform deposition on a uniform bed leads to no changes in bed composition and an increase in bed level'''
 
     s = copy.deepcopy(S)
-    s['pickup'][0,0,:] = -.25 / 4.
+    s['pickup'][0,0,:] = -25. / NF
     s = aeolis.bed.update(s, P)
     assert_continuity(s)
 
@@ -158,9 +161,11 @@ def test_deposition_huge():
     '''Test if continuity is ensured if an amount of sediment larger than the total contents of a bed composition layer is deposited'''
 
     s1 = copy.deepcopy(S)
-    s1['mass'][:,:,:,0] -= .5
-    s1['mass'][:,:,:,-1] += .5
-    s1['pickup'][:,:,:] = -10. * s1['mass'][:,:,0,:].sum(axis=2) / NF
+    s1['mass'][:,:,:,0] -= 50.
+    s1['mass'][:,:,:,-1] += 50.
+    s1['pickup'][:,:,:] = -10. * s1['mass'][:,:,0,:] \
+                          .mean(axis=-1, keepdims=True) \
+                          .repeat(NF, axis=-1)
     s2 = aeolis.bed.update(copy.deepcopy(s1), P)
     assert_continuity(s2, s1)
 
@@ -169,7 +174,7 @@ def test_deposition_mixed():
     '''Test if continuity is ensured in a net deposition cell with a single erosive fraction'''
 
     s = copy.deepcopy(S)
-    s['pickup'][:,:,:] = [-.95, -.95, .95, 0.]
+    s['pickup'][:,:,:] = [-95., -95., 95., 0.]
     s = aeolis.bed.update(s, P)
     assert_continuity(s)
     
@@ -178,7 +183,7 @@ def test_deposition_progressive():
     '''Test if progressive deposition only affects an increasing number of top layer and continiously increase the bed level'''
 
     s = copy.deepcopy(S)
-    s['pickup'][0,0,:] = -.25 * np.asarray([.6, .3, .1, 0.]) # sum: -.25
+    s['pickup'][0,0,:] = -25. * np.asarray([.6, .3, .1, 0.]) # sum: -.25
 
     for i in range(NL):
         s = aeolis.bed.update(s, P)

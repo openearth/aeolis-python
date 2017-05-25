@@ -225,7 +225,7 @@ def initialize(outputfile, outputvars, s, p, dimensions):
         nc.createVariable('time', 'float64', (u'time',))
         nc.variables['time'].long_name = 'time'
         nc.variables['time'].standard_name = 'time'
-        nc.variables['time'].units = 'seconds since 1970-01-01 00:00:00 0:00'
+        nc.variables['time'].units = 'seconds since %s' % p['refdate']
         nc.variables['time'].calendar = 'julian'
         nc.variables['time'].axis = 'T'
         nc.variables['time'].bounds = 'time_bounds'
@@ -249,7 +249,7 @@ def initialize(outputfile, outputvars, s, p, dimensions):
         nc.variables['lon_bounds'].comment = 'longitude values at the west and east bounds of each pixel.'
             
         nc.createVariable('time_bounds', 'float32', (u'time', u'nv'))
-        nc.variables['time_bounds'].units = 'seconds since 1970-01-01 00:00:00 0:00'
+        nc.variables['time_bounds'].units = 'seconds since %s' % p['refdate']
         nc.variables['time_bounds'].comment = 'time bounds for each time value'
 
         for var0, exts in outputvars.iteritems():
