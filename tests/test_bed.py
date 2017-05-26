@@ -22,6 +22,10 @@ NY = 0
 NL = 3
 NF = 4
 
+# erosion/deposition rates
+ED1 = 10.
+ED2 = 35.
+
 # parameters
 P = {
     '_time':0.,
@@ -30,10 +34,12 @@ P = {
     'ny':NY,
     'nlayers':NL,
     'nfractions':NF,
+    'thlyr':.1,
     'rhop':2650.,
     'porosity':.4,
     'grain_dist':np.ones((NF,)),
     'max_error':1e-6,
+    'mixtoplayer':True,
     'facDOD':.1,
 }
 
@@ -43,9 +49,9 @@ S = {
     'zb':np.zeros((NY+1, NX+1)),
     'zs':np.zeros((NY+1, NX+1)),
     'pickup':np.zeros((NY+1, NX+1, NF)),
-    'mass':100. * np.ones((NY+1, NX+1, NL, NF)),
-    'thlyr':.1 * np.ones((NY+1, NX+1, NL)),
-    'Hs':10. * np.ones((NY+1, NX+1)),
+    'mass':np.ones((NY+1, NX+1, NL, NF)) / NF * P['rhop'] * (1. - P['porosity']) * P['thlyr'],
+    'thlyr': np.ones((NY+1, NX+1, NL)) * P['thlyr'],
+    'Hs':2.5 * np.ones((NY+1, NX+1)),
 }
 
 
@@ -89,7 +95,7 @@ def test_erosion_uniform():
     '''Test if uniform erosion on a uniform bed leads to no changes in bed composition and a decrease in bed level'''
 
     s = copy.deepcopy(S)
-    s['pickup'][0,0,:] = 25. / NF
+    s['pickup'][0,0,:] = ED1 / NF
     s = aeolis.bed.update(s, P)
     assert_continuity(s)
 
@@ -106,7 +112,7 @@ def test_erosion_singlefraction():
     '''Test if erosion of a single fraction from a uniform bed leaves the other fractions unaffected'''
 
     s = copy.deepcopy(S)
-    s['pickup'][0,0,0] = 25.
+    s['pickup'][0,0,0] = ED1
     s = aeolis.bed.update(s, P)
     assert_continuity(s)
 
@@ -119,7 +125,7 @@ def test_erosion_mixed():
     '''Test if continuity is ensured in a net erosion cell with a single accretive fraction'''
 
     s = copy.deepcopy(S)
-    s['pickup'][:,:,:] = [95., 95., -95., 0.]
+    s['pickup'][:,:,:] = [ED2, ED2, -ED2, 0.]
     s = aeolis.bed.update(s, P)
     assert_continuity(s)
     
@@ -128,7 +134,7 @@ def test_erosion_progressive():
     '''Test if progressive erosion only affects top layer and continiously decrease the bed level'''
 
     s = copy.deepcopy(S)
-    s['pickup'][0,0,:] = 25. * np.asarray([.6, .3, .1, 0.]) # sum: 25
+    s['pickup'][0,0,:] = ED1 * np.asarray([.6, .3, .1, 0.]) # sum: ED1
 
     for i in range(NL):
         s = aeolis.bed.update(s, P)
@@ -147,7 +153,7 @@ def test_deposition_uniform():
     '''Test if uniform deposition on a uniform bed leads to no changes in bed composition and an increase in bed level'''
 
     s = copy.deepcopy(S)
-    s['pickup'][0,0,:] = -25. / NF
+    s['pickup'][0,0,:] = -ED1 / NF
     s = aeolis.bed.update(s, P)
     assert_continuity(s)
 
@@ -164,9 +170,9 @@ def test_deposition_huge():
     '''Test if continuity is ensured if an amount of sediment larger than the total contents of a bed composition layer is deposited'''
 
     s1 = copy.deepcopy(S)
-    s1['mass'][:,:,:,0] -= 50.
-    s1['mass'][:,:,:,-1] += 50.
-    s1['pickup'][:,:,:] = -10. * s1['mass'][:,:,0,:] \
+    s1['mass'][:,:,:,0] -= 2 * ED1
+    s1['mass'][:,:,:,-1] += 2 * ED1
+    s1['pickup'][:,:,:] = -ED1 * s1['mass'][:,:,0,:] \
                           .mean(axis=-1, keepdims=True) \
                           .repeat(NF, axis=-1)
     s2 = aeolis.bed.update(copy.deepcopy(s1), P)
@@ -177,7 +183,7 @@ def test_deposition_mixed():
     '''Test if continuity is ensured in a net deposition cell with a single erosive fraction'''
 
     s = copy.deepcopy(S)
-    s['pickup'][:,:,:] = [-95., -95., 95., 0.]
+    s['pickup'][:,:,:] = [-ED2, -ED2, ED2, 0.]
     s = aeolis.bed.update(s, P)
     assert_continuity(s)
     
@@ -186,7 +192,7 @@ def test_deposition_progressive():
     '''Test if progressive deposition only affects an increasing number of top layer and continiously increase the bed level'''
 
     s = copy.deepcopy(S)
-    s['pickup'][0,0,:] = -25. * np.asarray([.6, .3, .1, 0.]) # sum: -.25
+    s['pickup'][0,0,:] = -ED1 * np.asarray([.6, .3, .1, 0.]) # sum: -ED1
 
     for i in range(NL):
         s = aeolis.bed.update(s, P)
@@ -201,9 +207,18 @@ def test_deposition_progressive():
                              msg='Bed level did not increase')
 
 
-def test_mixtoplayer():
-    '''Test if mixing of top layers is mass conservative'''
+def test_mixtoplayer_small():
+    '''Test if mixing of top layers is mass conservative if mixing depth is smaller than the total bed layer thickness'''
 
     s = copy.deepcopy(S)
+    s = aeolis.bed.mixtoplayer(s, P)
+    assert_continuity(s)
+
+
+def test_mixtoplayer_large():
+    '''Test if mixing of top layers is mass conservative if mixing depth is larger than the total bed layer thickness'''
+
+    s = copy.deepcopy(S)
+    s['Hs'] *= 10.
     s = aeolis.bed.mixtoplayer(s, P)
     assert_continuity(s)
