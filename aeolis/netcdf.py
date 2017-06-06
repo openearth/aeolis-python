@@ -252,12 +252,12 @@ def initialize(outputfile, outputvars, s, p, dimensions):
         nc.variables['time_bounds'].units = 'seconds since %s' % p['refdate']
         nc.variables['time_bounds'].comment = 'time bounds for each time value'
 
-        for var0, exts in outputvars.iteritems():
+        for var0, exts in outputvars.items():
 
-            if not s.has_key(var0):
+            if var0 not in s:
                 continue
 
-            if not dimensions.has_key(var0):
+            if var0 not in dimensions:
                 continue
 
             dims = ['time'] + [d[1:] for d in dimensions[var0]]
@@ -316,7 +316,7 @@ def initialize(outputfile, outputvars, s, p, dimensions):
         
         # store model settings
         grp = nc.createGroup('settings')
-        for k, v in p.iteritems():
+        for k, v in p.items():
             if k.startswith('_'):
                 continue
             if v is None:
@@ -361,7 +361,7 @@ def append(outputfile, variables):
     with netCDF4.Dataset(outputfile, 'a') as nc:
         i = nc.variables['time'].shape[0]
         nc.variables['time'][i] = variables['time']
-        for k, v in variables.iteritems():
+        for k, v in variables.items():
             if k == 'time':
                 continue
             nc.variables[k][i,...] = v
