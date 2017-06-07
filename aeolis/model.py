@@ -907,19 +907,9 @@ class AeoLiS(IBmi):
 
         '''
         
-        dims = {}
-        
-        dims.update({v:('ny','nx')
-                     for v in ['x', 'y', 'zb', 'ds', 'dn', 'dsdn', 'dsdni',
-                               'alfa', 'uw', 'uws', 'uwn', 'tau', 'taus', 'taun', 'udir',
-                               'zs', 'Hs']})
-        dims.update({v:('ny','nx','nfractions')
-                     for v in ['Cu', 'Ct', 'qs', 'qn', 'pickup',
-                               'w', 'w_init', 'w_air', 'w_bed', 'uth']})
-        dims.update({v:('ny','nx','nlayers')
-                     for v in ['thlyr', 'moist', 'salt']})
-        dims.update({v:('ny','nx','nlayers','nfractions')
-                     for v in ['mass']})
+        dims = {s:d
+                for d, states in aeolis.constants.MODEL_STATE.items()
+                for s in states}
 
         if var is not None:
             if var in dims:
@@ -996,7 +986,7 @@ class AeoLiSRunner(AeoLiS):
         elif self.configfile.upper() == 'DEFAULT':
             self.changed = True
             self.configfile = os.path.abspath('aeolis.txt')
-            self.p = constants.DEFAULT_CONFIG
+            self.p = aeolis.constants.DEFAULT_CONFIG
 
             # add default profile and time series
             self.p.update(dict(nx         = 99,
