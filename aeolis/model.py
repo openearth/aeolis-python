@@ -744,14 +744,17 @@ class AeoLiS(IBmi):
                 
                 # check for negative values
                 if Ct_i.min() < 0.:
+                    ix = Ct_i < 0.
+                    
                     logger.warn(format_log('Removing negative concentrations',
-                                           nrcells=np.sum(Ct_i<0.),
+                                           nrcells=np.sum(ix),
                                            fraction=i,
                                            iteration=n,
                                            minvalue=Ct_i.min(),
                                            **logprops))
-                                            
-                    Ct_i = np.maximum(0., Ct_i)
+
+                    Ct_i[~ix] *= 1. + Ct_i[ix].sum() / Ct_i[~ix].sum()
+                    Ct_i[ix] = 0.
                 
                 # determine pickup and deficit for current fraction
                 Cu_i = s['Cu'][:,:,i].flatten()
