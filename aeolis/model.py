@@ -767,7 +767,7 @@ class AeoLiS(IBmi):
                      
                 # quit the iteration if there is no deficit, otherwise
                 # back-compute the maximum weight allowed to get zero
-                # deficit fo r the current fraction and progress to
+                # deficit for the current fraction and progress to
                 # the next iteration step
                 if not np.any(ix):
                     logger.debug(format_log('Iteration converged',

@@ -110,7 +110,7 @@ def initialize(s, p):
             if v is None:
                 s[k] = 1.
             else:
-                s[k] = v
+                s[k] = v.reshape(s['zb'].shape)
 
     # initialize threshold
     if p['threshold_file'] is not None:

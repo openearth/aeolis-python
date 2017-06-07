@@ -101,8 +101,8 @@ def compute_weights(s, p):
     w_air = normalize(s['Ct'], s['Cu'])
     w_bed = normalize(s['mass'][:,:,0,:], axis=2)
 
-    w = (1. - p['bi']) * w_air + w_bed * \
-        (1. - np.minimum(1., (1. - p['bi']) * np.sum(w_air, axis=2, keepdims=True)))
+    w = (1. - p['bi']) * w_air \
+        + (1. - np.minimum(1., (1. - p['bi']) * np.sum(w_air, axis=2, keepdims=True))) * w_bed
     w = normalize(w, axis=2)
     
     return w, w_air, w_bed
