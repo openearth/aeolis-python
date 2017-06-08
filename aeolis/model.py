@@ -671,6 +671,9 @@ class AeoLiS(IBmi):
         if p['boundary_onshore'] == 'noflux':
             Am2[:,-1] = 0.
             Am1[:,-1] = 0.
+        elif p['boundary_onshore'] == 'constant':
+            Am2[:,-1] = 0.
+            Am1[:,-1] = -1.
         elif p['boundary_onshore'] == 'gradient':
             Am2[:,-1] = s['ds'][:,-1] / s['ds'][:,-2]
             Am1[:,-1] = -1. - s['ds'][:,-1] / s['ds'][:,-2]
