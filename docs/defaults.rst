@@ -9,4 +9,4 @@ configuration is listed below.
 
 .. literalinclude:: ../aeolis/constants.py
    :language: python
-   :lines: 75-146
+   :lines: 75-149
