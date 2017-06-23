@@ -30,6 +30,7 @@ from __future__ import absolute_import, division
 import os
 import imp
 import time
+import glob
 import logging
 import operator
 import numpy as np
@@ -179,6 +180,7 @@ class AeoLiS(IBmi):
         
         # interpolate wind time series
         self.s = aeolis.wind.interpolate(self.s, self.p, self.t)
+        #self.s = aeolis.wind.update(self.s)
         
         # determine optimal time step
         if not self.set_timestep(dt):
@@ -1070,6 +1072,7 @@ class AeoLiSRunner(AeoLiS):
 
         # initialize model
         self.initialize()
+        self.load_hotstartfiles()
 
         # load restartfile
         if self.load_restartfile(restartfile):
@@ -1346,6 +1349,32 @@ class AeoLiSRunner(AeoLiS):
             self.trestart = self.t
 
 
+    def load_hotstartfiles(self):
+        '''Load model state from hotstart files
+
+        Hotstart files are plain text representations of model state
+        variables that can be used to hotstart the (partial) model
+        state. Hotstart files should have the name of the model state
+        variable it contains and have the extension
+        `.hotstart`. Hotstart files differ from restart files in that
+        restart files contain entire model states and are pickled
+        Python objects.
+
+        See Also
+        --------
+        model.AeoLiSRunner.load_restartfile
+
+        '''
+
+        for fname in glob.glob('*.hotstart'):
+            var = os.path.splitext(fname)[0]
+            if var in self.s.keys():
+                shp = self.s[var].shape
+                self.s[var] = np.loadtxt(fname).reshape(shp)
+            else:
+                logger.warn('Unrecognized hotstart file [%s]' % fname)
+                
+        
     def load_restartfile(self, restartfile):
         '''Load model state from restart file
 

@@ -66,6 +66,7 @@ class WindShear:
        from Kroy et al. (2002)
     * Grid interpolation can still be optimized
     * Separation bubble is still to be implemented
+    * Avalanching is still to be implemented
 
     '''
 
@@ -74,7 +75,9 @@ class WindShear:
     cgrid = {}
     
     
-    def __init__(self, x, y, z, dx=1., dy=1., buffer_width=100., buffer_relaxation=None, L=100., z0=.001, l=10.):
+    def __init__(self, x, y, z, dx=1., dy=1.,
+                 buffer_width=100., buffer_relaxation=None,
+                 L=100., z0=.001, l=10.):
         '''Class initialization
             
         Parameters
@@ -150,8 +153,10 @@ class WindShear:
         self.cgrid['dtaux'] = dtaux
         self.cgrid['dtauy'] = dtauy
                                         
-        self.igrid['dtaux'] = self.interpolate(gc['x'], gc['y'], dtaux, gi['x'], gi['y'])
-        self.igrid['dtauy'] = self.interpolate(gc['x'], gc['y'], dtauy, gi['x'], gi['y'])
+        self.igrid['dtaux'] = self.interpolate(gc['x'], gc['y'], dtaux,
+                                               gi['x'], gi['y'])
+        self.igrid['dtauy'] = self.interpolate(gc['x'], gc['y'], dtauy,
+                                               gi['x'], gi['y'])
         
         return self
 
@@ -191,8 +196,12 @@ class WindShear:
         '''
 
         tau = np.sqrt(taux**2 + tauy**2)
-        return (tau * (taux / tau + self.igrid['dtaux']),
-                tau * (tauy / tau + self.igrid['dtauy']))
+        ix = tau != 0.
+        
+        taux[ix] = tau[ix] * (taux[ix] / tau[ix] + self.igrid['dtaux'][ix])
+        tauy[ix] = tau[ix] * (tauy[ix] / tau[ix] + self.igrid['dtauy'][ix])
+
+        return taux, tauy
 
 
     def set_topo(self, z):
@@ -206,6 +215,8 @@ class WindShear:
         '''
 
         self.igrid['z'] = z
+
+        return self
         
 
     def populate_computational_grid(self, alpha):

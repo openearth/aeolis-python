@@ -60,26 +60,28 @@ def interpolate(s, p, t):
 
     '''
         
-    uw_t = p['wind_file'][:,0]
-    uw_s = p['wind_file'][:,1]
-    uw_d = p['wind_file'][:,2] / 180. * np.pi
+    if p['wind_file'] is not None:
 
-    s['uw'][:,:] = interp_circular(t, uw_t, uw_s)
-    s['udir'][:,:] = np.arctan2(np.interp(t, uw_t, np.sin(uw_d)),
-                                np.interp(t, uw_t, np.cos(uw_d))) * 180. / np.pi
+        uw_t = p['wind_file'][:,0]
+        uw_s = p['wind_file'][:,1]
+        uw_d = p['wind_file'][:,2] / 180. * np.pi
 
-    s['uws'] = s['uw'] * np.cos(s['alfa'] + s['udir'] / 180. * np.pi)
-    s['uwn'] = s['uw'] * np.sin(s['alfa'] + s['udir'] / 180. * np.pi)
+        s['uw'][:,:] = interp_circular(t, uw_t, uw_s)
+        s['udir'][:,:] = np.arctan2(np.interp(t, uw_t, np.sin(uw_d)),
+                                    np.interp(t, uw_t, np.cos(uw_d))) * 180. / np.pi
+        
+        s['uws'] = s['uw'] * np.cos(s['alfa'] + s['udir'] / 180. * np.pi)
+        s['uwn'] = s['uw'] * np.sin(s['alfa'] + s['udir'] / 180. * np.pi)
 
-    if p['ny'] == 0:
-        s['uwn'][:,:] = 0.
+        if p['ny'] == 0:
+            s['uwn'][:,:] = 0.
 
-    s['uw'] = np.abs(s['uw'])
+        s['uw'] = np.abs(s['uw'])
 
-    # compute saltation velocity
-    s['uw'] = get_velocity_at_height(s['uw'], p['z'], p['k'], p['h'])
-    s['uws'] = get_velocity_at_height(s['uws'], p['z'], p['k'], p['h'])
-    s['uwn'] = get_velocity_at_height(s['uwn'], p['z'], p['k'], p['h'])
+        # compute saltation velocity
+        s['uw'] = get_velocity_at_height(s['uw'], p['z'], p['k'], p['h'])
+        s['uws'] = get_velocity_at_height(s['uws'], p['z'], p['k'], p['h'])
+        s['uwn'] = get_velocity_at_height(s['uwn'], p['z'], p['k'], p['h'])
 
     # compute shear velocity
     s['tau'] = get_velocity_at_height(s['uw'], p['h'], p['k'])
