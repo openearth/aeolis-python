@@ -146,6 +146,9 @@ class AeoLiS(IBmi):
         # initialize bed composition
         self.s = aeolis.bed.initialize(self.s, self.p)
 
+        # initialize wind model
+        self.s = aeolis.wind.initialize(self.s, self.p)
+
         
     def update(self, dt=-1):
         '''Time stepping function
@@ -180,7 +183,6 @@ class AeoLiS(IBmi):
         
         # interpolate wind time series
         self.s = aeolis.wind.interpolate(self.s, self.p, self.t)
-        #self.s = aeolis.wind.update(self.s)
         
         # determine optimal time step
         if not self.set_timestep(dt):
@@ -664,9 +666,14 @@ class AeoLiS(IBmi):
         if p['boundary_offshore'] == 'noflux':
             Ap2[:,0] = 0.
             Ap1[:,0] = 0.
+        elif p['boundary_offshore'] == 'constant':
+            Ap2[:,0] = 0.
+            Ap1[:,0] = -1.
         elif p['boundary_offshore'] == 'gradient':
             Ap2[:,0] = s['ds'][:,1] / s['ds'][:,2]
             Ap1[:,0] = -1. - s['ds'][:,1] / s['ds'][:,2]
+        elif p['boundary_offshore'] == 'circular':
+            raise NotImplementedError('Cross-shore cricular boundary condition not yet implemented')
         else:
             raise ValueError('Unknown offshore boundary condition [%s]' % self.p['boundary_offshore'])
             
@@ -679,11 +686,15 @@ class AeoLiS(IBmi):
         elif p['boundary_onshore'] == 'gradient':
             Am2[:,-1] = s['ds'][:,-1] / s['ds'][:,-2]
             Am1[:,-1] = -1. - s['ds'][:,-1] / s['ds'][:,-2]
+        elif p['boundary_offshore'] == 'circular':
+            raise NotImplementedError('Cross-shore cricular boundary condition not yet implemented')
         else:
             raise ValueError('Unknown onshore boundary condition [%s]' % self.p['boundary_onshore'])
 
         if p['boundary_lateral'] == 'noflux':
             raise NotImplementedError('Lateral no-flux boundary condition not yet implemented')
+        if p['boundary_lateral'] == 'constant':
+            raise NotImplementedError('Lateral constant boundary condition not yet implemented')
         elif p['boundary_lateral'] == 'gradient':
             raise NotImplementedError('Lateral gradient boundary condition not yet implemented')
         elif p['boundary_lateral'] == 'circular':

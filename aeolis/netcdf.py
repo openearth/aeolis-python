@@ -147,8 +147,8 @@ def initialize(outputfile, outputvars, s, p, dimensions):
         nc.variables['s'].standard_name = ''
         nc.variables['s'].units = ''
         nc.variables['s'].axis = 'X'
-        nc.variables['s'].valid_min = 0
-        nc.variables['s'].valid_max = 0
+        nc.variables['s'].valid_min = -np.inf
+        nc.variables['s'].valid_max = np.inf
         nc.variables['s'].bounds = ''
         nc.variables['s'].grid_mapping = ''
         nc.variables['s'].comment = ''
@@ -158,8 +158,8 @@ def initialize(outputfile, outputvars, s, p, dimensions):
         nc.variables['n'].standard_name = ''
         nc.variables['n'].units = ''
         nc.variables['n'].axis = 'Y'
-        nc.variables['n'].valid_min = 0
-        nc.variables['n'].valid_max = 0
+        nc.variables['n'].valid_min = -np.inf
+        nc.variables['n'].valid_max = np.inf
         nc.variables['n'].bounds = ''
         nc.variables['n'].grid_mapping = ''
         nc.variables['n'].comment = ''
@@ -169,8 +169,8 @@ def initialize(outputfile, outputvars, s, p, dimensions):
         nc.variables['x'].standard_name = 'projection_x_coordinate'
         nc.variables['x'].units = 'm'
         nc.variables['x'].axis = 'X'
-        nc.variables['x'].valid_min = 0
-        nc.variables['x'].valid_max = 0
+        nc.variables['x'].valid_min = -np.inf
+        nc.variables['x'].valid_max = np.inf
         nc.variables['x'].bounds = 'x_bounds'
         nc.variables['x'].grid_mapping = 'crs'
         nc.variables['x'].comment = ''
@@ -180,8 +180,8 @@ def initialize(outputfile, outputvars, s, p, dimensions):
         nc.variables['y'].standard_name = 'projection_y_coordinate'
         nc.variables['y'].units = 'm'
         nc.variables['y'].axis = 'Y'
-        nc.variables['y'].valid_min = 0
-        nc.variables['y'].valid_max = 0
+        nc.variables['y'].valid_min = -np.inf
+        nc.variables['y'].valid_max = np.inf
         nc.variables['y'].bounds = 'y_bounds'
         nc.variables['y'].grid_mapping = 'crs'
         nc.variables['y'].comment = ''
@@ -191,7 +191,7 @@ def initialize(outputfile, outputvars, s, p, dimensions):
         nc.variables['layers'].standard_name = ''
         nc.variables['layers'].units = '-'
         nc.variables['layers'].valid_min = 0
-        nc.variables['layers'].valid_max = 0
+        nc.variables['layers'].valid_max = np.inf
         nc.variables['layers'].comment = ''
         
         nc.createVariable('fractions', 'float32', (u'fractions',))
@@ -199,15 +199,15 @@ def initialize(outputfile, outputvars, s, p, dimensions):
         nc.variables['fractions'].standard_name = ''
         nc.variables['fractions'].units = 'm'
         nc.variables['fractions'].valid_min = 0
-        nc.variables['fractions'].valid_max = 0
+        nc.variables['fractions'].valid_max = np.inf
         nc.variables['fractions'].comment = ''
         
         nc.createVariable('lat', 'float32', (u'n', u's'))
         nc.variables['lat'].long_name = 'latitude'
         nc.variables['lat'].standard_name = 'latitude'
         nc.variables['lat'].units = 'degrees_north'
-        nc.variables['lat'].valid_min = 0
-        nc.variables['lat'].valid_max = 0
+        nc.variables['lat'].valid_min = -np.inf
+        nc.variables['lat'].valid_max = np.inf
         nc.variables['lat'].bounds = 'lat_bounds'
         nc.variables['lat'].ancillary_variables = ''
         nc.variables['lat'].comment = ''
@@ -216,8 +216,8 @@ def initialize(outputfile, outputvars, s, p, dimensions):
         nc.variables['lon'].long_name = 'longitude'
         nc.variables['lon'].standard_name = 'longitude'
         nc.variables['lon'].units = 'degrees_east'
-        nc.variables['lon'].valid_min = 0
-        nc.variables['lon'].valid_max = 0
+        nc.variables['lon'].valid_min = -np.inf
+        nc.variables['lon'].valid_max = np.inf
         nc.variables['lon'].bounds = 'lon_bounds'
         nc.variables['lon'].ancillary_variables = ''
         nc.variables['lon'].comment = ''
@@ -276,8 +276,8 @@ def initialize(outputfile, outputvars, s, p, dimensions):
                 nc.variables[var].units = ''
                 nc.variables[var].scale_factor = 1.0
                 nc.variables[var].add_offset = 0.0
-                nc.variables[var].valid_min = 0
-                nc.variables[var].valid_max = 0
+                nc.variables[var].valid_min = -np.inf
+                nc.variables[var].valid_max = np.inf
                 nc.variables[var].coordinates = ' '.join(dims)
                 nc.variables[var].grid_mapping = 'crs'
                 nc.variables[var].source = ''

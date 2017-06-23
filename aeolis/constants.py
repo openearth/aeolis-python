@@ -73,6 +73,7 @@ MODEL_STATE = {
 #: AeoLiS model default configuration
 DEFAULT_CONFIG = {
     'process_wind'        : True,               # Enable the process of wind
+    'process_shear'       : True,               # Enable the process of wind shear
     'process_tide'        : True,               # Enable the process of tides
     'process_wave'        : True,               # Enable the process of waves
     'process_moist'       : True,               # Enable the process of moist
@@ -80,9 +81,9 @@ DEFAULT_CONFIG = {
     'process_threshold'   : True,               # Enable the process of threshold
     'process_transport'   : True,               # Enable the process of transport
     'process_bedupdate'   : True,               # Enable the process of bed updating
-    'process_meteo'       : True,               # Enable the process of meteo
-    'process_salt'        : True,               # Enable the process of salt
-    'process_humidity'    : True,               # Enable the process of humidity
+    'process_meteo'       : False,              # Enable the process of meteo
+    'process_salt'        : False,              # Enable the process of salt
+    'process_humidity'    : False,              # Enable the process of humidity
     'th_grainsize'        : True,               # Enable wind velocity threshold based on grainsize
     'th_bedslope'         : False,              # Enable wind velocity threshold based on bedslope
     'th_moisture'         : True,               # Enable wind velocity threshold based on moisture
