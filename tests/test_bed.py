@@ -27,9 +27,11 @@ ED1 = 10.
 ED2 = 35.
 
 # parameters
-P = {
+P = aeolis.constants.DEFAULT_CONFIG.copy()
+P.update({
     '_time':0.,
-    'bedupdate':True,
+    'process_bedupdate':True,
+    'process_mixtoplayer':True,
     'nx':NX,
     'ny':NY,
     'nlayers':NL,
@@ -39,9 +41,8 @@ P = {
     'porosity':.4,
     'grain_dist':np.ones((NF,)),
     'max_error':1e-6,
-    'mixtoplayer':True,
     'facDOD':.1,
-}
+})
 
 # variables
 S = {

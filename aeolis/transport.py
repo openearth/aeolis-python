@@ -50,25 +50,27 @@ def equilibrium(s, p):
 
     '''
 
-    nf = p['nfractions']
-    uw = s['uw'][:,:,np.newaxis].repeat(nf, axis=2)
-    tau = s['tau'][:,:,np.newaxis].repeat(nf, axis=2)
-    ix = tau != 0.
+    if p['process_transport']:
+        
+        nf = p['nfractions']
+        uw = s['uw'][:,:,np.newaxis].repeat(nf, axis=2)
+        tau = s['tau'][:,:,np.newaxis].repeat(nf, axis=2)
+        ix = tau != 0.
+        
+        s['Cu'] = np.zeros(uw.shape)
 
-    s['Cu'] = np.zeros(uw.shape)
-
-    if p['method_transport'].lower() == 'bagnold':
-        s['Cu'][ix] = np.maximum(0., p['Cb'] * p['rhoa'] / p['g'] \
-                                 * (tau[ix] - s['uth'][ix])**3 / uw[ix])
-    elif p['method_transport'].lower() == 'kawamura':
-        s['Cu'][ix] = np.maximum(0., p['Cb'] * p['rhoa'] / p['g'] \
-                                 * (tau[ix] + s['uth'][ix])**2 * (tau[ix] - s['uth'][ix]) / uw[ix])
-    elif p['method_transport'].lower() == 'lettau':
-        s['Cu'][ix] = np.maximum(0., p['Cb'] * p['rhoa'] / p['g'] \
-                                 * (tau[ix] - s['uth'][ix]) * tau[ix]**2 / uw[ix])
-    else:
-        raise ValuerError('Unknown transport formulation [%s]' % p['method_transport'])
-
+        if p['method_transport'].lower() == 'bagnold':
+            s['Cu'][ix] = np.maximum(0., p['Cb'] * p['rhoa'] / p['g'] \
+                                     * (tau[ix] - s['uth'][ix])**3 / uw[ix])
+        elif p['method_transport'].lower() == 'kawamura':
+            s['Cu'][ix] = np.maximum(0., p['Cb'] * p['rhoa'] / p['g'] \
+                                     * (tau[ix] + s['uth'][ix])**2 * (tau[ix] - s['uth'][ix]) / uw[ix])
+        elif p['method_transport'].lower() == 'lettau':
+            s['Cu'][ix] = np.maximum(0., p['Cb'] * p['rhoa'] / p['g'] \
+                                     * (tau[ix] - s['uth'][ix]) * tau[ix]**2 / uw[ix])
+        else:
+            raise ValuerError('Unknown transport formulation [%s]' % p['method_transport'])
+    
     s['Cu'] *= p['accfac']
 
     return s

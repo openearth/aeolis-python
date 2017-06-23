@@ -105,7 +105,7 @@ def read_configfile(configfile, parse_files=True, load_defaults=True):
     # set default value for h, if not given
     if 'h' in p and not p['h']:
         p['h'] = p['z']
-        
+
     return p
 
 
@@ -190,9 +190,9 @@ def check_configuration(p):
        not isarray(p['bed_file']) or (not isarray(p['ygrid_file']) and p['ny'] > 0):
         raise ValueError('Incomplete bathymetry definition')
 
-    if not isarray(p['wind_file']) or \
-       p['wind_file'].ndim != 2 or p['wind_file'].shape[1] < 3:
-        raise ValueError('Invalid wind definition file')
+    if isarray(p['wind_file']):
+        if p['wind_file'].ndim != 2 or p['wind_file'].shape[1] < 3:
+            raise ValueError('Invalid wind definition file')
 
     if isarray(p['tide_file']):
         if p['tide_file'].ndim != 2 or p['tide_file'].shape[1] < 2:

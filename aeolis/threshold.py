@@ -67,8 +67,8 @@ def compute(s, p):
 
     '''
 
-    if p['threshold_file'] is None:
-        
+    if p['threshold_file'] is None and p['process_threshold']:
+
         if p['th_grainsize']:
             s = compute_grainsize(s, p)
         if p['th_bedslope']:
@@ -81,7 +81,7 @@ def compute(s, p):
             s = compute_salt(s, p)
         if p['th_roughness']:
             s = compute_roughness(s, p)
-
+                    
         # apply complex mask
         s['uth'] = apply_mask(s['uth'], s['threshold_mask'])
 

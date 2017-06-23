@@ -198,7 +198,7 @@ def update(s, p):
     s['mass'] = m.reshape((ny+1,nx+1,nl,nf))
 
     # update bathy
-    if p['bedupdate']:
+    if p['process_bedupdate']:
         s['zb'] += dm[:,0].reshape((ny+1,nx+1)) / (p['rhop'] * (1. - p['porosity']))
         s['zs'] += dm[:,0].reshape((ny+1,nx+1)) / (p['rhop'] * (1. - p['porosity']))
 
@@ -360,7 +360,7 @@ def mixtoplayer(s, p):
 
     '''
 
-    if p['mixtoplayer']:
+    if p['process_mixtoplayer']:
         
         # get model dimensions
         nx = p['nx']+1

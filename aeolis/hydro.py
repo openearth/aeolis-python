@@ -56,8 +56,8 @@ def interpolate(s, p, t):
 
     '''
 
-    if p['tide_file'] is not None:
-    
+    if p['tide_file'] is not None and p['process_tide']:
+        
         s['zs'][:,:] = interp_circular(t,
                                        p['tide_file'][:,0],
                                        p['tide_file'][:,1])
@@ -65,7 +65,7 @@ def interpolate(s, p, t):
         # apply complex mask
         s['zs'] = apply_mask(s['zs'], s['tide_mask'])
 
-    if p['wave_file'] is not None:
+    if p['wave_file'] is not None and p['process_wave']:
 
         # determine water depth
         h = np.maximum(0., s['zs'] - s['zb'])
@@ -78,7 +78,7 @@ def interpolate(s, p, t):
         s['Hs'] = apply_mask(s['Hs'], s['wave_mask'])
 
         # add wave runup
-        if p['runup']:
+        if p['process_runup']:
             ix = s['Hs'] > 0.
             R = p['xi'] * s['Hs']
             s['zs'][ix] += R[ix] * (1. - np.minimum(1., h[ix] * p['gamma'] / s['Hs'][ix]))
@@ -86,7 +86,7 @@ def interpolate(s, p, t):
         # maximize wave height by depth ratio ``gamma``
         s['Hs'] = np.minimum(h * p['gamma'], s['Hs'])
         
-    if p['meteo_file'] is not None:
+    if p['meteo_file'] is not None and p['process_meteo']:
 
         m = interp_array(t,
                          p['meteo_file'][:,0],
@@ -141,17 +141,18 @@ def update(s, p, dt):
 
     '''
 
-    F1 = -np.log(.5) / p['Tdry']
-    F2 = -np.log(.5) / p['Tsalt']
-    
     # infiltration using Darcy
-    ix = s['zs'] - s['zb'] > p['eps']
-    s['moist'][ ix,0] = p['porosity']
-    s['moist'][~ix,0] *= np.exp(-F1 * dt)
+    if p['process_moist']:
+        F1 = -np.log(.5) / p['Tdry']
+        ix = s['zs'] - s['zb'] > p['eps']
+        s['moist'][ ix,0] = p['porosity']
+        s['moist'][~ix,0] *= np.exp(-F1 * dt)
 
     # salinitation
-    s['salt'][ ix,0] = 1.
-    s['salt'][~ix,0] *= np.exp(-F2 * dt)
+    if p['process_salt']:
+        F2 = -np.log(.5) / p['Tsalt']
+        s['salt'][ ix,0] = 1.
+        s['salt'][~ix,0] *= np.exp(-F2 * dt)
 
     # evaporation using Penman
     if 'meteo' in s:
