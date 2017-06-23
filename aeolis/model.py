@@ -1091,6 +1091,7 @@ class AeoLiSRunner(AeoLiS):
 
         # start model loop
         self.t0 = time.time()
+        self.output_write()
         while self.t <= self.p['tstop']:
             if callback is not None:
                 callback(self)
@@ -1339,7 +1340,7 @@ class AeoLiSRunner(AeoLiS):
 
         '''
         
-        if self.t - self.tout >= self.p['output_times']:
+        if self.t - self.tout >= self.p['output_times'] or self.t == 0.:
             
             variables = {}
             variables['time'] = self.t

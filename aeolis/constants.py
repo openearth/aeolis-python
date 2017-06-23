@@ -73,7 +73,7 @@ MODEL_STATE = {
 #: AeoLiS model default configuration
 DEFAULT_CONFIG = {
     'process_wind'        : True,               # Enable the process of wind
-    'process_shear'       : True,               # Enable the process of wind shear
+    'process_shear'       : False,              # Enable the process of wind shear
     'process_tide'        : True,               # Enable the process of tides
     'process_wave'        : True,               # Enable the process of waves
     'process_moist'       : True,               # Enable the process of moist
