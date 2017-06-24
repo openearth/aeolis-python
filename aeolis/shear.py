@@ -365,7 +365,7 @@ class WindShear:
         return 1. / (1. + np.exp(-(self.buffer_width-x) / self.buffer_relaxation))
         
 
-    def filter_highfrequenies(self, kx, ky, hs, nfilter=(1., 2,), p=.01):
+    def filter_highfrequenies(self, kx, ky, hs, nfilter=(1, 2), p=.01):
         '''Filter high frequencies from a 2D spectrum
 
         A logistic sigmoid filter is used to taper higher frequencies

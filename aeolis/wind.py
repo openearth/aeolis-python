@@ -100,9 +100,14 @@ def interpolate(s, p, t):
     s['taus'] = get_velocity_at_height(s['uws'], p['h'], p['k'])
     s['taun'] = get_velocity_at_height(s['uwn'], p['h'], p['k'])
 
+    # compute shear velocity field
     if 'shear' in s.keys():
-        s['taus'], s['taun'] = s['shear'](u0=s['uw'][0,0],
-                                          udir=s['udir'][0,0]).add_shear(s['taus'], s['taun'])
+        
+        s['shear'].set_topo(s['zb'])
+        s['shear'](u0=s['uw'][0,0],
+                   udir=s['udir'][0,0])
+        
+        s['taus'], s['taun'] = s['shear'].add_shear(s['taus'], s['taun'])
         s['tau'] = np.hypot(s['taus'], s['taun'])
 
     return s
