@@ -76,6 +76,7 @@ DEFAULT_CONFIG = {
     'process_shear'       : False,              # Enable the process of wind shear
     'process_tide'        : True,               # Enable the process of tides
     'process_wave'        : True,               # Enable the process of waves
+    'process_runup'       : True,               # Enable the process of wave runup
     'process_moist'       : True,               # Enable the process of moist
     'process_mixtoplayer' : True,               # Enable the process of mixing
     'process_threshold'   : True,               # Enable the process of threshold
