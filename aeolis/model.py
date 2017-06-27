@@ -57,6 +57,34 @@ from aeolis.utils import *
 logger = logging.getLogger(__name__)
 
 
+class ModelState(dict):
+    '''Dictionary-like object to store model state
+
+    Model state variables are mutable by default, but can be set
+    immutable. In the latter case any actions that set the immutable
+    model state variable are ignored.
+
+    '''
+    
+    
+    ismutable = set()
+
+    
+    def __setitem__(self, k, v):
+        if k not in self.keys() or k in self.ismutable:
+            super(ModelState, self).__setitem__(k, v)
+            self.set_mutable(k)
+            
+            
+    def set_mutable(self, k):
+        self.ismutable.add(k)
+
+            
+    def set_immutable(self, k):
+        if k in self.ismutable:
+            self.ismutable.remove(k)
+
+
 class AeoLiS(IBmi):
     '''AeoLiS model class
 
@@ -89,7 +117,7 @@ class AeoLiS(IBmi):
     configfile = ''
 
     l = {} # previous spatial grids
-    s = {} # spatial grids
+    s = ModelState() # spatial grids
     p = {} # parameters
     c = {} # counters
     
@@ -1383,6 +1411,8 @@ class AeoLiSRunner(AeoLiS):
             if var in self.s.keys():
                 shp = self.s[var].shape
                 self.s[var] = np.loadtxt(fname).reshape(shp)
+                self.s.set_immutable(var)
+                logger.info('Loaded "%s" from hotstart file.' % var)
             else:
                 logger.warn('Unrecognized hotstart file [%s]' % fname)
                 
@@ -1728,3 +1758,5 @@ class WindGenerator():
     @staticmethod
     def matmult4(m, v):
         return [reduce(operator.add, map(operator.mul,r,v)) for r in m]
+
+
