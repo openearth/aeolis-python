@@ -155,7 +155,8 @@ DEFAULT_CONFIG = {
     'max_error'           : 1e-6,               # [-] Maximum error at which to quit iterative solution in implicit numerical schemes
     'max_iter'            : 1000,               # [-] Maximum number of iterations at which to quit iterative solution in implicit numerical schemes
     'refdate'             : '1970-01-01 00:00', # [-] Reference datetime in netCDF output
-    'callback'            : None,               # Reference to callback function (e.g. example/callback.py':callback)   
+    'callback'            : None,               # Reference to callback function (e.g. example/callback.py':callback)
+    'grid_dir'            : 0,                  # direction of the grid with respect to geograpic north
 }
 
 
