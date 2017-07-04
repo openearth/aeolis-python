@@ -92,10 +92,6 @@ def read_configfile(configfile, parse_files=True, load_defaults=True):
                     p[key.strip()] = parse_value(val, parse_files=parse_files)
     else:
         raise IOError('File not found [%s]' % configfile)
-
-    # rotate nautical wind direction to cartesian grid
-    if p['wind_dir'] == 'nautical' and parse_files==True:
-        p['wind_file'][:,2] = 270-p['wind_file'][:,2] 
        
     # normalize grain size distribution
     if 'grain_dist' in p:
@@ -197,6 +193,14 @@ def check_configuration(p):
     if isarray(p['wind_file']):
         if p['wind_file'].ndim != 2 or p['wind_file'].shape[1] < 3:
             raise ValueError('Invalid wind definition file')
+
+        # rotate nautical wind direction to cartesian grid
+        if p['wind_convention'] == 'cartesian':
+            pass
+        elif p['wind_convention'] == 'nautical':
+            p['wind_file'][:,2] = 270.0 - p['wind_file'][:,2]
+        else:
+            raise ValueError('Unknown convention: %s' % p['wind_convention'])
 
     if isarray(p['tide_file']):
         if p['tide_file'].ndim != 2 or p['tide_file'].shape[1] < 2:
