@@ -40,8 +40,20 @@ def initialize(s, p):
 
     '''
 
+    # apply wind direction convention
+    if isarray(p['wind_file']):
+        if p['wind_convention'] == 'cartesian':
+            pass
+        elif p['wind_convention'] == 'nautical':
+            p['wind_file'][:,2] = 270.0 - p['wind_file'][:,2]
+        else:
+            raise ValueError('Unknown convention: %s' % p['wind_convention'])
+
+    # initialize wind shear model
     if p['process_shear']:
-        s['shear'] = aeolis.shear.WindShear(s['x'], s['y'], s['zb'], L=100., l=10., z0=0.001, buffer_width=10.)
+        s['shear'] = aeolis.shear.WindShear(s['x'], s['y'], s['zb'],
+                                            L=100., l=10., z0=0.001,
+                                            buffer_width=10.)
         
     return s
 
@@ -107,6 +119,7 @@ def interpolate(s, p, t):
         s['shear'](u0=s['uw'][0,0],
                    udir=s['udir'][0,0])
         
+        s['dtaus'], s['dtaun'] = s['shear'].get_shear()
         s['taus'], s['taun'] = s['shear'].add_shear(s['taus'], s['taun'])
         s['tau'] = np.hypot(s['taus'], s['taun'])
 

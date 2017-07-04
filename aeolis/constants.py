@@ -40,7 +40,9 @@ MODEL_STATE = {
         'uwn',                              # [m/s] Component of wind velocity in y-direction
         'tau',                              # [m/s] Wind shear velocity
         'taus',                             # [m/s] Component of wind shear velocity in x-direction
-        'taun',                             # [m/s] Component of wind shear velocity in x-direction
+        'taun',                             # [m/s] Component of wind shear velocity in y-direction
+        'dtaus',                            # [-] Component of the wind shear perturbation in x-direction
+        'dtaun',                            # [-] Component of the wind shear perturbation in y-direction
         'udir',                             # [rad] Wind direction
         'zb',                               # [m] Bed level above reference
         'zs',                               # [m] Water level above reference

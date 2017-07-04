@@ -73,6 +73,7 @@ class WindShear:
     
     igrid = {}
     cgrid = {}
+    istransect = False
     
     
     def __init__(self, x, y, z, dx=1., dy=1.,
@@ -112,6 +113,9 @@ class WindShear:
         
         if buffer_relaxation is None:
             buffer_relaxation = buffer_width / 4.
+
+        if z.shape[0] == 1:
+            self.istransect = True
         
         self.igrid = dict(x = x,
                           y = y,
@@ -172,8 +176,11 @@ class WindShear:
             Wind shear perturbation in y-direction
         
         '''
+
+        dtaux = self.igrid['dtaux']
+        dtauy = self.igrid['dtauy']
             
-        return self.igrid['dtaux'], self.igrid['dtauy']
+        return dtaux, dtauy
         
         
     def add_shear(self, taux, tauy):
@@ -197,9 +204,12 @@ class WindShear:
 
         tau = np.sqrt(taux**2 + tauy**2)
         ix = tau != 0.
+
+        dtaux = self.igrid['dtaux']
+        dtauy = self.igrid['dtauy']
         
-        taux[ix] = tau[ix] * (taux[ix] / tau[ix] + self.igrid['dtaux'][ix])
-        tauy[ix] = tau[ix] * (tauy[ix] / tau[ix] + self.igrid['dtauy'][ix])
+        taux[ix] = tau[ix] * (taux[ix] / tau[ix] + dtaux[ix])
+        tauy[ix] = tau[ix] * (tauy[ix] / tau[ix] + dtauy[ix])
 
         return taux, tauy
 
@@ -497,16 +507,18 @@ class WindShear:
                 np.asarray(xy[:,1].reshape(y.shape) + origin[1]))
     
     
-    @staticmethod
-    def interpolate(x, y, z, xi, yi):
+    def interpolate(self, x, y, z, xi, yi):
         '''Interpolate a grid onto another grid'''
         
         xy = np.concatenate((x.reshape((-1,1)),
                              y.reshape((-1,1))), axis=1)
         xyi = np.concatenate((xi.reshape((-1,1)),
                               yi.reshape((-1,1))), axis=1)
-        
-        z = scipy.interpolate.griddata(xy, z.reshape((-1,1)), xyi, method='cubic').reshape(xi.shape)
+
+        if self.istransect:
+            z = np.interp(xi.flatten(), x.flatten(), z.flatten()).reshape(xi.shape)
+        else:
+            z = scipy.interpolate.griddata(xy, z.reshape((-1,1)), xyi, method='cubic').reshape(xi.shape)
                              
         return z
 
