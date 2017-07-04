@@ -93,6 +93,10 @@ def read_configfile(configfile, parse_files=True, load_defaults=True):
     else:
         raise IOError('File not found [%s]' % configfile)
 
+    # rotate nautical wind direction to cartesian grid
+    if p['wind_dir'] == 'nautical' and parse_files==True:
+        p['wind_file'][:,2] = 270-p['wind_file'][:,2] 
+       
     # normalize grain size distribution
     if 'grain_dist' in p:
         p['grain_dist'] = normalize(p['grain_dist'])

@@ -76,7 +76,7 @@ def interpolate(s, p, t):
 
         uw_t = p['wind_file'][:,0]
         uw_s = p['wind_file'][:,1]
-        uw_d = p['wind_file'][:,2] / 180. * np.pi - 90 + p['grid_dir']
+        uw_d = p['wind_file'][:,2] / 180. * np.pi
 
         s['uw'][:,:] = interp_circular(t, uw_t, uw_s)
         s['udir'][:,:] = np.arctan2(np.interp(t, uw_t, np.sin(uw_d)),
