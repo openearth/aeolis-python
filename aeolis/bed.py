@@ -403,3 +403,8 @@ def mixtoplayer(s, p):
             s['mass'][ix] = mass[ix]
             
     return s
+
+
+def avalanche(s, p):
+
+    return s
