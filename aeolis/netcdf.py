@@ -27,6 +27,8 @@ The Netherlands                  The Netherlands
 
 from __future__ import absolute_import, division
 
+import os
+import re
 import logging
 from datetime import datetime
 
@@ -94,8 +96,8 @@ def initialize(outputfile, outputvars, s, p, dimensions):
         # see http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/formats/DataDiscoveryAttConvention.html
         nc.Conventions = 'CF-1.6'
         nc.Metadata_Conventions = 'Unidata Dataset Discovery v1.0'
-        nc.featureType = 'grid'
-        nc.cdm_data_type = 'grid'
+        #nc.featureType = 'grid'
+        #nc.cdm_data_type = 'grid'
         nc.standard_name_vocabulary = 'CF-1.6'
         nc.title = ''
         nc.summary = ''
@@ -144,25 +146,15 @@ def initialize(outputfile, outputvars, s, p, dimensions):
         # add variables
         nc.createVariable('s', 'float32', (u's'))
         nc.variables['s'].long_name = 's-coordinate'
-        nc.variables['s'].standard_name = ''
-        nc.variables['s'].units = ''
-        nc.variables['s'].axis = 'X'
+        nc.variables['s'].units = '1'
         nc.variables['s'].valid_min = -np.inf
         nc.variables['s'].valid_max = np.inf
-        nc.variables['s'].bounds = ''
-        nc.variables['s'].grid_mapping = ''
-        nc.variables['s'].comment = ''
         
         nc.createVariable('n', 'float32', (u'n'))
         nc.variables['n'].long_name = 'n-coordinate'
-        nc.variables['n'].standard_name = ''
-        nc.variables['n'].units = ''
-        nc.variables['n'].axis = 'Y'
+        nc.variables['n'].units = '1'
         nc.variables['n'].valid_min = -np.inf
         nc.variables['n'].valid_max = np.inf
-        nc.variables['n'].bounds = ''
-        nc.variables['n'].grid_mapping = ''
-        nc.variables['n'].comment = ''
         
         nc.createVariable('x', 'float32', (u'n', u's'))
         nc.variables['x'].long_name = 'x-coordinate'
@@ -173,7 +165,6 @@ def initialize(outputfile, outputvars, s, p, dimensions):
         nc.variables['x'].valid_max = np.inf
         nc.variables['x'].bounds = 'x_bounds'
         nc.variables['x'].grid_mapping = 'crs'
-        nc.variables['x'].comment = ''
         
         nc.createVariable('y', 'float32', (u'n', u's'))
         nc.variables['y'].long_name = 'y-coordinate'
@@ -184,23 +175,18 @@ def initialize(outputfile, outputvars, s, p, dimensions):
         nc.variables['y'].valid_max = np.inf
         nc.variables['y'].bounds = 'y_bounds'
         nc.variables['y'].grid_mapping = 'crs'
-        nc.variables['y'].comment = ''
         
         nc.createVariable('layers', 'float32', (u'layers',))
         nc.variables['layers'].long_name = 'bed layers'
-        nc.variables['layers'].standard_name = ''
-        nc.variables['layers'].units = '-'
+        nc.variables['layers'].units = '1'
         nc.variables['layers'].valid_min = 0
         nc.variables['layers'].valid_max = np.inf
-        nc.variables['layers'].comment = ''
         
         nc.createVariable('fractions', 'float32', (u'fractions',))
         nc.variables['fractions'].long_name = 'sediment fractions'
-        nc.variables['fractions'].standard_name = ''
         nc.variables['fractions'].units = 'm'
         nc.variables['fractions'].valid_min = 0
         nc.variables['fractions'].valid_max = np.inf
-        nc.variables['fractions'].comment = ''
         
         nc.createVariable('lat', 'float32', (u'n', u's'))
         nc.variables['lat'].long_name = 'latitude'
@@ -210,7 +196,6 @@ def initialize(outputfile, outputvars, s, p, dimensions):
         nc.variables['lat'].valid_max = np.inf
         nc.variables['lat'].bounds = 'lat_bounds'
         nc.variables['lat'].ancillary_variables = ''
-        nc.variables['lat'].comment = ''
         
         nc.createVariable('lon', 'float32', (u'n', u's'))
         nc.variables['lon'].long_name = 'longitude'
@@ -220,7 +205,6 @@ def initialize(outputfile, outputvars, s, p, dimensions):
         nc.variables['lon'].valid_max = np.inf
         nc.variables['lon'].bounds = 'lon_bounds'
         nc.variables['lon'].ancillary_variables = ''
-        nc.variables['lon'].comment = ''
         
         nc.createVariable('time', 'float64', (u'time',))
         nc.variables['time'].long_name = 'time'
@@ -229,8 +213,7 @@ def initialize(outputfile, outputvars, s, p, dimensions):
         nc.variables['time'].calendar = 'julian'
         nc.variables['time'].axis = 'T'
         nc.variables['time'].bounds = 'time_bounds'
-        nc.variables['time'].ancillary_variables = ''
-        nc.variables['time'].comment = ''
+        #nc.variables['time'].ancillary_variables = ''
             
         nc.createVariable('x_bounds', 'float32', (u's', u'n', u'nv'))
         nc.variables['x_bounds'].units = 'm'
@@ -252,6 +235,7 @@ def initialize(outputfile, outputvars, s, p, dimensions):
         nc.variables['time_bounds'].units = 'seconds since %s' % p['refdate']
         nc.variables['time_bounds'].comment = 'time bounds for each time value'
 
+        meta = parse_metadata(outputvars)
         for var0, exts in outputvars.items():
 
             if var0 not in s:
@@ -268,12 +252,11 @@ def initialize(outputfile, outputvars, s, p, dimensions):
                 if ext is None:
                     var = var0
                 else:
-                    var = '%s.%s' % (var0, ext)
+                    var = '%s_%s' % (var0, ext)
             
                 nc.createVariable(var, 'float32', dims)
                 nc.variables[var].long_name = var
-                nc.variables[var].standard_name = ''
-                nc.variables[var].units = ''
+                #nc.variables[var].standard_name = 'sea_surface_height_above_mean_sea_level'
                 nc.variables[var].scale_factor = 1.0
                 nc.variables[var].add_offset = 0.0
                 nc.variables[var].valid_min = -np.inf
@@ -282,12 +265,15 @@ def initialize(outputfile, outputvars, s, p, dimensions):
                 nc.variables[var].grid_mapping = 'crs'
                 nc.variables[var].source = ''
                 nc.variables[var].references = ''
-                nc.variables[var].cell_methods = ''
-                nc.variables[var].ancillary_variables = ''
-                nc.variables[var].comment = ''
+                #nc.variables[var].cell_methods = ''
+                #nc.variables[var].ancillary_variables = ''
+                #nc.variables[var].comment = ''
+
+                if meta[var0]['units']:
+                    nc.variables[var].units = meta[var0]['units']
             
         nc.createVariable('crs', 'int32', ())
-        nc.variables['crs'].grid_mapping_name = 'oblique_stereographic'
+        nc.variables['crs'].grid_mapping_name = 'stereographic'
         nc.variables['crs'].epsg_code = 'EPSG:28992'
         nc.variables['crs'].semi_major_axis = 6377397.155
         nc.variables['crs'].semi_minor_axis = 6356078.96282
@@ -315,16 +301,16 @@ def initialize(outputfile, outputvars, s, p, dimensions):
         nc.variables['lon_bounds'][:,:] = 0.
         
         # store model settings
-        grp = nc.createGroup('settings')
         for k, v in p.items():
             if k.startswith('_'):
                 continue
+            k = 'par_%s' % k
             if v is None:
-                grp.setncattr(k, -1)
+                nc.setncattr(k, -1)
             elif isinstance(v, bool):
-                grp.setncattr(k, int(v))
+                nc.setncattr(k, int(v))
             else:
-                grp.setncattr(k, np.real(v))
+                nc.setncattr(k, np.real(v))
 
 
 def append(outputfile, variables):
@@ -423,3 +409,40 @@ def dump(outputfile, dumpfile, var='mass', ix=-1):
     with netCDF4.Dataset(outputfile, 'r') as ds:
         m = ds.variables[var][ix,...]
         np.savetxt(dumpfile, m.reshape((-1, m.shape[1])))
+
+
+def parse_metadata(outputvars):
+    '''Parse metadata from constants.py
+
+    Parses the Python comments in constants.py to extract meta data,
+    like units, for the model state variables that can be used as
+    netCDF4 meta data.
+
+    Parameters
+    ----------
+    outputvars : dictionary
+        Spatial grids to be written to netCDF4 output file
+
+    Returns
+    -------
+    meta : dict
+        Dictionary with meta data for the output variables
+
+    '''
+
+    pyfile = os.path.join(os.path.split(__file__)[0], 'constants.py')
+    meta = {var:{'units':None} for var in outputvars.keys()}
+
+    if os.path.exists(pyfile):
+        with open(pyfile, 'r') as fp:
+            for line in fp:
+                m = re.match('^\s*\'(.*)\',\s*#\s*\[(.*)\]', line)
+                if m:
+                    var, units = m.groups()
+                    if var in meta.keys():
+                        if units == '-':
+                            meta[var]['units'] = '1'
+                        else:
+                            meta[var]['units'] = units
+
+    return meta

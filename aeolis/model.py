@@ -1174,7 +1174,10 @@ class AeoLiSRunner(AeoLiS):
         if stat in ['min', 'max', 'sum']:
             return self.o[var][stat]
         elif stat == 'avg':
-            return self.o[var]['sum'] / self.n
+            if self.n > 0:
+                return self.o[var]['sum'] / self.n
+            else:
+                return np.zeros(self.o[var]['sum'].shape)
         elif stat == 'var':
             if self.n > 1:
                 return (self.o[var]['var'] - self.o[var]['sum']**2 / self.n) \
@@ -1377,7 +1380,7 @@ class AeoLiSRunner(AeoLiS):
                     if ext is None:
                         variables[k] = self.get_var(k, clear=False).copy()
                     else:
-                        variables['%s.%s' % (k, ext)] = self.get_statistic(k, ext)
+                        variables['%s_%s' % (k, ext)] = self.get_statistic(k, ext)
 
             aeolis.netcdf.append(self.p['output_file'], variables)
 

@@ -155,7 +155,7 @@ def compute_moisture(s, p):
     ix = mg > 0.005
     
     if p['method_moist'].lower() == 'belly_johnson':
-        s['uth'][ix] *= np.maximum(1., 1.8+0.6*np.log10(mg[ix]))
+        s['uth'][ix] *= np.maximum(1., 1.8+0.6*np.log10(mg[ix] * 100.))
     elif p['method_moist'].lower() == 'hotta':
         s['uth'][ix] += 7.5 * mg[ix]
     else:

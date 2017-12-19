@@ -113,7 +113,7 @@ def print_license():
     print('AeoLiS  Copyright (C) 2015  Bas Hoonhout')
     print('This program comes with ABSOLUTELY NO WARRANTY.')
     print('This is free software, and you are welcome to redistribute it')
-    print('under certain conditions; See LICENSE for details.')
+    print('under certain conditions; See LICENSE.txt for details.')
     print('')
 
     
