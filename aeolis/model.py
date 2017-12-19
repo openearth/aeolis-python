@@ -1228,8 +1228,8 @@ class AeoLiSRunner(AeoLiS):
 
         self.clear = clear
 
-        if '.' in var:
-            var, stat = var.split('.')
+        if '_' in var:
+            var, stat = var.split('_')
             if var in self.o:
                 return self.get_statistic(var, stat)
 
@@ -1298,8 +1298,8 @@ class AeoLiSRunner(AeoLiS):
         # determine unique combinations of variables and types
         self.p['_output_vars'] = {}
         for var in self.p['output_vars']:
-            if '.' in var:
-                var0, ext = var.split('.')
+            if '_' in var:
+                var0, ext = var.split('_')
             else:
                 var0, ext = var, None
             if var0 not in self.p['_output_vars']:
