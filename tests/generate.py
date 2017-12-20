@@ -31,7 +31,7 @@ COMBINATIONS = [
      dict(bi = 1.0)],
     
     [dict(tstop = 3600,
-          output_vars = ['zb', 'Cu_avg', 'Ct_avg', 'uws_avg', 'pickup_avg','pickup.sum', 'w'])]
+          output_vars = ['zb', 'Cu_avg', 'Ct_avg', 'uws_avg', 'pickup_avg', 'w'])]
     
 ]
 
