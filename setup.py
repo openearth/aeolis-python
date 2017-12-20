@@ -33,7 +33,7 @@ setup(
     keywords=['aeolian sediment transport coastal model deltares tudelft'],
     packages=find_packages(exclude=['docs', 'examples', 'tests']),
     install_requires=[
-        'docopt',
+        'docopt==0.6.1',
         'bmi-python',
         'scipy',
         'numpy',
