@@ -1194,7 +1194,7 @@ class AeoLiSRunner(AeoLiS):
         Overloads the :func:`~model.AeoLiS.get_var()` function and
         extends it with the functionality to return statistics on
         spatial grids by adding a postfix to the variable name
-        (e.g. Ct.avg). Supported statistics are avg, sum, var, min and
+        (e.g. Ct_avg). Supported statistics are avg, sum, var, min and
         max.
 
         Parameters
@@ -1202,8 +1202,8 @@ class AeoLiSRunner(AeoLiS):
         var : str
             Name of spatial grid or model configuration
             parameter. Spatial grid name can be extended with a
-            postfix to request a statistic (.avg, .sum, .var, .min or
-            .max).
+            postfix to request a statistic (_avg, _sum, _var, _min or
+            _max).
         clear : bool
             Clear output statistics afterwards.
 
@@ -1215,10 +1215,10 @@ class AeoLiSRunner(AeoLiS):
         Examples
         --------
         >>> # returns average sediment concentration
-        ... model.get_var('Ct.avg')
+        ... model.get_var('Ct_avg')
 
         >>> # returns variance in wave height
-        ... model.get_var('Hs.var')
+        ... model.get_var('Hs_var')
 
         See Also
         --------
