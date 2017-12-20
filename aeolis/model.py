@@ -1761,5 +1761,3 @@ class WindGenerator():
     @staticmethod
     def matmult4(m, v):
         return [reduce(operator.add, map(operator.mul,r,v)) for r in m]
-
-
