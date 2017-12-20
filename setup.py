@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='AeoLiS',
-    version='1.1.1post2',
+    version='1.1.1post3',
     author='Bas Hoonhout',
     author_email='b.m.hoonhout@tudelft.nl',
     url='http://aeolis.readthedocs.io/',
@@ -33,10 +33,10 @@ setup(
     keywords=['aeolian sediment transport coastal model deltares tudelft'],
     packages=find_packages(exclude=['docs', 'examples', 'tests']),
     install_requires=[
+        'docopt==0.6.1',
+        'bmi-python',
         'scipy',
         'numpy',
-        'docopt',
-        'bmi-python',
     ],
     python_requires='>=2.7, <4',
     tests_require=[
