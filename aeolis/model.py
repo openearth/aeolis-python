@@ -32,6 +32,7 @@ import imp
 import time
 import glob
 import logging
+import warnings
 import operator
 import numpy as np
 import scipy.sparse
@@ -1232,9 +1233,16 @@ class AeoLiSRunner(AeoLiS):
             var, stat = var.split('_')
             if var in self.o:
                 return self.get_statistic(var, stat)
+        
+        # TODO: delete in future releases
+        if '.' in var:
+            warnings.warn('The use of "%s" is deprecated, use "%s" instead.' % (var, var.replace('.','_')),DeprecationWarning)
+            var, stat = var.split('.')
+            if var in self.o:
+                return self.get_statistic(var, stat)
 
         return super(AeoLiSRunner, self).get_var(var)
-
+	
 
     def initialize(self):
         '''Initialize model
@@ -1300,6 +1308,10 @@ class AeoLiSRunner(AeoLiS):
         for var in self.p['output_vars']:
             if '_' in var:
                 var0, ext = var.split('_')
+            # TODO: delete in future release
+            elif '.' in var:
+                warnings.warn('The use of "%s" is deprecated, use "%s" instead.' % (var, var.replace('.','_')), DeprecationWarning)
+                var0, ext = var.split('.')
             else:
                 var0, ext = var, None
             if var0 not in self.p['_output_vars']:

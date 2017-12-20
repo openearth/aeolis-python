@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='AeoLiS',
-    version='1.1.1post3',
+    version='1.1.2',
     author='Bas Hoonhout',
     author_email='b.m.hoonhout@tudelft.nl',
     url='http://aeolis.readthedocs.io/',
