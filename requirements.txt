@@ -1,3 +1,2 @@
 sphinxcontrib-bibtex==0.3.2
 sphinxcontrib-napoleon==0.2.8
--e git+https://github.com/openearth/bmi-python@d0da33fd59c2ad30b176060b84dbd1209921bb4f#egg=bmi-master
