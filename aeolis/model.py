@@ -1194,7 +1194,7 @@ class AeoLiSRunner(AeoLiS):
         Overloads the :func:`~model.AeoLiS.get_var()` function and
         extends it with the functionality to return statistics on
         spatial grids by adding a postfix to the variable name
-        (e.g. Ct.avg). Supported statistics are avg, sum, var, min and
+        (e.g. Ct_avg). Supported statistics are avg, sum, var, min and
         max.
 
         Parameters
@@ -1202,8 +1202,8 @@ class AeoLiSRunner(AeoLiS):
         var : str
             Name of spatial grid or model configuration
             parameter. Spatial grid name can be extended with a
-            postfix to request a statistic (.avg, .sum, .var, .min or
-            .max).
+            postfix to request a statistic (_avg, _sum, _var, _min or
+            _max).
         clear : bool
             Clear output statistics afterwards.
 
@@ -1215,10 +1215,10 @@ class AeoLiSRunner(AeoLiS):
         Examples
         --------
         >>> # returns average sediment concentration
-        ... model.get_var('Ct.avg')
+        ... model.get_var('Ct_avg')
 
         >>> # returns variance in wave height
-        ... model.get_var('Hs.var')
+        ... model.get_var('Hs_var')
 
         See Also
         --------
@@ -1228,8 +1228,8 @@ class AeoLiSRunner(AeoLiS):
 
         self.clear = clear
 
-        if '.' in var:
-            var, stat = var.split('.')
+        if '_' in var:
+            var, stat = var.split('_')
             if var in self.o:
                 return self.get_statistic(var, stat)
 
@@ -1298,8 +1298,8 @@ class AeoLiSRunner(AeoLiS):
         # determine unique combinations of variables and types
         self.p['_output_vars'] = {}
         for var in self.p['output_vars']:
-            if '.' in var:
-                var0, ext = var.split('.')
+            if '_' in var:
+                var0, ext = var.split('_')
             else:
                 var0, ext = var, None
             if var0 not in self.p['_output_vars']:
@@ -1761,5 +1761,3 @@ class WindGenerator():
     @staticmethod
     def matmult4(m, v):
         return [reduce(operator.add, map(operator.mul,r,v)) for r in m]
-
-
