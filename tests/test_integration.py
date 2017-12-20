@@ -30,7 +30,7 @@ def test_integration():
         with open(fname2, 'w') as fp:
             json.dump(data, fp, indent=4)
                 
-        yield assert_true, results['fraction'] < TNY
+        yield assert_true, results['fraction'] < 0.01 # deficit is smaller than 1%
 
 
 def check_continuity(fname):
@@ -48,8 +48,8 @@ def check_continuity(fname):
         V1 = dz * dx * dy
         
         # loss over border
-        Ct = np.sum(ds.variables['Ct.avg'][:,:,:,:], axis=-1)
-        uws = ds.variables['uws.avg'][:,:,:]
+        Ct = np.sum(ds.variables['Ct_avg'][:,:,:,:], axis=-1)
+        uws = ds.variables['uws_avg'][:,:,:]
         qs = Ct * uws
         V2 = qs[:,:,-1] * dt * dy / (2650. * .6)
         
@@ -59,7 +59,7 @@ def check_continuity(fname):
         # metrics
         E = np.abs(np.minimum(0., V1).sum())
         D = np.abs(np.maximum(0., V1).sum())
-        dV = np.abs(V1.sum() + V2.sum())# + V3.sum())
+        dV = np.abs(V1.sum() + V2.sum() + V3.sum())
         frac = dV/E
 
         return dict(erosion=float(E),

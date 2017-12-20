@@ -1,3 +1,4 @@
 netCDF4
+coverage
 sphinxcontrib-bibtex==0.3.2
 sphinxcontrib-napoleon==0.2.8
