@@ -1,3 +1,5 @@
+[![CircleCI](https://circleci.com/gh/openearth/aeolis-python.svg?style=svg)](https://circleci.com/gh/openearth/aeolis-python)
+
 # AeoLiS
 AeoLiS is a process-based model for simulating aeolian sediment
 transport in situations where supply-limiting factors are important,
