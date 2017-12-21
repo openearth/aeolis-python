@@ -26,7 +26,7 @@ Bug fixes
 None.
 
 Tests
------
+^^^^^
 
 None.
 
@@ -49,6 +49,7 @@ Improvements
 ^^^^^^^^^^^^
 
 * Prepared for continuous integration through CircleCI.
+* Prepared for code coverage checking through codecov.
 
 New functions/methods
 ^^^^^^^^^^^^^^^^^^^^^
@@ -64,7 +65,7 @@ Bug fixes
   and Susana Costas (b3d992b).
 
 Tests
------
+^^^^^
 
 * Reduced required accuracy for mass conservation tests from
   0.00000000000001% to 1%.
@@ -121,7 +122,7 @@ Bug fixes
   the concentrations from all other grid cells (03de813).
 
 Tests
------
+^^^^^
 
 * Added tests to check mass conservation in bed mixing routines.
 * Added integration tests.
