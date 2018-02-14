@@ -54,6 +54,12 @@ import aeolis.constants
 from aeolis.utils import *
 
 
+
+__version__ = open(
+    os.path.join(os.path.split(__file__)[0], '..', 'VERSION')
+).read().strip()
+
+
 # initialize logger
 logger = logging.getLogger(__name__)
 
@@ -1087,6 +1093,8 @@ class AeoLiSRunner(AeoLiS):
         print('    d88P   888 88888888 888  888 888      888       "888  ')
         print('   d8888888888 Y8b.     Y88..88P 888      888 Y88b  d88P  ')
         print('  d88P     888  "Y8888   "Y88P"  88888888 888  "Y8888P"   ')
+        print('                                                          ')
+        print('  Version: %-46s' % __version__)
         print('                                                          ')
 
         # set working directory
