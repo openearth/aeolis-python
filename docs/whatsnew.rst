@@ -1,7 +1,7 @@
 What's New
 ==========
 
-v1.1.3 (unreleased)
+v2.0.0 (unreleased)
 -------------------
 
 Breaking changes
@@ -9,6 +9,34 @@ Breaking changes
 
 * Removed support for statistical variable names with dot-notation
   (e.g. `.avg` and `.sum`).
+
+  Improvements
+^^^^^^^^^^^^
+
+None.
+
+New functions/methods
+^^^^^^^^^^^^^^^^^^^^^
+
+None.
+
+Bug fixes
+^^^^^^^^^
+
+None.
+
+Tests
+^^^^^
+
+None.
+
+v1.1.5 (unreleased)
+-------------------
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+
+None.
 
 Improvements
 ^^^^^^^^^^^^
@@ -24,6 +52,70 @@ Bug fixes
 ^^^^^^^^^
 
 None.
+
+Tests
+^^^^^
+
+None.
+
+v1.1.4 (15 February 2018)
+-------------------------
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+
+None.
+
+Improvements
+^^^^^^^^^^^^
+
+* Route all log messages and exceptions through the logging
+  module. Consequently, all information, warnings, and exceptions,
+  including tracebacks can be logged to file.
+
+* Added model version number and Git hash to log files and model
+  output.
+
+New functions/methods
+^^^^^^^^^^^^^^^^^^^^^
+
+None.
+
+Bug fixes
+^^^^^^^^^
+
+None.
+
+Tests
+^^^^^
+
+None.
+
+v1.1.3 (9 February 2018)
+------------------------
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+
+None.
+
+Improvements
+^^^^^^^^^^^^
+
+None.
+
+New functions/methods
+^^^^^^^^^^^^^^^^^^^^^
+
+None.
+
+Bug fixes
+^^^^^^^^^
+
+* Apply precipitation/eaporation only in top bed layer to prevent
+  mismatching matrix shapes in the multiplication. In the future,
+  precipitation might be distributed over multiple layers depending on
+  the porosity.
 
 Tests
 ^^^^^

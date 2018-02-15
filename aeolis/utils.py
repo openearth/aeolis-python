@@ -252,25 +252,25 @@ def format_log(msg, ncolumns=2, **props):
     '''
             
     fmt = []
-    fmt.append('%s\n         ' % msg)
+    fmt.append(msg)
 
     i = 0
+    fmt.append('')
     for k, v in sorted(props.items()):
+        
+        if i == ncolumns:
+            fmt.append('')
+            i = 0
+            
         k = re.sub('^min', 'min. ', k)
         k = re.sub('^max', 'max. ', k)
         k = re.sub('^nr', '# ', k)
     
-        fmt.append('%-15s: %-10s ' % (k.ljust(15, '.'),
-                                      print_value(v)))
+        fmt[-1] += '%-15s: %-10s ' % (k.ljust(15, '.'),
+                                      print_value(v))
         i += 1
-
-        if i == ncolumns:
-            fmt.append('\n         ')
-            i = 0
             
-    fmt.append('\n')
-            
-    return ''.join(fmt)
+    return fmt
     
 
 def apply_mask(arr, mask):

@@ -91,7 +91,7 @@ def read_configfile(configfile, parse_files=True, load_defaults=True):
                     key, val = line.split('=')[:2]
                     p[key.strip()] = parse_value(val, parse_files=parse_files)
     else:
-        raise IOError('File not found [%s]' % configfile)
+        logger.log_and_raise('File not found [%s]' % configfile, exc=IOError)
        
     # normalize grain size distribution
     if 'grain_dist' in p:
@@ -182,33 +182,33 @@ def check_configuration(p):
     # check for missing parameters
     missing = [k for k in REQUIRED_CONFIG if k not in p]
     if len(missing) > 0:
-        raise ValueError('Missing required parameters [%s]' % ', '.join(missing))
+        logger.log_and_raise('Missing required parameters [%s]' % ', '.join(missing), exc=ValueError)
         
 
     # check validity of configuration
     if not isarray(p['xgrid_file']) or \
        not isarray(p['bed_file']) or (not isarray(p['ygrid_file']) and p['ny'] > 0):
-        raise ValueError('Incomplete bathymetry definition')
+        logger.log_and_raise('Incomplete bathymetry definition', exc=ValueError)
 
     if isarray(p['wind_file']):
         if p['wind_file'].ndim != 2 or p['wind_file'].shape[1] < 3:
-            raise ValueError('Invalid wind definition file')
+            logger.log_and_raise('Invalid wind definition file', exc=ValueError)
 
     if isarray(p['tide_file']):
         if p['tide_file'].ndim != 2 or p['tide_file'].shape[1] < 2:
-            raise ValueError('Invalid tide definition file')
+            logger.log_and_raise('Invalid tide definition file', exc=ValueError)
             
     if isarray(p['meteo_file']):
         if p['meteo_file'].ndim != 2 or p['meteo_file'].shape[1] < 6:
-            raise ValueError('Invalid meteo definition file')
+            logger.log_and_raise('Invalid meteo definition file', exc=ValueError)
             
     if p['th_humidity']:
-        logger.warn('Wind velocity threshold based on air humidity following Arens (1996) '
-                    'is implemented for testing only. Use with care.')
+        logger.warning('Wind velocity threshold based on air humidity following Arens (1996) '
+                       'is implemented for testing only. Use with care.')
 
     if p['th_salt']:
-        logger.warn('Wind velocity threshold based on salt content following Nickling and '
-                    'Ecclestone (1981) is implemented for testing only. Use with care.')
+        logger.warning('Wind velocity threshold based on salt content following Nickling and '
+                       'Ecclestone (1981) is implemented for testing only. Use with care.')
 
         
 def parse_value(val, parse_files=True, force_list=False):
@@ -298,7 +298,7 @@ def get_backupfilename(fname):
             break
 
     if os.path.exists(backupfile):
-        raise ValueError('Too many backup files in use! Please clean up...')
+        logger.log_and_raise('Too many backup files in use! Please clean up...', exc=ValueError)
     
     return backupfile
             

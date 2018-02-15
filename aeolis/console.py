@@ -34,11 +34,20 @@ import numpy as np
 from aeolis.model import AeoLiSRunner, WindGenerator
 
 
+class StreamFormatter(logging.Formatter):
+
+    def format(self, record):
+        if record.levelname == 'INFO':
+            return record.getMessage()
+        else:
+            return '%s: %s' % (record.levelname, record.getMessage())
+
+
 def aeolis():
     '''aeolis : a process-based model for simulating supply-limited aeolian sediment transport
 
     Usage:
-        aeolis <config> [--callback=FUNC] [--restart=FILE] [--verbose=LEVEL]
+        aeolis <config> [options]
 
     Positional arguments:
         config             configuration file
@@ -47,7 +56,8 @@ def aeolis():
         -h, --help         show this help message and exit
         --callback=FUNC    reference to callback function (e.g. example/callback.py:callback)
         --restart=FILE     model restart file
-        --verbose=LEVEL    write logging messages [default: 20]
+        --verbose=LEVEL    logging verbosity [default: 20]
+        --debug            write debug logs
 
     '''
 
@@ -55,16 +65,20 @@ def aeolis():
     
     arguments = docopt.docopt(aeolis.__doc__)
 
+    logger = logging.getLogger('aeolis')
+    logger.setLevel(logging.DEBUG)
+    
     # initialize file logger
-    logging.basicConfig(level=logging.DEBUG,
-                        format='%(asctime)-15s %(name)-8s %(levelname)-8s %(message)s',
-                        filename='%s.log' % os.path.splitext(arguments['<config>'])[0])
+    filehandler = logging.FileHandler('%s.log' % os.path.splitext(arguments['<config>'])[0], mode='w')
+    filehandler.setLevel(logging.DEBUG if arguments['--debug'] else logging.INFO)
+    filehandler.setFormatter(logging.Formatter('%(asctime)-15s %(name)-8s %(levelname)-8s %(message)s'))
+    logger.addHandler(filehandler)
 
     # initialize console logger
-    console = logging.StreamHandler()
-    console.setLevel(int(arguments['--verbose']))
-    console.setFormatter(logging.Formatter('%(levelname)-8s %(message)s'))
-    logging.getLogger('').addHandler(console)
+    streamhandler = logging.StreamHandler()
+    streamhandler.setLevel(int(arguments['--verbose']))
+    streamhandler.setFormatter(StreamFormatter())
+    logger.addHandler(streamhandler)
 
     # start model
     model = AeoLiSRunner(configfile=arguments['<config>'])

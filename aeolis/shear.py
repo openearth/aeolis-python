@@ -24,10 +24,14 @@ The Netherlands                  The Netherlands
 
 '''
 
-
+import logging
 import numpy as np
 import scipy.special
 import scipy.interpolate
+
+
+# initialize logger
+logger = logging.getLogger(__name__)
 
 
 class WindShear:

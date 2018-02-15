@@ -25,8 +25,13 @@ The Netherlands                  The Netherlands
 '''
 
 
+import logging
 import netCDF4
 import matplotlib.pyplot as plt
+
+
+# initialize logger
+logger = logging.getLogger(__name__)
 
 
 def profile(outputfile, var, ix=-1, subplots_kw={'figsize':(10,4)}):

@@ -27,10 +27,15 @@ The Netherlands                  The Netherlands
 
 from __future__ import absolute_import, division
 
+import logging
 import numpy as np
 
 # package modules
 from aeolis.utils import *
+
+
+# initialize logger
+logger = logging.getLogger(__name__)
 
 
 def interpolate(s, p, t):

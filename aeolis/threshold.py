@@ -34,6 +34,10 @@ import numpy as np
 from aeolis.utils import *
 
 
+# initialize logger
+logger = logging.getLogger(__name__)
+
+
 def compute(s, p):
     '''Compute wind velocity threshold based on bed surface properties
 
@@ -159,7 +163,7 @@ def compute_moisture(s, p):
     elif p['method_moist'].lower() == 'hotta':
         s['uth'][ix] += 7.5 * mg[ix]
     else:
-        raise ValuerError('Unknown moisture formulation [%s]' % p['method_moist'])
+        logger.log_and_raise('Unknown moisture formulation [%s]' % p['method_moist'], exc=ValueError)
 
     # should be .04 according to Pye and Tsoar
     # should be .64 according to Delgado-Fernandez (10% vol.)
