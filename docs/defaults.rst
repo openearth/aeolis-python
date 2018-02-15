@@ -9,5 +9,5 @@ configuration is listed below.
 
 .. literalinclude:: ../aeolis/constants.py
    :language: python
-   :start-before: #: AeoLiS model default configuration
+   :start-after: #: AeoLiS model default configuration
    :end-before: #: Required model configuration parameters
