@@ -10,7 +10,7 @@ Breaking changes
 * Removed support for statistical variable names with dot-notation
   (e.g. `.avg` and `.sum`).
 
-  Improvements
+Improvements
 ^^^^^^^^^^^^
 
 None.
