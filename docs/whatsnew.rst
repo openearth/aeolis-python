@@ -136,7 +136,7 @@ Improvements
 * Prepared and uploaded package to PyPI.
 * Switch back to original working directory after finishing
   simulation.
-* Removed double definition of model state. Not only defined in
+* Removed double definition of model state. Now only defined in
   `constants.MODEL_STATE`.
 * Also write initial model state to output.
 * Made netCDF output compatible with CF-1.6 convention.
