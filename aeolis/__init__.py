@@ -38,14 +38,14 @@ class Logger(logging.getLoggerClass()):
         if not isinstance(msgs, list):
             msgs = [msgs]
         for msg in msgs:
-            super()._log(lvl, msg, *args, **kwargs)
+            super(Logger, self)._log(lvl, msg, *args, **kwargs)
 
             
-    def log_and_raise(self, msg, *args, exc=Exception, **kwargs):
+    def log_and_raise(self, msg, exc=Exception, *args, **kwargs):
         try:
             raise exc(msg)
         except:
-            super().exception(msg, stack_info=True)
+            super(Logger, self).exception(msg, stack_info=True)
             raise
 
 
