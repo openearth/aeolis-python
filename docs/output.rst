@@ -10,4 +10,5 @@ are listed below.
 
 .. literalinclude:: ../aeolis/constants.py
    :language: python
-   :lines: 30-69
+   :start-after: #: Aeolis model state variables
+   :end-before: #: AeoLiS model default configuration

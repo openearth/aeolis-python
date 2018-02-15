@@ -29,6 +29,7 @@ from __future__ import absolute_import, division
 
 import os
 import imp
+import sys
 import time
 import glob
 import logging
@@ -57,6 +58,17 @@ from aeolis.utils import *
 # initialize logger
 logger = logging.getLogger(__name__)
 
+
+__version__ = ''
+__gitversion__ = ''
+__root__ = os.path.dirname(__file__)
+
+try:
+    __version__ = open(os.path.join(__root__, 'VERSION')).read().strip()
+    __gitversion__ = open(os.path.join(__root__, 'GITVERSION')).read().strip()
+except:
+    logger.warning('WARNING: Unknown model version.')
+    
 
 class ModelState(dict):
     '''Dictionary-like object to store model state
@@ -238,7 +250,7 @@ class AeoLiS(IBmi):
         elif self.p['scheme'] == 'crank_nicolson':
             self.s.update(self.crank_nicolson())
         else:
-            raise ValueError('Unknown scheme [%s]' % self.p['scheme'])
+            logger.log_and_raise('Unknown scheme [%s]' % self.p['scheme'], exc=ValueError)
 
         # update bed
         self.s = aeolis.bed.update(self.s, self.p)
@@ -431,11 +443,11 @@ class AeoLiS(IBmi):
     
         
     def inq_compound(self):
-        raise NotImplementedError('Method not yet implemented [inq_compound]')
+        logger.log_and_raise('Method not yet implemented [inq_compound]', exc=NotImplementedError)
     
         
     def inq_compound_field(self):
-        raise NotImplementedError('Method not yet implemented [inq_compound_field]')
+        logger.log_and_raise('Method not yet implemented [inq_compound_field]', exc=NotImplementedError)
     
         
     def set_var(self, var, val):
@@ -490,7 +502,7 @@ class AeoLiS(IBmi):
     
         
     def set_var_slice(self):
-        raise NotImplementedError('Method not yet implemented [set_var_slice]')
+        logger.log_and_raise('Method not yet implemented [set_var_slice]', exc=NotImplementedError)
 
 
     def set_timestep(self, dt=-1.):
@@ -702,9 +714,9 @@ class AeoLiS(IBmi):
             Ap2[:,0] = s['ds'][:,1] / s['ds'][:,2]
             Ap1[:,0] = -1. - s['ds'][:,1] / s['ds'][:,2]
         elif p['boundary_offshore'] == 'circular':
-            raise NotImplementedError('Cross-shore cricular boundary condition not yet implemented')
+            logger.log_and_raise('Cross-shore cricular boundary condition not yet implemented', exc=NotImplementedError)
         else:
-            raise ValueError('Unknown offshore boundary condition [%s]' % self.p['boundary_offshore'])
+            logger.log_and_raise('Unknown offshore boundary condition [%s]' % self.p['boundary_offshore'], exc=ValueError)
             
         if p['boundary_onshore'] == 'noflux':
             Am2[:,-1] = 0.
@@ -716,20 +728,20 @@ class AeoLiS(IBmi):
             Am2[:,-1] = s['ds'][:,-1] / s['ds'][:,-2]
             Am1[:,-1] = -1. - s['ds'][:,-1] / s['ds'][:,-2]
         elif p['boundary_offshore'] == 'circular':
-            raise NotImplementedError('Cross-shore cricular boundary condition not yet implemented')
+            logger.log_and_raise('Cross-shore cricular boundary condition not yet implemented', exc=NotImplementedError)
         else:
-            raise ValueError('Unknown onshore boundary condition [%s]' % self.p['boundary_onshore'])
+            logger.log_and_raise('Unknown onshore boundary condition [%s]' % self.p['boundary_onshore'], exc=ValueError)
 
         if p['boundary_lateral'] == 'noflux':
-            raise NotImplementedError('Lateral no-flux boundary condition not yet implemented')
+            logger.log_and_raise('Lateral no-flux boundary condition not yet implemented', exc=NotImplementedError)
         if p['boundary_lateral'] == 'constant':
-            raise NotImplementedError('Lateral constant boundary condition not yet implemented')
+            logger.log_and_raise('Lateral constant boundary condition not yet implemented', exc=NotImplementedError)
         elif p['boundary_lateral'] == 'gradient':
-            raise NotImplementedError('Lateral gradient boundary condition not yet implemented')
+            logger.log_and_raise('Lateral gradient boundary condition not yet implemented', exc=NotImplementedError)
         elif p['boundary_lateral'] == 'circular':
             pass
         else:
-            raise ValueError('Unknown lateral boundary condition [%s]' % self.p['boundary_lateral'])
+            logger.log_and_raise('Unknown lateral boundary condition [%s]' % self.p['boundary_lateral'], exc=ValueError)
 
         # construct sparse matrix
         if p['ny'] > 0:
@@ -791,12 +803,12 @@ class AeoLiS(IBmi):
                 if Ct_i.min() < 0.:
                     ix = Ct_i < 0.
                     
-                    logger.warn(format_log('Removing negative concentrations',
-                                           nrcells=np.sum(ix),
-                                           fraction=i,
-                                           iteration=n,
-                                           minvalue=Ct_i.min(),
-                                           **logprops))
+                    logger.warning(format_log('Removing negative concentrations',
+                                              nrcells=np.sum(ix),
+                                              fraction=i,
+                                              iteration=n,
+                                              minvalue=Ct_i.min(),
+                                              **logprops))
 
                     Ct_i[~ix] *= 1. + Ct_i[ix].sum() / Ct_i[~ix].sum()
                     Ct_i[ix] = 0.
@@ -829,24 +841,24 @@ class AeoLiS(IBmi):
             # throw warning if the maximum number of iterations was
             # reached
             if np.any(ix):
-                logger.warn(format_log('Iteration not converged',
-                                       nrcells=np.sum(ix),
-                                       fraction=i,
-                                       **logprops))
+                logger.warning(format_log('Iteration not converged',
+                                          nrcells=np.sum(ix),
+                                          fraction=i,
+                                          **logprops))
             
             # check for unexpected negative values
             if Ct_i.min() < 0:
-                logger.warn(format_log('Negative concentrations',
-                                       nrcells=np.sum(Ct_i<0.),
-                                       fraction=i,
-                                       minvalue=Ct_i.min(),
-                                       **logprops))
+                logger.warning(format_log('Negative concentrations',
+                                          nrcells=np.sum(Ct_i<0.),
+                                          fraction=i,
+                                          minvalue=Ct_i.min(),
+                                          **logprops))
             if w_i.min() < 0:
-                logger.warn(format_log('Negative weights',
-                                       nrcells=np.sum(w_i<0),
-                                       fraction=i,
-                                       minvalue=w_i.min(),
-                                       **logprops))
+                logger.warning(format_log('Negative weights',
+                                          nrcells=np.sum(w_i<0),
+                                          fraction=i,
+                                          minvalue=w_i.min(),
+                                          **logprops))
 
             Ct[:,:,i] = Ct_i.reshape(y_i.shape)
             pickup[:,:,i] = pickup_i.reshape(y_i.shape)
@@ -857,10 +869,10 @@ class AeoLiS(IBmi):
         ix = 1. - np.sum(w, axis=2) > p['max_error']
         if np.any(ix):
             self._count('supplylim')
-            logger.warn(format_log('Ran out of sediment',
-                                   nrcells=np.sum(ix),
-                                   minweight=np.sum(w, axis=-1).min(),
-                                   **logprops))
+            logger.warning(format_log('Ran out of sediment',
+                                      nrcells=np.sum(ix),
+                                      minweight=np.sum(w, axis=-1).min(),
+                                      **logprops))
 
         qs = Ct * s['uws'].reshape(Ct[:,:,:1].shape).repeat(p['nfractions'], axis=-1)
         qn = Ct * s['uwn'].reshape(Ct[:,:,:1].shape).repeat(p['nfractions'], axis=-1)
@@ -1044,7 +1056,7 @@ class AeoLiSRunner(AeoLiS):
                                wind_file  = np.asarray([[0.,10.,0.],
                                                         [3601.,10.,0.]])))
         else:
-            raise IOError('Configuration file not found [%s]' % self.configfile)
+            logger.log_and_raise('Configuration file not found [%s]' % self.configfile, exc=IOError)
 
 
     def run(self, callback=None, restartfile=None):
@@ -1077,17 +1089,20 @@ class AeoLiSRunner(AeoLiS):
         # http://www.patorjk.com/software/taag/
         # font: Colossal
 
-        print('**********************************************************')
-        print('                                                          ')
-        print('         d8888                   888      d8b  .d8888b.   ')
-        print('        d88888                   888      Y8P d88P  Y88b  ')
-        print('       d88P888                   888          Y88b.       ')
-        print('      d88P 888  .d88b.   .d88b.  888      888  "Y888b.    ')
-        print('     d88P  888 d8P  Y8b d88""88b 888      888     "Y88b.  ')
-        print('    d88P   888 88888888 888  888 888      888       "888  ')
-        print('   d8888888888 Y8b.     Y88..88P 888      888 Y88b  d88P  ')
-        print('  d88P     888  "Y8888   "Y88P"  88888888 888  "Y8888P"   ')
-        print('                                                          ')
+        logger.info('**********************************************************')
+        logger.info('                                                          ')
+        logger.info('         d8888                   888      d8b  .d8888b.   ')
+        logger.info('        d88888                   888      Y8P d88P  Y88b  ')
+        logger.info('       d88P888                   888          Y88b.       ')
+        logger.info('      d88P 888  .d88b.   .d88b.  888      888  "Y888b.    ')
+        logger.info('     d88P  888 d8P  Y8b d88""88b 888      888     "Y88b.  ')
+        logger.info('    d88P   888 88888888 888  888 888      888       "888  ')
+        logger.info('   d8888888888 Y8b.     Y88..88P 888      888 Y88b  d88P  ')
+        logger.info('  d88P     888  "Y8888   "Y88P"  88888888 888  "Y8888P"   ')
+        logger.info('                                                          ')
+        logger.info('  Version:  %-45s' % __version__)
+        logger.info('  Git hash: %-45s' % __gitversion__)
+        logger.info('                                                          ')
 
         # set working directory
         fpath, fname = os.path.split(self.configfile)
@@ -1236,7 +1251,8 @@ class AeoLiSRunner(AeoLiS):
         
         # TODO: delete in future releases
         if '.' in var:
-            warnings.warn('The use of "%s" is deprecated, use "%s" instead.' % (var, var.replace('.','_')),DeprecationWarning)
+            warnings.warning('The use of "%s" is deprecated, use '
+                             '"%s" instead.' % (var, var.replace('.','_')), DeprecationWarning)
             var, stat = var.split('.')
             if var in self.o:
                 return self.get_statistic(var, stat)
@@ -1310,7 +1326,8 @@ class AeoLiSRunner(AeoLiS):
                 var0, ext = var.split('_')
             # TODO: delete in future release
             elif '.' in var:
-                warnings.warn('The use of "%s" is deprecated, use "%s" instead.' % (var, var.replace('.','_')), DeprecationWarning)
+                warnings.warning('The use of "%s" is deprecated, use '
+                                 '"%s" instead.' % (var, var.replace('.','_')), DeprecationWarning)
                 var0, ext = var.split('.')
             else:
                 var0, ext = var, None
@@ -1429,7 +1446,7 @@ class AeoLiSRunner(AeoLiS):
                 self.s.set_immutable(var)
                 logger.info('Loaded "%s" from hotstart file.' % var)
             else:
-                logger.warn('Unrecognized hotstart file [%s]' % fname)
+                logger.warning('Unrecognized hotstart file [%s]' % fname)
                 
         
     def load_restartfile(self, restartfile):
@@ -1457,7 +1474,7 @@ class AeoLiSRunner(AeoLiS):
 
                     return True
             else:
-                raise IOError('Restart file not found [%s]' % restartfile)
+                logger.log_and_raise('Restart file not found [%s]' % restartfile, exc=IOError)
             
         return False
         
@@ -1509,7 +1526,7 @@ class AeoLiSRunner(AeoLiS):
         elif callback is None:
             return callback
 
-        logger.warn('Invalid callback definition [%s]', callback)
+        logger.warning('Invalid callback definition [%s]', callback)
         return None
 
                         
@@ -1537,7 +1554,7 @@ class AeoLiSRunner(AeoLiS):
             t1 = timedelta(0, round(t-self.t0))
             t2 = timedelta(0, round((t-self.t0)/p))
             t3 = timedelta(0, round((t-self.t0)*(1.-p)/p))
-            print('%05.1f%%   %s / %s / %s' % (p * 100., t1, t2, t3))
+            logger.info('%05.1f%%   %s / %s / %s' % (p * 100., t1, t2, t3))
             self.tlog = time.time()
             self.plog = pr
             
@@ -1549,25 +1566,25 @@ class AeoLiSRunner(AeoLiS):
         fmt1 = '  %-%%ds = %%s' % maxl
         fmt2 = '  %-%%ds   %%s' % maxl
 
-        print('**********************************************************')
-        print('PARAMETER SETTINGS                                        ')
-        print('**********************************************************')
+        logger.info('**********************************************************')
+        logger.info('PARAMETER SETTINGS                                        ')
+        logger.info('**********************************************************')
 
         for par, val in sorted(self.p.items()):
             if isiterable(val):
                 if par.endswith('_file'):
-                    print(fmt1 % (par, '%s.txt' % par.replace('_file', '')))
+                    logger.info(fmt1 % (par, '%s.txt' % par.replace('_file', '')))
                 elif len(val) > 0:
-                    print(fmt1 % (par, aeolis.inout.print_value(val[0])))
+                    logger.info(fmt1 % (par, aeolis.inout.print_value(val[0])))
                     for v in val[1:]:
-                        print(fmt2 % ('', aeolis.inout.print_value(v)))
+                        logger.info(fmt2 % ('', aeolis.inout.print_value(v)))
                 else:
-                    print(fmt1 % (par, ''))
+                    logger.info(fmt1 % (par, ''))
             else:
-                print(fmt1 % (par, aeolis.inout.print_value(val)))
+                logger.info(fmt1 % (par, aeolis.inout.print_value(val)))
 
-        print('**********************************************************')
-        print('')
+        logger.info('**********************************************************')
+        logger.info('')
 
 
     def print_stats(self):
@@ -1577,20 +1594,20 @@ class AeoLiSRunner(AeoLiS):
         n_matrixsolve = self.get_count('matrixsolve')
         n_supplylim = self.get_count('supplylim')
 
-        print('')
-        print('**********************************************************')
+        logger.info('')
+        logger.info('**********************************************************')
 
         fmt = '%-20s : %s'
-        print(fmt % ('# time steps', aeolis.inout.print_value(n_time)))
-        print(fmt % ('# matrix solves', aeolis.inout.print_value(n_matrixsolve)))
-        print(fmt % ('# supply lim', aeolis.inout.print_value(n_supplylim)))
-        print(fmt % ('avg. solves per step',
+        logger.info(fmt % ('# time steps', aeolis.inout.print_value(n_time)))
+        logger.info(fmt % ('# matrix solves', aeolis.inout.print_value(n_matrixsolve)))
+        logger.info(fmt % ('# supply lim', aeolis.inout.print_value(n_supplylim)))
+        logger.info(fmt % ('avg. solves per step',
                            aeolis.inout.print_value(float(n_matrixsolve) / n_time)))
-        print(fmt % ('avg. time step',
+        logger.info(fmt % ('avg. time step',
                            aeolis.inout.print_value(float(self.p['tstop']) / n_time)))
 
-        print('**********************************************************')
-        print('')
+        logger.info('**********************************************************')
+        logger.info('')
 
 
 class WindGenerator():

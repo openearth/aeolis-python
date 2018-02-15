@@ -188,19 +188,20 @@ def update(s, p):
 
     # warn if not all negatives are gone
     if m.min() < 0:
-        logger.warn(format_log('Negative mass',
-                               nrcells=np.sum(np.any(m<0., axis=-1)),
-                               minvalue=m.min(),
-                               minwind=s['uw'].min(),
-                               time=p['_time']))
+        logger.warning(format_log('Negative mass',
+                                  nrcells=np.sum(np.any(m<0., axis=-1)),
+                                  minvalue=m.min(),
+                                  minwind=s['uw'].min(),
+                                  time=p['_time']))
         
     # reshape mass matrix
     s['mass'] = m.reshape((ny+1,nx+1,nl,nf))
 
     # update bathy
     if p['process_bedupdate']:
-        s['zb'] += dm[:,0].reshape((ny+1,nx+1)) / (p['rhop'] * (1. - p['porosity']))
-        s['zs'] += dm[:,0].reshape((ny+1,nx+1)) / (p['rhop'] * (1. - p['porosity']))
+        dz = dm[:,0].reshape((ny+1,nx+1)) / (p['rhop'] * (1. - p['porosity']))
+        s['zb'] += dz
+        s['zs'] += dz
 
     return s
 

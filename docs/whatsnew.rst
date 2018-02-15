@@ -1,7 +1,15 @@
+..
+   [Categories]
+   Breaking changes
+   Improvements
+   New functions/methods
+   Bug fixes
+   Tests
+
 What's New
 ==========
 
-v1.1.3 (unreleased)
+v2.0.0 (unreleased)
 -------------------
 
 Breaking changes
@@ -30,6 +38,59 @@ Tests
 
 None.
 
+v1.1.5 (unreleased)
+-------------------
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+
+None.
+
+Improvements
+^^^^^^^^^^^^
+
+* Also enable inundation if process_tide is True, but tide_file not
+  specified. In this case the water level is constant zero.
+
+New functions/methods
+^^^^^^^^^^^^^^^^^^^^^
+
+None.
+
+Bug fixes
+^^^^^^^^^
+
+None.
+
+Tests
+^^^^^
+
+None.
+
+v1.1.4 (15 February 2018)
+-------------------------
+
+Improvements
+^^^^^^^^^^^^
+
+* Route all log messages and exceptions through the logging
+  module. Consequently, all information, warnings, and exceptions,
+  including tracebacks can be logged to file.
+
+* Added model version number and Git hash to log files and model
+  output.
+
+v1.1.3 (9 February 2018)
+------------------------
+
+Bug fixes
+^^^^^^^^^
+
+* Apply precipitation/eaporation only in top bed layer to prevent
+  mismatching matrix shapes in the multiplication. In the future,
+  precipitation might be distributed over multiple layers depending on
+  the porosity.
+
 v1.1.2 (21 December 2017)
 -------------------------
 
@@ -51,11 +112,6 @@ Improvements
 * Prepared for continuous integration through CircleCI.
 * Prepared for code coverage checking through codecov.
 
-New functions/methods
-^^^^^^^^^^^^^^^^^^^^^
-
-None.
-
 Bug fixes
 ^^^^^^^^^
 
@@ -73,11 +129,6 @@ Tests
 v1.1.1 (15 November 2017)
 -------------------------
 
-Breaking changes
-^^^^^^^^^^^^^^^^
-
-None.
-
 Improvements
 ^^^^^^^^^^^^
 
@@ -85,7 +136,7 @@ Improvements
 * Prepared and uploaded package to PyPI.
 * Switch back to original working directory after finishing
   simulation.
-* Removed double definition of model state. Not only defined in
+* Removed double definition of model state. Now only defined in
   `constants.MODEL_STATE`.
 * Also write initial model state to output.
 * Made netCDF output compatible with CF-1.6 convention.

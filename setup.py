@@ -1,8 +1,25 @@
+import sys
 from setuptools import setup, find_packages
+
+
+# update Git hash
+if len(sys.argv) > 1:
+    if sys.argv[1] == 'bdist_wheel':
+        try:
+            import git
+            repo = git.Repo(search_parent_directories=True)
+            sha = repo.head.object.hexsha
+            open('aeolis/GITVERSION', 'w').write(sha)
+        except ImportError:
+            print('*' * 70)
+            print('WARNING: Cannot update Git hash, because package "git" is not')
+            print('         installed. Continue packaging...')
+            print('*' * 70)
+            
 
 setup(
     name='AeoLiS',
-    version='1.1.3',
+    version=open('aeolis/VERSION').read().strip(),
     author='Bas Hoonhout',
     author_email='b.m.hoonhout@tudelft.nl',
     url='http://aeolis.readthedocs.io/',
@@ -47,4 +64,5 @@ setup(
         'aeolis = aeolis.console:aeolis',
         'aeolis-wind = aeolis.console:wind',
     ]},
+    include_package_data=True,
 )

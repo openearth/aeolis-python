@@ -27,10 +27,15 @@ The Netherlands                  The Netherlands
 
 from __future__ import absolute_import, division
 
+import logging
 import numpy as np
 
 # package modules
 from aeolis.utils import *
+
+
+# initialize logger
+logger = logging.getLogger(__name__)
 
 
 def interpolate(s, p, t):
@@ -56,16 +61,18 @@ def interpolate(s, p, t):
 
     '''
 
-    if p['tide_file'] is not None and p['process_tide']:
-        
-        s['zs'][:,:] = interp_circular(t,
-                                       p['tide_file'][:,0],
-                                       p['tide_file'][:,1])
+    if p['process_tide']:
+        if p['tide_file'] is not None:
+            s['zs'][:,:] = interp_circular(t,
+                                           p['tide_file'][:,0],
+                                           p['tide_file'][:,1])
+        else:
+            s['zs'][:,:] = 0.
 
         # apply complex mask
         s['zs'] = apply_mask(s['zs'], s['tide_mask'])
 
-    if p['wave_file'] is not None and p['process_wave']:
+    if p['process_wave'] and p['wave_file'] is not None:
 
         # determine water depth
         h = np.maximum(0., s['zs'] - s['zb'])
@@ -86,7 +93,7 @@ def interpolate(s, p, t):
         # maximize wave height by depth ratio ``gamma``
         s['Hs'] = np.minimum(h * p['gamma'], s['Hs'])
         
-    if p['meteo_file'] is not None and p['process_meteo']:
+    if p['process_meteo'] and  p['meteo_file'] is not None:
 
         m = interp_array(t,
                          p['meteo_file'][:,0],

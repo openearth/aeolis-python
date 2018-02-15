@@ -27,10 +27,15 @@ The Netherlands                  The Netherlands
 
 from __future__ import absolute_import, division
 
+import logging
 import numpy as np
 
 # package modules
 from aeolis.utils import *
+
+
+# initialize logger
+logger = logging.getLogger(__name__)
 
 
 def equilibrium(s, p):
@@ -69,7 +74,7 @@ def equilibrium(s, p):
             s['Cu'][ix] = np.maximum(0., p['Cb'] * p['rhoa'] / p['g'] \
                                      * (tau[ix] - s['uth'][ix]) * tau[ix]**2 / uw[ix])
         else:
-            raise ValuerError('Unknown transport formulation [%s]' % p['method_transport'])
+            logger.log_and_raise('Unknown transport formulation [%s]' % p['method_transport'], exc=ValueError)
     
     s['Cu'] *= p['accfac']
 

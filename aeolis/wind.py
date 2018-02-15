@@ -28,11 +28,16 @@ The Netherlands                  The Netherlands
 from __future__ import absolute_import, division
 
 import numpy as np
+import logging
 import operator
 
 # package modules
 import aeolis.shear
 from aeolis.utils import *
+
+
+# initialize logger
+logger = logging.getLogger(__name__)
 
 
 def initialize(s, p):
@@ -47,7 +52,7 @@ def initialize(s, p):
         elif p['wind_convention'] == 'nautical':
             p['wind_file'][:,2] = 270.0 - p['wind_file'][:,2]
         else:
-            raise ValueError('Unknown convention: %s' % p['wind_convention'])
+            logger.log_and_raise('Unknown convention: %s' % p['wind_convention'], exc=ValueError)
 
     # initialize wind shear model
     if p['process_shear']:
@@ -84,7 +89,7 @@ def interpolate(s, p, t):
 
     '''
         
-    if p['wind_file'] is not None and p['process_wind']:
+    if p['process_wind'] and p['wind_file'] is not None:
 
         uw_t = p['wind_file'][:,0]
         uw_s = p['wind_file'][:,1]

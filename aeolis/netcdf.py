@@ -46,7 +46,7 @@ try:
     HAVE_NETCDF = True
 except ImportError:
     HAVE_NETCDF = False
-    logger.warn('No netCDF4 available, output is disabled')
+    logger.warning('No netCDF4 available, output is disabled')
 
 
 def initialize(outputfile, outputvars, s, p, dimensions):

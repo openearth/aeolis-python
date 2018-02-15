@@ -27,6 +27,30 @@ The Netherlands                  The Netherlands
 
 from __future__ import absolute_import
 
+import logging
+
+class Logger(logging.getLoggerClass()):
+    '''Custom logger class that supports multiline logging and raising
+       exceptions that are logged with the full traceback'''
+
+    
+    def _log(self, lvl, msgs, *args, **kwargs):
+        if not isinstance(msgs, list):
+            msgs = [msgs]
+        for msg in msgs:
+            super(Logger, self)._log(lvl, msg, *args, **kwargs)
+
+            
+    def log_and_raise(self, msg, exc=Exception, *args, **kwargs):
+        try:
+            raise exc(msg)
+        except:
+            super(Logger, self).exception(msg, stack_info=True)
+            raise
+
+
+logging.setLoggerClass(Logger)
+
 import aeolis.inout
 import aeolis.model
 import aeolis.wind
