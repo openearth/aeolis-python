@@ -60,14 +60,14 @@ logger = logging.getLogger(__name__)
 
 
 __version__ = ''
-__gitversion = ''
-__root__ = os.path.join(os.path.dirname(__file__), '..')
+__gitversion__ = ''
+__root__ = os.path.dirname(__file__)
 
 try:
     __version__ = open(os.path.join(__root__, 'VERSION')).read().strip()
     __gitversion__ = open(os.path.join(__root__, 'GITVERSION')).read().strip()
 except:
-    logger.warning('Unknown model version.')
+    logger.warning('WARNING: Unknown model version.')
     
 
 class ModelState(dict):
