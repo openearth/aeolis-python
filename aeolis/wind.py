@@ -89,7 +89,7 @@ def interpolate(s, p, t):
 
     '''
         
-    if p['wind_file'] is not None and p['process_wind']:
+    if p['process_wind'] and p['wind_file'] is not None:
 
         uw_t = p['wind_file'][:,0]
         uw_s = p['wind_file'][:,1]

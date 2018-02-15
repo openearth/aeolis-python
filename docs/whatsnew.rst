@@ -41,7 +41,8 @@ None.
 Improvements
 ^^^^^^^^^^^^
 
-None.
+* Also enable inundation if process_tide is True, but tide_file not
+  specified. In this case the water level is constant zero.
 
 New functions/methods
 ^^^^^^^^^^^^^^^^^^^^^

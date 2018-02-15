@@ -71,7 +71,7 @@ def compute(s, p):
 
     '''
 
-    if p['threshold_file'] is None and p['process_threshold']:
+    if p['process_threshold'] and p['threshold_file'] is None:
 
         if p['th_grainsize']:
             s = compute_grainsize(s, p)
