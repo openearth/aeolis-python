@@ -64,4 +64,5 @@ setup(
         'aeolis = aeolis.console:aeolis',
         'aeolis-wind = aeolis.console:wind',
     ]},
+    include_package_data=True,
 )
