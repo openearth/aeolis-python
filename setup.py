@@ -19,7 +19,7 @@ if len(sys.argv) > 1:
 
 setup(
     name='AeoLiS',
-    version=open('VERSION').read().strip(),
+    version=open('aeolis/VERSION').read().strip(),
     author='Bas Hoonhout',
     author_email='b.m.hoonhout@tudelft.nl',
     url='http://aeolis.readthedocs.io/',
