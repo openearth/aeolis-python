@@ -1,3 +1,11 @@
+..
+   [Categories]
+   Breaking changes
+   Improvements
+   New functions/methods
+   Bug fixes
+   Tests
+
 What's New
 ==========
 
@@ -62,11 +70,6 @@ None.
 v1.1.4 (15 February 2018)
 -------------------------
 
-Breaking changes
-^^^^^^^^^^^^^^^^
-
-None.
-
 Improvements
 ^^^^^^^^^^^^
 
@@ -77,38 +80,8 @@ Improvements
 * Added model version number and Git hash to log files and model
   output.
 
-New functions/methods
-^^^^^^^^^^^^^^^^^^^^^
-
-None.
-
-Bug fixes
-^^^^^^^^^
-
-None.
-
-Tests
-^^^^^
-
-None.
-
 v1.1.3 (9 February 2018)
 ------------------------
-
-Breaking changes
-^^^^^^^^^^^^^^^^
-
-None.
-
-Improvements
-^^^^^^^^^^^^
-
-None.
-
-New functions/methods
-^^^^^^^^^^^^^^^^^^^^^
-
-None.
 
 Bug fixes
 ^^^^^^^^^
@@ -117,11 +90,6 @@ Bug fixes
   mismatching matrix shapes in the multiplication. In the future,
   precipitation might be distributed over multiple layers depending on
   the porosity.
-
-Tests
-^^^^^
-
-None.
 
 v1.1.2 (21 December 2017)
 -------------------------
@@ -144,11 +112,6 @@ Improvements
 * Prepared for continuous integration through CircleCI.
 * Prepared for code coverage checking through codecov.
 
-New functions/methods
-^^^^^^^^^^^^^^^^^^^^^
-
-None.
-
 Bug fixes
 ^^^^^^^^^
 
@@ -165,11 +128,6 @@ Tests
 
 v1.1.1 (15 November 2017)
 -------------------------
-
-Breaking changes
-^^^^^^^^^^^^^^^^
-
-None.
 
 Improvements
 ^^^^^^^^^^^^
