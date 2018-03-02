@@ -1020,7 +1020,7 @@ class AeoLiSRunner(AeoLiS):
     n = 0 # time step counter
     o = {} # output stats
 
-    clear = False
+
     changed = False
     cwd = None
 
@@ -1333,11 +1333,12 @@ class AeoLiSRunner(AeoLiS):
                 var0, ext = var, None
             if var0 not in self.p['_output_vars']:
                 self.p['_output_vars'][var0] = []
-            self.p['_output_vars'][var0].append(ext)
+            if ext not in self.p['_output_vars'][var0]:
+                self.p['_output_vars'][var0].append(ext)
             for ext in self.p['output_types']:
                 if ext not in self.p['_output_vars'][var0]:
                     self.p['_output_vars'][var0].append(ext)
-        
+
         aeolis.netcdf.initialize(self.p['output_file'],
                                  self.p['_output_vars'],
                                  self.s,

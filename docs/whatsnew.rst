@@ -60,7 +60,9 @@ None.
 Bug fixes
 ^^^^^^^^^
 
-None.
+* Fixed double definition of statistics variables in netCDF file in
+  case both `output_types` is specified and individual statistics
+  variables are specified in `output_vars`.
 
 Tests
 ^^^^^
