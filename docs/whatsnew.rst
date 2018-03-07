@@ -52,6 +52,9 @@ Improvements
 * Also enable inundation if process_tide is True, but tide_file not
   specified. In this case the water level is constant zero.
 
+* Changed class attributes into instance attributes to support
+  parallel independent model instances.
+
 New functions/methods
 ^^^^^^^^^^^^^^^^^^^^^
 
