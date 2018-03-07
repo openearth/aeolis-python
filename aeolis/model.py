@@ -125,16 +125,6 @@ class AeoLiS(IBmi):
 
     '''
 
-    t = 0.
-    dt = 0.
-    configfile = ''
-
-    l = {} # previous spatial grids
-    s = ModelState() # spatial grids
-    p = {} # parameters
-    c = {} # counters
-    
-    
     def __init__(self, configfile):
         '''Initialize class
 
@@ -145,6 +135,15 @@ class AeoLiS(IBmi):
 
         '''
         
+        self.t = 0.
+        self.dt = 0.
+        self.configfile = ''
+
+        self.l = {} # previous spatial grids
+        self.s = ModelState() # spatial grids
+        self.p = {} # parameters
+        self.c = {} # counters
+    
         self.configfile = configfile
 
 
@@ -1011,20 +1010,6 @@ class AeoLiSRunner(AeoLiS):
     '''
     
 
-    t0 = None
-    tout = 0.
-    tlog = 0.
-    plog = -1.
-    trestart = 0.
-
-    n = 0 # time step counter
-    o = {} # output stats
-
-
-    changed = False
-    cwd = None
-
-    
     def __init__(self, configfile='aeolis.txt'):
         '''Initialize class
 
@@ -1038,6 +1023,18 @@ class AeoLiSRunner(AeoLiS):
             Model configuration file. See :func:`~inout.read_configfile()`.
 
         '''
+
+        self.t0 = None
+        self.tout = 0.
+        self.tlog = 0.
+        self.plog = -1.
+        self.trestart = 0.
+        
+        self.n = 0 # time step counter
+        self.o = {} # output stats
+
+        self.changed = False
+        self.cwd = None
 
         self.set_configfile(configfile)
         if os.path.exists(self.configfile):
