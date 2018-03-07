@@ -79,8 +79,10 @@ class ModelState(dict):
 
     '''
     
-    
-    ismutable = set()
+
+    def __init__(self, *args, **kwargs):
+        self.ismutable = set()
+        super(ModelState, self).__init__(*args, **kwargs)
 
     
     def __setitem__(self, k, v):
