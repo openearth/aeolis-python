@@ -171,4 +171,7 @@ DEFAULT_CONFIG = {
 REQUIRED_CONFIG = ['nx', 'ny']
 
 #: Merge initial and model state
-MODEL_STATE.update(INITIAL_STATE)
+MODEL_STATE.update({
+    (k, MODEL_STATE[k] + INITIAL_STATE[k])
+    for k in set(MODEL_STATE).intersection(INITIAL_STATE)
+})
