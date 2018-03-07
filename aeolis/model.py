@@ -1026,6 +1026,8 @@ class AeoLiSRunner(AeoLiS):
 
         '''
 
+        super(AeoLiSRunner, self).__init__(configfile=configfile)
+
         self.t0 = None
         self.tout = 0.
         self.tlog = 0.
