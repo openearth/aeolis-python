@@ -63,22 +63,30 @@ def equilibrium(s, p):
         ix = tau != 0.
         
         s['Cu'] = np.zeros(uw.shape)
+        s['Cuf'] = np.zeros(uw.shape)
 
-        if p['method_transport'].lower() == 'bagnold':
-            s['Cu'][ix] = np.maximum(0., p['Cb'] * p['rhoa'] / p['g'] \
-                                     * (tau[ix] - s['uth'][ix])**3 / uw[ix])
-        elif p['method_transport'].lower() == 'kawamura':
-            s['Cu'][ix] = np.maximum(0., p['Cb'] * p['rhoa'] / p['g'] \
-                                     * (tau[ix] + s['uth'][ix])**2 * (tau[ix] - s['uth'][ix]) / uw[ix])
-        elif p['method_transport'].lower() == 'lettau':
-            s['Cu'][ix] = np.maximum(0., p['Cb'] * p['rhoa'] / p['g'] \
-                                     * (tau[ix] - s['uth'][ix]) * tau[ix]**2 / uw[ix])
-        else:
-            logger.log_and_raise('Unknown transport formulation [%s]' % p['method_transport'], exc=ValueError)
-    
+        s['Cu'][ix] = _equilibrium(tau[ix], s['uth'][ix], uw[ix],
+                                   Cb=p['Cb'], rhoa=p['rhoa'], g=p['g'], method=p['method_transport'])
+        s['Cuf'][ix] = _equilibrium(tau[ix], s['uthf'][ix], uw[ix],
+                                    Cb=p['Cb'], rhoa=p['rhoa'], g=p['g'], method=p['method_transport'])
+
     s['Cu'] *= p['accfac']
+    s['Cuf'] *= p['accfac']
 
     return s
+
+
+def _equilibrium(tau, uth, uw, Cb=1.5, rhoa=1.25, g=9.81, method='bagnold'):
+    if method.lower() == 'bagnold':
+        Cu = np.maximum(0., Cb * rhoa / g * (tau - uth)**3 / uw)
+    elif method.lower() == 'kawamura':
+        Cu = np.maximum(0., Cb * rhoa / g * (tau + uth)**2 * (tau - uth) / uw)
+    elif method.lower() == 'lettau':
+        Cu = np.maximum(0., Cb * rhoa / g * (tau - uth) * tau**2 / uw)
+    else:
+        logger.log_and_raise('Unknown transport formulation [%s]' % method, exc=ValueError)
+
+    return Cu
 
 
 def compute_weights(s, p):

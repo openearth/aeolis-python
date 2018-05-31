@@ -710,6 +710,9 @@ class AeoLiS(IBmi):
             Ap1[:,0] = 0.
         elif p['boundary_offshore'] == 'constant':
             Ap2[:,0] = 0.
+            Ap1[:,0] = 0.
+        elif p['boundary_offshore'] == 'uniform':
+            Ap2[:,0] = 0.
             Ap1[:,0] = -1.
         elif p['boundary_offshore'] == 'gradient':
             Ap2[:,0] = s['ds'][:,1] / s['ds'][:,2]
@@ -722,7 +725,10 @@ class AeoLiS(IBmi):
         if p['boundary_onshore'] == 'noflux':
             Am2[:,-1] = 0.
             Am1[:,-1] = 0.
-        elif p['boundary_onshore'] == 'constant':
+        elif p['boundary_offshore'] == 'constant':
+            Ap2[:,0] = 0.
+            Ap1[:,0] = 0.
+        elif p['boundary_onshore'] == 'uniform':
             Am2[:,-1] = 0.
             Am1[:,-1] = -1.
         elif p['boundary_onshore'] == 'gradient':
@@ -737,6 +743,8 @@ class AeoLiS(IBmi):
             logger.log_and_raise('Lateral no-flux boundary condition not yet implemented', exc=NotImplementedError)
         if p['boundary_lateral'] == 'constant':
             logger.log_and_raise('Lateral constant boundary condition not yet implemented', exc=NotImplementedError)
+        if p['boundary_lateral'] == 'uniform':
+            logger.log_and_raise('Lateral uniform boundary condition not yet implemented', exc=NotImplementedError)
         elif p['boundary_lateral'] == 'gradient':
             logger.log_and_raise('Lateral gradient boundary condition not yet implemented', exc=NotImplementedError)
         elif p['boundary_lateral'] == 'circular':
@@ -780,21 +788,39 @@ class AeoLiS(IBmi):
             for n in range(p['max_iter']):
                 self._count('matrixsolve')
 
+                # compute saturation levels
+                ix = s['Cu'] > 0.
+                S_i = np.zeros(s['Cu'].shape)
+                S_i[ix] = s['Ct'][ix] / s['Cu'][ix]
+                s['S'] = S_i.sum(axis=-1)
+
                 # create the right hand side of the linear system
                 y_i = np.zeros(s['uw'].shape)
-                y_i[:,1:-1] = l['Ct'][:,1:-1,i] \
-                    + alpha * w[:,1:-1,i] * s['Cu'][:,1:-1,i] * Ti \
-                    + (1. - alpha) * (
-                        l['w'][:,1:-1,i] * l['Cu'][:,1:-1,i] * Ti \
-                        - (sgs[:,1:-1] * Cs[:,1:-1] + \
-                           sgn[:,1:-1] * Cn[:,1:-1] + Ti) * l['Ct'][:,1:-1,i] \
-                        + ixs[:,1:-1] * Cs[:,1:-1] * l['Ct'][:,:-2,i] \
-                        - (1. - ixs[:,1:-1]) * Cs[:,1:-1] * l['Ct'][:,2:,i] \
-                        + ixn[:,1:-1] * Cn[:,1:-1] * np.roll(l['Ct'][:,1:-1,i],
-                                                             1, axis=0) \
-                        - (1. - ixn[:,1:-1]) * Cn[:,1:-1] * np.roll(l['Ct'][:,1:-1,i],
-                                                                    -1, axis=0) \
-                    )
+                y_im = np.zeros(s['uw'].shape)  # implicit terms
+                y_ex = np.zeros(s['uw'].shape)  # explicit terms
+                y_im[:,1:-1] = (
+                    (w[:,1:-1,i] * s['Cuf'][:,1:-1,i] * Ti) * (1. - s['S'][:,1:-1]) +
+                    (w[:,1:-1,i] * s['Cu'][:,1:-1,i] * Ti) * s['S'][:,1:-1]
+                )
+                y_ex[:,1:-1] = (
+                    (l['w'][:,1:-1,i] * l['Cuf'][:,1:-1,i] * Ti) * (1. - s['S'][:,1:-1]) \
+                    + (l['w'][:,1:-1,i] * l['Cu'][:,1:-1,i] * Ti) * s['S'][:,1:-1] \
+                    - (
+                        sgs[:,1:-1] * Cs[:,1:-1] + \
+                        sgn[:,1:-1] * Cn[:,1:-1] + Ti
+                    ) * l['Ct'][:,1:-1,i] \
+                    + ixs[:,1:-1] * Cs[:,1:-1] * l['Ct'][:,:-2,i] \
+                    - (1. - ixs[:,1:-1]) * Cs[:,1:-1] * l['Ct'][:,2:,i] \
+                    + ixn[:,1:-1] * Cn[:,1:-1] * np.roll(l['Ct'][:,1:-1,i], 1, axis=0) \
+                    - (1. - ixn[:,1:-1]) * Cn[:,1:-1] * np.roll(l['Ct'][:,1:-1,i], -1, axis=0) \
+                )
+                y_i[:,1:-1] = l['Ct'][:,1:-1,i] + alpha * y_im[:,1:-1] + (1. - alpha) * y_ex[:,1:-1]
+
+                # add boundaries
+                if p['boundary_offshore'] == 'constant':
+                    y[:,0] = p['boundary_offshore_flux'] / s['uw'][:,0]
+                if p['boundary_onshore'] == 'constant':
+                    y[:,-1] = p['boundary_onshore_flux'] / s['uw'][:,-1]
 
                 # solve system with current weights
                 Ct_i = scipy.sparse.linalg.spsolve(A, y_i.flatten())
