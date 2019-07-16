@@ -1278,7 +1278,7 @@ class AeoLiSRunner(AeoLiS):
         
         # TODO: delete in future releases
         if '.' in var:
-            warnings.warning('The use of "%s" is deprecated, use '
+            warnings.warn('The use of "%s" is deprecated, use '
                              '"%s" instead.' % (var, var.replace('.','_')), DeprecationWarning)
             var, stat = var.split('.')
             if var in self.o:
@@ -1353,7 +1353,7 @@ class AeoLiSRunner(AeoLiS):
                 var0, ext = var.split('_')
             # TODO: delete in future release
             elif '.' in var:
-                warnings.warning('The use of "%s" is deprecated, use '
+                warnings.warn('The use of "%s" is deprecated, use '
                                  '"%s" instead.' % (var, var.replace('.','_')), DeprecationWarning)
                 var0, ext = var.split('.')
             else:
