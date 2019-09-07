@@ -88,6 +88,7 @@ def compute(s, p):
                     
         # apply complex mask
         s['uth'] = apply_mask(s['uth'], s['threshold_mask'])
+        s['uthf'] = s['uth'].copy()
 
     return s
 

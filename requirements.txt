@@ -1,4 +1,4 @@
-netCDF4
+netCDF4==1.4.1
 coverage
 codecov
 sphinxcontrib-bibtex==0.3.2

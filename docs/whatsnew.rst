@@ -52,6 +52,9 @@ Improvements
 * Also enable inundation if process_tide is True, but tide_file not
   specified. In this case the water level is constant zero.
 
+* Changed class attributes into instance attributes to support
+  parallel independent model instances.
+
 New functions/methods
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -60,7 +63,9 @@ None.
 Bug fixes
 ^^^^^^^^^
 
-None.
+* Fixed double definition of statistics variables in netCDF file in
+  case both `output_types` is specified and individual statistics
+  variables are specified in `output_vars`.
 
 Tests
 ^^^^^
