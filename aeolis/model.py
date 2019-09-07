@@ -1251,8 +1251,8 @@ class AeoLiSRunner(AeoLiS):
         
         # TODO: delete in future releases
         if '.' in var:
-            warnings.warning('The use of "%s" is deprecated, use '
-                             '"%s" instead.' % (var, var.replace('.','_')), DeprecationWarning)
+            logger.warning('The use of "%s" is deprecated, use '
+                             '"%s" instead.' % (var, var.replace('.','_')))
             var, stat = var.split('.')
             if var in self.o:
                 return self.get_statistic(var, stat)
@@ -1326,8 +1326,8 @@ class AeoLiSRunner(AeoLiS):
                 var0, ext = var.split('_')
             # TODO: delete in future release
             elif '.' in var:
-                warnings.warning('The use of "%s" is deprecated, use '
-                                 '"%s" instead.' % (var, var.replace('.','_')), DeprecationWarning)
+                logger.warning('The use of "%s" is deprecated, use '
+                                 '"%s" instead.' % (var, var.replace('.','_')))
                 var0, ext = var.split('.')
             else:
                 var0, ext = var, None
@@ -1563,8 +1563,8 @@ class AeoLiSRunner(AeoLiS):
         '''Print model configuration parameters to screen'''
         
         maxl = np.max([len(par) for par in self.p.keys()])
-        fmt1 = '  %-%%ds = %%s' % maxl
-        fmt2 = '  %-%%ds   %%s' % maxl
+        fmt1 = '  %%%ds = %%s' % maxl
+        fmt2 = '  %%%ds   %%s' % maxl
 
         logger.info('**********************************************************')
         logger.info('PARAMETER SETTINGS                                        ')
