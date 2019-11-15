@@ -33,7 +33,6 @@ import numpy as np
 # package modules
 from aeolis.utils import *
 
-#a
 
 # initialize logger
 logger = logging.getLogger(__name__)
