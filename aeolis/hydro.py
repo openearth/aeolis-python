@@ -38,7 +38,6 @@ from aeolis.utils import *
 logger = logging.getLogger(__name__)
 
 
-
 def interpolate(s, p, t):
     '''Interpolate hydrodynamic and meteorological conditions to current time step
 
