@@ -814,7 +814,7 @@ class AeoLiS(IBmi):
                     + ixn[:,1:-1] * Cn[:,1:-1] * np.roll(l['Ct'][:,1:-1,i], 1, axis=0) \
                     - (1. - ixn[:,1:-1]) * Cn[:,1:-1] * np.roll(l['Ct'][:,1:-1,i], -1, axis=0) \
                 )
-                y_i[:,1:-1] = l['Ct'][:,1:-1,i] + alpha * y_im[:,1:-1] - (1. - alpha) * y_ex[:,1:-1]
+                y_i[:,1:-1] = l['Ct'][:,1:-1,i] + alpha * y_im[:,1:-1] + (1. - alpha) * y_ex[:,1:-1]
 
                 # add boundaries
                 if p['boundary_offshore'] == 'constant':
