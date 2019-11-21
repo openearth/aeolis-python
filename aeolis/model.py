@@ -54,6 +54,14 @@ import aeolis.constants
 
 from aeolis.utils import *
 
+class StreamFormatter(logging.Formatter):
+
+    def format(self, record):
+        if record.levelname == 'INFO':
+            return record.getMessage()
+        else:
+            return '%s: %s' % (record.levelname, record.getMessage())
+
 
 # initialize logger
 logger = logging.getLogger(__name__)
@@ -1115,6 +1123,23 @@ class AeoLiSRunner(AeoLiS):
 
         # http://www.patorjk.com/software/taag/
         # font: Colossal
+        
+        if (logger.hasHandlers()):
+            logger.handlers.clear()
+        logger.setLevel(logging.DEBUG)
+
+        # initialize file logger
+        filehandler = logging.FileHandler('%s.log' % os.path.splitext(self.configfile)[0], mode='w')
+        filehandler.setLevel(logging.INFO)
+        filehandler.setFormatter(logging.Formatter('%(asctime)-15s %(name)-8s %(levelname)-8s %(message)s'))
+        logger.addHandler(filehandler)
+        
+        # initialize console logger
+        streamhandler = logging.StreamHandler()
+        streamhandler.setLevel(20)
+        streamhandler.setFormatter(StreamFormatter())
+        logger.addHandler(streamhandler)
+        
 
         logger.info('**********************************************************')
         logger.info('                                                          ')
@@ -1177,6 +1202,8 @@ class AeoLiSRunner(AeoLiS):
 
         if self.cwd is not None:
             os.chdir(self.cwd)
+        
+        logging.shutdown()
 
 
     def set_configfile(self, configfile):
@@ -1593,7 +1620,7 @@ class AeoLiSRunner(AeoLiS):
         '''Print model configuration parameters to screen'''
         
         maxl = np.max([len(par) for par in self.p.keys()])
-        fmt1 = '  %%-%ds = %%s' % maxl 
+        fmt1 = '  %%-%ds = %%s' % maxl
         fmt2 = '  %%-%ds   %%s' % maxl
 
         logger.info('**********************************************************')
