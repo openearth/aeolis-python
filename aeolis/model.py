@@ -1558,13 +1558,13 @@ class AeoLiSRunner(AeoLiS):
         return None
 
                         
-    def print_progress(self, fraction=.01, min_interval=1., max_interval=60.):
+    def print_progress(self, fraction=.1, min_interval=1., max_interval=60.):
         '''Print progress to screen
 
         Parameters
         ----------
         fraction : float, optional
-            Fraction of simulation at which to print progress (default: 1%)
+            Fraction of simulation at which to print progress (default: 10%)
         min_interval : float, optional
             Minimum time in seconds between subsequent progress prints (default: 1s)
         max_interval : float, optional
@@ -1573,18 +1573,16 @@ class AeoLiSRunner(AeoLiS):
         '''
         
         p = self.t / self.p['tstop']
-        pr = np.ceil(p/fraction)*fraction
+        pr = np.round(p/fraction)*fraction
+        
         t = time.time()
         interval = t - self.tlog
-        
-        if self.get_count('time') == 1:
-            logger.info('        Time elapsed / Total time / Time remaining')
 
         if (np.mod(p, fraction) < .01 and self.plog != pr) or interval > max_interval:
             t1 = timedelta(0, round(t-self.t0))
             t2 = timedelta(0, round((t-self.t0)/p))
             t3 = timedelta(0, round((t-self.t0)*(1.-p)/p))
-            logger.info('%05.1f%%  %12s / %10s / %14s' % (p * 100., t1, t2, t3))
+            logger.info('%05.1f%%   %s / %s / %s' % (p * 100., t1, t2, t3))
             self.tlog = time.time()
             self.plog = pr
             
@@ -1593,8 +1591,8 @@ class AeoLiSRunner(AeoLiS):
         '''Print model configuration parameters to screen'''
         
         maxl = np.max([len(par) for par in self.p.keys()])
-        fmt1 = '  %%-%ds = %%s' % maxl
-        fmt2 = '  %%-%ds   %%s' % maxl
+        fmt1 = '  %-%%ds = %%s' % maxl
+        fmt2 = '  %-%%ds   %%s' % maxl
 
         logger.info('**********************************************************')
         logger.info('PARAMETER SETTINGS                                        ')
