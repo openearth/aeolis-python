@@ -66,19 +66,19 @@ def aeolis():
     arguments = docopt.docopt(aeolis.__doc__)
 
     logger = logging.getLogger('aeolis')
-    logger.setLevel(logging.DEBUG)
-    
-    # initialize file logger
-    filehandler = logging.FileHandler('%s.log' % os.path.splitext(arguments['<config>'])[0], mode='w')
-    filehandler.setLevel(logging.DEBUG if arguments['--debug'] else logging.INFO)
-    filehandler.setFormatter(logging.Formatter('%(asctime)-15s %(name)-8s %(levelname)-8s %(message)s'))
-    logger.addHandler(filehandler)
-
-    # initialize console logger
-    streamhandler = logging.StreamHandler()
-    streamhandler.setLevel(int(arguments['--verbose']))
-    streamhandler.setFormatter(StreamFormatter())
-    logger.addHandler(streamhandler)
+#    logger.setLevel(logging.DEBUG)
+#    
+#    # initialize file logger
+#    filehandler = logging.FileHandler('%s.log' % os.path.splitext(arguments['<config>'])[0], mode='w')
+#    filehandler.setLevel(logging.DEBUG if arguments['--debug'] else logging.INFO)
+#    filehandler.setFormatter(logging.Formatter('%(asctime)-15s %(name)-8s %(levelname)-8s %(message)s'))
+#    logger.addHandler(filehandler)
+#
+#    # initialize console logger
+#    streamhandler = logging.StreamHandler()
+#    streamhandler.setLevel(int(arguments['--verbose']))
+#    streamhandler.setFormatter(StreamFormatter())
+#    logger.addHandler(streamhandler)
 
     # start model
     model = AeoLiSRunner(configfile=arguments['<config>'])
