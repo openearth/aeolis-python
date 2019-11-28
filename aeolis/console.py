@@ -34,13 +34,13 @@ import numpy as np
 from aeolis.model import AeoLiSRunner, WindGenerator
 
 
-class StreamFormatter(logging.Formatter):
-
-    def format(self, record):
-        if record.levelname == 'INFO':
-            return record.getMessage()
-        else:
-            return '%s: %s' % (record.levelname, record.getMessage())
+#class StreamFormatter(logging.Formatter):
+#
+#    def format(self, record):
+#        if record.levelname == 'INFO':
+#            return record.getMessage()
+#        else:
+#            return '%s: %s' % (record.levelname, record.getMessage())
 
 
 def aeolis():
