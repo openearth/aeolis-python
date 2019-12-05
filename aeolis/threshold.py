@@ -89,6 +89,12 @@ def compute(s, p):
         # apply complex mask
         s['uth'] = apply_mask(s['uth'], s['threshold_mask'])
         s['uthf'] = s['uth'].copy()
+        
+    #non-erodible layer (NEW)
+    if p['ne_file'] is None:
+        s = s
+    else:
+        s = non_erodible(s,p)
 
     return s
 
@@ -112,6 +118,8 @@ def compute_grainsize(s, p):
 
     s['uth'][:,:,:] = 1.
     s['uth'][:,:,:] *= p['A'] * np.sqrt((p['rhop'] - p['rhoa']) / p['rhoa'] * p['g'] * p['grain_size'])
+    
+    s['uth0']=s['uth'].copy() #new > necessary?
     return s
 
 
@@ -327,4 +335,31 @@ def compute_roughness(s, p):
     
     return s
 
+def non_erodible(s,p): #NEW
+    
+    #define non-erodible layer
+    
+    nf = p['nfraction']
+    ustar = np.repeat(s['ustar'][:,:, np.newaxis], nf, axis=2)
+    
+    s['zne'] [:,:] = p['ne_file']
+
+    ix = ['zb'] <= s['zne']
+    s['uth'][ix,:] = 10 #np.inf
+    
+    # Smoother method
+#    
+#    alfa = .05
+#    
+#    nf = p['nfractions']
+#    thuthlyr = -0.1
+#    ix = s['zb']<=s['zne']+thuthlyr
+#    
+#    for i in range(nf):
+#        s['uth'][ix,i] += np.maximum((1-(s['zb'][ix]-s['zne'][ix])/thuthlyr)*(s['ustar'][ix]*2.0-s['uth'][ix,i]),s['uth'][ix,i])
+
+
+#   How about (Raupach et al., 1993) ?? 
+    
+    return s    
 
