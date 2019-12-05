@@ -25,7 +25,7 @@ Grant 291206 Nearshore Monitoring and Modeling
 ([NEMO](http://nemo.citg.tudelft.nl>)) and
 [Deltares](http://www.deltares.nl>). AeoLiS is currently maintained by
 [Bart van Westen](mailto:Bart.vanWesten@deltares.nl) at Deltares, 
-[Nick Cohn](mailto:nick.cohn@usace.army.mil) and 
+[Nick Cohn](mailto:nick.cohn@usace.army.mil) at U.S. Army Engineer Research and Development Center (ERDC) and 
 [Sierd de Vries](mailto:Sierd.deVries@tudelft.nl) at Delft University of Technology.
 
 ## Examples
