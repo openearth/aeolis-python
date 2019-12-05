@@ -79,6 +79,10 @@ def compute(s, p):
             s = compute_bedslope(s, p)
         if p['th_moisture']:
             s = compute_moisture(s, p)
+        else:
+            # no aeolian transport when the bed level is lower than the water level
+            ix = s['zb'] - s['zs'] < p['eps']
+            s['uth'][ix] = np.inf
         if p['th_humidity']:
             s = compute_humidity(s, p)
         if p['th_salt']:
