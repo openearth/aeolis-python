@@ -394,7 +394,7 @@ If the constraint if violated, a new estimate for the weights
 is back-calculated following:
 
 .. math::
-  \hat{w}^{n+1}_{i,j,k} = \frac{ c^{n+1}_{i,j,k} + m_{\mathrm{a}} \frac{\Delta t^n}{T} }{c^{n+1}_{\mathrm{sat},i,j,k}}
+  \hat{w}^{n+1}_{i,j,k} = \frac{ c^{n+1}_{i,j,k} + m_{\mathrm{a}} \frac{T}{\Delta t^n} }{c^{n+1}_{\mathrm{sat},i,j,k}}
 
 The system is solved again using the new weights. This
 procedure is repeated until a weight is found that does not violate
