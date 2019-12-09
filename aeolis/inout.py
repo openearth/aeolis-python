@@ -179,12 +179,6 @@ def check_configuration(p):
 
     '''
 
-    # check for missing parameters
-    missing = [k for k in REQUIRED_CONFIG if k not in p]
-    if len(missing) > 0:
-        logger.log_and_raise('Missing required parameters [%s]' % ', '.join(missing), exc=ValueError)
-        
-
     # check validity of configuration
     if not isarray(p['xgrid_file']) or \
        not isarray(p['bed_file']) or (not isarray(p['ygrid_file']) and p['ny'] > 0):
