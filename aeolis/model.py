@@ -1,18 +1,18 @@
 '''This file is part of AeoLiS.
-   
+
 AeoLiS is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
-   
+
 AeoLiS is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-   
+
 You should have received a copy of the GNU General Public License
 along with AeoLiS.  If not, see <http://www.gnu.org/licenses/>.
-   
+
 AeoLiS  Copyright (C) 2015 Bas Hoonhout
 
 bas.hoonhout@deltares.nl         b.m.hoonhout@tudelft.nl
@@ -62,6 +62,7 @@ class StreamFormatter(logging.Formatter):
         else:
             return '%s: %s' % (record.levelname, record.getMessage())
 
+
 # initialize logger
 logger = logging.getLogger(__name__)
 
@@ -75,7 +76,7 @@ try:
     __gitversion__ = open(os.path.join(__root__, 'GITVERSION')).read().strip()
 except:
     logger.warning('WARNING: Unknown model version.')
-    
+
 
 class ModelState(dict):
     '''Dictionary-like object to store model state
@@ -85,23 +86,23 @@ class ModelState(dict):
     model state variable are ignored.
 
     '''
-    
+
 
     def __init__(self, *args, **kwargs):
         self.ismutable = set()
         super(ModelState, self).__init__(*args, **kwargs)
 
-    
+
     def __setitem__(self, k, v):
         if k not in self.keys() or k in self.ismutable:
             super(ModelState, self).__setitem__(k, v)
             self.set_mutable(k)
-            
-            
+
+
     def set_mutable(self, k):
         self.ismutable.add(k)
 
-            
+
     def set_immutable(self, k):
         if k in self.ismutable:
             self.ismutable.remove(k)
@@ -143,7 +144,7 @@ class AeoLiS(IBmi):
             Model configuration file. See :func:`~inout.read_configfile()`.
 
         '''
-        
+
         self.t = 0.
         self.dt = 0.
         self.configfile = ''
@@ -152,7 +153,7 @@ class AeoLiS(IBmi):
         self.s = ModelState() # spatial grids
         self.p = {} # parameters
         self.c = {} # counters
-    
+
         self.configfile = configfile
 
 
@@ -164,7 +165,7 @@ class AeoLiS(IBmi):
     def __exit__(self, *args):
         self.finalize()
 
-    
+
     def initialize(self):
         '''Initialize model
 
@@ -177,6 +178,12 @@ class AeoLiS(IBmi):
         # read configuration file
         self.p = aeolis.inout.read_configfile(self.configfile)
         aeolis.inout.check_configuration(self.p)
+
+        # set nx, ny and nfractions
+        self.p['ny'], self.p['nx'] = self.p['xgrid_file'].shape
+        self.p['nx'] -= 1 # change nx from number of points to number of cells
+        self.p['ny'] -= 1 # change ny from number of points to number of cells
+        self.p['nfractions'] = len(self.p['grain_dist'])
 
         # initialize time
         self.t = self.p['tstart']
@@ -198,7 +205,7 @@ class AeoLiS(IBmi):
         # initialize wind model
         self.s = aeolis.wind.initialize(self.s, self.p)
 
-        
+
     def update(self, dt=-1):
         '''Time stepping function
 
@@ -229,10 +236,10 @@ class AeoLiS(IBmi):
 
         # store previous state
         self.l = self.s.copy()
-        
+
         # interpolate wind time series
         self.s = aeolis.wind.interpolate(self.s, self.p, self.t)
-        
+
         # determine optimal time step
         if not self.set_timestep(dt):
             return
@@ -270,10 +277,10 @@ class AeoLiS(IBmi):
 
     def finalize(self):
         '''Finalize model'''
-        
+
         pass
-    
-        
+
+
     def get_current_time(self):
         '''
         Returns
@@ -282,10 +289,10 @@ class AeoLiS(IBmi):
             Current simulation time
 
         '''
-        
+
         return self.t
-    
-        
+
+
     def get_end_time(self):
         '''
         Returns
@@ -296,8 +303,8 @@ class AeoLiS(IBmi):
         '''
 
         return self.p['tstop']
-    
-        
+
+
     def get_start_time(self):
         '''
         Returns
@@ -308,8 +315,8 @@ class AeoLiS(IBmi):
         '''
 
         return self.p['tstart']
-    
-        
+
+
     def get_var(self, var):
         '''Returns spatial grid or model configuration parameter
 
@@ -352,8 +359,8 @@ class AeoLiS(IBmi):
             return self.p[var]
         else:
             return None
-    
-        
+
+
     def get_var_count(self):
         '''
         Returns
@@ -362,10 +369,10 @@ class AeoLiS(IBmi):
             Number of spatial grids
 
         '''
-        
+
         return len(self.s)
-    
-        
+
+
     def get_var_name(self, i):
         '''Returns name of spatial grid by index (in alphabetical order)
 
@@ -380,13 +387,13 @@ class AeoLiS(IBmi):
             Name of spatial grid or -1 in case index exceeds the number of grids
 
         '''
-        
+
         if len(self.s) > i:
             return sorted(self.s.keys())[i]
         else:
             return -1
-    
-        
+
+
     def get_var_rank(self, var):
         '''Returns rank of spatial grid
 
@@ -401,13 +408,13 @@ class AeoLiS(IBmi):
             Rank of spatial grid or -1 if not found
 
         '''
-        
+
         if var in self.s:
             return len(self.s[var].shape)
         else:
             return -1
-    
-        
+
+
     def get_var_shape(self, var):
         '''Returns shape of spatial grid
 
@@ -422,13 +429,13 @@ class AeoLiS(IBmi):
             Dimensions of spatial grid or -1 if not found
 
         '''
-        
+
         if var in self.s:
             return self.s[var].shape
         else:
             return -1
-    
-        
+
+
     def get_var_type(self, var):
         '''Returns variable type of spatial grid
 
@@ -448,16 +455,16 @@ class AeoLiS(IBmi):
             return 'double'
         else:
             return -1
-    
-        
+
+
     def inq_compound(self):
         logger.log_and_raise('Method not yet implemented [inq_compound]', exc=NotImplementedError)
-    
-        
+
+
     def inq_compound_field(self):
         logger.log_and_raise('Method not yet implemented [inq_compound_field]', exc=NotImplementedError)
-    
-        
+
+
     def set_var(self, var, val):
         '''Sets spatial grid or model configuration parameter
 
@@ -486,13 +493,13 @@ class AeoLiS(IBmi):
         model.AeoLiS.get_var
 
         '''
-        
+
         if var in self.s:
             self.s[var] = val
         elif var in self.p:
             self.p[var] = val
-    
-        
+
+
     def set_var_index(self, i, val):
         '''Set spatial grid by index (in alphabetical order)
 
@@ -504,11 +511,11 @@ class AeoLiS(IBmi):
             Spatial grid
 
         '''
-        
+
         var = self.get_var_name(i)
         self.set_var(var, val)
-    
-        
+
+
     def set_var_slice(self):
         logger.log_and_raise('Method not yet implemented [set_var_slice]', exc=NotImplementedError)
 
@@ -568,7 +575,7 @@ class AeoLiS(IBmi):
 
         return True
 
-                
+
     def euler_forward(self):
         '''Convenience function for explicit solver based on Euler forward scheme
 
@@ -577,7 +584,7 @@ class AeoLiS(IBmi):
         model.AeoLiS.solve
 
         '''
-        
+
         return self.solve(alpha=0., beta=1.)
 
 
@@ -589,10 +596,10 @@ class AeoLiS(IBmi):
         model.AeoLiS.solve
 
         '''
-        
+
         return self.solve(alpha=1., beta=1.)
 
-    
+
     def crank_nicolson(self):
         '''Convenience function for implicit solver based on Crank-Nicolson scheme
 
@@ -604,7 +611,7 @@ class AeoLiS(IBmi):
 
         return self.solve(alpha=.5, beta=1.)
 
-    
+
     def solve(self, alpha=.5, beta=1.):
         '''Implements the explicit Euler forward, implicit Euler backward and semi-implicit Crank-Nicolson numerical schemes
 
@@ -711,7 +718,7 @@ class AeoLiS(IBmi):
         Apx[:,-1] = 0.
         Ap1[:,-1] = 0.
         Amx[:,-1] = 0.
-        
+
         if p['boundary_offshore'] == 'noflux':
             Ap2[:,0] = 0.
             Ap1[:,0] = 0.
@@ -728,7 +735,7 @@ class AeoLiS(IBmi):
             logger.log_and_raise('Cross-shore cricular boundary condition not yet implemented', exc=NotImplementedError)
         else:
             logger.log_and_raise('Unknown offshore boundary condition [%s]' % self.p['boundary_offshore'], exc=ValueError)
-            
+
         if p['boundary_onshore'] == 'noflux':
             Am2[:,-1] = 0.
             Am1[:,-1] = 0.
@@ -832,11 +839,11 @@ class AeoLiS(IBmi):
                 # solve system with current weights
                 Ct_i = scipy.sparse.linalg.spsolve(A, y_i.flatten())
                 Ct_i = prevent_tiny_negatives(Ct_i, p['max_error'])
-                
+
                 # check for negative values
                 if Ct_i.min() < 0.:
                     ix = Ct_i < 0.
-                    
+
                     logger.warning(format_log('Removing negative concentrations',
                                               nrcells=np.sum(ix),
                                               fraction=i,
@@ -846,7 +853,7 @@ class AeoLiS(IBmi):
 
                     Ct_i[~ix] *= 1. + Ct_i[ix].sum() / Ct_i[~ix].sum()
                     Ct_i[ix] = 0.
-                
+
                 # determine pickup and deficit for current fraction
                 Cu_i = s['Cu'][:,:,i].flatten()
                 mass_i = s['mass'][:,:,0,i].flatten()
@@ -855,7 +862,7 @@ class AeoLiS(IBmi):
                 deficit_i = pickup_i - mass_i
                 ix = (deficit_i > p['max_error']) \
                      & (w_i * Cu_i > 0.)
-                     
+
                 # quit the iteration if there is no deficit, otherwise
                 # back-compute the maximum weight allowed to get zero
                 # deficit for the current fraction and progress to
@@ -879,7 +886,7 @@ class AeoLiS(IBmi):
                                           nrcells=np.sum(ix),
                                           fraction=i,
                                           **logprops))
-            
+
             # check for unexpected negative values
             if Ct_i.min() < 0:
                 logger.warning(format_log('Negative concentrations',
@@ -910,7 +917,7 @@ class AeoLiS(IBmi):
 
         qs = Ct * s['uws'].reshape(Ct[:,:,:1].shape).repeat(p['nfractions'], axis=-1)
         qn = Ct * s['uwn'].reshape(Ct[:,:,:1].shape).repeat(p['nfractions'], axis=-1)
-                    
+
         return dict(Ct=Ct,
                     qs=qs,
                     qn=qn,
@@ -936,7 +943,7 @@ class AeoLiS(IBmi):
         else:
             return 0
 
-        
+
     def _count(self, name, n=1):
         '''Increase counter
 
@@ -948,7 +955,7 @@ class AeoLiS(IBmi):
             Increment of counter (default: 1)
 
         '''
-        
+
         if name not in self.c:
             self.c[name] = 0
         self.c[name] += n
@@ -973,14 +980,14 @@ class AeoLiS(IBmi):
             Shape of spatial grid
 
         '''
-        
+
         shape = []
         for dim in dims:
             shape.append(self.p[dim])
             if dim in ['nx', 'ny']:
                 shape[-1] += 1
         return tuple(shape)
-    
+
 
     @staticmethod
     def dimensions(var=None):
@@ -1000,7 +1007,7 @@ class AeoLiS(IBmi):
             defined.
 
         '''
-        
+
         dims = {s:d
                 for d, states in aeolis.constants.MODEL_STATE.items()
                 for s in states}
@@ -1012,7 +1019,7 @@ class AeoLiS(IBmi):
                 return None
         else:
             return dims
-        
+
 
 class AeoLiSRunner(AeoLiS):
     '''AeoLiS model runner class
@@ -1043,7 +1050,7 @@ class AeoLiSRunner(AeoLiS):
     console.aeolis
 
     '''
-    
+
 
     def __init__(self, configfile='aeolis.txt'):
         '''Initialize class
@@ -1051,7 +1058,7 @@ class AeoLiSRunner(AeoLiS):
         Reads model configuration file without parsing all referenced
         files for the progress indicator and netCDF output. If no
         configuration file is given, the default settings are used.
-        
+
         Parameters
         ----------
         configfile : str, optional
@@ -1066,7 +1073,7 @@ class AeoLiSRunner(AeoLiS):
         self.tlog = 0.
         self.plog = -1.
         self.trestart = 0.
-        
+
         self.n = 0 # time step counter
         self.o = {} # output stats
 
@@ -1122,7 +1129,7 @@ class AeoLiSRunner(AeoLiS):
 
         # http://www.patorjk.com/software/taag/
         # font: Colossal
-        
+
         if (logger.hasHandlers()):
             logger.handlers.clear()
         logger.setLevel(logging.DEBUG)
@@ -1138,7 +1145,6 @@ class AeoLiSRunner(AeoLiS):
         streamhandler.setLevel(20)
         streamhandler.setFormatter(StreamFormatter())
         logger.addHandler(streamhandler)
-
 
 
         logger.info('**********************************************************')
@@ -1205,6 +1211,8 @@ class AeoLiSRunner(AeoLiS):
 
         logging.shutdown()
 
+        logging.shutdown()
+
 
     def set_configfile(self, configfile):
         '''Set model configuration file name'''
@@ -1215,7 +1223,7 @@ class AeoLiSRunner(AeoLiS):
         else:
             self.configfile = configfile
 
-        
+
     def set_params(self, **kwargs):
         '''Set model configuration parameters'''
 
@@ -1257,7 +1265,7 @@ class AeoLiSRunner(AeoLiS):
         else:
             return None
 
-        
+
     def get_var(self, var, clear=True):
         '''Returns spatial grid, statistic or model configuration parameter
 
@@ -1302,7 +1310,7 @@ class AeoLiSRunner(AeoLiS):
             var, stat = var.split('_')
             if var in self.o:
                 return self.get_statistic(var, stat)
-        
+
         # TODO: delete in future releases
         if '.' in var:
             warnings.warn('The use of "%s" is deprecated, use '
@@ -1312,7 +1320,7 @@ class AeoLiSRunner(AeoLiS):
                 return self.get_statistic(var, stat)
 
         return super(AeoLiSRunner, self).get_var(var)
-	
+
 
     def initialize(self):
         '''Initialize model
@@ -1321,10 +1329,10 @@ class AeoLiSRunner(AeoLiS):
         also initializes output statistics.
 
         '''
-        
+
         super(AeoLiSRunner, self).initialize()
         self.output_init()
-        
+
 
     def update(self, dt=-1):
         '''Time stepping function
@@ -1343,11 +1351,11 @@ class AeoLiSRunner(AeoLiS):
         if self.clear or self.dt < -1:
             self.output_clear()
             self.clear = False
-            
+
         super(AeoLiSRunner, self).update(dt=dt)
         self.output_update()
-        
-                    
+
+
     def write_params(self):
         '''Write updated model configuration to configuration file
 
@@ -1364,8 +1372,8 @@ class AeoLiSRunner(AeoLiS):
             aeolis.inout.backup(self.configfile)
             aeolis.inout.write_configfile(self.configfile, self.p)
             self.changed = False
-                            
-        
+
+
     def output_init(self):
 
         '''Initialize netCDF4 output file and output statistics dictionary'''
@@ -1440,7 +1448,7 @@ class AeoLiSRunner(AeoLiS):
                 self.o[k]['sum'] = self.o[k]['sum'] + v
             if 'var' in exts:
                 self.o[k]['var'] = self.o[k]['var'] + v**2
-            
+
         self.n += 1
 
 
@@ -1454,9 +1462,9 @@ class AeoLiSRunner(AeoLiS):
         dictionary.
 
         '''
-        
+
         if self.t - self.tout >= self.p['output_times'] or self.t == 0.:
-            
+
             variables = {}
             variables['time'] = self.t
             for k, exts in self.p['_output_vars'].items():
@@ -1470,7 +1478,7 @@ class AeoLiSRunner(AeoLiS):
 
             self.output_clear()
             self.tout = self.t
-            
+
         if self.p['restart'] and self.t - self.trestart >= self.p['restart']:
             self.dump_restartfile()
             self.trestart = self.t
@@ -1502,8 +1510,8 @@ class AeoLiSRunner(AeoLiS):
                 logger.info('Loaded "%s" from hotstart file.' % var)
             else:
                 logger.warning('Unrecognized hotstart file [%s]' % fname)
-                
-        
+
+
     def load_restartfile(self, restartfile):
         '''Load model state from restart file
 
@@ -1513,12 +1521,12 @@ class AeoLiSRunner(AeoLiS):
             Path to previously written restartfile.
 
         '''
-        
+
         if restartfile:
             if os.path.exists(restartfile):
                 with open(restartfile, 'r') as fp:
                     state = pickle.load(fp)
-                
+
                     self.t = state['t']
                     self.p = state['p']
                     self.s = state['s']
@@ -1530,10 +1538,10 @@ class AeoLiSRunner(AeoLiS):
                     return True
             else:
                 logger.log_and_raise('Restart file not found [%s]' % restartfile, exc=IOError)
-            
+
         return False
-        
-                
+
+
     def dump_restartfile(self):
         '''Dump model state to restart file'''
 
@@ -1584,7 +1592,7 @@ class AeoLiSRunner(AeoLiS):
         logger.warning('Invalid callback definition [%s]', callback)
         return None
 
-                        
+
     def print_progress(self, fraction=.01, min_interval=1., max_interval=60.):
         '''Print progress to screen
 
@@ -1598,7 +1606,7 @@ class AeoLiSRunner(AeoLiS):
             Maximum time in seconds between subsequent progress prints (default: 60s)
 
         '''
-        
+
         p = self.t / self.p['tstop']
         pr = np.ceil(p/fraction)*fraction
         t = time.time()
@@ -1606,22 +1614,25 @@ class AeoLiSRunner(AeoLiS):
 
         if self.get_count('time') == 1:
             logger.info('        Time elapsed / Total time / Time remaining')
-            
+
+        if self.get_count('time') == 1:
+            logger.info('        Time elapsed / Total time / Time remaining')
+
         if (np.mod(p, fraction) < .01 and self.plog != pr) or interval > max_interval:
             t1 = timedelta(0, round(t-self.t0))
             t2 = timedelta(0, round((t-self.t0)/p))
             t3 = timedelta(0, round((t-self.t0)*(1.-p)/p))
-            logger.info('%05.1f%%   %s / %s / %s' % (p * 100., t1, t2, t3))
+            logger.info('%05.1f%%  %12s / %10s / %14s' % (p * 100., t1, t2, t3))
             self.tlog = time.time()
             self.plog = pr
-            
-        
+
+
     def print_params(self):
         '''Print model configuration parameters to screen'''
-        
+
         maxl = np.max([len(par) for par in self.p.keys()])
-        fmt1 = '  %-%%ds = %%s' % maxl
-        fmt2 = '  %-%%ds   %%s' % maxl
+        fmt1 = '  %%-%ds = %%s' % maxl
+        fmt2 = '  %%-%ds   %%s' % maxl
 
         logger.info('**********************************************************')
         logger.info('PARAMETER SETTINGS                                        ')
@@ -1692,7 +1703,7 @@ class WindGenerator():
     console.wind
 
     '''
-    
+
     # source:
     # http://www.lutralutra.co.uk/2012/07/02/simulating-a-wind-speed-time-series-in-python/
 
@@ -1704,43 +1715,43 @@ class WindGenerator():
                  n_states=30,
                  shape=2.,
                  scale=2.):
-        
+
         self.mean_speed=mean_speed
         self.max_speed=max_speed
         self.n_states=n_states
 
         self.t=0.
         self.dt=dt
-        
+
         # setup matrix
-        n_rows = n_columns = n_states                             
+        n_rows = n_columns = n_states
         self.bin_size = float(max_speed)/n_states
-        
+
         # weibull parameters
         weib_shape=shape
         weib_scale=scale*float(mean_speed)/np.sqrt(np.pi);
-        
+
         # wind speed bins
         self.bins = np.arange(self.bin_size/2.0,
                               float(max_speed) + self.bin_size/2.0,
                               self.bin_size)
-        
+
         # distribution of probabilities, normalised
         fdpWind = self.weibullpdf(self.bins, weib_scale, weib_shape)
         fdpWind = fdpWind / sum(fdpWind)
-        
+
         # decreasing function
         G = np.empty((n_rows, n_columns,))
         for x in range(n_rows):
             for y in range(n_columns):
                 G[x][y] = 2.0**float(-abs(x-y))
-            
+
         # initial value of the P matrix
         P0 = np.diag(fdpWind)
-        
+
         # initital value of the p vector
         p0 = fdpWind
-        
+
         P, p = P0, p0
         rmse = np.inf
         while rmse > 1e-10:
@@ -1749,20 +1760,20 @@ class WindGenerator():
             r = r/sum(r)
             p = p+0.5*(p0-r)
             P = np.diag(p)
-            
+
             rmse = np.sqrt(np.mean((p - pp)**2))
-            
+
         N=np.diag([1.0/i for i in self.matmult4(G,p)])
         MTM=self.matmult4(N,self.matmult4(G,P))
         self.MTMcum = np.cumsum(MTM,1)
-        
-        
+
+
     def __getitem__(self, s):
         return np.asarray(self.wind_speeds[s])
-        
-        
+
+
     def generate(self, duration=3600.):
-        
+
         # initialise series
         self.state = 0
         self.states = []
@@ -1772,7 +1783,7 @@ class WindGenerator():
 
         self.update()
         self.t = 0.
-        
+
         while self.t < duration:
             self.update()
 
@@ -1782,23 +1793,23 @@ class WindGenerator():
     def update(self):
         r1 = np.random.uniform(0,1)
         r2 = np.random.uniform(0,1)
-        
+
         self.randoms1.append(r1)
         self.randoms2.append(r2)
-        
+
         self.state = next(j for j,v in enumerate(self.MTMcum[self.state]) if v > r1)
         self.states.append(self.state)
 
         u = np.maximum(0., self.bins[self.state] - 0.5 + r2 * self.bin_size)
         self.wind_speeds.append(u)
-        
+
         self.t += self.dt
-        
-        
+
+
     def get_time_series(self):
         u = np.asarray(self.wind_speeds)
         t = np.arange(len(u)) * self.dt
-        
+
         return t, u
 
 
@@ -1810,10 +1821,10 @@ class WindGenerator():
 
         np.savetxt(fname, M)
 
-    
+
     def plot(self):
         t, u = self.get_time_series()
-        
+
         fig, axs = plt.subplots(figsize=(10,4))
         axs.plot(t, u
 
@@ -1824,8 +1835,8 @@ class WindGenerator():
         axs.grid()
 
         return fig, axs
-    
-    
+
+
     def hist(self):
         fig, axs = plt.subplots(figsize=(10,4))
         axs.hist(self.wind_speeds, bins=self.bins, normed=True, color='k')
@@ -1833,7 +1844,7 @@ class WindGenerator():
         axs.set_ylabel('occurence [-]')
         axs.grid()
 
-        return fig, axs    
+        return fig, axs
 
 
     @staticmethod

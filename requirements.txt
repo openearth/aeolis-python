@@ -1,5 +1,6 @@
 netCDF4==1.4.1
 coverage
 codecov
-sphinxcontrib-bibtex==0.3.2
+sphinxcontrib-bibtex
 sphinxcontrib-napoleon==0.2.8
+sphinx-rtd-theme

@@ -1,18 +1,18 @@
 '''This file is part of AeoLiS.
-   
+
 AeoLiS is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
-   
+
 AeoLiS is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-   
+
 You should have received a copy of the GNU General Public License
 along with AeoLiS.  If not, see <http://www.gnu.org/licenses/>.
-   
+
 AeoLiS  Copyright (C) 2015 Bas Hoonhout
 
 bas.hoonhout@deltares.nl         b.m.hoonhout@tudelft.nl
@@ -36,7 +36,7 @@ from aeolis.model import AeoLiSRunner, WindGenerator
 
 #class StreamFormatter(logging.Formatter):
 #
-#   def format(self, record):
+#    def format(self, record):
 #        if record.levelname == 'INFO':
 #            return record.getMessage()
 #        else:
@@ -62,12 +62,12 @@ def aeolis():
     '''
 
     print_license()
-    
+
     arguments = docopt.docopt(aeolis.__doc__)
 
     logger = logging.getLogger('aeolis')
 #    logger.setLevel(logging.DEBUG)
-#    
+#
 #    # initialize file logger
 #    filehandler = logging.FileHandler('%s.log' % os.path.splitext(arguments['<config>'])[0], mode='w')
 #    filehandler.setLevel(logging.DEBUG if arguments['--debug'] else logging.INFO)
@@ -103,9 +103,9 @@ def wind():
         --timestep=TIMESTEP  timestep of time series [default: 60]
 
     '''
-    
+
     print_license()
-    
+
     arguments = docopt.docopt(wind.__doc__)
 
     # create random wind time series
@@ -116,7 +116,7 @@ def wind():
     generator.write_time_series(arguments['<file>'])
 
     u = generator.get_time_series()[1]
-    
+
     fmt = '%-4s : %6.3f m/s'
     print(fmt % ('min', np.min(u)))
     print(fmt % ('mean', np.mean(u)))
@@ -130,7 +130,6 @@ def print_license():
     print('under certain conditions; See LICENSE.txt for details.')
     print('')
 
-    
+
 if __name__ == '__main__':
     aeolis()
-    
