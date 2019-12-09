@@ -178,6 +178,12 @@ class AeoLiS(IBmi):
         # read configuration file
         self.p = aeolis.inout.read_configfile(self.configfile)
         aeolis.inout.check_configuration(self.p)
+        
+        # set nx, ny and nfractions
+        self.p['ny'], self.p['nx'] = self.p['xgrid_file'].shape
+        self.p['nx'] -= 1 # change nx from number of points to number of cells
+        self.p['ny'] -= 1 # change ny from number of points to number of cells
+        self.p['nfractions'] = len(self.p['grain_dist'])
 
         # initialize time
         self.t = self.p['tstart']
@@ -1305,8 +1311,8 @@ class AeoLiSRunner(AeoLiS):
         
         # TODO: delete in future releases
         if '.' in var:
-            logger.warning('The use of "%s" is deprecated, use '
-                             '"%s" instead.' % (var, var.replace('.','_')))
+            warnings.warn('The use of "%s" is deprecated, use '
+                             '"%s" instead.' % (var, var.replace('.','_')), DeprecationWarning)
             var, stat = var.split('.')
             if var in self.o:
                 return self.get_statistic(var, stat)
@@ -1380,8 +1386,8 @@ class AeoLiSRunner(AeoLiS):
                 var0, ext = var.split('_')
             # TODO: delete in future release
             elif '.' in var:
-                logger.warning('The use of "%s" is deprecated, use '
-                                 '"%s" instead.' % (var, var.replace('.','_')))
+                warnings.warn('The use of "%s" is deprecated, use '
+                                 '"%s" instead.' % (var, var.replace('.','_')), DeprecationWarning)
                 var0, ext = var.split('.')
             else:
                 var0, ext = var, None
@@ -1620,8 +1626,8 @@ class AeoLiSRunner(AeoLiS):
         '''Print model configuration parameters to screen'''
         
         maxl = np.max([len(par) for par in self.p.keys()])
-        fmt1 = '  %%%ds = %%s' % maxl
-        fmt2 = '  %%%ds   %%s' % maxl
+        fmt1 = '  %%-%ds = %%s' % maxl
+        fmt2 = '  %%-%ds   %%s' % maxl
 
         logger.info('**********************************************************')
         logger.info('PARAMETER SETTINGS                                        ')
