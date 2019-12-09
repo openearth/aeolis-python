@@ -54,6 +54,13 @@ import aeolis.constants
 
 from aeolis.utils import *
 
+class StreamFormatter(logging.Formatter):
+
+    def format(self, record):
+        if record.levelname == 'INFO':
+            return record.getMessage()
+        else:
+            return '%s: %s' % (record.levelname, record.getMessage())
 
 # initialize logger
 logger = logging.getLogger(__name__)
@@ -1115,6 +1122,24 @@ class AeoLiSRunner(AeoLiS):
 
         # http://www.patorjk.com/software/taag/
         # font: Colossal
+        
+        if (logger.hasHandlers()):
+            logger.handlers.clear()
+        logger.setLevel(logging.DEBUG)
+
+        # initialize file logger
+        filehandler = logging.FileHandler('%s.log' % os.path.splitext(self.configfile)[0], mode='w')
+        filehandler.setLevel(logging.INFO)
+        filehandler.setFormatter(logging.Formatter('%(asctime)-15s %(name)-8s %(levelname)-8s %(message)s'))
+        logger.addHandler(filehandler)
+
+        # initialize console logger
+        streamhandler = logging.StreamHandler()
+        streamhandler.setLevel(20)
+        streamhandler.setFormatter(StreamFormatter())
+        logger.addHandler(streamhandler)
+
+
 
         logger.info('**********************************************************')
         logger.info('                                                          ')
@@ -1177,6 +1202,8 @@ class AeoLiSRunner(AeoLiS):
 
         if self.cwd is not None:
             os.chdir(self.cwd)
+
+        logging.shutdown()
 
 
     def set_configfile(self, configfile):
@@ -1558,13 +1585,13 @@ class AeoLiSRunner(AeoLiS):
         return None
 
                         
-    def print_progress(self, fraction=.1, min_interval=1., max_interval=60.):
+    def print_progress(self, fraction=.01, min_interval=1., max_interval=60.):
         '''Print progress to screen
 
         Parameters
         ----------
         fraction : float, optional
-            Fraction of simulation at which to print progress (default: 10%)
+            Fraction of simulation at which to print progress (default: 1%)
         min_interval : float, optional
             Minimum time in seconds between subsequent progress prints (default: 1s)
         max_interval : float, optional
@@ -1573,11 +1600,13 @@ class AeoLiSRunner(AeoLiS):
         '''
         
         p = self.t / self.p['tstop']
-        pr = np.round(p/fraction)*fraction
-        
+        pr = np.ceil(p/fraction)*fraction
         t = time.time()
         interval = t - self.tlog
 
+        if self.get_count('time') == 1:
+            logger.info('        Time elapsed / Total time / Time remaining')
+            
         if (np.mod(p, fraction) < .01 and self.plog != pr) or interval > max_interval:
             t1 = timedelta(0, round(t-self.t0))
             t2 = timedelta(0, round((t-self.t0)/p))
