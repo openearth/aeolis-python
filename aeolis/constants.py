@@ -123,8 +123,9 @@ DEFAULT_CONFIG = {
     'output_file'                   : None,               # Filename of netCDF4 output file
     'output_vars'                   : ['zb', 'zs',
                                        'Ct', 'Cu',
-                                       'uw', 'uth',
-                                       'mass', 'pickup'], # Names of spatial grids to be included in output
+                                       'uw', 'udir', 
+                                       'uth', 'mass'
+                                       'pickup', 'w'],    # Names of spatial grids to be included in output
     'output_types'                  : [],                 # Names of statistical parameters to be included in output (avg, sum, var, min or max)
     'grain_size'                    : [225e-6],           # [m] Average grain size of each sediment fraction
     'grain_dist'                    : [1.],               # [-] Initial distribution of sediment fractions
@@ -138,7 +139,7 @@ DEFAULT_CONFIG = {
     'A'                             : .085,               # [-] Constant in formulation for wind velocity threshold based on grain size
     'z'                             : 10.,                # [m] Measurement height of wind velocity
     'h'                             : None,               # [m] Representative height of saltation layer
-    'k'                             : 0.01,               # [m] Bed roughness
+#    'k'                             : 0.01,               # [m] Bed roughness
     'Cb'                            : 1.5,                # [-] Constant in formulation for equilibrium sediment concentration
     'm'                             : .5,                 # [-] Factor to account for difference between average and maximum shear stress
     'sigma'                         : 4.2,                # [-] Ratio between basal area and frontal area of roughness elements
