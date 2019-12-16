@@ -82,7 +82,7 @@ class WindShear:
     
     def __init__(self, x, y, z, dx=1., dy=1.,
                  buffer_width=100., buffer_relaxation=None,
-                 L=100., z0=.001, l=10.):
+                 d, L=100., l=10.):
         '''Class initialization
             
         Parameters
@@ -106,10 +106,11 @@ class WindShear:
             Relaxation of topography in buffer from input grid
             boundary to computational grid boundary (default:
             buffer_width / 4)
+        d : numpy.ndarry
+            array with sediment grain sizes of input
+            length is equal to number of sediment fractions (nf)
         L : float, optional
-            Length scale of topographic features (default: 100)
-        z0 : float, optional
-            Aerodynamic roughness (default: .001)
+            Length scale of topographic features (default: 100) 
         l : float, optional
             Height of inner layer (default: 10)
 
@@ -131,8 +132,8 @@ class WindShear:
         self.buffer_width = buffer_width
         self.buffer_relaxation = buffer_relaxation
                           
+        self.d = d
         self.L = L
-        self.z0 = z0
         self.l = l
                           
         self.set_computational_grid()

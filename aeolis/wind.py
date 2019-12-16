@@ -52,13 +52,14 @@ def initialize(s, p):
         elif p['wind_convention'] == 'nautical':
             p['wind_file'][:,2] = 270.0 - p['wind_file'][:,2]
         else:
-            logger.log_and_raise('Unknown convention: %s' % p['wind_convention'], exc=ValueError)
+            logger.log_and_raise('Unknown convention: %s' 
+                                 % p['wind_convention'], exc=ValueError)
 
     # initialize wind shear model
     if p['process_shear']:
         s['shear'] = aeolis.shear.WindShear(s['x'], s['y'], s['zb'],
-                                            L=100., l=10., z0=0.001,
-                                            buffer_width=10.)
+                                            d=p['grain_size'], L=100., l=10., 
+                                            buffer_width=10.)                   # look for correct input params
         
     return s
 
@@ -96,8 +97,8 @@ def interpolate(s, p, t):
         uw_d = p['wind_file'][:,2] / 180. * np.pi
 
         s['uw'][:,:] = interp_circular(t, uw_t, uw_s)
-        s['udir'][:,:] = np.arctan2(np.interp(t, uw_t, np.sin(uw_d)),
-                                    np.interp(t, uw_t, np.cos(uw_d))) * 180. / np.pi
+        s['udir'][:,:] = np.arctan2(interp_circular(t, uw_t, np.sin(uw_d)),
+                                    interp_circular(t, uw_t, np.cos(uw_d))) * 180. / np.pi
 
     s['uws'] = s['uw'] * np.cos(s['alfa'] + s['udir'] / 180. * np.pi)
     s['uwn'] = s['uw'] * np.sin(s['alfa'] + s['udir'] / 180. * np.pi)
@@ -107,15 +108,15 @@ def interpolate(s, p, t):
         
     s['uw'] = np.abs(s['uw'])
 
-    # compute saltation velocity
-    s['uw'] = get_velocity_at_height(s['uw'], p['z'], p['k'], p['h'])
-    s['uws'] = get_velocity_at_height(s['uws'], p['z'], p['k'], p['h'])
-    s['uwn'] = get_velocity_at_height(s['uwn'], p['z'], p['k'], p['h'])
+    # compute saltation velocity > perturbation theory
+    #s['uw'] = get_velocity_at_height(s['uw'], p['z'], p['k'], p['h'])
+    #s['uws'] = get_velocity_at_height(s['uws'], p['z'], p['k'], p['h'])
+    #s['uwn'] = get_velocity_at_height(s['uwn'], p['z'], p['k'], p['h'])
 
     # compute shear velocity
-    s['tau'] = get_velocity_at_height(s['uw'], p['h'], p['k'])
-    s['taus'] = get_velocity_at_height(s['uws'], p['h'], p['k'])
-    s['taun'] = get_velocity_at_height(s['uwn'], p['h'], p['k'])
+    s['tau'] = get_velocity_at_height(p['grain_size'], s['uw'], p['h'])
+    s['taus'] = get_velocity_at_height(p['grain_size'], s['uws'], p['h'])
+    s['taun'] = get_velocity_at_height(p['grain_size'], s['uwn'], p['h'])
 
     # compute shear velocity field
     if 'shear' in s.keys():
@@ -131,31 +132,42 @@ def interpolate(s, p, t):
     return s
 
 
-def get_velocity_at_height(u, z, z0, z1=None):
+def get_velocity_at_height(d, u, z):
     '''Compute shear velocity from wind velocity following Prandl-Karman's Law of the Wall
 
     Parameters
     ----------
+    p : dict
+        Model configuration parameters
     u : numpy.ndarray
         Spatial wind field
     z : float
         Height above bed where ``u`` is measured
     z0 : float
         Roughness length
-    z1 : float, optional
-        Height above bed for which to return wind speeds.
-        Returns wind shear if not given.
+        Varies with grain size
 
     Returns
     -------
     numpy.ndarray
-        Array of size ``u`` with wind speeds at height ``z1``
+        Array of size ``u* `` with shear velocity per sediment fraction
 
     '''
+    karman = 0.41
+    
+    z0 = d/30                                                                   # Duran 2007?
+    
+    tau = karman / np.log(z/z0) * u
 
-    tau = .41 / np.log(z / z0) * u
-
-    if z1 is None:
-        return tau
-    else:
-        return tau * np.log(z1 / z0) / .41
+    return tau
+    
+#    Trunk version:                                                             # remove later
+#    if z1 is None:
+#        return tau
+#    else:
+#        return tau * np.log(z1/z0) / karman
+    
+    ''' z1 : float, optional
+        Height above bed for which to return wind speeds.
+        Returns wind shear if not given.'''
+        
