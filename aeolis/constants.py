@@ -39,6 +39,7 @@ INITIAL_STATE = {
         'udir',                             # [rad] Wind direction
         'zs',                               # [m] Water level above reference
         'Hs',                               # [m] Wave height
+        'zne',                         #NEW # [m] Non-erodible layer
     ),
 }
 
@@ -83,7 +84,7 @@ MODEL_STATE = {
 #: AeoLiS model default configuration
 DEFAULT_CONFIG = {
     'process_wind'                  : True,               # Enable the process of wind
-    'process_shear'                 : False,              # Enable the process of wind shear
+    'process_shear'                 : True,               # Enable the process of wind shear
     'process_tide'                  : True,               # Enable the process of tides
     'process_wave'                  : True,               # Enable the process of waves
     'process_runup'                 : True,               # Enable the process of wave runup
@@ -95,6 +96,9 @@ DEFAULT_CONFIG = {
     'process_meteo'                 : False,              # Enable the process of meteo
     'process_salt'                  : False,              # Enable the process of salt
     'process_humidity'              : False,              # Enable the process of humidity
+    'process_avalanche'             : False,        # NEW # Enable the process of avalanching
+    'process_inertia'               : False,        # NEW 
+    'process_separation'            : False,        # NEW # Enable the incluing of separation bubble
     'th_grainsize'                  : True,               # Enable wind velocity threshold based on grainsize
     'th_bedslope'                   : False,              # Enable wind velocity threshold based on bedslope
     'th_moisture'                   : True,               # Enable wind velocity threshold based on moisture
@@ -110,9 +114,13 @@ DEFAULT_CONFIG = {
     'meteo_file'                    : None,               # Filename of ASCII file with time series of meteorlogical conditions
     'bedcomp_file'                  : None,               # Filename of ASCII file with initial bed composition
     'threshold_file'                : None,               # Filename of ASCII file with shear velocity threshold
+    'ne_file'                       : None,         # NEW # Filename of ASCII file with non-erodible layer
+    'veg_file'                      : None,         # NEW # Filename of ASCII file with initial vegetation density
     'wave_mask'                     : None,               # Filename of ASCII file with mask for wave height
     'tide_mask'                     : None,               # Filename of ASCII file with mask for tidal elevation
     'threshold_mask'                : None,               # Filename of ASCII file with mask for the shear velocity threshold
+    'nx'                            : 0,                  # [-] Number of grid cells in x-dimension
+    'ny'                            : 0,                  # [-] Number of grid cells in y-dimension
     'dt'                            : 60.,                # [s] Time step size
     'CFL'                           : 1.,                 # [-] CFL number to determine time step in explicit scheme
     'accfac'                        : 1.,                 # [-] Numerical acceleration factor
@@ -129,6 +137,7 @@ DEFAULT_CONFIG = {
     'output_types'                  : [],                 # Names of statistical parameters to be included in output (avg, sum, var, min or max)
     'grain_size'                    : [225e-6],           # [m] Average grain size of each sediment fraction
     'grain_dist'                    : [1.],               # [-] Initial distribution of sediment fractions
+    'nfractions'                    : 1,                  # [-] Number of sediment fractions
     'nlayers'                       : 3,                  # [-] Number of bed layers
     'layer_thickness'               : .01,                # [m] Thickness of bed layers
     'g'                             : 9.81,               # [m/s^2] Gravitational constant
@@ -139,7 +148,7 @@ DEFAULT_CONFIG = {
     'A'                             : .085,               # [-] Constant in formulation for wind velocity threshold based on grain size
     'z'                             : 10.,                # [m] Measurement height of wind velocity
     'h'                             : None,               # [m] Representative height of saltation layer
-#    'k'                             : 0.01,               # [m] Bed roughness
+    'k'                             : 0.001,              # [m] Bed roughness
     'Cb'                            : 1.5,                # [-] Constant in formulation for equilibrium sediment concentration
     'm'                             : .5,                 # [-] Factor to account for difference between average and maximum shear stress
     'sigma'                         : 4.2,                # [-] Ratio between basal area and frontal area of roughness elements
@@ -170,6 +179,8 @@ DEFAULT_CONFIG = {
 }
 
 
+#: Required model configuration parameters
+REQUIRED_CONFIG = ['nx', 'ny']
 
 #: Merge initial and model state
 MODEL_STATE.update({

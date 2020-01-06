@@ -28,6 +28,7 @@ import logging
 import numpy as np
 import scipy.special
 import scipy.interpolate
+import matplotlib as plt
 
 
 # initialize logger
@@ -68,7 +69,7 @@ class WindShear:
 
     * Actual resulting values are still to be compared with the results
        from Kroy et al. (2002)
-    * Grid interpolation can still be optimized
+    * Grid interpolation can still be optimized                                 # update after thesis completion?
     * Separation bubble is still to be implemented
     * Avalanching is still to be implemented
 
@@ -82,7 +83,7 @@ class WindShear:
     
     def __init__(self, x, y, z, dx=1., dy=1.,
                  buffer_width=100., buffer_relaxation=None,
-                 d, L=100., l=10.):
+                 L=100., l=10., z0=.001):
         '''Class initialization
             
         Parameters
@@ -92,7 +93,7 @@ class WindShear:
         y : numpy.ndarray
             2D array with y-coordinates of input grid
         z : numpy.ndarray
-            2D array with topography of input grid
+            2D array with topography of input grid    
         dx : float, optional
             Grid spacing in x dimension of computational grid
             (default: 1)
@@ -106,13 +107,12 @@ class WindShear:
             Relaxation of topography in buffer from input grid
             boundary to computational grid boundary (default:
             buffer_width / 4)
-        d : numpy.ndarry
-            array with sediment grain sizes of input
-            length is equal to number of sediment fractions (nf)
         L : float, optional
             Length scale of topographic features (default: 100) 
         l : float, optional
             Height of inner layer (default: 10)
+        z0 : float, optional
+            Aerodynamic roughness (default: .001)
 
         '''
         
@@ -132,9 +132,9 @@ class WindShear:
         self.buffer_width = buffer_width
         self.buffer_relaxation = buffer_relaxation
                           
-        self.d = d
         self.L = L
         self.l = l
+        self.z0 = z0
                           
         self.set_computational_grid()
 
@@ -150,23 +150,71 @@ class WindShear:
             Wind direction in degrees
         
         '''
+#        u1 = np.zeros(u0.shape)
+#        
+#        ix = u0 > 0.
+#        u1[ix] = u0[ix] / u0[ix] * 0.76
             
         self.populate_computational_grid(udir)
+        
+        # Compute shear stresses on computational grid:
         self.compute_shear(u0)
-                    
+        
         gc = self.cgrid
         gi = self.igrid
-                            
-        dtaux, dtauy = self.rotate(gc['dtaux'], gc['dtauy'], udir)
-                                
-        self.cgrid['dtaux'] = dtaux
-        self.cgrid['dtauy'] = dtauy
-                                        
-        self.igrid['dtaux'] = self.interpolate(gc['x'], gc['y'], dtaux,
-                                               gi['x'], gi['y'])
-        self.igrid['dtauy'] = self.interpolate(gc['x'], gc['y'], dtauy,
-                                               gi['x'], gi['y'])
         
+        dtaux, dtauy = self.rotate(gc['dtaux'], gc['dtauy'], udir)
+                                        
+        gc['dtaux'] = np.max(dtaux, -1.)
+        gc['dtauy'] = dtauy
+        
+        # Compute separation bubble:                                            Moet nog worden aangepast
+        if process_separation:
+            zsep = self.separation()
+            z_origin = gc['z'].copy()
+            gc['z'] = np.max(gc['z'], zsep)
+                    
+        # Add shear and multiply shear with separation                          = overgenomen bart > check constants!
+        self.add_shear()
+        
+        if process_separation:
+            gc['dzsep'] = gc['z']- z_origin 
+            self.separation_shear(gc['dzsep'])
+        
+        # Rotation                                                              = overgenomen bart
+        gi['x'], gi['y'] =          self.rotate(gi['x'],    gi['y'],    -udir,
+          origin=(self.x0, self.y0))
+        gc['x'], gc['y'] =          self.rotate(gc['x'],    gc['y'],    -udir,
+          origin=(self.x0, self.y0))
+        gc['taux'], gc['tauy'] =    self.rotate(gc['taux'], gc['tauy'], -udir)
+        
+        # Interpolate real grid with shear stresses and separation bubble
+        gi['taux'] = self.interpolate(gc['x'], gc['y'], gc['taux'], gi['x'], gi['y'])
+        gi['tauy'] = self.interpolate(gc['x'], gc['y'], gc['tauy'], gi['x'], gi['y'])
+
+        if process_separation:
+            gi['dzsep'] = self.interpolate(gc['x'], gc['y'], gc['dzsep'], gi['x'], gi['y'])
+            
+                                        
+        gi['dtaux'] = self.interpolate(gc['x'], gc['y'], dtaux, gi['x'], gi['y'])
+        gi['dtauy'] = self.interpolate(gc['x'], gc['y'], dtauy, gi['x'], gi['y'])
+        
+        # Filled rotational grid, now rotate it back to original direction
+
+        gi['taux'], gi['tauy'] = self.rotate(gi['taux'], gi['tauy'], udir)
+        gi['x'], gi['y'] = self.rotate(gi['x'], gi['y'], udir, origin=(self.x0, self.y0))
+
+        # PLOTTING! -------------------------------------------------------
+        # d = 10
+        # plt.pcolormesh(gi['x'], gi['y'], gi['dzsep'])
+        # plt.quiver(gi['x'][::d, ::d], gi['y'][::d, ::d],
+        #           gi['taux'][::d, ::d], gi['tauy'][::d, ::d])
+        # plt.colorbar()
+        # plt.show()
+        # -------------------------------------------------
+
+        gc['x'], gc['y'] = self.rotate(gc['x'], gc['y'], udir, origin=(self.x0, self.y0))
+
         return self
 
 
@@ -234,7 +282,7 @@ class WindShear:
         return self
         
 
-    def populate_computational_grid(self, alpha):
+    def populate_computational_grid(self, alpha):                               # moet nog worden bekeken
         '''Interpolate input topography to computational grid
             
         Rotates computational grid to current wind direction and
@@ -304,30 +352,33 @@ class WindShear:
 
         '''
             
-        g = self.cgrid
+        gc = self.cgrid
                 
         if u0 == 0.:
-            self.cgrid['dtaux'] = np.zeros(g['z'].shape)
-            self.cgrid['dtauy'] = np.zeros(g['z'].shape)
+            gc['dtaux'] = np.zeros(gc['z'].shape)
+            gc['dtauy'] = np.zeros(gc['z'].shape)
             return
                                 
-        ny, nx = g['z'].shape
-        kx, ky = np.meshgrid(2. * np.pi * np.fft.fftfreq(nx+1, g['dx'])[1:],
-                             2. * np.pi * np.fft.fftfreq(ny+1, g['dy'])[1:])
-        hs = np.fft.fft2(g['z'])
+        ny, nx = gc['z'].shape
+        kx, ky = np.meshgrid(2. * np.pi * np.fft.fftfreq(nx+1, gc['dx'])[1:],
+                             2. * np.pi * np.fft.fftfreq(ny+1, gc['dy'])[1:])
+        hs = np.fft.fft2(gc['z'])
+        
+        #filter
         hs = self.filter_highfrequenies(kx, ky, hs, nfilter)
 
         k = np.sqrt(kx**2 + ky**2)
         sigma = np.sqrt(1j * self.L / 4. * kx * self.z0 / self.l)
         
+        # Shear stress perturbation | according to Duran (2007)
         dtaux_t = hs * kx**2 / k * 2 / u0**2 * \
                   (-1 + (2 * np.log(self.l/self.z0) + k**2/kx**2) * sigma * \
                    scipy.special.kv(1, 2 * sigma) / scipy.special.kv(0, 2 * sigma))
         dtauy_t = hs * kx * ky / k * 2 / u0**2 * \
                   2 * np.sqrt(2) * sigma * scipy.special.kv(1, 2 * np.sqrt(2) * sigma)
         
-        self.cgrid['dtaux'] = np.real(np.fft.ifft2(dtaux_t))
-        self.cgrid['dtauy'] = np.real(np.fft.ifft2(dtauy_t))
+        gc['dtaux'] = np.real(np.fft.ifft2(dtaux_t))
+        gc['dtauy'] = np.real(np.fft.ifft2(dtauy_t))
         
         
     def set_computational_grid(self):
@@ -339,24 +390,25 @@ class WindShear:
 
         '''
             
-        g = self.igrid
+        gc = self.cgrid
+        gi = self.igrid
                 
         # grid center
-        x0, y0 = np.mean(g['x']), np.mean(g['y'])
+        x0, y0 = np.mean(gi['x']), np.mean(gi['y'])
                     
         # grid size
-        self.D = np.sqrt((g['x'].max() - g['x'].min())**2 +
-                         (g['y'].max() - g['y'].min())**2) + 2 * self.buffer_width
+        self.D = np.sqrt((gi['x'].max() - gi['x'].min())**2 +
+                         (gi['y'].max() - gi['y'].min())**2) + 2 * self.buffer_width
                         
         # determine equidistant, square grid
         xc, yc = self.get_exact_grid(x0 - self.D/2., x0 + self.D/2.,
                                      y0 - self.D/2., y0 + self.D/2.,
-                                     self.cgrid['dx'], self.cgrid['dy'])
+                                     gc['dx'], gc['dy'])
         
         self.x0 = x0
         self.y0 = y0
-        self.cgrid['xi'] = xc
-        self.cgrid['yi'] = yc
+        gc['xi'] = xc
+        gc['yi'] = yc
         
         
     def get_sigmoid(self, x):
@@ -451,7 +503,7 @@ class WindShear:
         d = stride
         
         if ax is None:
-            fig, ax = subplots()
+            fig, ax = plt.subplots()
         
         if computational_grid:
             g = self.cgrid

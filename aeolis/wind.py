@@ -58,7 +58,7 @@ def initialize(s, p):
     # initialize wind shear model
     if p['process_shear']:
         s['shear'] = aeolis.shear.WindShear(s['x'], s['y'], s['zb'],
-                                            d=p['grain_size'], L=100., l=10., 
+                                            L=100., l=10., z0=.001, 
                                             buffer_width=10.)                   # look for correct input params
         
     return s
@@ -108,66 +108,87 @@ def interpolate(s, p, t):
         
     s['uw'] = np.abs(s['uw'])
 
-    # compute saltation velocity > perturbation theory
-    #s['uw'] = get_velocity_at_height(s['uw'], p['z'], p['k'], p['h'])
-    #s['uws'] = get_velocity_at_height(s['uws'], p['z'], p['k'], p['h'])
-    #s['uwn'] = get_velocity_at_height(s['uwn'], p['z'], p['k'], p['h'])
-
-    # compute shear velocity
-    s['tau'] = get_velocity_at_height(p['grain_size'], s['uw'], p['h'])
-    s['taus'] = get_velocity_at_height(p['grain_size'], s['uws'], p['h'])
-    s['taun'] = get_velocity_at_height(p['grain_size'], s['uwn'], p['h'])
-
-    # compute shear velocity field
-    if 'shear' in s.keys():
+    # compute wind shear at height z
+    kappa = 0.41
+    z = p['z']
+    z0 = p['k']                                                                 # dependent on grain size?                                             
+    
+    s['tau'] = s['uw'] * kappa / np.log(z/z0)
+    s['taus'] = s['uws'] * kappa / np.log(z/z0)
+    s['taun'] = s['uwn'] * kappa / np.log(z/z0)
+    
+    # Compute saltation velocity (at height z1)
+    if p['h'] is not None:
+        z1 = p['h']
+    
+        s['uw'] = s['tau'] / kappa * np.log(z1/z0)
+        s['uws'] = s['taus'] / kappa * np.log(z1/z0)
+        s['uwn'] = s['taun'] / kappa * np.log(z1/z0)
+    
+    # Shear stress to shear velocity
+    s['ustar'] = np.sqrt(s['tau'] / p['rhoa'])
+    s['ustars'] = s['ustar'] * s['taus'] / s['tau']
+    s['ustarn'] = s['ustar'] * s['taun'] / s['tau']
         
-        s['shear'].set_topo(s['zb'])
+    ix = s['tau'] == 0.
+    s['ustar'][ix] = 0.
+    s['ustars'][ix] = 0.
+    s['ustarn'][ix] = 0.
+                
+    s['ustar0'] = s['ustar']
+    s['tau0'] = s['tau']
+    s['taus0'] = s['taus'].copy()
+    s['taun0'] = s['taun'].copy()
+    
+    return s
+    
+   
+def shear(s,p):
+    '''Determine shear velocity including separation process
+
+    Parameters
+    ----------
+    s : dict
+        Spatial grids
+    p : dict
+        Model configuration parameters
+        
+    Returns
+    -------
+    dict
+        Spatial grids
+
+    '''
+    
+    if 'shear' in s.keys() and p['process_shear']:
+        
+        s['shear'].set_topo(s['zb'].copy())
+        s['shear'].set_shear(s['taus'], s['taun'])
+        
         s['shear'](u0=s['uw'][0,0],
-                   udir=s['udir'][0,0])
+                   udir=s['udir'][0,0],
+                   process_separation = p['process_separation'])
         
         s['dtaus'], s['dtaun'] = s['shear'].get_shear()
         s['taus'], s['taun'] = s['shear'].add_shear(s['taus'], s['taun'])
         s['tau'] = np.hypot(s['taus'], s['taun'])
+        
+#        import matplotlib.pyplot as plt
+#        plt.pcolormesh(s['x'], s['y'], s['ustar'])
+#       # plt.pcolormesh(s['x'], s['y'], (np.sqrt(2 * alfa) * uf / Ax[:,:,0]) * dhs[:,:,0])
+#        plt.colorbar()
+#        plt.show(
+                               
+#        if p['process_separation']:
+#            s['dzsep'] = ['shear'].get_separation()
+#            s['zsep'] = s['dzsep'] + s['zb']
 
     return s
 
-
-def get_velocity_at_height(d, u, z):
-    '''Compute shear velocity from wind velocity following Prandl-Karman's Law of the Wall
-
-    Parameters
-    ----------
-    p : dict
-        Model configuration parameters
-    u : numpy.ndarray
-        Spatial wind field
-    z : float
-        Height above bed where ``u`` is measured
-    z0 : float
-        Roughness length
-        Varies with grain size
-
-    Returns
-    -------
-    numpy.ndarray
-        Array of size ``u* `` with shear velocity per sediment fraction
-
-    '''
-    karman = 0.41
+def separation(s,p):                                                            # to be determined
     
-    z0 = d/30                                                                   # Duran 2007?
-    
-    tau = karman / np.log(z/z0) * u
+    return s
 
-    return tau
+def filter_low(s, p, par, direction, Cut):                                      # waar is dit filter voor?
     
-#    Trunk version:                                                             # remove later
-#    if z1 is None:
-#        return tau
-#    else:
-#        return tau * np.log(z1/z0) / karman
-    
-    ''' z1 : float, optional
-        Height above bed for which to return wind speeds.
-        Returns wind shear if not given.'''
-        
+    return s

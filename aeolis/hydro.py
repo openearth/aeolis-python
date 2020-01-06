@@ -63,8 +63,8 @@ def interpolate(s, p, t):
 
     if p['process_tide']:
         if p['tide_file'] is not None:
-            s['zs'][:,:] = interp_circular(t,
-                                           p['tide_file'][:,0],
+            s['zs'][:,:] = interp_circular(t, 
+                                           p['tide_file'][:,0], 
                                            p['tide_file'][:,1])
         else:
             s['zs'][:,:] = 0.

@@ -54,8 +54,12 @@ logging.setLoggerClass(Logger)
 import aeolis.inout
 import aeolis.model
 import aeolis.wind
+import aeolis.shear
 import aeolis.bed
 import aeolis.hydro
 import aeolis.threshold
 import aeolis.transport
 import aeolis.netcdf
+
+# import aeolis.vegetation
+
