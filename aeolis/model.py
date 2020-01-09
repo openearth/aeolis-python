@@ -51,6 +51,7 @@ import aeolis.transport
 import aeolis.hydro
 import aeolis.netcdf
 import aeolis.constants
+import aeolis.gridparams
 
 from aeolis.utils import *
 
@@ -269,6 +270,9 @@ class AeoLiS(IBmi):
 
         # update bed
         self.s = aeolis.bed.update(self.s, self.p)
+        
+        # avalanching
+        self.s = aeolis.bed.avalanche(self.s, self.p)
 
         # increment time
         self.t += self.dt * self.p['accfac']
@@ -832,9 +836,9 @@ class AeoLiS(IBmi):
 
                 # add boundaries
                 if p['boundary_offshore'] == 'constant':
-                    y[:,0] = p['boundary_offshore_flux'] / s['uw'][:,0]
+                    y_i[:,0] = p['boundary_offshore_flux'] / s['uw'][:,0]
                 if p['boundary_onshore'] == 'constant':
-                    y[:,-1] = p['boundary_onshore_flux'] / s['uw'][:,-1]
+                    y_i[:,-1] = p['boundary_onshore_flux'] / s['uw'][:,-1]
 
                 # solve system with current weights
                 Ct_i = scipy.sparse.linalg.spsolve(A, y_i.flatten())
