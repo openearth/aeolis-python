@@ -44,13 +44,35 @@ INITIAL_STATE = {
 
 MODEL_STATE = {
     ('ny', 'nx') : (
-        'x',                                # [m] Real-world x-coordinate of grid cell center
+        'x',                                # [m] Real-world x-coordinate of grid cell center      
         'y',                                # [m] Real-world y-coordinate of grid cell center
+# Gridparams 
+        'xz',                               # [m] Real-world x-coordinate of grid cell center
+        'xu',                               # [m] Real-world x-coordinates of u-points
+        'xv',                               # [m] Real-world x-coordinates of v-points
+        'xc',                               # [m] Real-world x-oordinates of c-points
+        'yz',                               # [m] Real-world y-coordinate of grid cell center
+        'yu',                               # [m] Real-world y-coordinates of u-points
+        'yv',                               # [m] Real-world y-coordinates of v-points
+        'yc',                               # [m] Real-world y-coordinates of c-points
         'ds',                               # [m] Real-world grid cell size in x-direction
         'dn',                               # [m] Real-world grid cell size in y-direction
+        'dnz',                              # [m] Distances in n-direction
+        'dnu',                              # [m] Distances in n-direction
+        'dnv',                              # [m] Distances in n-direction
+        'dnc',                              # [m] Distances in n-direction
+        'dsz',                              # [m] Distances in s-direction
+        'dsu',                              # [m] Distances in s-direction
+        'dsv',                              # [m] Distances in s-direction
+        'dsc',                              # [m] Distances in s-direction
+        'dsdnz',                             # [m^2] Real-world grid cell surface area
+        'dsdnzi',                            # [m^-2] Inverse of real-world grid cell surface area   
         'dsdn',                             # [m^2] Real-world grid cell surface area
-        'dsdni',                            # [m^-2] Inverse of real-world grid cell surface area
-        'alfa',                             # [rad] Real-world grid cell orientation
+        'dsdni',                            # [m^-2] Inverse of real-world grid cell surface area   
+        'alfaz',                            # [rad] Real-world grid cell orientation around z
+        'alfau',                            # [rad] Real-world grid cell orientation around u
+        'alfav',                            # [rad] Real-world grid cell orientation around v    
+        'alfa',                             # [rad] Real-world grid cell orientation #Sierd_comm in later releases this needs a revision 
         'zb',                               # [m] Bed level above reference
         'S',                                # [-] Level of saturation
     ),
@@ -95,6 +117,7 @@ DEFAULT_CONFIG = {
     'process_meteo'                 : False,              # Enable the process of meteo
     'process_salt'                  : False,              # Enable the process of salt
     'process_humidity'              : False,              # Enable the process of humidity
+    'process_avalanche'             : True,               # NEW! Enable the process of avalanching
     'th_grainsize'                  : True,               # Enable wind velocity threshold based on grainsize
     'th_bedslope'                   : False,              # Enable wind velocity threshold based on bedslope
     'th_moisture'                   : True,               # Enable wind velocity threshold based on moisture
@@ -153,6 +176,8 @@ DEFAULT_CONFIG = {
     'facDOD'                        : .1,                 # [-] Ratio between depth of disturbance and local wave height
     'csalt'                         : 35e-3,              # [-] Maximum salt concentration in bed surface layer
     'cpair'                         : 1.0035e-3,          # [MJ/kg/oC] Specific heat capacity air
+    'Mcr_stat'                      : 34.,                # critical static slope for avalanching
+    'Mcr_dyn'                       : 33.,                # critical dynamic slope for avalanching 
     'scheme'                        : 'euler_backward',   # Name of numerical scheme (euler_forward, euler_backward or crank_nicolson)
     'boundary_lateral'              : 'circular',         # Name of lateral boundary conditions (circular, noflux)
     'boundary_offshore'             : 'noflux',           # Name of offshore boundary conditions (gradient, noflux, constant, uniform)
