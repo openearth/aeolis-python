@@ -63,6 +63,7 @@ def initialize(s, p):
     nl = p['nlayers']
     nf = p['nfractions']
 
+## Sierd_com; This could be moved to gridparams file in future release where ds is equal to dsz??
     # initialize x-dimension
     s['x'][:,:] = p['xgrid_file']
     s['ds'][:,1:] = np.diff(s['x'], axis=1)
@@ -338,7 +339,7 @@ def prevent_negative_mass(m, dm, pickup):
 def mixtoplayer(s, p):
     '''Mix grain size distribution in top layer of the bed
 
-    Simulates mixing of the top layers of the bed by wave action. The
+    Simulates mixing of the top layers of the bed by wave action. The 
     wave action is represented by a local wave height maximized by a
     maximum wave hieght over depth ratio ``gamma``. The mixing depth
     is a fraction of the local wave height indicated by
@@ -407,5 +408,185 @@ def mixtoplayer(s, p):
 
 
 def avalanche(s, p):
+    '''Avalanche if bed slopes exceed critical slopes
 
+    Simulates the process of avalanching that is triggered by the exceedence
+    of a critical static slope ``Mcr_stat`` by the bed slope. The iteration
+    stops if the bed slope does not exceed the dynamic critical slope
+    ``Mcr_dyn``.
+
+    Parameters
+    ----------
+    s : dict
+        Spatial grids
+    p : dict
+        Model configuration parameters
+
+    Returns
+    -------
+    dict
+        Spatial grids
+
+    '''
+    
+    if p['process_avalanche']:
+    
+        nx = p['nx']+1
+        ny = p['ny']+1
+        
+        #parameters
+        
+        tan_stat = np.tan(np.deg2rad(p['Mcr_stat']))
+        tan_dyn = np.tan(np.deg2rad(p['Mcr_dyn']))
+        
+        E = 0.2
+        
+        grad_h_down = np.zeros((ny,nx,4))
+        flux_down = np.zeros((ny,nx,4))
+        slope_diff = np.zeros((ny,nx))
+        grad_h = np.zeros((ny,nx))
+    
+        max_iter_ava = 1000
+        
+        s, max_grad_h, grad_h, grad_h_down = calc_grad(s, p)
+        
+        initiate_avalanche = (max_grad_h > tan_stat) #* (np.max(s['zb']) > 2*tan_stat*s['dsu'][1,1]) # TEMP
+        
+        if initiate_avalanche:
+        
+            for i in range(0,max_iter_ava):
+                
+                grad_h_down *= 0.
+                flux_down *= 0.
+                slope_diff *= 0.
+                grad_h *= 0.
+                
+                s, max_grad_h, grad_h, grad_h_down = calc_grad(s, p)
+            
+                if max_grad_h < tan_dyn:
+                    break
+                
+                # Calculation of flux
+                              
+                if 0: #Sierd_com; for now we consider no non-erodible layers yet, Update this in future release 
+                    grad_h_nonerod = (s['zb'] - s['zne']) / s['dsu'] # HAS TO BE ADJUSTED!                 
+                    ix = np.logical_and(grad_h > tan_dyn, grad_h_nonerod > 0)
+                    slope_diff[ix] = np.tanh(grad_h[ix]) - np.tanh(0.9*tan_dyn)                    
+                    ix = grad_h_nonerod < grad_h - tan_dyn 
+                    slope_diff[ix] = np.tanh(grad_h_nonerod[ix])
+                else:
+                    ix = (grad_h > tan_dyn)
+                    slope_diff[ix] = np.tanh(grad_h[ix]) - np.tanh(0.9*tan_dyn)                    
+                    
+                                            
+                ix = grad_h != 0
+                
+                flux_down[:,:,0][ix] = slope_diff[ix] * grad_h_down[:,:,0][ix] / grad_h[ix]
+                flux_down[:,:,1][ix] = slope_diff[ix] * grad_h_down[:,:,1][ix] / grad_h[ix]
+                flux_down[:,:,2][ix] = slope_diff[ix] * grad_h_down[:,:,2][ix] / grad_h[ix]
+                flux_down[:,:,3][ix] = slope_diff[ix] * grad_h_down[:,:,3][ix] / grad_h[ix]
+                
+                # Calculation of change in bed level
+                
+                q_in = np.zeros((ny,nx))
+                
+                q_out = 0.5*np.abs(flux_down[:,:,0]) + 0.5* np.abs(flux_down[:,:,1]) + 0.5*np.abs(flux_down[:,:,2]) + 0.5* np.abs(flux_down[:,:,3])
+                
+                q_in[1:-1,1:-1] =   0.5*(np.maximum(flux_down[1:-1,:-2,0],0.) \
+                                    - np.minimum(flux_down[1:-1,2:,0],0.) \
+                                    + np.maximum(flux_down[:-2,1:-1,1],0.) \
+                                    - np.minimum(flux_down[2:,1:-1,1],0.) \
+                                    
+                                    + np.maximum(flux_down[1:-1,2:,2],0.) \
+                                    - np.minimum(flux_down[1:-1,:-2,2],0.) \
+                                    + np.maximum(flux_down[2:,1:-1,3],0.) \
+                                    - np.minimum(flux_down[:-2,1:-1,3],0.) )
+                
+                s['zb'] += E * (q_in - q_out)
+                
     return s
+
+def calc_grad(s,p):
+    '''Calculates the downslope gradients in the bed that are needed for
+    avalanching module
+
+ 
+    Parameters
+    ----------
+    s : dict
+        Spatial grids
+    p : dict
+        Model configuration parameters
+
+    Returns
+    -------
+    dict
+        Spatial grids
+    np.ndarray
+        Downslope gradients in 4 different directions (nx*ny, 4)
+    BART CAN YOU HELP UPDATING THIS
+
+    '''
+    
+    zb = s['zb']
+    
+    nx = p['nx']+1
+    ny = p['ny']+1
+    
+    ds = s['ds']
+    dn = s['dn']
+    
+    grad_h_down = np.zeros((ny,nx,4))
+    
+    # Calculation of slope (positive x-direction)
+    grad_h_down[:,1:-1,0] = zb[:,1:-1] - zb[:,2:] 
+    ix = zb[:,2:] > zb[:,:-2]
+    grad_h_down[:,1:-1,0][ix] = - (zb[:,1:-1][ix] - zb[:,:-2][ix])    
+    ix = np.logical_and(zb[:,2:]>zb[:,1:-1], zb[:,:-2]>zb[:,1:-1])
+    grad_h_down[:,1:-1,0][ix] = 0.
+
+    # Calculation of slope (positive y-direction)
+    grad_h_down[1:-1,:,1] = zb[1:-1,:] - zb[2:,:]    
+    ix = zb[2:,:] > zb[:-2,:]
+    grad_h_down[1:-1,:,1][ix] = - (zb[1:-1,:][ix] - zb[:-2,:][ix])    
+    ix = np.logical_and(zb[2:,:]>zb[1:-1,:], zb[:-2,:]>zb[1:-1,:])
+    grad_h_down[1:-1,:,1][ix] = 0.
+    
+    # Calculation of slope (negative x-direction)
+    grad_h_down[:,1:-1,2] = zb[:,1:-1] - zb[:,:-2]    
+    ix = zb[:,:-2] > zb[:,2:]
+    grad_h_down[:,1:-1,2][ix] = - (zb[:,1:-1][ix] - zb[:,2:][ix])    
+    ix = np.logical_and(zb[:,:-2]>zb[:,1:-1], zb[:,2:]>zb[:,1:-1])
+    grad_h_down[:,1:-1,2][ix] = 0.
+    
+    # Calculation of slope (negative y-direction)
+    grad_h_down[1:-1,:,3] = zb[1:-1,:] - zb[:-2,:]    
+    ix = zb[:-2,:] > zb[2:,:]
+    grad_h_down[1:-1,:,3][ix] = - (zb[1:-1,:][ix] - zb[2:,:][ix])    
+    ix = np.logical_and(zb[:-2,:]>zb[1:-1,:], zb[2:,:]>zb[1:-1,:])
+    grad_h_down[1:-1,:,3][ix] = 0.
+        
+    # Calculation of slopes (x+y)    
+    grad_h_down[:,0,:] = 0
+    grad_h_down[:,-1,:] = 0
+    grad_h_down[0,:,:] = 0
+    grad_h_down[-1,:,:] = 0
+    
+    grad_h_down[:,:,0] /= ds
+    grad_h_down[:,:,1] /= dn
+    grad_h_down[:,:,2] /= ds
+    grad_h_down[:,:,3] /= dn
+    
+    grad_h2 = 0.5*grad_h_down[:,:,0]**2 + 0.5*grad_h_down[:,:,1]**2 + 0.5*grad_h_down[:,:,2]**2 + 0.5*grad_h_down[:,:,3]**2
+    
+    if 0: #Sierd_com; to be changed in future release
+        ix = s['zb'] < s['zne'] + 0.005
+        grad_h2[ix] = 0.
+    
+    grad_h = np.sqrt(grad_h2)
+    
+    s['gradh'] = grad_h.copy()
+    
+    max_grad_h = np.max(grad_h)
+    
+    return s, max_grad_h, grad_h, grad_h_down
