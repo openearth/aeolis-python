@@ -52,6 +52,10 @@ import aeolis.hydro
 import aeolis.netcdf
 import aeolis.constants
 
+#import aeolis.vegetation
+#import aeolis.gridparams
+#import aeolis.avalanche
+
 from aeolis.utils import *
 
 class StreamFormatter(logging.Formatter):
@@ -179,12 +183,6 @@ class AeoLiS(IBmi):
         self.p = aeolis.inout.read_configfile(self.configfile)
         aeolis.inout.check_configuration(self.p)
 
-        # set nx, ny and nfractions
-        self.p['ny'], self.p['nx'] = self.p['xgrid_file'].shape
-        self.p['nx'] -= 1 # change nx from number of points to number of cells
-        self.p['ny'] -= 1 # change ny from number of points to number of cells
-        self.p['nfractions'] = len(self.p['grain_dist'])
-
         # initialize time
         self.t = self.p['tstart']
 
@@ -198,12 +196,18 @@ class AeoLiS(IBmi):
         for var, dims in self.dimensions().items():
             self.s[var] = np.zeros(self._dims2shape(dims))
             self.l[var] = self.s[var].copy()
+            
+        # initialize grid parameters
+#        self.s = aeolis.gridparams.initialize(self.s, self.p)
 
         # initialize bed composition
         self.s = aeolis.bed.initialize(self.s, self.p)
 
         # initialize wind model
         self.s = aeolis.wind.initialize(self.s, self.p)
+        
+        #initialize vegetation model
+#        self.s = aeolis.vegetation.initialize(self.s, self.p)                  #toevoegen als veg. module is gemaakt
 
 
     def update(self, dt=-1):
@@ -236,10 +240,20 @@ class AeoLiS(IBmi):
 
         # store previous state
         self.l = self.s.copy()
-
+        
         # interpolate wind time series
         self.s = aeolis.wind.interpolate(self.s, self.p, self.t)
-
+        
+        if np.sum(self.s['uw']) != 0:
+        
+            # calculate wind shear (bed + separation bubble)
+            self.s = aeolis.wind.shear(self.s, self.p)
+        
+        # compute vegetation shear
+        
+        # compute shear velocity and determine grainspeed
+        
+        
         # determine optimal time step
         if not self.set_timestep(dt):
             return
@@ -269,6 +283,12 @@ class AeoLiS(IBmi):
 
         # update bed
         self.s = aeolis.bed.update(self.s, self.p)
+        
+        # compute bed slopes (for avalanching)
+        #self.s = aeolis.bed.slope(self.s, self.p)
+        
+        # avalanching
+#        self.s = aeolis.bed.avalanche(self.s, self.p)
 
         # increment time
         self.t += self.dt * self.p['accfac']

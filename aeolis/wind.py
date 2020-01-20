@@ -30,6 +30,8 @@ from __future__ import absolute_import, division
 import numpy as np
 import logging
 import operator
+import matplotlib.pyplot as plt
+
 
 # package modules
 import aeolis.shear
@@ -59,7 +61,7 @@ def initialize(s, p):
     if p['process_shear']:
         s['shear'] = aeolis.shear.WindShear(s['x'], s['y'], s['zb'],
                                             L=100., l=10., z0=.001, 
-                                            buffer_width=10.)                   # look for correct input params
+                                            buffer_width=10.)                   
         
     return s
 
@@ -100,15 +102,15 @@ def interpolate(s, p, t):
         s['udir'][:,:] = np.arctan2(interp_circular(t, uw_t, np.sin(uw_d)),
                                     interp_circular(t, uw_t, np.cos(uw_d))) * 180. / np.pi
 
-    s['uws'] = s['uw'] * np.cos(s['alfa'] + s['udir'] / 180. * np.pi)
+    s['uws'] = s['uw'] * np.cos(s['alfa'] + s['udir'] / 180. * np.pi)           # alfa is real world grid cell orientation
     s['uwn'] = s['uw'] * np.sin(s['alfa'] + s['udir'] / 180. * np.pi)
 
     if p['ny'] == 0:
         s['uwn'][:,:] = 0.
         
     s['uw'] = np.abs(s['uw'])
-
-    # compute wind shear at height z
+    
+    # Compute wind shear at height z
     kappa = 0.41
     z = p['z']
     z0 = p['k']                                                                 # dependent on grain size?                                             
@@ -117,7 +119,7 @@ def interpolate(s, p, t):
     s['taus'] = s['uws'] * kappa / np.log(z/z0)
     s['taun'] = s['uwn'] * kappa / np.log(z/z0)
     
-    # Compute saltation velocity (at height z1)
+    # Compute wind velocity (at height z1)
     if p['h'] is not None:
         z1 = p['h']
     
@@ -125,7 +127,7 @@ def interpolate(s, p, t):
         s['uws'] = s['taus'] / kappa * np.log(z1/z0)
         s['uwn'] = s['taun'] / kappa * np.log(z1/z0)
     
-    # Shear stress to shear velocity
+    # Shear stress to shear velocity                                            # waar wordt dit voor gebruikt?
     s['ustar'] = np.sqrt(s['tau'] / p['rhoa'])
     s['ustars'] = s['ustar'] * s['taus'] / s['tau']
     s['ustarn'] = s['ustar'] * s['taun'] / s['tau']
@@ -141,29 +143,13 @@ def interpolate(s, p, t):
     s['taun0'] = s['taun'].copy()
     
     return s
-    
-   
+
 def shear(s,p):
-    '''Determine shear velocity including separation process
-
-    Parameters
-    ----------
-    s : dict
-        Spatial grids
-    p : dict
-        Model configuration parameters
-        
-    Returns
-    -------
-    dict
-        Spatial grids
-
-    '''
     
+    # Compute shear velocity field (including separation)
     if 'shear' in s.keys() and p['process_shear']:
         
         s['shear'].set_topo(s['zb'].copy())
-        s['shear'].set_shear(s['taus'], s['taun'])
         
         s['shear'](u0=s['uw'][0,0],
                    udir=s['udir'][0,0],
@@ -173,22 +159,22 @@ def shear(s,p):
         s['taus'], s['taun'] = s['shear'].add_shear(s['taus'], s['taun'])
         s['tau'] = np.hypot(s['taus'], s['taun'])
         
-#        import matplotlib.pyplot as plt
+#        print (s['tau'])
+        
+#        plt.figure()
 #        plt.pcolormesh(s['x'], s['y'], s['ustar'])
-#       # plt.pcolormesh(s['x'], s['y'], (np.sqrt(2 * alfa) * uf / Ax[:,:,0]) * dhs[:,:,0])
+#        # plt.pcolormesh(s['x'], s['y'], (np.sqrt(2 * alfa) * uf / Ax[:,:,0]) * dhs[:,:,0])
 #        plt.colorbar()
-#        plt.show(
+#        plt.show()
                                
-#        if p['process_separation']:
-#            s['dzsep'] = ['shear'].get_separation()
-#            s['zsep'] = s['dzsep'] + s['zb']
+        # Returns separation surface     
+        if p['process_separation']:
+            s['hsep'] = s['shear'].get_separation()
+            s['zsep'] = s['hsep'] + s['zb']
 
     return s
 
-def separation(s,p):                                                            # to be determined
-    
-    return s
 
-def filter_low(s, p, par, direction, Cut):                                      # waar is dit filter voor?
-    
-    return s
+# def filter_low(s, p, par, direction, Cut):                                    # No references to this filter function..?
+                                                                                 
+#    return s

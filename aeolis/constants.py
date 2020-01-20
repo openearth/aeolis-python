@@ -54,6 +54,17 @@ MODEL_STATE = {
         'alfa',                             # [rad] Real-world grid cell orientation
         'zb',                               # [m] Bed level above reference
         'S',                                # [-] Level of saturation
+        'ustar',                       #NEW # [m/s] Shear velocity by wind
+        'ustars',                      #NEW # [m/s] Component of shear velocity in x-direction by wind
+        'ustarn',                      #NEW # [m/s] Component of shear velocity in y-direction by wind
+        'ustar0',                      #NEW # [m/s] Initial Shear velocity by wind 
+        'tau0',                        #NEW # [m/s] Initial wind shear velocity
+        'taus0',                       #NEW # [m/s] Component of initial wind shear velocity in x-direction
+        'taun0',                       #NEW # [m/s] Component of initial wind shear velocity in y-direction
+        'zsep',                        #NEW # [m] Z level of polynomial that defines the separation bubble
+        'hsep',                        #NEW # [m] Height of separation bubbel = difference z-level of zsep and of the bed level zb
+#        'stall',                       #NEW # [ ] 
+#        'bubble',                      #NEW # [ ] 
     ),
     ('ny','nx','nfractions') : (
         'Cu',                               # [kg/m^2] Equilibrium sediment concentration integrated over saltation height
@@ -98,7 +109,7 @@ DEFAULT_CONFIG = {
     'process_humidity'              : False,              # Enable the process of humidity
     'process_avalanche'             : False,        # NEW # Enable the process of avalanching
     'process_inertia'               : False,        # NEW 
-    'process_separation'            : False,        # NEW # Enable the incluing of separation bubble
+    'process_separation'            : True,         # NEW # Enable the incluing of separation bubble
     'th_grainsize'                  : True,               # Enable wind velocity threshold based on grainsize
     'th_bedslope'                   : False,              # Enable wind velocity threshold based on bedslope
     'th_moisture'                   : True,               # Enable wind velocity threshold based on moisture
@@ -163,6 +174,8 @@ DEFAULT_CONFIG = {
     'facDOD'                        : .1,                 # [-] Ratio between depth of disturbance and local wave height
     'csalt'                         : 35e-3,              # [-] Maximum salt concentration in bed surface layer
     'cpair'                         : 1.0035e-3,          # [MJ/kg/oC] Specific heat capacity air
+    'theta_dyn'                     : 33.,           #NEW # [degrees] Dynamic angle of repose 
+    'theta_stat'                    : 34.,           #NEW # [degrees] Static angle of repose
     'scheme'                        : 'euler_backward',   # Name of numerical scheme (euler_forward, euler_backward or crank_nicolson)
     'boundary_lateral'              : 'circular',         # Name of lateral boundary conditions (circular, noflux)
     'boundary_offshore'             : 'noflux',           # Name of offshore boundary conditions (gradient, noflux, constant, uniform)
