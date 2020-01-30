@@ -181,9 +181,14 @@ class AeoLiS(IBmi):
         aeolis.inout.check_configuration(self.p)
         
         # set nx, ny and nfractions
-        self.p['ny'], self.p['nx'] = self.p['xgrid_file'].shape
-        self.p['nx'] -= 1 # change nx from number of points to number of cells
-        self.p['ny'] -= 1 # change ny from number of points to number of cells
+        if self.p['xgrid_file'].ndim==2:
+            self.p['ny'], self.p['nx'] = self.p['xgrid_file'].shape
+            self.p['nx'] -= 1 # change nx from number of points to number of cells
+            self.p['ny'] -= 1 # change ny from number of points to number of cells
+        else:
+            self.p['nx'] = self.p['xgrid_file'].size
+            self.p['nx'] -= 1 # change nx from number of points to number of cells
+            self.p['ny'] = 0 # change ny from number of points to number of cells
         self.p['nfractions'] = len(self.p['grain_dist'])
 
         # initialize time
