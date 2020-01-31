@@ -181,7 +181,11 @@ class AeoLiS(IBmi):
         aeolis.inout.check_configuration(self.p)
         
         # set nx, ny and nfractions
-        self.p['ny'], self.p['nx'] = self.p['xgrid_file'].shape
+		if len(self.p['xgrid_file'].shape) == 2:
+			self.p['ny'], self.p['nx'] = self.p['xgrid_file'].shape
+		else:
+			self.p['nx'] = self.p['xgrid_file'].shape
+			self.p['ny'] = 1
         self.p['nx'] -= 1 # change nx from number of points to number of cells
         self.p['ny'] -= 1 # change ny from number of points to number of cells
         self.p['nfractions'] = len(self.p['grain_dist'])
@@ -853,6 +857,7 @@ class AeoLiS(IBmi):
                                               fraction=i,
                                               iteration=n,
                                               minvalue=Ct_i.min(),
+											  coords=np.argwhere(ix.reshape(y_i.shape)),
                                               **logprops))
 
                     Ct_i[~ix] *= 1. + Ct_i[ix].sum() / Ct_i[~ix].sum()
