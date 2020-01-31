@@ -370,7 +370,7 @@ def mixtoplayer(s, p):
         nl = p['nlayers']
         nf = p['nfractions']
 
-        # compute depth of disturbence for each cell and repeat for each layer
+        # compute depth of disturbance for each cell and repeat for each layer
         DOD = p['facDOD'] * s['Hs']
 
         # compute ratio total layer thickness and depth of disturbance 
@@ -481,27 +481,47 @@ def avalanche(s, p):
                                             
                 ix = grad_h != 0
                 
-                flux_down[:,:,0][ix] = slope_diff[ix] * grad_h_down[:,:,0][ix] / grad_h[ix]
-                flux_down[:,:,1][ix] = slope_diff[ix] * grad_h_down[:,:,1][ix] / grad_h[ix]
-                flux_down[:,:,2][ix] = slope_diff[ix] * grad_h_down[:,:,2][ix] / grad_h[ix]
-                flux_down[:,:,3][ix] = slope_diff[ix] * grad_h_down[:,:,3][ix] / grad_h[ix]
                 
-                # Calculation of change in bed level
-                
-                q_in = np.zeros((ny,nx))
-                
-                q_out = 0.5*np.abs(flux_down[:,:,0]) + 0.5* np.abs(flux_down[:,:,1]) + 0.5*np.abs(flux_down[:,:,2]) + 0.5* np.abs(flux_down[:,:,3])
-                
-                q_in[1:-1,1:-1] =   0.5*(np.maximum(flux_down[1:-1,:-2,0],0.) \
-                                    - np.minimum(flux_down[1:-1,2:,0],0.) \
-                                    + np.maximum(flux_down[:-2,1:-1,1],0.) \
-                                    - np.minimum(flux_down[2:,1:-1,1],0.) \
-                                    
-                                    + np.maximum(flux_down[1:-1,2:,2],0.) \
-                                    - np.minimum(flux_down[1:-1,:-2,2],0.) \
-                                    + np.maximum(flux_down[2:,1:-1,3],0.) \
-                                    - np.minimum(flux_down[:-2,1:-1,3],0.) )
-                
+                if ny==1:
+                    #1D interpretation
+                    flux_down[:,:,0][ix] = slope_diff[ix] * grad_h_down[:,:,0][ix] / grad_h[ix]
+                    flux_down[:,:,2][ix] = slope_diff[ix] * grad_h_down[:,:,2][ix] / grad_h[ix]
+                    
+                    # Calculation of change in bed level
+                    
+                    q_in = np.zeros((ny,nx))
+                    
+                    q_out = 0.5*np.abs(flux_down[:,:,0]) + 0.5*np.abs(flux_down[:,:,2])
+                    
+                    q_in[0,1:-1] =   0.5*(np.maximum(flux_down[0,:-2,0],0.) \
+                                        - np.minimum(flux_down[0,2:,0],0.) \
+                                                                               
+                                        + np.maximum(flux_down[0,2:,2],0.) \
+                                        - np.minimum(flux_down[0,:-2,2],0.) )
+                    
+                else:
+                    #2D interpretation
+                    flux_down[:,:,0][ix] = slope_diff[ix] * grad_h_down[:,:,0][ix] / grad_h[ix]
+                    flux_down[:,:,1][ix] = slope_diff[ix] * grad_h_down[:,:,1][ix] / grad_h[ix]
+                    flux_down[:,:,2][ix] = slope_diff[ix] * grad_h_down[:,:,2][ix] / grad_h[ix]
+                    flux_down[:,:,3][ix] = slope_diff[ix] * grad_h_down[:,:,3][ix] / grad_h[ix]
+                    
+                    # Calculation of change in bed level
+                    
+                    q_in = np.zeros((ny,nx))
+                    
+                    q_out = 0.5*np.abs(flux_down[:,:,0]) + 0.5* np.abs(flux_down[:,:,1]) + 0.5*np.abs(flux_down[:,:,2]) + 0.5* np.abs(flux_down[:,:,3])
+                    
+                    q_in[1:-1,1:-1] =   0.5*(np.maximum(flux_down[1:-1,:-2,0],0.) \
+                                        - np.minimum(flux_down[1:-1,2:,0],0.) \
+                                        + np.maximum(flux_down[:-2,1:-1,1],0.) \
+                                        - np.minimum(flux_down[2:,1:-1,1],0.) \
+                                        
+                                        + np.maximum(flux_down[1:-1,2:,2],0.) \
+                                        - np.minimum(flux_down[1:-1,:-2,2],0.) \
+                                        + np.maximum(flux_down[2:,1:-1,3],0.) \
+                                        - np.minimum(flux_down[:-2,1:-1,3],0.) )
+                    
                 s['zb'] += E * (q_in - q_out)
                 
     return s
@@ -544,7 +564,7 @@ def calc_grad(s,p):
     grad_h_down[:,1:-1,0][ix] = - (zb[:,1:-1][ix] - zb[:,:-2][ix])    
     ix = np.logical_and(zb[:,2:]>zb[:,1:-1], zb[:,:-2]>zb[:,1:-1])
     grad_h_down[:,1:-1,0][ix] = 0.
-
+    
     # Calculation of slope (positive y-direction)
     grad_h_down[1:-1,:,1] = zb[1:-1,:] - zb[2:,:]    
     ix = zb[2:,:] > zb[:-2,:]
@@ -565,17 +585,23 @@ def calc_grad(s,p):
     grad_h_down[1:-1,:,3][ix] = - (zb[1:-1,:][ix] - zb[2:,:][ix])    
     ix = np.logical_and(zb[:-2,:]>zb[1:-1,:], zb[2:,:]>zb[1:-1,:])
     grad_h_down[1:-1,:,3][ix] = 0.
-        
-    # Calculation of slopes (x+y)    
-    grad_h_down[:,0,:] = 0
-    grad_h_down[:,-1,:] = 0
-    grad_h_down[0,:,:] = 0
-    grad_h_down[-1,:,:] = 0
+
+    if ny==1:
+        #1D interpretation
+        grad_h_down[:,0,:] = 0
+        grad_h_down[:,-1,:] = 0
+    else:           
+        # 2D interpreation
+        grad_h_down[:,0,:] = 0
+        grad_h_down[:,-1,:] = 0
+        grad_h_down[0,:,:] = 0
+        grad_h_down[-1,:,:] = 0
     
     grad_h_down[:,:,0] /= ds
     grad_h_down[:,:,1] /= dn
     grad_h_down[:,:,2] /= ds
     grad_h_down[:,:,3] /= dn
+    
     
     grad_h2 = 0.5*grad_h_down[:,:,0]**2 + 0.5*grad_h_down[:,:,1]**2 + 0.5*grad_h_down[:,:,2]**2 + 0.5*grad_h_down[:,:,3]**2
     
