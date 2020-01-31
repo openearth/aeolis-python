@@ -857,7 +857,7 @@ class AeoLiS(IBmi):
                                               fraction=i,
                                               iteration=n,
                                               minvalue=Ct_i.min(),
-											  coords=np.argwhere(ix.reshape(y_i.shape)),
+                                              coords=np.argwhere(ix.reshape(y_i.shape)),
                                               **logprops))
 
                     Ct_i[~ix] *= 1. + Ct_i[ix].sum() / Ct_i[~ix].sum()
