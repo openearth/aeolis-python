@@ -23,7 +23,10 @@ http://aeolis.readthedocs.io/.
 AeoLiS is initially developed at Delft University of Technology with support from the ERC-Advanced
 Grant 291206 Nearshore Monitoring and Modeling
 ([NEMO](http://nemo.citg.tudelft.nl>)) and
-[Deltares](http://www.deltares.nl>). AeoLiS is currently maintained by
+[Deltares](http://www.deltares.nl>). 
+
+Significant contributions to the development have been made by
+[Bas Hoonhout](mailto:bas@hoonhout.com), 
 [Bart van Westen](mailto:Bart.vanWesten@deltares.nl) at Deltares, 
 [Nick Cohn](mailto:nick.cohn@usace.army.mil) at U.S. Army Engineer Research and Development Center (ERDC) and 
 [Sierd de Vries](mailto:Sierd.deVries@tudelft.nl) at Delft University of Technology.
