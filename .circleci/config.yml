@@ -48,11 +48,7 @@ jobs:
           name: run tests
           command: |
             . venv/bin/activate
-            override:
-              - mkdir -p $CIRCLE_TEST_REPORTS/nose
-              - mkdir -p $CIRCLE_ARTIFACTS/coverage
-              - nosetests --with-coverage
-              - codecov
+            run python setup.py test
 
       - store_artifacts:
           path: test-reports
