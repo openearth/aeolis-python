@@ -4,3 +4,4 @@ codecov
 sphinxcontrib-bibtex
 sphinxcontrib-napoleon
 nose
+scipy
