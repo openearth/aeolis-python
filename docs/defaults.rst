@@ -10,4 +10,4 @@ configuration is listed below.
 .. literalinclude:: ../aeolis/constants.py
    :language: python
    :start-after: #: AeoLiS model default configuration
-   :end-before: #: Required model configuration parameters
+   :end-before: #: Merge initial and model state
