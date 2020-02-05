@@ -1,0 +1,5 @@
+netCDF4==1.4.1
+coverage
+codecov
+sphinxcontrib-bibtex
+sphinxcontrib-napoleon
