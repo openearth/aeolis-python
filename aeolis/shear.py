@@ -28,10 +28,14 @@ import logging
 import numpy as np
 import scipy.special
 import scipy.interpolate
-import matplotlib as plt
-import scipy.interpolate as spint
-import scipy.spatial.qhull as qhull
-import time
+import matplotlib
+import matplotlib.pyplot as plt
+#import scipy.interpolate as spint
+#import scipy.spatial.qhull as qhull
+#import time
+
+# package modules
+from aeolis.utils import *
 
 
 # initialize logger
@@ -72,9 +76,9 @@ class WindShear:
 
     * Actual resulting values are still to be compared with the results
        from Kroy et al. (2002)
-    * Grid interpolation can still be optimized                                 # update after thesis completion?
-    * Separation bubble is still to be implemented                              # in progress
-    * Avalanching is still to be implemented                                    # apart module is to be written
+    * Grid interpolation can still be optimized                                 
+    * Separation bubble is still to be implemented                              
+    * Avalanching is still to be implemented                                    
 
     '''
 
@@ -85,7 +89,7 @@ class WindShear:
     
     
     def __init__(self, x, y, z, dx=1., dy=1.,
-                 buffer_width=100., buffer_relaxation=None,
+                 buffer_width=10., buffer_relaxation=None,
                  L=100., l=10., z0=.001):
         '''Class initialization
             
@@ -128,10 +132,6 @@ class WindShear:
         self.igrid = dict(x = x,
                           y = y,
                           z = z)
-        
-#        self.irgrid = dict(x = x,                                              # is this used?
-#                          y = y,
-#                          z = z)
             
         self.cgrid = dict(dx = dx,
                           dy = dy)
@@ -144,9 +144,9 @@ class WindShear:
         self.z0 = z0
                           
         self.set_computational_grid()
+        
 
-
-    def __call__(self, u0, udir, process_separation):                           # gebasserd op trunk
+    def __call__(self, u0, udir, process_separation):                           
         '''Compute wind shear for given wind speed and direction
         
         Parameters
@@ -161,41 +161,98 @@ class WindShear:
         gc = self.cgrid # computational grid
         gi = self.igrid # initial grid
         
+        
         # Populate computational grid (rotate to wind direction + interpolate input topography)
-        udir = udir + 90
-        self.populate_computational_grid(udir)
+        self.populate_computational_grid(udir+90.)
         
         # Compute separation bubble
         if process_separation:
-            zsep = self.separation()
+            gc['zsep'] = self.separation()
             z_origin = gc['z'].copy()
-            gc['z'] = np.maximum(gc['z'], zsep)
+            gc['z'] = np.maximum(gc['z'], gc['zsep'])
         
-        # Compute wind shear on computational grid (incl. separation)
-        self.compute_shear(u0)
+        # Compute wind shear stresses on computational grid 
+        u = np.zeros(u0.shape)
+        
+        ix = u0 > 0
+        u [ix] = u0 [ix] / u0[ix] #* 0.76
+        
+        self.compute_shear(u)
+        #gc['dtaux']= np.maximum(gc['dtaux'], -1.)
+        
+        gc['dtaux'], gc['dtauy'] = self.rotate(gc['dtaux'], gc['dtauy'], udir+90)
+        
+        # Plot shear stresses on c.grid---------------------
+        # d = 10
+        # plt.pcolormesh(gc['x'], gc['y'], gc['z'], cmap='copper_r')
+        # bar = plt.colorbar()
+        # bar.set_label('zb [m]')                          
+        # plt.quiver(gc['x'][::d, ::d], gc['y'][::d, ::d],
+        #           gc['dtaux'][::d, ::d], gc['dtauy'][::d, ::d], color='white')
+        # plt.xlabel('xc [m]')
+        # plt.ylabel('yc [m]')
+        # plt.title('Morphology-wind shear stresses on c.grid')
+        # plt.show()
+        # -------------------------------------------------
+        
+        
+        # Add shear and apply reduction factor for shear in sep. bubble
+        self.add_shear()
         
         if process_separation:
             gc['hsep'] = gc['z'] - z_origin
             self.separation_shear(gc['hsep'])
+            
+        # PLOTTING! -------------------------------------------------------
+        # d = 10
+        # plt.pcolormesh(gc['x'], gc['y'], gc['z'], cmap='copper_r') 
+        # bar = plt.colorbar()
+        # bar.set_label('zb [m]')                         
+        # plt.quiver(gc['x'][::d, ::d], gc['y'][::d, ::d],
+        #           gc['taux'][::d, ::d], gc['tauy'][::d, ::d], color='white')
+        # plt.xlabel('xc [m]')
+        # plt.ylabel('yc [m]')
+        # plt.title('Total shear stresses c.grid')
+        # plt.show()
+        # -------------------------------------------------   
         
-        # Rotate grid and results to original grid orientation
-        x, y = self.rotate(gc['x'], gc['y'], -udir)
+        # Rotate both (i&c) grids + results in opposite dir.
+        gi['x'], gi['y'] = self.rotate(gi['x'], gi['y'], -(udir+90.), origin=(self.x0, self.y0))
         
-        dtaux, dtauy = self.rotate(gc['dtaux'], gc['dtauy'], -udir)
+        gc['x'], gc['y'] = self.rotate(gc['x'], gc['y'], -(udir+90.), origin=(self.x0, self.y0))
         
-        gc['x'] = x  
-        gc['y'] = y                       
-        gc['dtaux'] = dtaux
-        gc['dtauy'] = dtauy
+        gc['taux'], gc['tauy'] = self.rotate(gc['taux'], gc['tauy'], -(udir+90))
         
-        # Interpolate results on original grid
-        gi['dtaux'] = self.interpolate(gc['x'], gc['y'], dtaux,
+    
+        # Interpolate wind shear results to real grid
+        gi['taux'] = self.interpolate(gc['x'], gc['y'], gc['taux'],
                                               gi['x'], gi['y'])
-        gi['dtauy'] = self.interpolate(gc['x'], gc['y'], dtauy,
+        gi['tauy'] = self.interpolate(gc['x'], gc['y'], gc['tauy'],
                                               gi['x'], gi['y'])
+        
         if process_separation:
             gi['hsep'] = self.interpolate(gc['x'], gc['y'], gc['hsep'], 
-                                              gi['x'], gi['y'] )
+                                          gi['x'], gi['y'] )
+            
+        # Rotate real grid and wind shear results back to orignal orientation
+        gc['x'], gc['y'] = self.rotate(gc['x'], gc['y'], udir+90., origin=(self.x0, self.y0))
+        gi['x'], gi['y'] = self.rotate(gi['x'], gi['y'], +(udir+90.), origin=(self.x0, self.y0))
+                       
+        gi['taux'], gi['tauy'] = self.rotate(gi['taux'], gi['tauy'], +(udir+90))
+        
+        # PLOTTING! -------------------------------------------------------
+        # d = 10
+        # plt.figure(figsize=(8,4))
+        # plt.pcolormesh(gi['x'], gi['y'], gi['z'], cmap='copper_r')  
+        # bar = plt.colorbar()
+        # bar.set_label('zb [m]')                        
+        # plt.quiver(gi['x'][::d, ::d], gi['y'][::d, ::d],
+        #           gi['taux'][::d, ::d], gi['tauy'][::d, ::d], color='white')
+        # plt.xlabel('x [m]')
+        # plt.ylabel('y [m]')
+        # plt.title('Shear stresses on i.grid')
+        # plt.show()
+        # -------------------------------------------------        
         
         return self
  
@@ -215,25 +272,39 @@ class WindShear:
 
         return self
     
+    def set_shear(self, taus, taun):
+        '''Update shear
+
+        Parameters
+        ----------
+        tau : numpy.ndarray
+            array with wind shear stresses of input grid
+
+        '''
+        self.igrid['taux'] = taus
+        self.igrid['tauy'] = taun
+        
+        return self
+    
     def get_shear(self):
         '''Returns wind shear perturbation field
         
         Returns
         -------
-        dtaux : numpy.ndarray
+        taux : numpy.ndarray
             Wind shear perturbation in x-direction
-        dtauy : numpy.ndarray
+        tauy : numpy.ndarray
             Wind shear perturbation in y-direction
         
         '''
 
-        dtaux = self.igrid['dtaux']
-        dtauy = self.igrid['dtauy']
+        taux = self.igrid['taux']
+        tauy = self.igrid['tauy']
             
-        return dtaux, dtauy
+        return taux, tauy
         
         
-    def add_shear(self, taux, tauy):
+    def add_shear(self):
         '''Add wind shear perturbations to a given wind shear field
         
         Parameters
@@ -251,20 +322,19 @@ class WindShear:
             Wind shear including perturbations in y-direction
         
         '''
+        taux = self.cgrid['taux']
+        tauy = self.cgrid['tauy']
         
         tau = np.sqrt(taux**2 + tauy**2)
-        ix = tau > 0.
+        ix = tau != 0.
 
-        dtaux = self.igrid['dtaux']
-        dtauy = self.igrid['dtauy']
+        dtaux = self.cgrid['dtaux']
+        dtauy = self.cgrid['dtauy']
         
-        taux[ix] = tau[ix] * (taux[ix] / tau[ix] + dtaux[ix])
-        tauy[ix] = tau[ix] * (tauy[ix] / tau[ix] + dtauy[ix])
+        self.cgrid['taux'][ix] = tau[ix] * (taux[ix] / tau[ix] + dtaux[ix])
+        self.cgrid['tauy'][ix] = tau[ix] * (tauy[ix] / tau[ix] + dtauy[ix])
         
-        self.igrid['taux'] = taux
-        self.igrid['tauy'] = tauy
-        
-        return taux, tauy
+        return self
     
     def get_separation(self):
         '''Returns difference in height between z-coordinate of 
@@ -287,12 +357,12 @@ class WindShear:
         
         The computational grid is square with dimensions equal to the
         diagonal of the bounding box of the input grid, plus twice the
-        buffer width.
+        buffer width. 
 
         '''
             
-        gc = self.cgrid
         gi = self.igrid
+        gc = self.cgrid
                 
         # grid center
         x0, y0 = np.mean(gi['x']), np.mean(gi['y'])
@@ -310,14 +380,15 @@ class WindShear:
         self.y0 = y0
         gc['xi'] = xc
         gc['yi'] = yc
+    
         
     def populate_computational_grid(self, alpha):                               
         '''Interpolate input topography to computational grid
                 
-        Adds a buffer zone around the computational grid and 
+        Adds and fills buffer zone around the initial grid and  
         rotates the computational grid to current wind direction.
         The computational grid is filled by interpolating the input 
-        topography to it. 
+        topography and initial wind induced shear stresses to it.
             
         Parameters
         ----------
@@ -326,8 +397,8 @@ class WindShear:
 
         '''
         
-        gc = self.cgrid
         gi = self.igrid
+        gc = self.cgrid
         
         # Add buffer zone around grid                                           #buffer is based on version bart, sigmoid function is no longer required
         dxi = gi['x'][1,1] - gi['x'][0,0]
@@ -337,8 +408,10 @@ class WindShear:
 
         xi, yi = np.meshgrid(np.linspace(gi['x'][0,0]-buf*dxi, gi['x'][-1,-1]+buf*dxi, gi['x'].shape[1]+2*buf),
                             np.linspace(gi['y'][0,0]-buf*dyi, gi['y'][-1,-1]+buf*dyi, gi['y'].shape[0]+2*buf))
-
+        
+        
         zi = np.zeros((xi.shape))
+        zi[buf:-buf, buf:-buf] = gi['z']
         
         # Filling buffer zone edges
         zi[buf:-buf,:buf] = np.repeat(zi[buf:-buf,buf+1][:,np.newaxis], buf, axis = 1)
@@ -356,19 +429,20 @@ class WindShear:
         # Rotate computational grid to the current wind direction
         xc, yc = self.rotate(gc['xi'], gc['yi'], alpha, origin=(self.x0, self.y0))
         
-        # Interpolate input topography (and shear stresses??) to computational grid
+        # Interpolate input topography to computational grid
         zc = self.interpolate(xi, yi, zi, xc, yc)
         
-#        dtauxc = self.interpolate(gi['x'], gi['y'], gi['dtaux'], xc, yc)
-#        dtauyc = self.interpolate(gi['x'], gi['y'], gi['dtauy'], xc, yc)
+        # Interpolate input wind - shear
+        tauxc = self.interpolate(gi['x'], gi['y'], gi['taux'], xc, yc)
+        tauyc = self.interpolate(gi['x'], gi['y'], gi['tauy'], xc, yc)
         
         gc['x'] = xc
         gc['y'] = yc
         gc['z'] = zc
         
-#        gc['dtaux'] = dtauxc
-#        gc['dtauy'] = dtauyc
-        
+        gc['taux'] = tauxc
+        gc['tauy'] = tauyc
+
         return self
     
     def separation(self):
@@ -378,10 +452,13 @@ class WindShear:
         gc = self.cgrid
          
         x = gc['x']
+        y = gc['y']
         z = gc['z']
         
         nx = len(gc['z'][1])
+        ny = len(gc['z'][0])
         dx = gc['dx']
+        dy = gc['dy']
     
         # Initialize arrays
 
@@ -401,21 +478,24 @@ class WindShear:
         
 #        zsep2 = np.zeros(g['z'].shape)                                         # separation bubble after cutting dune profile       
 #        zmin = np.zeros(ny)
+        
+        zfft = np.zeros((ny,nx), dtype=np.complex)
 
-        c = 0.2                                                                 # max slope of separation surface
+        c = 0.2                                                                # max slope of separation surface
                                                                                 # c = 0.2 according to Durán 2010 (Sauermann 2001: c = 0.25 for 14 degrees)
         # Compute bed slope angle  
-        dzx[:,:-1] = np.rad2deg(np.arctan((z[:,:-1]-z[:,1:])/(x[:,:-1]-x[:,1:])))
+        dzx[:,:-1] = np.rad2deg(np.arctan((z[:,1:]-z[:,:-1])/dx))
+        # dzx[:,0] = dzx[:,1]
         dzx[:,-1] = dzx[:,-2]
         
-        print (dzx)
+        #print ('dzx:', dzx)
         
         # Determine location of separation bubbles
         '''Separation bubble exist if bed slope angle (lee side) 
         is larger than max angle that wind stream lines can 
-        folllow behind an obstacle (mu_b = 30)'''
+        follow behind an obstacle (mu_b = 30)'''
         
-        mu_b = 30.                                                                
+        mu_b = 10.                                                                
         stall += np.logical_and(abs(dzx) > mu_b, dzx < 0) 
         
         stall[1:-1,:] += np.logical_and(stall[1:-1,:]==0, stall[:-2,:]>0, stall[2:,:]>0)
@@ -423,24 +503,28 @@ class WindShear:
         
         # Define separation bubble
         bubble[:,:-1] = np.logical_and(stall[:,:-1] == 0, stall[:,1:] > 0) 
-        print (bubble)
+        # print ('bubble:', bubble)
         
         # Shift bubble back to x0: start of separation bubble 
         x0 = -2
         bubble[:,:x0] = bubble[:,-x0:]
         bubble[:,:-x0] = 0
 
+        # print ('bubble:', bubble)
         # plt.pcolormesh(x, y, bubble)
         # plt.colorbar()
+        # plt.title('bubble')
         # plt.show()
         
         bubble = bubble.astype(int)
-
+        # print ('bubble int:', bubble)
+        
         # Count separation bubbles
         n = np.sum(bubble)
         print ('number of sep bubbles', n)
         bubble_n = np.asarray(np.where(bubble == True)).T
-        print (bubble_n)
+        # print ('bubble_n:', bubble_n)
+        
         # Walk through all separation bubbles and determine polynoms
         
         for k in range(0, n):
@@ -448,12 +532,12 @@ class WindShear:
             i = bubble_n[k,1]
             j = bubble_n[k,0]
 
-            ix_neg = (dz[j, i+5:] >= 0)                                         # i + 5??
+            ix_neg = (dzx[j, i+5:] >= 0)                                         # i + 5??
 
             # print(n)
             # print(k)
             #
-            # plt.plot(x[j, i:], dz[j, i:])
+            # plt.plot(x[j, i:], dzx[j, i:])
             # plt.show()
 
             if np.sum(ix_neg) == 0:
@@ -466,47 +550,98 @@ class WindShear:
             
             a = dzdx0 / c
         
-            ls = np.minimum(np.maximum((3.*zbrink/(2.*c) * (1 + a/4. + a**2./8.)), .1), 200.)
+            ls = np.minimum(np.maximum((3.*zbrink/(2.*c) * (1 + a/4. + a**2./8.)), 1.5*zbrink), 200.)
+            # print ('ls:', ls)
+            
+            a2 = -3. * zbrink/ls**2 - 2. * dzdx0 / ls
+            a3 =  2. * zbrink/ls**3 +      dzdx0 / ls**2
+          
+            i_max = min(i+int(ls/dx),int(nx-1))
+
+            xs = x[j,i:i_max] - x[j,i]
+            
+            zsep0[j,i:i_max] = (a3*xs**3 + a2*xs**2 + dzdx0*xs + zbrink)
+            
+            # plt.plot(x[j,i:i_max], zsep0[j,i:i_max])
+            # plt.title('zsep0')
+            # plt.show()
+            
+            # First order filter
+            Cut = 1.5
+            dk = 2.0 * np.pi / (np.max(gc['x']))
+            zfft[j,:] = np.fft.fft(zsep0[j,:])
+            zfft[j,:] *= np.exp(-(dk*k*gc['dx'])**2/(2.*Cut**2))
+            zsep0[j,:] = np.real(np.fft.ifft(zfft[j,:]))
+            
+            # First order polynom
+            dzdx1 = (zsep0[j, i+1]-zsep0[j,i])/dx
+            
+            a = dzdx1 / c
+            
+            ls = np.maximum((3.*zbrink/(2.*c) * (1 + a/4. + a**2./8.)), 1.5*zbrink)
+            #print ('ls:', ls)
                 
-            a2 = -(3. * zbrink/ls**2 + 2. * dzdx0 / ls)
-            a3 =  2. * zbrink/ls**3  +     dzdx0 / ls**2
+            a2 = -(3. * zbrink/ls**2 + 2. * dzdx1 / ls)
+            a3 =   2. * zbrink/ls**3 +      dzdx1 / ls**2
           
             i_max = min(i+int(ls/dx),int(nx-1))
             xs = x[j,i:i_max] - x[j,i]
             
-            zsep0[j,i:i_max] = a3*xs**3 + a2*xs**2 + dzdx0*xs + zbrink
+            zsep1[j,i:i_max] = (a3*xs**3 + a2*xs**2 + dzdx1*xs + zbrink)
             
-            # First order polynom - dune cutting
-            cut_list = np.logical_and(zsep0[j,i:i_max] >= z[j,i:i_max], 
-                                 zsep0[j,i:i_max+1] < z[j,i:i_max])
-            cut_list = cut_list.astype(int)
-
-            if np.sum(cut_list[5:int(ls[j,i]/dx)]) > 0:
-                
-                i_cut_list = np.asarray(np.where(cut_list[5:] == True)).T
-                i_cut = int(i_cut_list[0]) + i
-
-                dzdx1 = (z[j,i_cut] - z[j,i_cut-1])/dx
-                ls_cut = x[j,i_cut] - x[j,i]
-                
-                a2_cut = -3. * zbrink/ls_cut**2 - 2. * dzdx0 / ls_cut     +3. * z[j,i_cut] / ls_cut**2 - dzdx1 / ls_cut
-                a3_cut =  2. * zbrink/ls_cut**3  +     dzdx0 / ls_cut**2  -2. * z[j,i_cut] / ls_cut**3 + dzdx1 / ls_cut**2
-
-                i_max = min(i+int(ls_cut/dx),int(nx-1))
-                
-                zsep[j,i:i_max] = a3_cut*xs**3 + a2_cut*xs**2 + dzdx0*xs + zbrink 
-                
-                #zsep[j,i:i_max]  = np.maximum(zsep[j,i:i_max], zsep0[j,i:i_max])
-                
-            else:
-                zsep[j,i:i_max] = zsep0[j,i:i_max]
+            # plt.plot(x[j,i:i_max], zsep1[j,i:i_max])
+            # plt.title('zsep1')
+            # plt.show()        
             
-            print (zsep)
+            zsep[j,i:i_max] = np.minimum(zsep1[j,i:i_max], zbrink)
+            
+            # plt.plot(x[j,i:i_max], zsep[j,i:i_max], label='zsep')
+            # plt.plot(x[j,i:i_max], z[j,i:i_max], label='zb')
+            # plt.xlabel('x [m]')
+            # plt.ylabel('z [m]')
+            # plt.title('Separation bubble')
+            # plt.legend()
+            #plt.show()
+            
+            # Dune cutting
+#            cut_list = np.logical_and(zsep0[j,i:i_max] >= z[j,i:i_max], 
+#                                      zsep0[j,i+1:i_max+1] < z[j,i:i_max])
+            
+#            cut_list = cut_list.astype(int)
+#            print ('cut_list:', cut_list)
+#            print ('cut list sum:', np.sum(cut_list[5:int(ls[j,i]/dx)]))
+
+#            if np.sum(cut_list[5:int(ls[j,i]/dx)]) > 0:
+#                
+#                i_cut_list = np.asarray(np.where(cut_list[5:] == True)).T
+#                i_cut = int(i_cut_list[0]) + i
+
+#                dzdx1 = (z[j,i_cut] - z[j,i_cut-1])/dx
+#                ls_cut = x[j,i_cut] - x[j,i]
+                
+#                a2_cut = -3. * zbrink/ls_cut**2 - 2. * dzdx0 / ls_cut     +3. * z[j,i_cut] / ls_cut**2 - dzdx1 / ls_cut
+#                a3_cut =  2. * zbrink/ls_cut**3  +     dzdx0 / ls_cut**2  -2. * z[j,i_cut] / ls_cut**3 + dzdx1 / ls_cut**2
+
+#                i_max = min(i+int(ls_cut/dx),int(nx-1))
+                
+#                zsep[j,i:i_max] = a3_cut*xs**3 + a2_cut*xs**2 + dzdx0*xs + zbrink 
+                
+#                zsep[j,i:i_max]  = np.maximum(zsep[j,i:i_max], zsep0[j,i:i_max])
+                
+#            else:
+#                zsep[j,i:i_max] = zsep0[j,i:i_max]
+            
+                   
+        
+        # plt.pcolormesh(x, y, zsep)
+        # plt.colorbar()
+        # plt.title('zsep')
+        # plt.show()
             
         return zsep
                 
     
-    def compute_shear(self, u0, nfilter=(1.,2.)):                               
+    def compute_shear(self, u0, nfilter=(1.5,6.)):                               
         '''Compute wind shear perturbation for given free-flow wind
         speed on computational grid
         
@@ -532,16 +667,30 @@ class WindShear:
         
         hs = np.fft.fft2(gc['z'])
         hs = self.filter_highfrequenies(kx, ky, hs, nfilter, p=0.01)
-             
+        
+        # Inner layer height
+        l = self.l
+        for i in range(5):
+            l = 2 * 0.41**2*self.L /np.log(l/self.z0)
+        
+        # Middle layer height
+        zm = 1.0
+        for i in range(5):
+            zm = self.L / np.sqrt(np.log(zm/self.z0))
+        # Non-dimensional velocity    
+        ul = np.log(l/self.z0) / np.log(zm/self.z0)
+        
+        # Arrays in Fourier 
         k = np.sqrt(kx**2 + ky**2)
-        sigma = np.sqrt(1j * self.L / 4. * kx * self.z0 / self.l)
+        sigma = np.sqrt(1j * self.L * kx * self.z0 / self.l)
         
-        dtaux_t = hs * kx**2 / k * 2 / u0**2 * \
-                  (-1 + (2 * np.log(self.l/self.z0) + k**2/kx**2) * sigma * \
-                   scipy.special.kv(1, 2 * sigma) / scipy.special.kv(0, 2 * sigma))
+        # Shear stress perturbation
+        dtaux_t = hs * kx**2 / k * 2 / ul**2 * \
+                  (-1. + (2. * np.log(self.l/self.z0) + k**2/kx**2) * sigma * \
+                   scipy.special.kv(1., 2. * sigma) / scipy.special.kv(0., 2. * sigma))
         
-        dtauy_t = hs * kx * ky / k * 2 / u0**2 * \
-                  2 * np.sqrt(2) * sigma * scipy.special.kv(1, 2 * np.sqrt(2) * sigma)
+        dtauy_t = hs * kx * ky / k * 2 / ul**2 * \
+                  2. * np.sqrt(2.) * sigma * scipy.special.kv(1., 2. * np.sqrt(2.) * sigma)
         
         gc['dtaux'] = np.real(np.fft.ifft2(dtaux_t))
         gc['dtauy'] = np.real(np.fft.ifft2(dtauy_t))
@@ -561,13 +710,13 @@ class WindShear:
         theta_dyn = 33.
         
         tau_sep = 0.2 #0.05
-        slope = np.tan(np.rad2deg(theta_dyn))                                       # according to Durán 2010 (Sauermann 2001: c = 0.25 for 14 degrees)
+        slope = 0.2 #np.tan(np.rad2deg(theta_dyn))                                       # according to Durán 2010 (Sauermann 2001: c = 0.25 for 14 degrees)
         delta = 1./(slope*tau_sep)
         
-        zsepdelta = np.minimum(np.maximum(1. - delta * hsep, 0.),1.)
+        zsepdelta = np.minimum(np.maximum(1. - delta * hsep, 0.), 1.)
         
-        self.cgrid['dtaux'] *= zsepdelta
-        self.cgrid['dtauy'] *= zsepdelta
+        self.cgrid['taux'] *= zsepdelta
+        self.cgrid['tauy'] *= zsepdelta
         
         
     
@@ -701,80 +850,78 @@ class WindShear:
                          
         return (np.asarray(xy[:,0].reshape(x.shape) + origin[0]),
                 np.asarray(xy[:,1].reshape(y.shape) + origin[1]))
-    
-    
-    def interpolate(self, x, y, z, xi, yi):
-        '''Interpolate a grid onto another grid'''
         
-        xy = np.concatenate((x.reshape((-1,1)),
-                             y.reshape((-1,1))), axis=1)
+    def interpolate(self, x, y, z, xi, yi):
+        '''Interpolate one grid to an other'''
+        
+        xy = np.concatenate((y.reshape((-1,1)),
+                             x.reshape((-1,1))), axis=1)
 
-        xyi = np.concatenate((xi.reshape((-1,1)),
-                              yi.reshape((-1,1))), axis=1)
+        xyi = np.concatenate((yi.reshape((-1,1)),
+                              xi.reshape((-1,1))), axis=1)
 
         if self.istransect:
             zi = np.interp(xi.flatten(), x.flatten(), z.flatten()).reshape(xi.shape)
         else:
-            # Calculate step 4 of interpolate.griddata:
-            zi = self.interpolate_Qhull(xy, xyi, z.flatten()).reshape(xi.shape)
+            # Trunk interpolation
+            # zi = scipy.interpolate.griddata(xy, z.reshape((-1,1)), xyi, method='cubic').reshape(xi.shape)
             
-#            zi = scipy.interpolate.griddata(xy, z.reshape((-1,1)), xyi, method='cubic').reshape(xi.shape)
-                             
+            # version Bart
+            inter = scipy.interpolate.RegularGridInterpolator((y[:,0], x[0,:]), z, bounds_error = False, fill_value = 0.)
+            zi = inter(xyi).reshape(xi.shape)
+            
+        return zi
+        
+#    def interpolation_weights(self, udir):
+#        '''Covers the first 3 steps of interpolate.griddata 
+#        Is only executed as initialization '''
+        
+#        gi = self.igrid
+#        gc = self.cgrid
+        
+#        x = gi['x']
+#        y = gi['y']
+
+#        xi = gc['xi']
+#        yi = gc['yi']
+                      
+#        xy = np.concatenate((x.reshape((-1,1)),
+#                             y.reshape((-1,1))), axis=1)
+        
+#        xi, yi = self.rotate(xi, yi, udir+90, origin=(self.x0, self.y0))
+    
+#        xyi = np.concatenate((xi.reshape((-1,1)),
+#                              yi.reshape((-1,1))), axis=1)
+        
+#        tri = qhull.Delaunay(xy)                                             
+#        simplex = tri.find_simplex(xyi)
+#        vertices = np.take(tri.simplices, simplex, axis=0)
+#        temp = np.take(tri.transform, simplex, axis=0)
+#        delta = xyi- temp[:, 2]
+#        bary = np.einsum('njk,nk->nj', temp[:, :2, :], delta) 
+        
+#        return vertices, np.hstack((bary, 1 - bary.sum(axis=1, keepdims=True)))
+        
+#    def interpolate_qhull(self, x, y, z, xi, yi, udir):
+#        '''Execute step 4 of interpolation for each time step
+#        (= different udir)'''
+        
+#        xy = np.concatenate((x.reshape((-1,1)),
+#                             y.reshape((-1,1))), axis=1)
+
+#        xyi = np.concatenate((xi.reshape((-1,1)),
+#                              yi.reshape((-1,1))), axis=1)
+
+#        if self.istransect:
+#            zi = np.interp(xi.flatten(), x.flatten(), z.flatten()).reshape(xi.shape)
+#        else:
+            # Calculate step 4 of interpolate.griddata:
+#            if 0. < udir <=5.:
+#                zi = np.einsum('nj,nj->n', np.take(z.flatten, vtx0), wts0).reshape(xi.shape)
+#            if 5. < udir <=15.:
+#               zi = np.einsum('nj,nj->n', np.take(z.flatten, vtx10), wts10).reshape(xi.shape)
+            
+            
+
         return zi
     
-    def interpolate_Qhull(self, xy, xyi, values):
-        '''#covers the first 3 steps of interpolate.griddata 
-        TO DO: save separatly per wind direction
-        '''
-        
-        tri = qhull.Delaunay(xy)                                             
-        simplex = tri.find_simplex(xyi)
-        vertices = np.take(tri.simplices, simplex, axis=0)
-        temp = np.take(tri.transform, simplex, axis=0)
-        delta = xyi- temp[:, 2]
-        bary = np.einsum('njk,nk->nj', temp[:, :2, :], delta) 
-        
-        return np.einsum('nj,nj->n', np.take(values, vertices), 
-                          np.hstack((bary, 1.0 - bary.sum(axis=1, keepdims=True))))
-        
-
-    @staticmethod
-    def interpolate_projected_point(a, b, p):
-        '''Project point to line segment and return distance and interpolated value
-        
-        Parameters
-        ----------
-        a : iterable
-            Start vector for line segment
-        b : iterable
-            End vector for line segment
-        p : iterable
-            Point vector to be projected
-            
-        Returns
-        -------
-        d : numpy.ndarray
-            Distance from point p to projected point q
-        z : float
-            Interpolated value at projected point q
-            
-        '''
-        
-        a = np.asarray(a)
-        b = np.asarray(b)
-        p = np.asarray(p)
-        
-        ab = b[:-1]-a[:-1]                                                      # line segment
-        ab2 = np.dot(ab, ab)                                                    # length of line segment squared
-        
-        if ab2 > 0.:
-            ap = p[:-1]-a[:-1]
-            t = np.dot(ap, ab) / ab2                                            # location of projected point along line segment as fraction of its length
-            if t >= 0. and t <= 1.:
-                q = a[:-1] + t * ab                                             # projected point
-                pq = p-q                                                        # vector from original to projected point
-                d = np.sqrt(np.dot(pq, pq))                                     # distance from original to projected point
-                z = a[-1] * (1.-t) + b[-1] * t                                  # linearly interpolated height of projected point
-                return d, z
-            
-        return

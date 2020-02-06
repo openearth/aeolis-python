@@ -24,14 +24,14 @@ The Netherlands                  The Netherlands
 
 '''
 
-
 from __future__ import absolute_import, division
 
 import numpy as np
 import logging
 import operator
 import matplotlib.pyplot as plt
-
+#import scipy.interpolate as spint
+#import scipy.spatial.qhull as qhull
 
 # package modules
 import aeolis.shear
@@ -60,12 +60,11 @@ def initialize(s, p):
     # initialize wind shear model
     if p['process_shear']:
         s['shear'] = aeolis.shear.WindShear(s['x'], s['y'], s['zb'],
-                                            L=100., l=10., z0=.001, 
-                                            buffer_width=10.)                   
-        
+                                            L=50., l=1., z0=.001, 
+                                            buffer_width=10.) 
     return s
-
-
+   
+    
 def interpolate(s, p, t):
     '''Interpolate wind velocity and direction to current time step
 
@@ -102,45 +101,61 @@ def interpolate(s, p, t):
         s['udir'][:,:] = np.arctan2(interp_circular(t, uw_t, np.sin(uw_d)),
                                     interp_circular(t, uw_t, np.cos(uw_d))) * 180. / np.pi
 
-    s['uws'] = s['uw'] * np.cos(s['alfa'] + s['udir'] / 180. * np.pi)           # alfa is real world grid cell orientation
-    s['uwn'] = s['uw'] * np.sin(s['alfa'] + s['udir'] / 180. * np.pi)
-
+    s['uws'] = - s['uw'] * np.sin(-s['alfa'] + s['udir'] / 180. * np.pi)           # alfa [rad] is real world grid cell orientation (clockwise)
+    # print ('uws:', s['uws'])
+    s['uwn'] = - s['uw'] * np.cos(-s['alfa'] + s['udir'] / 180. * np.pi)
+    # print ('uwn:', s['uwn'])
+    
     if p['ny'] == 0:
         s['uwn'][:,:] = 0.
         
     s['uw'] = np.abs(s['uw'])
     
-    # Compute wind shear at height z
+    # Compute wind shear velocity at height z
     kappa = 0.41
     z = p['z']
     z0 = p['k']                                                                 # dependent on grain size?                                             
     
-    s['tau'] = s['uw'] * kappa / np.log(z/z0)
-    s['taus'] = s['uws'] * kappa / np.log(z/z0)
-    s['taun'] = s['uwn'] * kappa / np.log(z/z0)
+    s['ustar'] = s['uw'] * kappa / np.log(z/z0)
+    s['ustars'] = s['uws'] * kappa / np.log(z/z0)
+    s['ustarn'] = s['uwn'] * kappa / np.log(z/z0)
     
-    # Compute wind velocity (at height z1)
-    if p['h'] is not None:
-        z1 = p['h']
+    # Shear velocity to shear stress
+    s['tau'] = p['rhoa'] * s['ustar']**2 
     
-        s['uw'] = s['tau'] / kappa * np.log(z1/z0)
-        s['uws'] = s['taus'] / kappa * np.log(z1/z0)
-        s['uwn'] = s['taun'] / kappa * np.log(z1/z0)
+    ix = s['ustar'] > 0.
+    s['taus'][ix] = s['tau'][ix]*s['ustars'][ix]/s['ustar'][ix]
+    s['taun'][ix] = s['tau'][ix]*s['ustarn'][ix]/s['ustar'][ix]
+    s['tau'] = np.hypot(s['taus'], s['taun'])
+
+    ix = s['ustar'] == 0.
+    s['taus'][ix] = 0.
+    s['taun'][ix] = 0.
+    s['tau'][ix] = 0.
+    
+    
+#    # Compute wind velocity (at height z1)                                      # In the trunk this is used as saltation velocity. Now unnecessary?
+#    if p['h'] is not None:
+#        z1 = p['h']
+    
+#        s['uw'] = s['tau'] / kappa * np.log(z1/z0)
+#        s['uws'] = s['taus'] / kappa * np.log(z1/z0)
+#        s['uwn'] = s['taun'] / kappa * np.log(z1/z0)
     
     # Shear stress to shear velocity                                            # waar wordt dit voor gebruikt?
-    s['ustar'] = np.sqrt(s['tau'] / p['rhoa'])
-    s['ustars'] = s['ustar'] * s['taus'] / s['tau']
-    s['ustarn'] = s['ustar'] * s['taun'] / s['tau']
+#    s['ustar'] = np.sqrt(s['tau'] / p['rhoa'])
+#    s['ustars'] = s['ustar'] * s['taus'] / s['tau']
+#    s['ustarn'] = s['ustar'] * s['taun'] / s['tau']
         
-    ix = s['tau'] == 0.
-    s['ustar'][ix] = 0.
-    s['ustars'][ix] = 0.
-    s['ustarn'][ix] = 0.
+#    ix = s['tau'] == 0.
+#    s['ustar'][ix] = 0.
+#    s['ustars'][ix] = 0.
+#    s['ustarn'][ix] = 0.
                 
-    s['ustar0'] = s['ustar']
-    s['tau0'] = s['tau']
-    s['taus0'] = s['taus'].copy()
-    s['taun0'] = s['taun'].copy()
+#    s['ustar0'] = s['ustar']
+#    s['tau0'] = s['tau']
+#    s['taus0'] = s['taus'].copy()
+ #   s['taun0'] = s['taun'].copy()
     
     return s
 
@@ -150,19 +165,21 @@ def shear(s,p):
     if 'shear' in s.keys() and p['process_shear']:
         
         s['shear'].set_topo(s['zb'].copy())
+        s['shear'].set_shear(s['taus'], s['taun'])
         
         s['shear'](u0=s['uw'][0,0],
                    udir=s['udir'][0,0],
                    process_separation = p['process_separation'])
         
-        s['dtaus'], s['dtaun'] = s['shear'].get_shear()
-        s['taus'], s['taun'] = s['shear'].add_shear(s['taus'], s['taun'])
-        s['tau'] = np.hypot(s['taus'], s['taun'])
+        s['taus'], s['taun'] = s['shear'].get_shear()
+               
+        s['tau'] = np.hypot(s['taus'], s['taun'])                               # set minimum of tau to zero
+        #print ('tau shear:', s['tau'])
         
-#        print (s['tau'])
+#        print ('shear tau:', s['tau'])
         
 #        plt.figure()
-#        plt.pcolormesh(s['x'], s['y'], s['ustar'])
+#        plt.pcolormesh(s['x'], s['y'], s['tau'])
 #        # plt.pcolormesh(s['x'], s['y'], (np.sqrt(2 * alfa) * uf / Ax[:,:,0]) * dhs[:,:,0])
 #        plt.colorbar()
 #        plt.show()
