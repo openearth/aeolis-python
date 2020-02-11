@@ -170,6 +170,17 @@ class WindShear:
             gc['zsep'] = self.separation()
             z_origin = gc['z'].copy()
             gc['z'] = np.maximum(gc['z'], gc['zsep'])
+            
+            # Plot shear stresses on c.grid---------------------
+            # d = 10
+            # plt.pcolormesh(gc['x'], gc['y'], gc['z'], cmap='copper_r')
+            # bar = plt.colorbar()
+            # bar.set_label('z [m]')                          
+            # plt.xlabel('xc [m]')
+            # plt.ylabel('yc [m]')
+            # plt.title('Bed level c.grid including separation bubble')
+            # plt.show()
+            # -------------------------------------------------
         
         # Compute wind shear stresses on computational grid 
         u = np.zeros(u0.shape)
@@ -212,7 +223,7 @@ class WindShear:
         #           gc['taux'][::d, ::d], gc['tauy'][::d, ::d], color='white')
         # plt.xlabel('xc [m]')
         # plt.ylabel('yc [m]')
-        # plt.title('Total shear stresses c.grid')
+        # plt.title('Shear stresses c.grid including separation bubble')
         # plt.show()
         # -------------------------------------------------   
         
@@ -245,12 +256,12 @@ class WindShear:
         # plt.figure(figsize=(8,4))
         # plt.pcolormesh(gi['x'], gi['y'], gi['z'], cmap='copper_r')  
         # bar = plt.colorbar()
-        # bar.set_label('zb [m]')                        
+        # bar.set_label('z [m]')                        
         # plt.quiver(gi['x'][::d, ::d], gi['y'][::d, ::d],
         #           gi['taux'][::d, ::d], gi['tauy'][::d, ::d], color='white')
         # plt.xlabel('x [m]')
         # plt.ylabel('y [m]')
-        # plt.title('Shear stresses on i.grid')
+        # plt.title('Shear stresses i.grid including separation bubble')
         # plt.show()
         # -------------------------------------------------        
         
@@ -486,7 +497,7 @@ class WindShear:
         # Compute bed slope angle  
         dzx[:,:-1] = np.rad2deg(np.arctan((z[:,1:]-z[:,:-1])/dx))
         # dzx[:,0] = dzx[:,1]
-        dzx[:,-1] = dzx[:,-2]
+        # dzx[:,-1] = dzx[:,-2]
         
         #print ('dzx:', dzx)
         
@@ -495,7 +506,7 @@ class WindShear:
         is larger than max angle that wind stream lines can 
         follow behind an obstacle (mu_b = 30)'''
         
-        mu_b = 10.                                                                
+        mu_b = 30.                                                                
         stall += np.logical_and(abs(dzx) > mu_b, dzx < 0) 
         
         stall[1:-1,:] += np.logical_and(stall[1:-1,:]==0, stall[:-2,:]>0, stall[2:,:]>0)
@@ -521,7 +532,7 @@ class WindShear:
         
         # Count separation bubbles
         n = np.sum(bubble)
-        print ('number of sep bubbles', n)
+        # print ('number of sep bubbles', n)
         bubble_n = np.asarray(np.where(bubble == True)).T
         # print ('bubble_n:', bubble_n)
         
@@ -562,10 +573,6 @@ class WindShear:
             
             zsep0[j,i:i_max] = (a3*xs**3 + a2*xs**2 + dzdx0*xs + zbrink)
             
-            # plt.plot(x[j,i:i_max], zsep0[j,i:i_max])
-            # plt.title('zsep0')
-            # plt.show()
-            
             # First order filter
             Cut = 1.5
             dk = 2.0 * np.pi / (np.max(gc['x']))
@@ -581,27 +588,24 @@ class WindShear:
             ls = np.maximum((3.*zbrink/(2.*c) * (1 + a/4. + a**2./8.)), 1.5*zbrink)
             #print ('ls:', ls)
                 
-            a2 = -(3. * zbrink/ls**2 + 2. * dzdx1 / ls)
-            a3 =   2. * zbrink/ls**3 +      dzdx1 / ls**2
+            a2 = -3. * zbrink/ls**2 - 2. * dzdx1 / ls
+            a3 =  2. * zbrink/ls**3 +      dzdx1 / ls**2
           
             i_max = min(i+int(ls/dx),int(nx-1))
             xs = x[j,i:i_max] - x[j,i]
             
             zsep1[j,i:i_max] = (a3*xs**3 + a2*xs**2 + dzdx1*xs + zbrink)
             
-            # plt.plot(x[j,i:i_max], zsep1[j,i:i_max])
-            # plt.title('zsep1')
-            # plt.show()        
+            zsep[j,i:i_max] = zsep1[j,i:i_max]
             
-            zsep[j,i:i_max] = np.minimum(zsep1[j,i:i_max], zbrink)
-            
+            # plt.plot(x[j,i:i_max], zsep0[j,i:i_max], label='zsep0')
             # plt.plot(x[j,i:i_max], zsep[j,i:i_max], label='zsep')
             # plt.plot(x[j,i:i_max], z[j,i:i_max], label='zb')
             # plt.xlabel('x [m]')
             # plt.ylabel('z [m]')
             # plt.title('Separation bubble')
             # plt.legend()
-            #plt.show()
+            # plt.show()
             
             # Dune cutting
 #            cut_list = np.logical_and(zsep0[j,i:i_max] >= z[j,i:i_max], 
@@ -633,10 +637,11 @@ class WindShear:
             
                    
         
-        # plt.pcolormesh(x, y, zsep)
-        # plt.colorbar()
-        # plt.title('zsep')
-        # plt.show()
+        #plt.pcolormesh(x, y, zsep, cmap='copper_r')
+        #bar = plt.colorbar()
+        #bar.set_label('zsep [m]')
+        #plt.title('zsep')
+        #plt.show()
             
         return zsep
                 

@@ -60,7 +60,7 @@ def initialize(s, p):
     # initialize wind shear model
     if p['process_shear']:
         s['shear'] = aeolis.shear.WindShear(s['x'], s['y'], s['zb'],
-                                            L=50., l=1., z0=.001, 
+                                            L=100., l=10., z0=.001, 
                                             buffer_width=10.) 
     return s
    

@@ -46,6 +46,7 @@ from bmi.api import IBmi
 import aeolis.inout
 import aeolis.bed
 import aeolis.wind
+#import aeolis.shear
 import aeolis.threshold
 import aeolis.transport
 import aeolis.hydro
@@ -53,7 +54,7 @@ import aeolis.netcdf
 import aeolis.constants
 
 #import aeolis.vegetation
-#import aeolis.gridparams
+import aeolis.gridparams
 #import aeolis.avalanche
 
 from aeolis.utils import *
@@ -196,15 +197,18 @@ class AeoLiS(IBmi):
         for var, dims in self.dimensions().items():
             self.s[var] = np.zeros(self._dims2shape(dims))
             self.l[var] = self.s[var].copy()
-            
+                        
         # initialize grid parameters
-#        self.s = aeolis.gridparams.initialize(self.s, self.p)
+        self.s = aeolis.gridparams.initialize(self.s, self.p)
 
         # initialize bed composition
         self.s = aeolis.bed.initialize(self.s, self.p)
 
         # initialize wind model
         self.s = aeolis.wind.initialize(self.s, self.p)
+        
+        # initialize interpolation weights
+        #self.s = aeolis.wind.weights(self.s, self.p)
         
         #initialize vegetation model
 #        self.s = aeolis.vegetation.initialize(self.s, self.p)                  #toevoegen als veg. module is gemaakt
@@ -288,7 +292,7 @@ class AeoLiS(IBmi):
         #self.s = aeolis.bed.slope(self.s, self.p)
         
         # avalanching
-#        self.s = aeolis.bed.avalanche(self.s, self.p)
+        self.s = aeolis.bed.avalanche(self.s, self.p)
 
         # increment time
         self.t += self.dt * self.p['accfac']
@@ -852,9 +856,9 @@ class AeoLiS(IBmi):
 
                 # add boundaries
                 if p['boundary_offshore'] == 'constant':
-                    y[:,0] = p['boundary_offshore_flux'] / s['uw'][:,0]
+                    y_1[:,0] = p['boundary_offshore_flux'] / s['uw'][:,0]
                 if p['boundary_onshore'] == 'constant':
-                    y[:,-1] = p['boundary_onshore_flux'] / s['uw'][:,-1]
+                    y_1[:,-1] = p['boundary_onshore_flux'] / s['uw'][:,-1]
 
                 # solve system with current weights
                 Ct_i = scipy.sparse.linalg.spsolve(A, y_i.flatten())
@@ -1631,9 +1635,6 @@ class AeoLiSRunner(AeoLiS):
         pr = np.ceil(p/fraction)*fraction
         t = time.time()
         interval = t - self.tlog
-
-        if self.get_count('time') == 1:
-            logger.info('        Time elapsed / Total time / Time remaining')
 
         if self.get_count('time') == 1:
             logger.info('        Time elapsed / Total time / Time remaining')

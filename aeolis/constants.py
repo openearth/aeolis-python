@@ -47,11 +47,33 @@ MODEL_STATE = {
     ('ny', 'nx') : (
         'x',                                # [m] Real-world x-coordinate of grid cell center
         'y',                                # [m] Real-world y-coordinate of grid cell center
+        # Gridparams 
+        'xz',                               # [m] Real-world x-coordinate of grid cell center
+        'xu',                               # [m] Real-world x-coordinates of u-points
+        'xv',                               # [m] Real-world x-coordinates of v-points
+        'xc',                               # [m] Real-world x-oordinates of c-points
+        'yz',                               # [m] Real-world y-coordinate of grid cell center
+        'yu',                               # [m] Real-world y-coordinates of u-points
+        'yv',                               # [m] Real-world y-coordinates of v-points
+        'yc',                               # [m] Real-world y-coordinates of c-points
         'ds',                               # [m] Real-world grid cell size in x-direction
         'dn',                               # [m] Real-world grid cell size in y-direction
+        'dnz',                              # [m] Distances in n-direction
+        'dnu',                              # [m] Distances in n-direction
+        'dnv',                              # [m] Distances in n-direction
+        'dnc',                              # [m] Distances in n-direction
+        'dsz',                              # [m] Distances in s-direction
+        'dsu',                              # [m] Distances in s-direction
+        'dsv',                              # [m] Distances in s-direction
+        'dsc',                              # [m] Distances in s-direction
+        'dsdnz',                            # [m^2] Real-world grid cell surface area
+        'dsdnzi',                           # [m^-2] Inverse of real-world grid cell surface area
         'dsdn',                             # [m^2] Real-world grid cell surface area
         'dsdni',                            # [m^-2] Inverse of real-world grid cell surface area
-        'alfa',                             # [rad] Real-world grid cell orientation
+        'alfaz',                            # [rad] Real-world grid cell orientation around z
+        'alfau',                            # [rad] Real-world grid cell orientation around u
+        'alfav',                            # [rad] Real-world grid cell orientation around v
+        'alfa',                             # [rad] Real-world grid cell orientation (clockwise)
         'zb',                               # [m] Bed level above reference
         'S',                                # [-] Level of saturation
         'ustar',                       #NEW # [m/s] Shear velocity by wind
@@ -62,7 +84,7 @@ MODEL_STATE = {
         'taus0',                       #NEW # [m/s] Component of initial wind shear velocity in x-direction
         'taun0',                       #NEW # [m/s] Component of initial wind shear velocity in y-direction
         'zsep',                        #NEW # [m] Z level of polynomial that defines the separation bubble
-        'hsep',                        #NEW # [m] Height of separation bubbel = difference z-level of zsep and of the bed level zb
+        'hsep',                        #NEW # [m] Height of separation bubbel = difference between z-level of zsep and of the bed level zb
 #        'stall',                       #NEW # [ ] 
 #        'bubble',                      #NEW # [ ] 
     ),
@@ -107,7 +129,7 @@ DEFAULT_CONFIG = {
     'process_meteo'                 : False,              # Enable the process of meteo
     'process_salt'                  : False,              # Enable the process of salt
     'process_humidity'              : False,              # Enable the process of humidity
-    'process_avalanche'             : False,        # NEW # Enable the process of avalanching
+    'process_avalanche'             : True,         # NEW # Enable the process of avalanching
     'process_inertia'               : False,        # NEW 
     'process_separation'            : True,         # NEW # Enable the incluing of separation bubble
     'th_grainsize'                  : True,               # Enable wind velocity threshold based on grainsize
@@ -141,6 +163,7 @@ DEFAULT_CONFIG = {
     'output_times'                  : 60.,                # [s] Output interval in seconds of simulation time
     'output_file'                   : None,               # Filename of netCDF4 output file
     'output_vars'                   : ['zb', 'zs',
+                                       'zsep', 'hsep',
                                        'Ct', 'Cu',
                                        'uw', 'udir', 
                                        'uth', 'mass'
@@ -174,8 +197,8 @@ DEFAULT_CONFIG = {
     'facDOD'                        : .1,                 # [-] Ratio between depth of disturbance and local wave height
     'csalt'                         : 35e-3,              # [-] Maximum salt concentration in bed surface layer
     'cpair'                         : 1.0035e-3,          # [MJ/kg/oC] Specific heat capacity air
-    'theta_dyn'                     : 33.,           #NEW # [degrees] Dynamic angle of repose 
-    'theta_stat'                    : 34.,           #NEW # [degrees] Static angle of repose
+    'theta_dyn'                     : 33.,           #NEW # [degrees] Dynamic angle of repose, critical dynamic slope for avalanching 
+    'theta_stat'                    : 34.,           #NEW # [degrees] Static angle of repose, critical static slope for avalanching
     'scheme'                        : 'euler_backward',   # Name of numerical scheme (euler_forward, euler_backward or crank_nicolson)
     'boundary_lateral'              : 'circular',         # Name of lateral boundary conditions (circular, noflux)
     'boundary_offshore'             : 'noflux',           # Name of offshore boundary conditions (gradient, noflux, constant, uniform)
@@ -186,7 +209,7 @@ DEFAULT_CONFIG = {
     'method_transport'              : 'bagnold',          # Name of method to compute equilibrium sediment transport rate
     'max_error'                     : 1e-6,               # [-] Maximum error at which to quit iterative solution in implicit numerical schemes
     'max_iter'                      : 1000,               # [-] Maximum number of iterations at which to quit iterative solution in implicit numerical schemes
-    'refdate'                       : '1970-01-01 00:00', # [-] Reference datetime in netCDF output
+    'refdate'                       : '2020-01-01 00:00', # [-] Reference datetime in netCDF output
     'callback'                      : None,               # Reference to callback function (e.g. example/callback.py':callback)
     'wind_convention'               : 'cartesian',        # Convention used for the wind direction in the input files
 }
