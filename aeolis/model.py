@@ -47,14 +47,14 @@ import aeolis.inout
 import aeolis.bed
 import aeolis.avalanching
 import aeolis.wind
-#import aeolis.shear
 import aeolis.threshold
 import aeolis.transport
 import aeolis.hydro
 import aeolis.netcdf
 import aeolis.constants
 
-#import aeolis.vegetation
+import aeolis.vegetation
+
 #import aeolis.gridparams
 
 from aeolis.utils import *
@@ -211,7 +211,7 @@ class AeoLiS(IBmi):
         # self.s = aeolis.wind.weights(self.s, self.p)
          
         #initialize vegetation model
-#        self.s = aeolis.vegetation.initialize(self.s, self.p)                  #toevoegen als veg. module is gemaakt
+        self.s = aeolis.vegetation.initialize(self.s, self.p)                  
 
 
     def update(self, dt=-1):
@@ -252,11 +252,12 @@ class AeoLiS(IBmi):
         
             # calculate wind shear (bed + separation bubble)
             self.s = aeolis.wind.shear(self.s, self.p)
-        
+
         # compute shear velocity and determine grainspeed
         
         # compute vegetation shear
-
+        if self.p['veg_file'] is not None: 
+            self.s = aeolis.vegetation.vegshear(self.s, self.p)    
         
         # determine optimal time step
         if not self.set_timestep(dt):
@@ -268,7 +269,7 @@ class AeoLiS(IBmi):
 
         # mix top layer
         self.s = aeolis.bed.mixtoplayer(self.s, self.p)
-
+        
         # compute threshold
         self.s = aeolis.threshold.compute(self.s, self.p)
 
@@ -287,6 +288,14 @@ class AeoLiS(IBmi):
 
         # update bed
         self.s = aeolis.bed.update(self.s, self.p)
+        
+        # calculate average bedlevel change over time
+        self.s = aeolis.bed.average_change(self.s, self.p)
+        
+        # grow vegetation
+        if self.p['veg_file'] is not None:
+            self.s = aeolis.vegetation.germinate(self.s, self.p)
+            self.s = aeolis.vegetation.grow(self.s, self.p)
         
         # avalanching
         self.s = aeolis.avalanching.avalanche(self.s, self.p)

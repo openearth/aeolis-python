@@ -29,17 +29,14 @@ from __future__ import absolute_import, division
 
 import logging
 import numpy as np
-import numba
-from numba import jit
 
 # package modules
 from aeolis.utils import *
 
-
 # initialize logger
 logger = logging.getLogger(__name__)
 
-#@jit(nopython=True)
+
 def avalanche(s, p):
     '''Avalanching occurs if bed slopes exceed critical slopes.
     

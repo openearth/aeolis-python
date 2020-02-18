@@ -119,6 +119,76 @@ def initialize(s, p):
     return s
 
 
+def mixtoplayer(s, p):
+    '''Mix grain size distribution in top layer of the bed.
+
+    Simulates mixing of the top layers of the bed by wave action. The
+    wave action is represented by a local wave height maximized by a
+    maximum wave hieght over depth ratio ``gamma``. The mixing depth
+    is a fraction of the local wave height indicated by
+    ``facDOD``. The mixing depth is used to compute the number of bed
+    layers that should be included in the mixing. The grain size
+    distribution in these layers is then replaced by the average grain
+    size distribution over these layers.
+
+    Parameters
+    ----------
+    s : dict
+        Spatial grids
+    p : dict
+        Model configuration parameters
+
+    Returns
+    -------
+    dict
+        Spatial grids
+
+    '''
+
+    if p['process_mixtoplayer']:
+        
+        # get model dimensions
+        nx = p['nx']+1
+        ny = p['ny']+1
+        nl = p['nlayers']
+        nf = p['nfractions']
+
+        # compute depth of disturbance for each cell and repeat for each layer
+        DOD = p['facDOD'] * s['Hs']
+
+        # compute ratio total layer thickness and depth of disturbance 
+        ix = DOD > 0.
+        f = np.ones(DOD.shape)
+        f[ix] = np.minimum(1., s['thlyr'].sum(axis=2)[ix] / DOD[ix])
+
+        # correct shapes
+        DOD = DOD[:,:,np.newaxis].repeat(nl, axis=2)
+        f = f[:,:,np.newaxis].repeat(nl, axis=2)
+
+        # determine what layers are above the depth of disturbance
+        ix = (s['thlyr'].cumsum(axis=2) <= DOD) & (DOD > 0.)
+        ix = ix[:,:,:,np.newaxis].repeat(nf, axis=3)
+        f = f[:,:,:,np.newaxis].repeat(nf, axis=3)
+        
+        # average mass over layers
+        if np.any(ix):
+            ix[:,:,0,:] = True # at least mix the top layer
+            mass = s['mass'].copy()
+            mass[~ix] = np.nan
+            
+            gd = normalize(p['grain_dist']) * p['rhop'] * (1. - p['porosity'])
+            gd = gd.reshape((1,1,1,-1)).repeat(ny, axis=0) \
+                                       .repeat(nx, axis=1) \
+                                       .repeat(nl, axis=2)
+
+            mass1 = np.nanmean(mass, axis=2, keepdims=True).repeat(nl, axis=2)
+            mass2 = gd * s['thlyr'][:,:,:,np.newaxis].repeat(nf, axis=-1)
+            mass = mass1 * f + mass2 * (1. - f)
+        
+            s['mass'][ix] = mass[ix]
+            
+    return s
+
 def update(s, p):
     '''Update bathymetry and bed composition
 
@@ -202,6 +272,8 @@ def update(s, p):
         dz = dm[:,0].reshape((ny+1,nx+1)) / (p['rhop'] * (1. - p['porosity']))
         s['zb'] += dz
         s['zs'] += dz
+        
+        s['dzb'] = dz
 
     return s
 
@@ -335,72 +407,16 @@ def prevent_negative_mass(m, dm, pickup):
     return m, dm, pickup
 
 
-def mixtoplayer(s, p):
-    '''Mix grain size distribution in top layer of the bed.
-
-    Simulates mixing of the top layers of the bed by wave action. The
-    wave action is represented by a local wave height maximized by a
-    maximum wave hieght over depth ratio ``gamma``. The mixing depth
-    is a fraction of the local wave height indicated by
-    ``facDOD``. The mixing depth is used to compute the number of bed
-    layers that should be included in the mixing. The grain size
-    distribution in these layers is then replaced by the average grain
-    size distribution over these layers.
-
-    Parameters
-    ----------
-    s : dict
-        Spatial grids
-    p : dict
-        Model configuration parameters
-
-    Returns
-    -------
-    dict
-        Spatial grids
-
-    '''
-
-    if p['process_mixtoplayer']:
+def average_change(s, p):
         
-        # get model dimensions
-        nx = p['nx']+1
-        ny = p['ny']+1
-        nl = p['nlayers']
-        nf = p['nfractions']
+    # Collect time steps
+    
+    s['dzb_year'] = s['dzb'] * (3600. * 24. * 365.25) / p['dt']
 
-        # compute depth of disturbance for each cell and repeat for each layer
-        DOD = p['facDOD'] * s['Hs']
+    s['dzb_avg'] = np.delete(s['dzb_avg'], 0, axis=2)
+    s['dzb_avg'] = np.dstack((s['dzb_avg'], s['dzb_year']))
 
-        # compute ratio total layer thickness and depth of disturbance 
-        ix = DOD > 0.
-        f = np.ones(DOD.shape)
-        f[ix] = np.minimum(1., s['thlyr'].sum(axis=2)[ix] / DOD[ix])
-
-        # correct shapes
-        DOD = DOD[:,:,np.newaxis].repeat(nl, axis=2)
-        f = f[:,:,np.newaxis].repeat(nl, axis=2)
-
-        # determine what layers are above the depth of disturbance
-        ix = (s['thlyr'].cumsum(axis=2) <= DOD) & (DOD > 0.)
-        ix = ix[:,:,:,np.newaxis].repeat(nf, axis=3)
-        f = f[:,:,:,np.newaxis].repeat(nf, axis=3)
-        
-        # average mass over layers
-        if np.any(ix):
-            ix[:,:,0,:] = True # at least mix the top layer
-            mass = s['mass'].copy()
-            mass[~ix] = np.nan
-            
-            gd = normalize(p['grain_dist']) * p['rhop'] * (1. - p['porosity'])
-            gd = gd.reshape((1,1,1,-1)).repeat(ny, axis=0) \
-                                       .repeat(nx, axis=1) \
-                                       .repeat(nl, axis=2)
-
-            mass1 = np.nanmean(mass, axis=2, keepdims=True).repeat(nl, axis=2)
-            mass2 = gd * s['thlyr'][:,:,:,np.newaxis].repeat(nf, axis=-1)
-            mass = mass1 * f + mass2 * (1. - f)
-        
-            s['mass'][ix] = mass[ix]
-            
+    # Calculate average
+    s['dzb_veg'] = np.average(s['dzb_avg'], axis=2)
+    
     return s
