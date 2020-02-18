@@ -506,7 +506,7 @@ class WindShear:
         is larger than max angle that wind stream lines can 
         follow behind an obstacle (mu_b = 30)'''
         
-        mu_b = 30.                                                                
+        mu_b = 10.                                                                
         stall += np.logical_and(abs(dzx) > mu_b, dzx < 0) 
         
         stall[1:-1,:] += np.logical_and(stall[1:-1,:]==0, stall[:-2,:]>0, stall[2:,:]>0)

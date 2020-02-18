@@ -45,6 +45,7 @@ from bmi.api import IBmi
 # package modules
 import aeolis.inout
 import aeolis.bed
+import aeolis.avalanching
 import aeolis.wind
 #import aeolis.shear
 import aeolis.threshold
@@ -54,8 +55,7 @@ import aeolis.netcdf
 import aeolis.constants
 
 #import aeolis.vegetation
-import aeolis.gridparams
-#import aeolis.avalanche
+#import aeolis.gridparams
 
 from aeolis.utils import *
 
@@ -199,7 +199,7 @@ class AeoLiS(IBmi):
             self.l[var] = self.s[var].copy()
                         
         # initialize grid parameters
-        self.s = aeolis.gridparams.initialize(self.s, self.p)
+        # self.s = aeolis.gridparams.initialize(self.s, self.p)
 
         # initialize bed composition
         self.s = aeolis.bed.initialize(self.s, self.p)
@@ -208,8 +208,8 @@ class AeoLiS(IBmi):
         self.s = aeolis.wind.initialize(self.s, self.p)
         
         # initialize interpolation weights
-        #self.s = aeolis.wind.weights(self.s, self.p)
-        
+        # self.s = aeolis.wind.weights(self.s, self.p)
+         
         #initialize vegetation model
 #        self.s = aeolis.vegetation.initialize(self.s, self.p)                  #toevoegen als veg. module is gemaakt
 
@@ -253,10 +253,10 @@ class AeoLiS(IBmi):
             # calculate wind shear (bed + separation bubble)
             self.s = aeolis.wind.shear(self.s, self.p)
         
-        # compute vegetation shear
-        
         # compute shear velocity and determine grainspeed
         
+        # compute vegetation shear
+
         
         # determine optimal time step
         if not self.set_timestep(dt):
@@ -288,11 +288,8 @@ class AeoLiS(IBmi):
         # update bed
         self.s = aeolis.bed.update(self.s, self.p)
         
-        # compute bed slopes (for avalanching)
-        #self.s = aeolis.bed.slope(self.s, self.p)
-        
         # avalanching
-        self.s = aeolis.bed.avalanche(self.s, self.p)
+        self.s = aeolis.avalanching.avalanche(self.s, self.p)
 
         # increment time
         self.t += self.dt * self.p['accfac']
@@ -763,7 +760,7 @@ class AeoLiS(IBmi):
         if p['boundary_onshore'] == 'noflux':
             Am2[:,-1] = 0.
             Am1[:,-1] = 0.
-        elif p['boundary_offshore'] == 'constant':
+        elif p['boundary_offshore'] == 'constant':                              # Should this be Am2 and Am1 ???
             Ap2[:,0] = 0.
             Ap1[:,0] = 0.
         elif p['boundary_onshore'] == 'uniform':
@@ -873,6 +870,7 @@ class AeoLiS(IBmi):
                                               fraction=i,
                                               iteration=n,
                                               minvalue=Ct_i.min(),
+                                              coords=np.argwhere(ix.reshape(y_i.shape)),
                                               **logprops))
 
                     Ct_i[~ix] *= 1. + Ct_i[ix].sum() / Ct_i[~ix].sum()

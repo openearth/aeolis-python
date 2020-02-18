@@ -31,9 +31,9 @@ INITIAL_STATE = {
         'uw',                               # [m/s] Wind velocity
         'uws',                              # [m/s] Component of wind velocity in x-direction
         'uwn',                              # [m/s] Component of wind velocity in y-direction
-        'tau',                              # [m/s] Wind shear velocity
-        'taus',                             # [m/s] Component of wind shear velocity in x-direction
-        'taun',                             # [m/s] Component of wind shear velocity in y-direction
+        'tau',                              # [N/m^2] Wind shear stress
+        'taus',                             # [N/m^2] Component of wind shear stress in x-direction
+        'taun',                             # [N/m^2] Component of wind shear stress in y-direction
         'dtaus',                            # [-] Component of the wind shear perturbation in x-direction
         'dtaun',                            # [-] Component of the wind shear perturbation in y-direction
         'udir',                             # [rad] Wind direction
@@ -58,31 +58,31 @@ MODEL_STATE = {
         'yc',                               # [m] Real-world y-coordinates of c-points
         'ds',                               # [m] Real-world grid cell size in x-direction
         'dn',                               # [m] Real-world grid cell size in y-direction
-        'dnz',                              # [m] Distances in n-direction
-        'dnu',                              # [m] Distances in n-direction
-        'dnv',                              # [m] Distances in n-direction
-        'dnc',                              # [m] Distances in n-direction
-        'dsz',                              # [m] Distances in s-direction
-        'dsu',                              # [m] Distances in s-direction
-        'dsv',                              # [m] Distances in s-direction
-        'dsc',                              # [m] Distances in s-direction
-        'dsdnz',                            # [m^2] Real-world grid cell surface area
-        'dsdnzi',                           # [m^-2] Inverse of real-world grid cell surface area
+#        'dnz',                              # [m] Distances in n-direction
+#        'dnu',                              # [m] Distances in n-direction
+#        'dnv',                              # [m] Distances in n-direction
+#        'dnc',                              # [m] Distances in n-direction
+#        'dsz',                              # [m] Distances in s-direction
+#        'dsu',                              # [m] Distances in s-direction
+#        'dsv',                              # [m] Distances in s-direction
+#        'dsc',                              # [m] Distances in s-direction
+#        'dsdnz',                            # [m^2] Real-world grid cell surface area
+#        'dsdnzi',                           # [m^-2] Inverse of real-world grid cell surface area
         'dsdn',                             # [m^2] Real-world grid cell surface area
         'dsdni',                            # [m^-2] Inverse of real-world grid cell surface area
-        'alfaz',                            # [rad] Real-world grid cell orientation around z
-        'alfau',                            # [rad] Real-world grid cell orientation around u
-        'alfav',                            # [rad] Real-world grid cell orientation around v
+#        'alfaz',                            # [rad] Real-world grid cell orientation around z
+#        'alfau',                            # [rad] Real-world grid cell orientation around u
+#        'alfav',                            # [rad] Real-world grid cell orientation around v
         'alfa',                             # [rad] Real-world grid cell orientation (clockwise)
         'zb',                               # [m] Bed level above reference
         'S',                                # [-] Level of saturation
         'ustar',                       #NEW # [m/s] Shear velocity by wind
         'ustars',                      #NEW # [m/s] Component of shear velocity in x-direction by wind
         'ustarn',                      #NEW # [m/s] Component of shear velocity in y-direction by wind
-        'ustar0',                      #NEW # [m/s] Initial Shear velocity by wind 
-        'tau0',                        #NEW # [m/s] Initial wind shear velocity
-        'taus0',                       #NEW # [m/s] Component of initial wind shear velocity in x-direction
-        'taun0',                       #NEW # [m/s] Component of initial wind shear velocity in y-direction
+#        'ustar0',                      #NEW # [m/s] Initial Shear velocity by wind 
+#        'tau0',                        #NEW # [m/s] Initial wind shear velocity
+#        'taus0',                       #NEW # [m/s] Component of initial wind shear velocity in x-direction
+#        'taun0',                       #NEW # [m/s] Component of initial wind shear velocity in y-direction
         'zsep',                        #NEW # [m] Z level of polynomial that defines the separation bubble
         'hsep',                        #NEW # [m] Height of separation bubbel = difference between z-level of zsep and of the bed level zb
 #        'stall',                       #NEW # [ ] 
@@ -131,13 +131,14 @@ DEFAULT_CONFIG = {
     'process_humidity'              : False,              # Enable the process of humidity
     'process_avalanche'             : True,         # NEW # Enable the process of avalanching
     'process_inertia'               : False,        # NEW 
-    'process_separation'            : True,         # NEW # Enable the incluing of separation bubble
+    'process_separation'            : False,         # NEW # Enable the incluing of separation bubble
     'th_grainsize'                  : True,               # Enable wind velocity threshold based on grainsize
     'th_bedslope'                   : False,              # Enable wind velocity threshold based on bedslope
     'th_moisture'                   : True,               # Enable wind velocity threshold based on moisture
     'th_humidity'                   : False,              # Enable wind velocity threshold based on humidity
     'th_salt'                       : False,              # Enable wind velocity threshold based on salt
     'th_roughness'                  : True,               # Enable wind velocity threshold based on roughness
+    'th_nelayer'                    : True,         # NEW # Enable wind velocity threshold based on a non-erodible layer
     'xgrid_file'                    : None,               # Filename of ASCII file with x-coordinates of grid cells
     'ygrid_file'                    : None,               # Filename of ASCII file with y-coordinates of grid cells
     'bed_file'                      : None,               # Filename of ASCII file with bed level heights of grid cells
@@ -188,7 +189,7 @@ DEFAULT_CONFIG = {
     'sigma'                         : 4.2,                # [-] Ratio between basal area and frontal area of roughness elements
     'beta'                          : 130.,               # [-] Ratio between drag coefficient of roughness elements and bare surface
     'bi'                            : 1.,                 # [-] Bed interaction factor
-    'T'                             : 1.,                 # [s] Adaptation time scale in advection equation
+    'T'                             : 1,                  # [s] Adaptation time scale in advection equation
     'Tdry'                          : 3600.*1.5,          # [s] Adaptation time scale for soil drying
     'Tsalt'                         : 3600.*24.*30.,      # [s] Adaptation time scale for salinitation
     'eps'                           : 1e-3,               # [m] Minimum water depth to consider a cell "flooded"
@@ -209,6 +210,7 @@ DEFAULT_CONFIG = {
     'method_transport'              : 'bagnold',          # Name of method to compute equilibrium sediment transport rate
     'max_error'                     : 1e-6,               # [-] Maximum error at which to quit iterative solution in implicit numerical schemes
     'max_iter'                      : 1000,               # [-] Maximum number of iterations at which to quit iterative solution in implicit numerical schemes
+    'max_iter_ava'                  : 1000,               # [-] Maximum number of iterations at which to quit iterative solution in avalanching calculation
     'refdate'                       : '2020-01-01 00:00', # [-] Reference datetime in netCDF output
     'callback'                      : None,               # Reference to callback function (e.g. example/callback.py':callback)
     'wind_convention'               : 'cartesian',        # Convention used for the wind direction in the input files

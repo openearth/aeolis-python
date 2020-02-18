@@ -59,15 +59,15 @@ def equilibrium(s, p):
         
         nf = p['nfractions']
         uw = s['uw'][:,:,np.newaxis].repeat(nf, axis=2)
-        tau = s['tau'][:,:,np.newaxis].repeat(nf, axis=2)
-        ix = tau != 0.
+        ustar = s['ustar'][:,:,np.newaxis].repeat(nf, axis=2)
+        ix = ustar != 0.
         
         s['Cu'] = np.zeros(uw.shape)
         s['Cuf'] = np.zeros(uw.shape)
 
-        s['Cu'][ix] = _equilibrium(tau[ix], s['uth'][ix], uw[ix],
+        s['Cu'][ix] = _equilibrium(ustar[ix], s['uth'][ix], uw[ix],
                                    Cb=p['Cb'], rhoa=p['rhoa'], g=p['g'], method=p['method_transport'])
-        s['Cuf'][ix] = _equilibrium(tau[ix], s['uthf'][ix], uw[ix],
+        s['Cuf'][ix] = _equilibrium(ustar[ix], s['uthf'][ix], uw[ix],
                                     Cb=p['Cb'], rhoa=p['rhoa'], g=p['g'], method=p['method_transport'])
 
     s['Cu'] *= p['accfac']
@@ -76,13 +76,13 @@ def equilibrium(s, p):
     return s
 
 
-def _equilibrium(tau, uth, uw, Cb=1.5, rhoa=1.25, g=9.81, method='bagnold'):
+def _equilibrium(ustar, uth, uw, Cb, rhoa, g, method):
     if method.lower() == 'bagnold':
-        Cu = np.maximum(0., Cb * rhoa / g * (tau - uth)**3 / uw)
+        Cu = np.maximum(0., Cb * rhoa / g * (ustar - uth)**3 / uw)
     elif method.lower() == 'kawamura':
-        Cu = np.maximum(0., Cb * rhoa / g * (tau + uth)**2 * (tau - uth) / uw)
+        Cu = np.maximum(0., Cb * rhoa / g * (ustar + uth)**2 * (ustar - uth) / uw)
     elif method.lower() == 'lettau':
-        Cu = np.maximum(0., Cb * rhoa / g * (tau - uth) * tau**2 / uw)
+        Cu = np.maximum(0., Cb * rhoa / g * (ustar - uth) * ustar**2 / uw)
     else:
         logger.log_and_raise('Unknown transport formulation [%s]' % method, exc=ValueError)
 

@@ -116,46 +116,16 @@ def interpolate(s, p, t):
     z = p['z']
     z0 = p['k']                                                                 # dependent on grain size?                                             
     
+    
     s['ustar'] = s['uw'] * kappa / np.log(z/z0)
     s['ustars'] = s['uws'] * kappa / np.log(z/z0)
     s['ustarn'] = s['uwn'] * kappa / np.log(z/z0)
     
-    # Shear velocity to shear stress
-    s['tau'] = p['rhoa'] * s['ustar']**2 
+    s['tau'] = p['rhoa'] * s['ustar'] ** 2
+    s['taus'] = p['rhoa'] * s['ustars'] ** 2
+    s['taun'] = p['rhoa'] * s['ustarn'] ** 2
     
-    ix = s['ustar'] > 0.
-    s['taus'][ix] = s['tau'][ix]*s['ustars'][ix]/s['ustar'][ix]
-    s['taun'][ix] = s['tau'][ix]*s['ustarn'][ix]/s['ustar'][ix]
-    s['tau'] = np.hypot(s['taus'], s['taun'])
-
-    ix = s['ustar'] == 0.
-    s['taus'][ix] = 0.
-    s['taun'][ix] = 0.
-    s['tau'][ix] = 0.
-    
-    
-#    # Compute wind velocity (at height z1)                                      # In the trunk this is used as saltation velocity. Now unnecessary?
-#    if p['h'] is not None:
-#        z1 = p['h']
-    
-#        s['uw'] = s['tau'] / kappa * np.log(z1/z0)
-#        s['uws'] = s['taus'] / kappa * np.log(z1/z0)
-#        s['uwn'] = s['taun'] / kappa * np.log(z1/z0)
-    
-    # Shear stress to shear velocity                                            # waar wordt dit voor gebruikt?
-#    s['ustar'] = np.sqrt(s['tau'] / p['rhoa'])
-#    s['ustars'] = s['ustar'] * s['taus'] / s['tau']
-#    s['ustarn'] = s['ustar'] * s['taun'] / s['tau']
-        
-#    ix = s['tau'] == 0.
-#    s['ustar'][ix] = 0.
-#    s['ustars'][ix] = 0.
-#    s['ustarn'][ix] = 0.
-                
-#    s['ustar0'] = s['ustar']
-#    s['tau0'] = s['tau']
-#    s['taus0'] = s['taus'].copy()
- #   s['taun0'] = s['taun'].copy()
+#    s = velocity_stress(s,p)
     
     return s
 
@@ -176,11 +146,14 @@ def shear(s,p):
         s['tau'] = np.hypot(s['taus'], s['taun'])                               # set minimum of tau to zero
         #print ('tau shear:', s['tau'])
         
-#        print ('shear tau:', s['tau'])
+        s['ustar'] = np.sqrt(s['tau'] / p['rhoa'])
+        s['ustars'] = np.sqrt(s['taus'] / p['rhoa'])
+        s['ustarn'] = np.sqrt(s['taun'] / p['rhoa'])
         
+#        s = stress_velocity(s,p)
+                
 #        plt.figure()
-#        plt.pcolormesh(s['x'], s['y'], s['tau'])
-#        # plt.pcolormesh(s['x'], s['y'], (np.sqrt(2 * alfa) * uf / Ax[:,:,0]) * dhs[:,:,0])
+#        plt.pcolormesh(s['x'], s['y'], s['ustar'])
 #        plt.colorbar()
 #        plt.show()
                                
@@ -191,7 +164,37 @@ def shear(s,p):
 
     return s
 
+def velocity_stress(s, p):
 
-# def filter_low(s, p, par, direction, Cut):                                    # No references to this filter function..?
-                                                                                 
-#    return s
+    s['tau'] = p['rhoa'] * s['ustar'] ** 2
+
+    ix = s['ustar'] > 0.
+    s['taus'][ix] = s['tau'][ix]*s['ustars'][ix]/s['ustar'][ix]
+    s['taun'][ix] = s['tau'][ix]*s['ustarn'][ix]/s['ustar'][ix]
+    s['tau'] = np.hypot(s['taus'], s['taun'])
+
+    ix = s['ustar'] == 0.
+    s['taus'][ix] = 0.
+    s['taun'][ix] = 0.
+    s['tau'][ix] = 0.
+
+    return s
+
+def stress_velocity(s, p):
+
+    s['ustar'] = np.sqrt(s['tau'] / p['rhoa'])
+
+    ix = s['tau'] > 0.
+    s['ustars'][ix] = s['ustar'][ix] * s['taus'][ix] / s['tau'][ix]
+    s['ustarn'][ix] = s['ustar'][ix] * s['taun'][ix] / s['tau'][ix]
+
+    ix = s['tau'] == 0.
+    s['ustar'][ix] = 0.
+    s['ustars'][ix] = 0.
+    s['ustarn'][ix] = 0.
+
+    return s
+
+
+
+
