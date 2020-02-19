@@ -468,17 +468,14 @@ def avalanche(s, p):
                 
                 # Calculation of flux
                               
-                if 0: #Sierd_com; for now we consider no non-erodible layers yet, Update this in future release 
-                    grad_h_nonerod = (s['zb'] - s['zne']) / s['dsu'] # HAS TO BE ADJUSTED!                 
-                    ix = np.logical_and(grad_h > tan_dyn, grad_h_nonerod > 0)
-                    slope_diff[ix] = np.tanh(grad_h[ix]) - np.tanh(0.9*tan_dyn)                    
-                    ix = grad_h_nonerod < grad_h - tan_dyn 
-                    slope_diff[ix] = np.tanh(grad_h_nonerod[ix])
-                else:
-                    ix = (grad_h > tan_dyn)
-                    slope_diff[ix] = np.tanh(grad_h[ix]) - np.tanh(0.9*tan_dyn)                    
-                    
-                                            
+                grad_h_nonerod = (s['zb'] - s['zne']) / s['dsu'] # HAS TO BE ADJUSTED!    
+				
+                ix = np.logical_and(grad_h > tan_dyn, grad_h_nonerod > 0)
+                slope_diff[ix] = np.tanh(grad_h[ix]) - np.tanh(0.9*tan_dyn)    
+                
+                ix = grad_h_nonerod < grad_h - tan_dyn 
+                slope_diff[ix] = np.tanh(grad_h_nonerod[ix])
+				                     
                 ix = grad_h != 0
                 
                 
@@ -605,9 +602,8 @@ def calc_grad(s,p):
     
     grad_h2 = 0.5*grad_h_down[:,:,0]**2 + 0.5*grad_h_down[:,:,1]**2 + 0.5*grad_h_down[:,:,2]**2 + 0.5*grad_h_down[:,:,3]**2
     
-    if 0: #Sierd_com; to be changed in future release
-        ix = s['zb'] < s['zne'] + 0.005
-        grad_h2[ix] = 0.
+    ix = s['zb'] < s['zne'] + 0.005
+    grad_h2[ix] = 0.
     
     grad_h = np.sqrt(grad_h2)
     
