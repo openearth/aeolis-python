@@ -94,10 +94,10 @@ def compute(s, p):
         s['uth'] = apply_mask(s['uth'], s['threshold_mask'])
         s['uthf'] = s['uth'].copy()
 
-	# Non-erodible layer NEW!
+    # Non-erodible layer NEW!
     if p['ne_file'] is not None:
         s = non_erodible(s, p)
-		
+    
     return s
 
 
