@@ -49,9 +49,9 @@ def initialize(s, p):
 
     # apply wind direction convention
     if isarray(p['wind_file']):
-        if p['wind_convention'] == 'cartesian':
+        if p['wind_convention'] == 'nautical':
             pass
-        elif p['wind_convention'] == 'nautical':
+        elif p['wind_convention'] == 'cartesian':
             p['wind_file'][:,2] = 270.0 - p['wind_file'][:,2]
         else:
             logger.log_and_raise('Unknown convention: %s' 
@@ -121,11 +121,7 @@ def interpolate(s, p, t):
     s['ustars'] = s['uws'] * kappa / np.log(z/z0)
     s['ustarn'] = s['uwn'] * kappa / np.log(z/z0)
     
-    s['tau'] = p['rhoa'] * s['ustar'] ** 2
-    s['taus'] = p['rhoa'] * s['ustars'] ** 2
-    s['taun'] = p['rhoa'] * s['ustarn'] ** 2
-    
-#    s = velocity_stress(s,p)
+    s = velocity_stress(s,p)
     
     return s
 
@@ -145,17 +141,8 @@ def shear(s,p):
                
         s['tau'] = np.hypot(s['taus'], s['taun'])                               # set minimum of tau to zero
         #print ('tau shear:', s['tau'])
-        
-        s['ustar'] = np.sqrt(s['tau'] / p['rhoa'])
-        s['ustars'] = np.sqrt(s['taus'] / p['rhoa'])
-        s['ustarn'] = np.sqrt(s['taun'] / p['rhoa'])
-        
-#        s = stress_velocity(s,p)
-                
-#        plt.figure()
-#        plt.pcolormesh(s['x'], s['y'], s['ustar'])
-#        plt.colorbar()
-#        plt.show()
+               
+        s = stress_velocity(s,p)
                                
         # Returns separation surface     
         if p['process_separation']:
