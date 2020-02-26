@@ -58,6 +58,7 @@ MODEL_STATE = {
         'ustar',                      # NEW # [m/s] Shear velocity by wind
         'ustars',                     # NEW # [m/s] Component of shear velocity in x-direction by wind
         'ustarn',                     # NEW # [m/s] Component of shear velocity in y-direction by wind
+        'ustar0',                     # NEW # [m/s] Initial shear velocity
         'zsep',                       # NEW # [m] Z level of polynomial that defines the separation bubble
         'hsep',                       # NEW # [m] Height of separation bubbel = difference between z-level of zsep and of the bed level zb
 #        'stall',                      # NEW # [ ] 
@@ -87,6 +88,10 @@ MODEL_STATE = {
         'w_bed',                            # [-] Weights of sediment fractions based on grain size distribution in the bed
         'uth',                              # [m/s] Shear velocity threshold
         'uthf',                             # [m/s] Fluid shear velocity threshold
+        'uth0',                             # [m/s] Shear velocity threshold based on grainsize only (aerodynamic entrainment)
+        'ug',                               # [m/s] Mean horizontal grain velocity in saturated state
+        'ugs',                              # [m/s] Component of the grain velocity in x-direction
+        'ugn',                              # [m/s] Component of the grain velocity in y-direction
     ),
     ('ny','nx','nlayers') : (
         'thlyr',                            # [m] Bed composition layer thickness
@@ -120,7 +125,8 @@ DEFAULT_CONFIG = {
     'process_humidity'              : False,              # Enable the process of humidity
     'process_avalanche'             : True,         # NEW # Enable the process of avalanching
     'process_inertia'               : False,        # NEW 
-    'process_separation'            : True,         # NEW # Enable the incluing of separation bubble
+    'process_separation'            : False,         # NEW # Enable the including of separation bubble
+    'process_vegetation'            : False,        # NEW # Enable the including of vegetation
     'th_grainsize'                  : True,               # Enable wind velocity threshold based on grainsize
     'th_bedslope'                   : False,              # Enable wind velocity threshold based on bedslope
     'th_moisture'                   : True,               # Enable wind velocity threshold based on moisture
@@ -150,7 +156,7 @@ DEFAULT_CONFIG = {
     'tstart'                        : 0.,                 # [s] Start time of simulation
     'tstop'                         : 3600.,              # [s] End time of simulation
     'restart'                       : None,               # [s] Interval for which to write restart files
-    'dzb_interval'                  : 604800,        # NEW # [s] for vegetation
+    'dzb_interval'                  : 604800,       # NEW # [s] Interval used for calcuation of vegetation growth
     'output_times'                  : 60.,                # [s] Output interval in seconds of simulation time
     'output_file'                   : None,               # Filename of netCDF4 output file
     'output_vars'                   : ['zb', 'zs',
@@ -166,16 +172,19 @@ DEFAULT_CONFIG = {
     'nlayers'                       : 3,                  # [-] Number of bed layers
     'layer_thickness'               : .01,                # [m] Thickness of bed layers
     'g'                             : 9.81,               # [m/s^2] Gravitational constant
-    'rhoa'                          : 1.225,               # [kg/m^3] Air density
-    'rhop'                          : 2650.,              # [kg/m^3] Grain density
+    'v'                             : 0.000015,             # [m^2/s] Air viscosity  
+    'rhoa'                          : 1.225,              # [kg/m^3] Air density
+    'rhog'                          : 2650.,              # [kg/m^3] Grain density
     'rhow'                          : 1025.,              # [kg/m^3] Water density
     'porosity'                      : .4,                 # [-] Sediment porosity
-    'A'                             : .085,               # [-] Constant in formulation for wind velocity threshold based on grain size
+    'Aa'                            : .085,               # [-] Constant in formulation for wind velocity threshold based on grain size
     'z'                             : 10.,                # [m] Measurement height of wind velocity
     'h'                             : None,               # [m] Representative height of saltation layer
     'k'                             : 0.001,              # [m] Bed roughness
     'Cb'                            : 1.5,                # [-] Constant in formulation for equilibrium sediment concentration
-    'm'                             : .5,                 # [-] Factor to account for difference between average and maximum shear stress
+    'm'                             : 0.5,                # [-] Factor to account for difference between average and maximum shear stress
+    'alpha'                         : 0.4,                # [-] Relation of vertical component of ejection velocity and horizontal velocity difference between impact and ejection 
+    'kappa'                         : 0.41,               # [-] Von Kármán constant
     'sigma'                         : 4.2,                # [-] Ratio between basal area and frontal area of roughness elements
     'beta'                          : 130.,               # [-] Ratio between drag coefficient of roughness elements and bare surface
     'bi'                            : 1.,                 # [-] Bed interaction factor
@@ -209,7 +218,7 @@ DEFAULT_CONFIG = {
     'max_iter_ava'                  : 1000,               # [-] Maximum number of iterations at which to quit iterative solution in avalanching calculation
     'refdate'                       : '2020-01-01 00:00', # [-] Reference datetime in netCDF output
     'callback'                      : None,               # Reference to callback function (e.g. example/callback.py':callback)
-    'wind_convention'               : 'cartesian',        # Convention used for the wind direction in the input files
+    'wind_convention'               : 'nautical',        # Convention used for the wind direction in the input files
 }
 
 

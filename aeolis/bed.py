@@ -99,7 +99,7 @@ def initialize(s, p):
         gs = gs / np.sum(gs)
         for i in range(nl):
             for j in range(nf):
-                s['mass'][:,:,i,j] = p['rhop'] * (1. - p['porosity']) \
+                s['mass'][:,:,i,j] = p['rhog'] * (1. - p['porosity']) \
                                      * s['thlyr'][:,:,i] * gs[j]
     else:
         s['mass'][:,:,:,:] = p['bedcomp_file'].reshape(s['mass'].shape)                
@@ -269,7 +269,7 @@ def update(s, p):
 
     # update bathy
     if p['process_bedupdate']:
-        dz = dm[:,0].reshape((ny+1,nx+1)) / (p['rhop'] * (1. - p['porosity']))
+        dz = dm[:,0].reshape((ny+1,nx+1)) / (p['rhog'] * (1. - p['porosity']))
         s['zb'] += dz
         s['zs'] += dz
         
@@ -416,7 +416,7 @@ def average_change(s, p):
     s['dzb_avg'] = np.delete(s['dzb_avg'], 0, axis=2)
     s['dzb_avg'] = np.dstack((s['dzb_avg'], s['dzb_year']))
 
-    # Calculate average
+    # Calculate average as input for vegetation growth
     s['dzb_veg'] = np.average(s['dzb_avg'], axis=2)
     
     return s

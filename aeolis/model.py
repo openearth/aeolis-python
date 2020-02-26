@@ -206,9 +206,6 @@ class AeoLiS(IBmi):
 
         # initialize wind model
         self.s = aeolis.wind.initialize(self.s, self.p)
-        
-        # initialize interpolation weights
-        # self.s = aeolis.wind.weights(self.s, self.p)
          
         #initialize vegetation model
         self.s = aeolis.vegetation.initialize(self.s, self.p)                  
@@ -252,11 +249,9 @@ class AeoLiS(IBmi):
         
             # calculate wind shear (bed + separation bubble)
             self.s = aeolis.wind.shear(self.s, self.p)
-
-        # compute shear velocity and determine grainspeed
         
         # compute vegetation shear
-        if self.p['veg_file'] is not None: 
+        if self.p['process_vegetation']: 
             self.s = aeolis.vegetation.vegshear(self.s, self.p)    
         
         # determine optimal time step
@@ -272,6 +267,9 @@ class AeoLiS(IBmi):
         
         # compute threshold
         self.s = aeolis.threshold.compute(self.s, self.p)
+        
+        # determine grainspeed
+        self.s = aeolis.transport.grainspeed(self.s, self.p)
 
         # compute equilibrium transport
         self.s = aeolis.transport.equilibrium(self.s, self.p)
@@ -769,9 +767,9 @@ class AeoLiS(IBmi):
         if p['boundary_onshore'] == 'noflux':
             Am2[:,-1] = 0.
             Am1[:,-1] = 0.
-        elif p['boundary_offshore'] == 'constant':                              # Should this be Am2 and Am1 ???
-            Ap2[:,0] = 0.
-            Ap1[:,0] = 0.
+        elif p['boundary_onshore'] == 'constant':                              
+            Am2[:,-1] = 0.
+            Am1[:,-1] = -1.
         elif p['boundary_onshore'] == 'uniform':
             Am2[:,-1] = 0.
             Am1[:,-1] = -1.

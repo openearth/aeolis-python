@@ -57,7 +57,7 @@ def initialize(s, p):
     
     # World coordinates of u-points
     s['xu'][:,1:] = 0.5 * (s['xz'][:,:-1] + s['xz'][:,1:])
-    s['xu'][:,0]  = 1.5 *  s['xz'][:,0] - 0.5 * s['xz'][:,1]
+    s['xu'][:,0]  = 1.5 *  s['xz'][:,0]   - 0.5 * s['xz'][:,1]
     
     # World coordinates of v-points
     s['xv'][1:,:] = 0.5 * (s['xz'][:-1,:] + s['xz'][1:,:])

@@ -77,8 +77,7 @@ class WindShear:
     * Actual resulting values are still to be compared with the results
        from Kroy et al. (2002)
     * Grid interpolation can still be optimized                                 
-    * Separation bubble is still to be implemented                              
-    * Avalanching is still to be implemented                                    
+    * Separation bubble is still to be improved                                                                 
 
     '''
 
@@ -170,42 +169,18 @@ class WindShear:
             gc['zsep'] = self.separation()
             z_origin = gc['z'].copy()
             gc['z'] = np.maximum(gc['z'], gc['zsep'])
-            
-            # Plot shear stresses on c.grid---------------------
-            # d = 10
-            # plt.pcolormesh(gc['x'], gc['y'], gc['z'], cmap='copper_r')
-            # bar = plt.colorbar()
-            # bar.set_label('z [m]')                          
-            # plt.xlabel('xc [m]')
-            # plt.ylabel('yc [m]')
-            # plt.title('Bed level c.grid including separation bubble')
-            # plt.show()
-            # -------------------------------------------------
-        
+                    
         # Compute wind shear stresses on computational grid 
         u = np.zeros(u0.shape)
         
         ix = u0 > 0
         u [ix] = u0 [ix] / u0[ix] #* 0.76
         
-        self.compute_shear(u)
+        self.compute_shear(u0)
+        
         #gc['dtaux']= np.maximum(gc['dtaux'], -1.)
         
         gc['dtaux'], gc['dtauy'] = self.rotate(gc['dtaux'], gc['dtauy'], udir+90)
-        
-        # Plot shear stresses on c.grid---------------------
-        # d = 10
-        # plt.pcolormesh(gc['x'], gc['y'], gc['z'], cmap='copper_r')
-        # bar = plt.colorbar()
-        # bar.set_label('zb [m]')                          
-        # plt.quiver(gc['x'][::d, ::d], gc['y'][::d, ::d],
-        #           gc['dtaux'][::d, ::d], gc['dtauy'][::d, ::d], color='white')
-        # plt.xlabel('xc [m]')
-        # plt.ylabel('yc [m]')
-        # plt.title('Morphology-wind shear stresses on c.grid')
-        # plt.show()
-        # -------------------------------------------------
-        
         
         # Add shear and apply reduction factor for shear in sep. bubble
         self.add_shear()
@@ -213,19 +188,6 @@ class WindShear:
         if process_separation:
             gc['hsep'] = gc['z'] - z_origin
             self.separation_shear(gc['hsep'])
-            
-        # PLOTTING! -------------------------------------------------------
-        # d = 10
-        # plt.pcolormesh(gc['x'], gc['y'], gc['z'], cmap='copper_r') 
-        # bar = plt.colorbar()
-        # bar.set_label('zb [m]')                         
-        # plt.quiver(gc['x'][::d, ::d], gc['y'][::d, ::d],
-        #           gc['taux'][::d, ::d], gc['tauy'][::d, ::d], color='white')
-        # plt.xlabel('xc [m]')
-        # plt.ylabel('yc [m]')
-        # plt.title('Shear stresses c.grid including separation bubble')
-        # plt.show()
-        # -------------------------------------------------   
         
         # Rotate both (i&c) grids + results in opposite dir.
         gi['x'], gi['y'] = self.rotate(gi['x'], gi['y'], -(udir+90.), origin=(self.x0, self.y0))
@@ -257,7 +219,7 @@ class WindShear:
         # plt.pcolormesh(gi['x'], gi['y'], gi['z'], cmap='copper_r')  
         # bar = plt.colorbar()
         # bar.set_label('z [m]')                        
-        # plt.quiver(gi['x'][::d, ::d], gi['y'][::d, ::d],
+        #plt.quiver(gi['x'][::d, ::d], gi['y'][::d, ::d],
         #           gi['taux'][::d, ::d], gi['tauy'][::d, ::d], color='white')
         # plt.xlabel('x [m]')
         # plt.ylabel('y [m]')
@@ -354,7 +316,7 @@ class WindShear:
         Returns
         -------
         hsep : numpy.ndarray
-            Height of seperation bubble (in x direction)
+            Height of seperation bubble
             
         '''  
         hsep = self.igrid['hsep']
@@ -411,11 +373,12 @@ class WindShear:
         gi = self.igrid
         gc = self.cgrid
         
-        # Add buffer zone around grid                                           #buffer is based on version bart, sigmoid function is no longer required
+        # Add buffer zone around grid                                           # buffer is based on version bart, sigmoid function is no longer required
         dxi = gi['x'][1,1] - gi['x'][0,0]
         dyi = gi['y'][1,1] - gi['y'][0,0]
 
-        buf = 200 # amount of cells
+        buf = 10                                                                # amount of cells
+
 
         xi, yi = np.meshgrid(np.linspace(gi['x'][0,0]-buf*dxi, gi['x'][-1,-1]+buf*dxi, gi['x'].shape[1]+2*buf),
                             np.linspace(gi['y'][0,0]-buf*dyi, gi['y'][-1,-1]+buf*dyi, gi['y'].shape[0]+2*buf))
@@ -506,7 +469,7 @@ class WindShear:
         is larger than max angle that wind stream lines can 
         follow behind an obstacle (mu_b = 30)'''
         
-        mu_b = 10.                                                                
+        mu_b = 30.                                                                
         stall += np.logical_and(abs(dzx) > mu_b, dzx < 0) 
         
         stall[1:-1,:] += np.logical_and(stall[1:-1,:]==0, stall[:-2,:]>0, stall[2:,:]>0)
@@ -928,5 +891,5 @@ class WindShear:
             
             
 
-        return zi
+#        return zi
     

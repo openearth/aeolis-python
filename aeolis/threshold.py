@@ -120,9 +120,11 @@ def compute_grainsize(s, p):
     '''
 
     s['uth'][:,:,:] = 1.
-    s['uth'][:,:,:] *= p['A'] * np.sqrt((p['rhop'] - p['rhoa']) / p['rhoa'] * p['g'] * p['grain_size'])
+    s['uth'][:,:,:] = p['Aa'] * np.sqrt((p['rhog'] - p['rhoa']) / p['rhoa'] * p['g'] * p['grain_size']) 
     
-    s['uth0']=s['uth'].copy() #new > necessary?
+    # Shear velocity threshold based on grainsize only (aerodynamic entrainment)
+    s['uth0'] = s['uth'].copy()
+    
     return s
 
 
@@ -167,7 +169,7 @@ def compute_moisture(s, p):
     
     # convert from volumetric content (percentage of volume) to
     # geotechnical mass content (percentage of dry mass)
-    mg = (s['moist'][:,:,:1] * p['rhow'] / (p['rhop'] * (1. - p['porosity']))).repeat(nf, axis=2)
+    mg = (s['moist'][:,:,:1] * p['rhow'] / (p['rhog'] * (1. - p['porosity']))).repeat(nf, axis=2)
     ix = mg > 0.005
     
     if p['method_moist'].lower() == 'belly_johnson':
@@ -357,26 +359,18 @@ def non_erodible(s,p):
     '''
     
     nf = p['nfractions']
-    ustar = np.repeat(s['ustar'][:,:, np.newaxis], nf, axis=2)                  # Doet dit nog iets?
-    
+    thuthlyr = -0.1
+      
     s['zne'][:,:] = p['ne_file']
-
-    ix = s['zb'] <= s['zne']
-    s['uth'][ix,:] = np.inf
     
-    # Smoother method
-#    
-#    alfa = .05
-#    
-#    nf = p['nfractions']
-#    thuthlyr = -0.1
-#    ix = s['zb'] <= s['zne']+thuthlyr
-#    
-#    for i in range(nf):
-#        s['uth'][ix,i] += np.maximum((1-(s['zb'][ix]-s['zne'][ix])/thuthlyr)*(s['ustar'][ix]*2.0-s['uth'][ix,i]),s['uth'][ix,i])
+    ix = s['zb'] <= s['zne'] + thuthlyr
 
+    ustar = s['ustar']
+    uth = s['uth']
+    
+    for i in range(nf):
+        s['uth'][ix,i] += np.maximum((1-(s['zb'][ix]-s['zne'][ix])/thuthlyr)*(ustar[ix]*2.0-uth[ix,i]), uth[ix,i])
 
-#   How about (Raupach et al., 1993) ?? 
     
     return s    
 

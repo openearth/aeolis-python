@@ -27,6 +27,7 @@ from __future__ import absolute_import, division
 
 import logging
 import numpy as np
+import matplotlib.pyplot as plt
 
 # package modules
 import aeolis.wind
@@ -52,6 +53,7 @@ def initialize (s,p):
 
     return s
 
+
 def vegshear(s, p):
 
     # Raupach, 1993
@@ -65,15 +67,29 @@ def vegshear(s, p):
     ix = s['ustar'] != 0.
     ets[ix] = s['ustars'][ix]/s['ustar'][ix]
     etn[ix] = s['ustarn'][ix]/s['ustar'][ix]
+    
+    #print ('ets:', ets)
+    #print ('etn:', etn)
 
     s['vegfac'] = 1. / np.sqrt(1. + roughness * s['rhoveg'])
 
     s['ustar']  *= s['vegfac']
     s['ustars']  = s['ustar'] * ets
     s['ustarn']  = s['ustar'] * etn
-
+    
+    #d = 5        
+    #plt.figure()
+    #plt.pcolormesh(s['x'], s['y'], s['zb'], cmap='copper_r')
+    #bar = plt.colorbar()
+    #bar.set_label('zb [m]')
+    #plt.quiver(s['x'][::d, ::d], s['y'][::d, ::d], s['ustars'][::d, ::d], s['ustarn'][::d, ::d], color='white')
+    #plt.xlabel('x [m]')
+    #plt.ylabel('y [m]')
+    #plt.title('Shear velocities vegetation')
+    #plt.show()
     
     return s
+
 
 def germinate (s,p):
     
@@ -91,8 +107,7 @@ def germinate (s,p):
     s['germinate'] = np.minimum(s['germinate'], 1.)
 
 
-    # Lateral expension 
-    # not included for now
+    # Lateral expension = not included for now
 
     return s
 
@@ -100,7 +115,7 @@ def grow (s, p): #DURAN 2006
     
     ix = np.logical_or(s['germinate'] != 0., s['lateral'] != 0.) * ( p['V_ver'] > 0.)
 
-    s['drhoveg'][:,:] *= 0.
+    s['drhoveg'][:,:] *= 0.                                                     #is this used?
 
     # Reduction of vegetation growth due to sediment burial
     s['dhveg'][ix] = p['V_ver'] * (1 - s['hveg'][ix]/p['hveg_max']) - np.abs(s['dzb_veg'][ix])*p['veg_gamma'] # m/year

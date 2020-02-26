@@ -101,7 +101,7 @@ def interpolate(s, p, t):
         s['udir'][:,:] = np.arctan2(interp_circular(t, uw_t, np.sin(uw_d)),
                                     interp_circular(t, uw_t, np.cos(uw_d))) * 180. / np.pi
 
-    s['uws'] = - s['uw'] * np.sin(-s['alfa'] + s['udir'] / 180. * np.pi)           # alfa [rad] is real world grid cell orientation (clockwise)
+    s['uws'] = - s['uw'] * np.sin(-s['alfa'] + s['udir'] / 180. * np.pi)        # alfa [rad] is real world grid cell orientation (clockwise)
     # print ('uws:', s['uws'])
     s['uwn'] = - s['uw'] * np.cos(-s['alfa'] + s['udir'] / 180. * np.pi)
     # print ('uwn:', s['uwn'])
@@ -111,15 +111,17 @@ def interpolate(s, p, t):
         
     s['uw'] = np.abs(s['uw'])
     
-    # Compute wind shear velocity at height z
-    kappa = 0.41
-    z = p['z']
-    z0 = p['k']                                                                 # dependent on grain size?                                             
+    # Compute wind shear velocity
+    kappa = p['kappa']
+    z     = p['z']
+    z0    = p['k']                                                              # dependent on grain size? - z0 = d/20                                             
     
     
     s['ustar'] = s['uw'] * kappa / np.log(z/z0)
     s['ustars'] = s['uws'] * kappa / np.log(z/z0)
-    s['ustarn'] = s['uwn'] * kappa / np.log(z/z0)
+    s['ustarn'] = s['uwn'] * kappa / np.log(z/z0) 
+    
+    s['ustar0'] = s['ustar'].copy()
     
     s = velocity_stress(s,p)
     
@@ -140,7 +142,7 @@ def shear(s,p):
         s['taus'], s['taun'] = s['shear'].get_shear()
                
         s['tau'] = np.hypot(s['taus'], s['taun'])                               # set minimum of tau to zero
-        #print ('tau shear:', s['tau'])
+
                
         s = stress_velocity(s,p)
                                
