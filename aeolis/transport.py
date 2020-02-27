@@ -64,8 +64,7 @@ def grainspeed(s, p):
     y = s['y']
     
     uth = s['uth']  
-    uth0 = s['uth0']
-    
+    uth0 = s['uth0']    
     ustar = s['ustar']
     ustars = s['ustars']
     ustarn = s['ustarn']
@@ -125,8 +124,8 @@ def grainspeed(s, p):
         # determine ueff for different grainsizes
         
         ix = (ustar[:,:,i] >= uth[:,:,i])*(ustar[:,:,i] > 0.)
-        ueff[ix,i] = (uth[ix,i] / kappa) * (np.log(z1[i] / z0[i]) + z1[i] / zm[ix,i] * (ustar[ix,i] / uth[ix,i] - 1.))
-        # ueff[ix] = (uth[ix] / kappa) * (np.log(z1 / z0) + 2*(np.sqrt(1+z1/zm[ix]*(ustar[ix]**2/uth[ix]**2-1))-1))
+        # ueff[ix,i] = (uth[ix,i] / kappa) * (np.log(z1[i] / z0[i]) + z1[i] / zm[ix,i] * (ustar[ix,i] / uth[ix,i] - 1.))
+        ueff[ix,i] = (uth[ix,i] / kappa) * (np.log(z1[i] / z0[i]) + 2*(np.sqrt(1+z1[i]/zm[ix,i]*(ustar[ix,i]**2/uth[ix,i]**2-1))-1))
         
         # PLOT effective wind velocity per grain fraction ---------------
         # plt.pcolormesh(x, y, ueff[:, :, i])  
@@ -167,40 +166,42 @@ def grainspeed(s, p):
     Ax = np.hypot(Axs, Axn)
     
     # Compute grain speed
-    print ('alpha:', type(alpha), alpha.shape)
-    print ('ueff:', type(ueff), ueff.shape)
-    print ('uf:', type(uf), uf.shape)
-    print ('Ax:', type(Ax), Ax.shape)
-    print ('ets:', type(ets), ets.shape)
-    print ('dhs:', type(dhs), dhs.shape)
+    # print ('alpha:', type(alpha), alpha.shape)
+    # print ('ueff:', type(ueff), ueff.shape)
+    # print ('uf:', type(uf), uf.shape)
+    # print ('Ax:', type(Ax), Ax.shape)
+    # print ('ets:', type(ets), ets.shape)
+    # print ('dhs:', type(dhs), dhs.shape)
     
+    ug0 = np.zeros(uth.shape)
     ugs = np.zeros(uth.shape)
     ugn = np.zeros(uth.shape)
+    ug = np.zeros(uth.shape)
 
     for i in range(nf):  # loop over fractions
-        
+        ug0[:,:,i] = (ueff0[:,:,i] - uf[i] / (np.sqrt(2 * alpha[i])))
         ugs[:,:,i] = (ueff[:,:,i] - uf[i] / (np.sqrt(2. * alpha[i]) * Ax[:,:,i])) * ets[:,:,i] - (np.sqrt(2*alpha[i]) * uf[i] / Ax[:,:,i]) * dhs[:,:,i] 
         ugn[:,:,i] = (ueff[:,:,i] - uf[i] / (np.sqrt(2. * alpha[i]) * Ax[:,:,i])) * etn[:,:,i] - (np.sqrt(2*alpha[i]) * uf[i] / Ax[:,:,i]) * dhn[:,:,i]
         
-        #s['ugs'] = (ueff - uf / (np.sqrt(2 * alpha) * Ax)) * ets - (np.sqrt(2 * alpha) * uf / Ax) * dhs
-        #s['ugn'] = (ueff - uf / (np.sqrt(2 * alpha) * Ax)) * etn - (np.sqrt(2 * alpha) * uf / Ax) * dhn
+        ug[:,:,i] = np.hypot(ugs[:,:,i], ugn[:,:,i])
+        
+        # plt.pcolormesh(x, y, ug[:, :, i])
+        # bar = plt.colorbar()
+        # bar.set_label('ug [m/s]')
+        # plt.pcolormesh(x, y, (np.sqrt(2 * alpha) * uf / Ax[:,:,0]) * dhs[:,:,0])
+        # plt.xlabel('x [m]')
+        # plt.ylabel('y [m]')
+        # plt.title('Horizontal grain velocity')
+        # plt.show()
     
-    print ('ugs:', type(ugs), ugs.shape, ugs)
-    print ('ugn:', type(ugn), ugn.shape, ugn)
-    #s['ugs'] = ugs
-    #s['ugn'] = ugn    
-    #s['ug'] = np.hypot(s['ugs'], s['ugn'])
-    s['ug0'] = (ueff0 - uf / (np.sqrt(2 * alpha)))
+    #print ('ug0:', type(ug0), ug0.shape, ug0)
+    #print ('ugs:', type(ugs), ugs.shape, ugs)
+    #print ('ugn:', type(ugn), ugn.shape, ugn)
+    #print ('ug:', type(ug), ug.shape, ug)
+        
     
-    print ('ug0:', type(s['ug0']), s['ug0'].shape, s['ug0'])
 
-
-    plt.pcolormesh(x, y, ugs[:, :, 0])
-    # plt.pcolormesh(x, y, (np.sqrt(2 * alpha) * uf / Ax[:,:,0]) * dhs[:,:,0])
-    plt.colorbar()
-    plt.show()
-
-    return s
+    return ug0, ugs, ugn, ug
 
 
 def equilibrium(s, p):
@@ -220,17 +221,22 @@ def equilibrium(s, p):
 
     '''
 
-
     if p['process_transport']:
         
-        nf = p['nfractions']
-        ug = s['uw'][:,:,np.newaxis].repeat(nf, axis=2)
+        ug0, ugs, ugn, ug = grainspeed(s,p)
+        
+        s['ug0'] = ug0
+        s['ugs'] = ugs
+        s['ugn'] = ugn    
+        s['ug'] = ug
+        
+        nf    = p['nfractions']
         ustar = s['ustar'][:,:,np.newaxis].repeat(nf, axis=2)
-        uth = s['uth']
-        uthf = s['uthf']
+        uth   = s['uth']
+        uthf  = s['uthf']
         ix = ustar != 0.
         
-        s['Cu'] = np.zeros(ug.shape)
+        s['Cu']  = np.zeros(ug.shape)
         s['Cuf'] = np.zeros(ug.shape)
 
         s['Cu'][ix] = _equilibrium(ustar[ix], uth[ix], ug[ix],

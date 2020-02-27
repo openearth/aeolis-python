@@ -267,11 +267,8 @@ class AeoLiS(IBmi):
         
         # compute threshold
         self.s = aeolis.threshold.compute(self.s, self.p)
-        
-        # determine grainspeed
-        self.s = aeolis.transport.grainspeed(self.s, self.p)
 
-        # compute equilibrium transport
+        # compute grainspeed and equilibrium transport
         self.s = aeolis.transport.equilibrium(self.s, self.p)
 
         # compute instantaneous transport
@@ -699,126 +696,132 @@ class AeoLiS(IBmi):
                         maxdrop=(l['uw']-s['uw']).max(),
                         time=self.t,
                         dt=self.dt)
-
-        # define matrix coefficients to solve linear system of equations
-        Cs = self.dt * s['dn'] * s['dsdni'] * s['uws']
-        Cn = self.dt * s['ds'] * s['dsdni'] * s['uwn']
-        Ti = self.dt / p['T']
-
-        beta = abs(beta)
-        if beta >= 1.:
-            # define upwind direction
-            ixs = np.asarray(s['uws'] >= 0., dtype=np.float)
-            ixn = np.asarray(s['uwn'] >= 0., dtype=np.float)
-            sgs = 2. * ixs - 1.
-            sgn = 2. * ixn - 1.
-        else:
-            # or centralizing weights
-            ixs = beta + np.zeros(s['uw'])
-            ixn = beta + np.zeros(s['uw'])
-            sgs = np.zeros(s['uw'])
-            sgn = np.zeros(s['uw'])
-
-        # initialize matrix diagonals
-        A0 = np.zeros(s['uw'].shape)
-        Apx = np.zeros(s['uw'].shape)
-        Ap1 = np.zeros(s['uw'].shape)
-        Ap2 = np.zeros(s['uw'].shape)
-        Amx = np.zeros(s['uw'].shape)
-        Am1 = np.zeros(s['uw'].shape)
-        Am2 = np.zeros(s['uw'].shape)
-
-        # populate matrix diagonals
-        A0 = 1. + (sgs * Cs + sgn * Cn + Ti) * alpha
-        Apx = Cn * alpha * (1. - ixn)
-        Ap1 = Cs * alpha * (1. - ixs)
-        Amx = -Cn * alpha * ixn
-        Am1 = -Cs * alpha * ixs
-
-        # add boundaries
-        A0[:,0] = 1.
-        Apx[:,0] = 0.
-        Amx[:,0] = 0.
-        Am2[:,0] = 0.
-        Am1[:,0] = 0.
-
-        A0[:,-1] = 1.
-        Apx[:,-1] = 0.
-        Ap1[:,-1] = 0.
-        Amx[:,-1] = 0.
-
-        if p['boundary_offshore'] == 'noflux':
-            Ap2[:,0] = 0.
-            Ap1[:,0] = 0.
-        elif p['boundary_offshore'] == 'constant':
-            Ap2[:,0] = 0.
-            Ap1[:,0] = 0.
-        elif p['boundary_offshore'] == 'uniform':
-            Ap2[:,0] = 0.
-            Ap1[:,0] = -1.
-        elif p['boundary_offshore'] == 'gradient':
-            Ap2[:,0] = s['ds'][:,1] / s['ds'][:,2]
-            Ap1[:,0] = -1. - s['ds'][:,1] / s['ds'][:,2]
-        elif p['boundary_offshore'] == 'circular':
-            logger.log_and_raise('Cross-shore cricular boundary condition not yet implemented', exc=NotImplementedError)
-        else:
-            logger.log_and_raise('Unknown offshore boundary condition [%s]' % self.p['boundary_offshore'], exc=ValueError)
-
-        if p['boundary_onshore'] == 'noflux':
-            Am2[:,-1] = 0.
-            Am1[:,-1] = 0.
-        elif p['boundary_onshore'] == 'constant':                              
-            Am2[:,-1] = 0.
-            Am1[:,-1] = -1.
-        elif p['boundary_onshore'] == 'uniform':
-            Am2[:,-1] = 0.
-            Am1[:,-1] = -1.
-        elif p['boundary_onshore'] == 'gradient':
-            Am2[:,-1] = s['ds'][:,-1] / s['ds'][:,-2]
-            Am1[:,-1] = -1. - s['ds'][:,-1] / s['ds'][:,-2]
-        elif p['boundary_offshore'] == 'circular':
-            logger.log_and_raise('Cross-shore cricular boundary condition not yet implemented', exc=NotImplementedError)
-        else:
-            logger.log_and_raise('Unknown onshore boundary condition [%s]' % self.p['boundary_onshore'], exc=ValueError)
-
-        if p['boundary_lateral'] == 'noflux':
-            logger.log_and_raise('Lateral no-flux boundary condition not yet implemented', exc=NotImplementedError)
-        if p['boundary_lateral'] == 'constant':
-            logger.log_and_raise('Lateral constant boundary condition not yet implemented', exc=NotImplementedError)
-        if p['boundary_lateral'] == 'uniform':
-            logger.log_and_raise('Lateral uniform boundary condition not yet implemented', exc=NotImplementedError)
-        elif p['boundary_lateral'] == 'gradient':
-            logger.log_and_raise('Lateral gradient boundary condition not yet implemented', exc=NotImplementedError)
-        elif p['boundary_lateral'] == 'circular':
-            pass
-        else:
-            logger.log_and_raise('Unknown lateral boundary condition [%s]' % self.p['boundary_lateral'], exc=ValueError)
-
-        # construct sparse matrix
-        if p['ny'] > 0:
-            i = p['nx']+1
-            A = scipy.sparse.diags((Apx.flatten()[:i],
-                                    Amx.flatten()[i:],
-                                    Am2.flatten()[2:],
-                                    Am1.flatten()[1:],
-                                    A0.flatten(),
-                                    Ap1.flatten()[:-1],
-                                    Ap2.flatten()[:-2],
-                                    Apx.flatten()[i:],
-                                    Amx.flatten()[:i]),
-                                   (-i*p['ny'],-i,-2,-1,0,1,2,i,i*p['ny']), format='csr')
-        else:
-            A = scipy.sparse.diags((Am2.flatten()[2:],
-                                    Am1.flatten()[1:],
-                                    A0.flatten(),
-                                    Ap1.flatten()[:-1],
-                                    Ap2.flatten()[:-2]),
-                                   (-2,-1,0,1,2), format='csr')
-
-        # solve transport for each fraction separately using latest
-        # available weights
+            
         nf = p['nfractions']
+        
+        Cs = np.zeros(s['ug'].shape)
+        Cn = np.zeros(s['ug'].shape)
+
+        
         for i in range(nf):
+            # define matrix coefficients to solve linear system of equations        
+            Cs = self.dt * s['dn'] * s['dsdni'] * s['ugs'][:,:,i]
+            Cn = self.dt * s['ds'] * s['dsdni'] * s['ugn'][:,:,i]
+            Ti = self.dt / p['T']
+            
+            beta = abs(beta)
+            if beta >= 1.:
+                # define upwind direction
+                ixs = np.asarray(s['ugs'][:,:,i] >= 0., dtype=np.float)
+                ixn = np.asarray(s['ugn'][:,:,i] >= 0., dtype=np.float)
+                sgs = 2. * ixs - 1.
+                sgn = 2. * ixn - 1.
+            
+            else:
+                # or centralizing weights
+                ixs = beta + np.zeros(Cs.shape)
+                ixn = beta + np.zeros(Cn.shape)
+                sgs = np.zeros(s['ug'][:,:,i])
+                sgn = np.zeros(s['ug'][:,:,i])
+
+            # initialize matrix diagonals
+            A0 = np.zeros(s['zb'].shape)
+            Apx = np.zeros(s['zb'].shape)
+            Ap1 = np.zeros(s['zb'].shape)
+            Ap2 = np.zeros(s['zb'].shape)
+            Amx = np.zeros(s['zb'].shape)
+            Am1 = np.zeros(s['zb'].shape)
+            Am2 = np.zeros(s['zb'].shape)
+
+            # populate matrix diagonals
+            A0  = 1. + (sgs * Cs + sgn * Cn + Ti) * alpha
+            Apx = Cn * alpha * (1. - ixn)
+            Ap1 = Cs * alpha * (1. - ixs)
+            Amx = -Cn * alpha * ixn
+            Am1 = -Cs * alpha * ixs    
+
+            # add boundaries
+            A0[:,0] = 1.
+            Apx[:,0] = 0.
+            Amx[:,0] = 0.
+            Am2[:,0] = 0.
+            Am1[:,0] = 0.
+
+            A0[:,-1] = 1.
+            Apx[:,-1] = 0.
+            Ap1[:,-1] = 0.
+            Amx[:,-1] = 0.
+
+            if p['boundary_offshore'] == 'noflux':
+                Ap2[:,0] = 0.
+                Ap1[:,0] = 0.
+            elif p['boundary_offshore'] == 'constant':
+                Ap2[:,0] = 0.
+                Ap1[:,0] = 0.
+            elif p['boundary_offshore'] == 'uniform':
+                Ap2[:,0] = 0.
+                Ap1[:,0] = -1.
+            elif p['boundary_offshore'] == 'gradient':
+                Ap2[:,0] = s['ds'][:,1] / s['ds'][:,2]
+                Ap1[:,0] = -1. - s['ds'][:,1] / s['ds'][:,2]
+            elif p['boundary_offshore'] == 'circular':
+                logger.log_and_raise('Cross-shore cricular boundary condition not yet implemented', exc=NotImplementedError)
+            else:
+                logger.log_and_raise('Unknown offshore boundary condition [%s]' % self.p['boundary_offshore'], exc=ValueError)
+
+            if p['boundary_onshore'] == 'noflux':
+                Am2[:,-1] = 0.
+                Am1[:,-1] = 0.
+            elif p['boundary_onshore'] == 'constant':                              
+                Am2[:,-1] = 0.
+                Am1[:,-1] = -1.
+            elif p['boundary_onshore'] == 'uniform':
+                Am2[:,-1] = 0.
+                Am1[:,-1] = -1.
+            elif p['boundary_onshore'] == 'gradient':
+                Am2[:,-1] = s['ds'][:,-1] / s['ds'][:,-2]
+                Am1[:,-1] = -1. - s['ds'][:,-1] / s['ds'][:,-2]
+            elif p['boundary_offshore'] == 'circular':
+                logger.log_and_raise('Cross-shore cricular boundary condition not yet implemented', exc=NotImplementedError)
+            else:
+                logger.log_and_raise('Unknown onshore boundary condition [%s]' % self.p['boundary_onshore'], exc=ValueError)
+
+            if p['boundary_lateral'] == 'noflux':
+                logger.log_and_raise('Lateral no-flux boundary condition not yet implemented', exc=NotImplementedError)
+            if p['boundary_lateral'] == 'constant':
+                logger.log_and_raise('Lateral constant boundary condition not yet implemented', exc=NotImplementedError)
+            if p['boundary_lateral'] == 'uniform':
+                logger.log_and_raise('Lateral uniform boundary condition not yet implemented', exc=NotImplementedError)
+            elif p['boundary_lateral'] == 'gradient':
+                logger.log_and_raise('Lateral gradient boundary condition not yet implemented', exc=NotImplementedError)
+            elif p['boundary_lateral'] == 'circular':
+                pass
+            else:
+                logger.log_and_raise('Unknown lateral boundary condition [%s]' % self.p['boundary_lateral'], exc=ValueError)
+
+            # construct sparse matrix
+            if p['ny'] > 0:
+                j = p['nx']+1
+                A = scipy.sparse.diags((Apx.flatten()[:j],
+                                        Amx.flatten()[j:],
+                                        Am2.flatten()[2:],
+                                        Am1.flatten()[1:],
+                                        A0.flatten(),
+                                        Ap1.flatten()[:-1],
+                                        Ap2.flatten()[:-2],
+                                        Apx.flatten()[j:],
+                                        Amx.flatten()[:j]),
+                                       (-j*p['ny'],-j,-2,-1,0,1,2,j,j*p['ny']), format='csr')
+            else:
+                A = scipy.sparse.diags((Am2.flatten()[2:],
+                                        Am1.flatten()[1:],
+                                        A0.flatten(),
+                                        Ap1.flatten()[:-1],
+                                        Ap2.flatten()[:-2]),
+                                       (-2,-1,0,1,2), format='csr')
+
+            # solve transport for each fraction separately using latest
+            # available weights
 
             # renormalize weights for all fractions equal or larger
             # than the current one such that the sum of all weights is
@@ -837,9 +840,10 @@ class AeoLiS(IBmi):
                 s['S'] = S_i.sum(axis=-1)
 
                 # create the right hand side of the linear system
-                y_i = np.zeros(s['uw'].shape)
-                y_im = np.zeros(s['uw'].shape)  # implicit terms
-                y_ex = np.zeros(s['uw'].shape)  # explicit terms
+                y_i = np.zeros(s['zb'].shape)
+                y_im = np.zeros(s['zb'].shape)  # implicit terms
+                y_ex = np.zeros(s['zb'].shape)  # explicit terms
+                
                 y_im[:,1:-1] = (
                     (w[:,1:-1,i] * s['Cuf'][:,1:-1,i] * Ti) * (1. - s['S'][:,1:-1]) +
                     (w[:,1:-1,i] * s['Cu'][:,1:-1,i] * Ti) * s['S'][:,1:-1]
@@ -860,9 +864,9 @@ class AeoLiS(IBmi):
 
                 # add boundaries
                 if p['boundary_offshore'] == 'constant':
-                    y_1[:,0] = p['boundary_offshore_flux'] / s['uw'][:,0]
+                    y_i[:,0,i] = p['boundary_offshore_flux'] / s['ug'][:,0,i]
                 if p['boundary_onshore'] == 'constant':
-                    y_1[:,-1] = p['boundary_onshore_flux'] / s['uw'][:,-1]
+                    y_i[:,-1,i] = p['boundary_onshore_flux'] / s['ug'][:,-1,i]
 
                 # solve system with current weights
                 Ct_i = scipy.sparse.linalg.spsolve(A, y_i.flatten())
@@ -944,8 +948,10 @@ class AeoLiS(IBmi):
                                       minweight=np.sum(w, axis=-1).min(),
                                       **logprops))
 
-        qs = Ct * s['uws'].reshape(Ct[:,:,:1].shape).repeat(p['nfractions'], axis=-1)
-        qn = Ct * s['uwn'].reshape(Ct[:,:,:1].shape).repeat(p['nfractions'], axis=-1)
+        qs = Ct * s['ugs']#.reshape(Ct[:,:,:1].shape).repeat(p['nfractions'], axis=-1)
+        qn = Ct * s['ugn']#.reshape(Ct[:,:,:1].shape).repeat(p['nfractions'], axis=-1)
+        
+        # print ('Ct:', Ct.shape)
 
         return dict(Ct=Ct,
                     qs=qs,

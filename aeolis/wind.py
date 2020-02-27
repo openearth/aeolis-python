@@ -114,7 +114,7 @@ def interpolate(s, p, t):
     # Compute wind shear velocity
     kappa = p['kappa']
     z     = p['z']
-    z0    = p['k']                                                              # dependent on grain size? - z0 = d/20                                             
+    z0    = p['grain_size'][0] / 20                                                              # dependent on grain size? - z0 = d/20                                             
     
     
     s['ustar'] = s['uw'] * kappa / np.log(z/z0)
