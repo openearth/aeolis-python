@@ -293,6 +293,7 @@ class AeoLiS(IBmi):
             self.s = aeolis.vegetation.grow(self.s, self.p)
         
         # avalanching
+        self.s = aeolis.avalanching.angele_of_repose(self.s, self.p)
         self.s = aeolis.avalanching.avalanche(self.s, self.p)
 
         # increment time
@@ -721,8 +722,8 @@ class AeoLiS(IBmi):
                 # or centralizing weights
                 ixs = beta + np.zeros(Cs.shape)
                 ixn = beta + np.zeros(Cn.shape)
-                sgs = np.zeros(s['ug'][:,:,i])
-                sgn = np.zeros(s['ug'][:,:,i])
+                sgs = np.zeros(Cs.shape)
+                sgn = np.zeros(Cn.shape)
 
             # initialize matrix diagonals
             A0 = np.zeros(s['zb'].shape)
@@ -774,7 +775,7 @@ class AeoLiS(IBmi):
                 Am1[:,-1] = 0.
             elif p['boundary_onshore'] == 'constant':                              
                 Am2[:,-1] = 0.
-                Am1[:,-1] = -1.
+                Am1[:,-1] = 0.
             elif p['boundary_onshore'] == 'uniform':
                 Am2[:,-1] = 0.
                 Am1[:,-1] = -1.
@@ -948,8 +949,8 @@ class AeoLiS(IBmi):
                                       minweight=np.sum(w, axis=-1).min(),
                                       **logprops))
 
-        qs = Ct * s['ugs']#.reshape(Ct[:,:,:1].shape).repeat(p['nfractions'], axis=-1)
-        qn = Ct * s['ugn']#.reshape(Ct[:,:,:1].shape).repeat(p['nfractions'], axis=-1)
+        qs = Ct * s['ugs'] #.reshape(Ct[:,:,:1].shape).repeat(p['nfractions'], axis=-1)
+        qn = Ct * s['ugn'] #.reshape(Ct[:,:,:1].shape).repeat(p['nfractions'], axis=-1)
         
         # print ('Ct:', Ct.shape)
 

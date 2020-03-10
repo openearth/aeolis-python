@@ -53,6 +53,7 @@ MODEL_STATE = {
         'dsdni',                            # [m^-2] Inverse of real-world grid cell surface area
         'alfa',                             # [rad] Real-world grid cell orientation (clockwise)
         'zb',                               # [m] Bed level above reference
+        'zb0',                        # NEW # [m] Initial bed level above reference
         'dzb',                        # NEW # [m] Bed level change per time step
         'S',                                # [-] Level of saturation
         'ustar',                      # NEW # [m/s] Shear velocity by wind
@@ -63,6 +64,8 @@ MODEL_STATE = {
         'hsep',                       # NEW # [m] Height of separation bubbel = difference between z-level of zsep and of the bed level zb
 #        'stall',                      # NEW # [ ] 
 #        'bubble',                     # NEW # [ ]
+        'theta_stat',                 # NEW # [degrees] Updated, spatially varying static angle of repose
+        'theta_dyn',                  # NEW # [degrees] Updated, spatially varying dynamic angle of repose
         'dzb_year',                   # NEW # Bed level change averaged over collected time steps 
         'rhoveg',                     # NEW # Vegetation cover
         'drhoveg',                    # NEW # Change in vegetation cover
@@ -92,6 +95,7 @@ MODEL_STATE = {
         'ug',                               # [m/s] Mean horizontal grain velocity in saturated state
         'ugs',                              # [m/s] Component of the grain velocity in x-direction
         'ugn',                              # [m/s] Component of the grain velocity in y-direction
+        'ug0',
     ),
     ('ny','nx','nlayers') : (
         'thlyr',                            # [m] Bed composition layer thickness
@@ -125,8 +129,8 @@ DEFAULT_CONFIG = {
     'process_humidity'              : False,              # Enable the process of humidity
     'process_avalanche'             : True,         # NEW # Enable the process of avalanching
     'process_inertia'               : False,        # NEW 
-    'process_separation'            : False,         # NEW # Enable the including of separation bubble
-    'process_vegetation'            : False,        # NEW # Enable the including of vegetation
+    'process_separation'            : True,         # NEW # Enable the including of separation bubble
+    'process_vegetation'            : True,         # NEW # Enable the including of vegetation
     'th_grainsize'                  : True,               # Enable wind velocity threshold based on grainsize
     'th_bedslope'                   : False,              # Enable wind velocity threshold based on bedslope
     'th_moisture'                   : True,               # Enable wind velocity threshold based on moisture
@@ -172,7 +176,7 @@ DEFAULT_CONFIG = {
     'nlayers'                       : 3,                  # [-] Number of bed layers
     'layer_thickness'               : .01,                # [m] Thickness of bed layers
     'g'                             : 9.81,               # [m/s^2] Gravitational constant
-    'v'                             : 0.000015,             # [m^2/s] Air viscosity  
+    'v'                             : 0.000015,           # [m^2/s] Air viscosity  
     'rhoa'                          : 1.225,              # [kg/m^3] Air density
     'rhog'                          : 2650.,              # [kg/m^3] Grain density
     'rhow'                          : 1025.,              # [kg/m^3] Water density
@@ -188,17 +192,18 @@ DEFAULT_CONFIG = {
     'sigma'                         : 4.2,                # [-] Ratio between basal area and frontal area of roughness elements
     'beta'                          : 130.,               # [-] Ratio between drag coefficient of roughness elements and bare surface
     'bi'                            : 1.,                 # [-] Bed interaction factor
-    'T'                             : 1,                  # [s] Adaptation time scale in advection equation
+    'T'                             : 1.,                 # [s] Adaptation time scale in advection equation
     'Tdry'                          : 3600.*1.5,          # [s] Adaptation time scale for soil drying
     'Tsalt'                         : 3600.*24.*30.,      # [s] Adaptation time scale for salinitation
+    'Tswash'                        : 30.,                # [s] 
     'eps'                           : 1e-3,               # [m] Minimum water depth to consider a cell "flooded"
     'gamma'                         : .5,                 # [-] Maximum wave height over depth ratio
     'xi'                            : .3,                 # [-] Surf similarity parameter
     'facDOD'                        : .1,                 # [-] Ratio between depth of disturbance and local wave height
     'csalt'                         : 35e-3,              # [-] Maximum salt concentration in bed surface layer
     'cpair'                         : 1.0035e-3,          # [MJ/kg/oC] Specific heat capacity air
-    'theta_dyn'                     : 33.,          # NEW # [degrees] Dynamic angle of repose, critical dynamic slope for avalanching 
-    'theta_stat'                    : 34.,          # NEW # [degrees] Static angle of repose, critical static slope for avalanching
+    'theta_dyn'                     : 33.,          # NEW # [degrees] Initial Dynamic angle of repose, critical dynamic slope for avalanching 
+    'theta_stat'                    : 34.,          # NEW # [degrees] Initial Static angle of repose, critical static slope for avalanching
     'hveg_max'                      : 1.,           # NEW # [m] Max height of vegetation 
     'V_ver'                         : 0.,           # NEW # [1/year]
     'V_lat'                         : 0.,           # NEW # [m/year]

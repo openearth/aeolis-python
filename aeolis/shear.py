@@ -459,8 +459,8 @@ class WindShear:
                                                                                 # c = 0.2 according to Durán 2010 (Sauermann 2001: c = 0.25 for 14 degrees)
         # Compute bed slope angle  
         dzx[:,:-1] = np.rad2deg(np.arctan((z[:,1:]-z[:,:-1])/dx))
-        # dzx[:,0] = dzx[:,1]
-        # dzx[:,-1] = dzx[:,-2]
+        dzx[:,0] = dzx[:,1]
+        dzx[:,-1] = dzx[:,-2]
         
         #print ('dzx:', dzx)
         
@@ -491,11 +491,11 @@ class WindShear:
         # plt.show()
         
         bubble = bubble.astype(int)
-        # print ('bubble int:', bubble)
+        #print ('bubble int:', bubble)
         
         # Count separation bubbles
         n = np.sum(bubble)
-        # print ('number of sep bubbles', n)
+        #print ('number of sep bubbles', n)
         bubble_n = np.asarray(np.where(bubble == True)).T
         # print ('bubble_n:', bubble_n)
         
@@ -562,13 +562,13 @@ class WindShear:
             zsep[j,i:i_max] = zsep1[j,i:i_max]
             
             # plt.plot(x[j,i:i_max], zsep0[j,i:i_max], label='zsep0')
-            # plt.plot(x[j,i:i_max], zsep[j,i:i_max], label='zsep')
-            # plt.plot(x[j,i:i_max], z[j,i:i_max], label='zb')
-            # plt.xlabel('x [m]')
-            # plt.ylabel('z [m]')
-            # plt.title('Separation bubble')
-            # plt.legend()
-            # plt.show()
+            #plt.plot(x[j,i:i_max], zsep[j,i:i_max], label='zsep')
+            #plt.plot(x[j,i:i_max], z[j,i:i_max], label='zb')
+            #plt.xlabel('x [m]')
+            #plt.ylabel('z [m]')
+            #plt.title('Separation bubble')
+            #plt.legend()
+            #plt.show()
             
             # Dune cutting
 #            cut_list = np.logical_and(zsep0[j,i:i_max] >= z[j,i:i_max], 

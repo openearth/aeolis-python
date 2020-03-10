@@ -36,6 +36,34 @@ from aeolis.utils import *
 # initialize logger
 logger = logging.getLogger(__name__)
 
+def angele_of_repose(s,p):
+    '''Determine the dynamic and static angle of repose.
+    
+    Both the critical dynamic and static angle of repose are spatial varying
+    and depend on surface moisture content and .... 
+        
+    Parameters
+    ----------
+    s : dict
+        Spatial grids
+    p : dict
+        Model configuration parameters
+        
+    Returns
+    -------
+    dict
+        Spatial grids'''
+        
+    # comment Lisa: dependence on moisture content is not yet implemented     
+        
+    theta_stat = p['theta_stat']
+    theta_dyn  = p['theta_dyn']
+    
+    s['theta_stat'] = theta_stat
+    s['theta_dyn'] = theta_dyn
+        
+    return s
+
 
 def avalanche(s, p):
     '''Avalanching occurs if bed slopes exceed critical slopes.
@@ -65,8 +93,8 @@ def avalanche(s, p):
 
         #parameters
 
-        tan_stat = np.tan(np.deg2rad(p['theta_stat']))
-        tan_dyn = np.tan(np.deg2rad(p['theta_dyn']))
+        tan_stat = np.tan(np.deg2rad(s['theta_stat']))
+        tan_dyn = np.tan(np.deg2rad(s['theta_dyn']))
 
         E = 0.2
 
@@ -153,7 +181,7 @@ def avalanche(s, p):
 
     return s	    
 
-#@jit(nopython=True)
+
 def calc_gradients(zb, nx, ny, ds, dn, zne):
     '''Calculates the downslope gradients in the bed that are needed for
     avalanching module

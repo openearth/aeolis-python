@@ -95,6 +95,7 @@ def grainspeed(s, p):
     z1      = 35. * lv # reference height +- 35 mm
   
     alpha   = 0.17 * d / lv
+    p['alpha'] = alpha
 
     Sstar   = d/(4*v)*np.sqrt(g*d*(s-1.))
     Cd      = (4/3)*(A+np.sqrt(2*alpha)*B/Sstar)**2
@@ -199,8 +200,6 @@ def grainspeed(s, p):
     #print ('ugn:', type(ugn), ugn.shape, ugn)
     #print ('ug:', type(ug), ug.shape, ug)
         
-    
-
     return ug0, ugs, ugn, ug
 
 
@@ -240,9 +239,9 @@ def equilibrium(s, p):
         s['Cuf'] = np.zeros(ug.shape)
 
         s['Cu'][ix] = _equilibrium(ustar[ix], uth[ix], ug[ix],
-                                   Cb=p['Cb'], rhoa=p['rhoa'], g=p['g'], method=p['method_transport'])
+                                   Cb=p['Cb'], alpha=p['alpha'], rhoa=p['rhoa'], g=p['g'], method=p['method_transport'])
         s['Cuf'][ix] = _equilibrium(ustar[ix], uthf[ix], ug[ix],
-                                    Cb=p['Cb'], rhoa=p['rhoa'], g=p['g'], method=p['method_transport'])
+                                    Cb=p['Cb'], alpha=p['alpha'], rhoa=p['rhoa'], g=p['g'], method=p['method_transport'])
 
     s['Cu'] *= p['accfac']
     s['Cuf'] *= p['accfac']
@@ -250,13 +249,15 @@ def equilibrium(s, p):
     return s
 
 
-def _equilibrium(ustar, uth, ug, Cb, rhoa, g, method):
+def _equilibrium(ustar, uth, ug, Cb, alpha, rhoa, g, method):
     if method.lower() == 'bagnold':
         Cu = np.maximum(0., Cb * rhoa / g * (ustar - uth)**3 / ug)
     elif method.lower() == 'kawamura':
         Cu = np.maximum(0., Cb * rhoa / g * (ustar + uth)**2 * (ustar - uth) / ug)
     elif method.lower() == 'lettau':
         Cu = np.maximum(0., Cb * rhoa / g * (ustar - uth) * ustar**2 / ug)
+    elif method.lower() == 'cdm':
+        Cu = np.maximum(0.,  alpha * rhoa / g * (ustar**2 - uth**2))    
     else:
         logger.log_and_raise('Unknown transport formulation [%s]' % method, exc=ValueError)
 

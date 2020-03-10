@@ -89,6 +89,7 @@ def initialize(s, p):
 
     # initialize bathymetry
     s['zb'][:,:] = p['bed_file']
+    s['zb'][:,:] = p['bed_file']
 
     # initialize bed layers
     s['thlyr'][:,:,:] = p['layer_thickness']
@@ -270,10 +271,18 @@ def update(s, p):
     # update bathy
     if p['process_bedupdate']:
         dz = dm[:,0].reshape((ny+1,nx+1)) / (p['rhog'] * (1. - p['porosity']))
+        
+        s['dzb'] = dz
+        
+        # redistribute sediment from inactive zone to marine interaction zone
+        
         s['zb'] += dz
         s['zs'] += dz
         
-        s['dzb'] = dz
+        Tswash = 0.01 # p['Tswash'] / p['dt']
+        ix = s['zs'] > (s['zb'] + 0.01)
+        s['zb'][ix] += (s['zb0'][ix] - s['zb'][ix]) * Tswash
+        
 
     return s
 
