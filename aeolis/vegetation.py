@@ -72,6 +72,7 @@ def vegshear(s, p):
     #print ('etn:', etn)
 
     s['vegfac'] = 1. / np.sqrt(1. + roughness * s['rhoveg'])
+    # print (s['vegfac'])
 
     s['ustar']  *= s['vegfac']
     s['ustars']  = s['ustar'] * ets
@@ -122,10 +123,14 @@ def grow (s, p): #DURAN 2006
     s['dhveg'] = np.maximum(s['dhveg'], -3.)
 
     # if p['_time'] > p['dz_interval']:
-    #     import matplotlib.pyplot as plt
-    #     plt.pcolormesh(s['x'], s['y'], s['dhveg'], vmin=-1, vmax=1)
-    #     plt.colorbar()
-    #     plt.show()
+        # plt.pcolormesh(s['x'],s['y'], s['dhveg'], vmin=-1, vmax=1, cmap='YlGn')
+        # plt.gca().invert_yaxis()
+        # bar = plt.colorbar()
+        # bar.set_label('rhoveg')
+        # plt.xlabel('x [m]')
+        # plt.ylabel('y [m]')
+        # plt.title('Vegetation cover')
+        # plt.show()
 
     # Adding growth
     s['hveg'] += s['dhveg']*p['dt']/(365.25*24*3600)
@@ -134,6 +139,8 @@ def grow (s, p): #DURAN 2006
 
     s['hveg'] = np.maximum(np.minimum(s['hveg'], p['hveg_max']), 0.)
     s['rhoveg'] = (s['hveg']/p['hveg_max'])**2
+    
+    
 
     # Plot has to vegetate again after dying
 

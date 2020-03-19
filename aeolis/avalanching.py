@@ -40,7 +40,8 @@ def angele_of_repose(s,p):
     '''Determine the dynamic and static angle of repose.
     
     Both the critical dynamic and static angle of repose are spatial varying
-    and depend on surface moisture content and .... 
+    and depend on surface moisture content and roots of present vegetation
+    and .... 
         
     Parameters
     ----------

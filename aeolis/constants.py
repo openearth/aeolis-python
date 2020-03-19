@@ -80,6 +80,7 @@ MODEL_STATE = {
     ('ny','nx','nfractions') : (
         'Cu',                               # [kg/m^2] Equilibrium sediment concentration integrated over saltation height
         'Cuf',                              # [kg/m^2] Equilibrium sediment concentration integrated over saltation height, assuming the fluid shear velocity threshold
+        'Cu0', 
         'Ct',                               # [kg/m^2] Instantaneous sediment concentration integrated over saltation height
         'q',                                # [kg/m/s] Instantaneous sediment flux
         'qs',                               # [kg/m/s] Instantaneous sediment flux in x-direction
@@ -209,7 +210,8 @@ DEFAULT_CONFIG = {
     'V_lat'                         : 0.,           # NEW # [m/year]
     'germinate'                     : 0.,           # NEW # [1/year] Possibility of germination per year
     'lateral'                       : 0.,           # NEW # -/year
-    'veg_gamma'                     : 1.,
+    'veg_gamma'                     : 1.,           # NEW #
+    'sedimentinput'                 : 0.,           # NEW #
     'scheme'                        : 'euler_backward',   # Name of numerical scheme (euler_forward, euler_backward or crank_nicolson)
     'boundary_lateral'              : 'circular',         # Name of lateral boundary conditions (circular, noflux)
     'boundary_offshore'             : 'noflux',           # Name of offshore boundary conditions (gradient, noflux, constant, uniform)

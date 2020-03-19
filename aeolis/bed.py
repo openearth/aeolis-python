@@ -32,6 +32,7 @@ import numpy as np
 
 # package modules
 from aeolis.utils import *
+import matplotlib.pyplot as plt
 
 
 # initialize logger
@@ -90,6 +91,7 @@ def initialize(s, p):
     # initialize bathymetry
     s['zb'][:,:] = p['bed_file']
     s['zb'][:,:] = p['bed_file']
+    
 
     # initialize bed layers
     s['thlyr'][:,:,:] = p['layer_thickness']
@@ -177,7 +179,7 @@ def mixtoplayer(s, p):
             mass = s['mass'].copy()
             mass[~ix] = np.nan
             
-            gd = normalize(p['grain_dist']) * p['rhop'] * (1. - p['porosity'])
+            gd = normalize(p['grain_dist']) * p['rhog'] * (1. - p['porosity'])
             gd = gd.reshape((1,1,1,-1)).repeat(ny, axis=0) \
                                        .repeat(nx, axis=1) \
                                        .repeat(nl, axis=2)
@@ -283,7 +285,14 @@ def update(s, p):
         ix = s['zs'] > (s['zb'] + 0.01)
         s['zb'][ix] += (s['zb0'][ix] - s['zb'][ix]) * Tswash
         
-
+    # plt.pcolormesh(s['x'], s['y'], s['zb'], cmap='copper_r')
+    # bar = plt.colorbar()
+    # bar.set_label('zb [m]')
+    # plt.xlabel('x [m]')
+    # plt.ylabel('y [m]')
+    # plt.title('Bed elevation')
+    # plt.show()
+    
     return s
 
 

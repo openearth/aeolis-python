@@ -88,7 +88,7 @@ class WindShear:
     
     
     def __init__(self, x, y, z, dx=1., dy=1.,
-                 buffer_width=10., buffer_relaxation=None,
+                 buffer_width=100., buffer_relaxation=None,
                  L=100., l=10., z0=.001):
         '''Class initialization
             
@@ -377,7 +377,7 @@ class WindShear:
         dxi = gi['x'][1,1] - gi['x'][0,0]
         dyi = gi['y'][1,1] - gi['y'][0,0]
 
-        buf = 10                                                                # amount of cells
+        buf = 200                                                                # amount of cells
 
 
         xi, yi = np.meshgrid(np.linspace(gi['x'][0,0]-buf*dxi, gi['x'][-1,-1]+buf*dxi, gi['x'].shape[1]+2*buf),
@@ -462,12 +462,12 @@ class WindShear:
         dzx[:,0] = dzx[:,1]
         dzx[:,-1] = dzx[:,-2]
         
-        #print ('dzx:', dzx)
+        # print ('dzx:', dzx)
         
         # Determine location of separation bubbles
         '''Separation bubble exist if bed slope angle (lee side) 
         is larger than max angle that wind stream lines can 
-        follow behind an obstacle (mu_b = 30)'''
+        follow behind an obstacle (mu_b = ..)'''
         
         mu_b = 30.                                                                
         stall += np.logical_and(abs(dzx) > mu_b, dzx < 0) 
@@ -480,9 +480,9 @@ class WindShear:
         # print ('bubble:', bubble)
         
         # Shift bubble back to x0: start of separation bubble 
-        x0 = -2
-        bubble[:,:x0] = bubble[:,-x0:]
-        bubble[:,:-x0] = 0
+        p = 2
+        bubble[:,:-p] = bubble[:,p:]
+        bubble[:,:p] = 0
 
         # print ('bubble:', bubble)
         # plt.pcolormesh(x, y, bubble)
@@ -495,7 +495,7 @@ class WindShear:
         
         # Count separation bubbles
         n = np.sum(bubble)
-        #print ('number of sep bubbles', n)
+        # print ('number of sep bubbles', n)
         bubble_n = np.asarray(np.where(bubble == True)).T
         # print ('bubble_n:', bubble_n)
         
@@ -522,48 +522,58 @@ class WindShear:
             # Zero order polynom
             dzdx0 = (z[j,i-1] - z[j,i-2])/dx
             
+            if dzdx0 > 0.2:
+                dzdx0 = 0.2
+            
             a = dzdx0 / c
         
-            ls = np.minimum(np.maximum((3.*zbrink/(2.*c) * (1 + a/4. + a**2./8.)), 1.5*zbrink), 200.)
+            ls = np.minimum(np.maximum((3.*zbrink/(2.*c) * (1. + a/4. + a**2/8.)), 1.5*zbrink), 200.)
             # print ('ls:', ls)
             
-            a2 = -3. * zbrink/ls**2 - 2. * dzdx0 / ls
-            a3 =  2. * zbrink/ls**3 +      dzdx0 / ls**2
+            a2 = -3 * zbrink/ls**2 - 2 * dzdx0 / ls
+            a3 =  2 * zbrink/ls**3 +     dzdx0 / ls**2
           
             i_max = min(i+int(ls/dx),int(nx-1))
 
             xs = x[j,i:i_max] - x[j,i]
             
-            zsep0[j,i:i_max] = (a3*xs**3 + a2*xs**2 + dzdx0*xs + zbrink)
+            zsep0[j,i:i_max] = (a3*xs**3 + a2*xs**2 + dzdx0*xs + z[j,i])
             
-            # First order filter
+            zsep0[j,i:i_max] = np.maximum(zsep0[j,i:i_max], z[j,i:i_max])
+            
+            # Zero order filter
             Cut = 1.5
-            dk = 2.0 * np.pi / (np.max(gc['x']))
+            dk = 2.0 * np.pi / (np.max(x))
             zfft[j,:] = np.fft.fft(zsep0[j,:])
-            zfft[j,:] *= np.exp(-(dk*k*gc['dx'])**2/(2.*Cut**2))
+            zfft[j,:] *= np.exp(-(dk*k*dx)**2/(2.*Cut**2))
             zsep0[j,:] = np.real(np.fft.ifft(zfft[j,:]))
             
             # First order polynom
-            dzdx1 = (zsep0[j, i+1]-zsep0[j,i])/dx
+            #dzdx1 = (zsep0[j, i+1]-zsep0[j,i])/dx
             
-            a = dzdx1 / c
+            #if dzdx1 > 0.2:
+            #    dzdx1 = 0.2
             
-            ls = np.maximum((3.*zbrink/(2.*c) * (1 + a/4. + a**2./8.)), 1.5*zbrink)
-            #print ('ls:', ls)
+            #a = dzdx1 / c
+            
+            ls = np.minimum(np.maximum((3.*z[j,i]/(2.*c) * (1 + a/4. + a**2/8.)), 1.5*zbrink), 200.)
+            
                 
-            a2 = -3. * zbrink/ls**2 - 2. * dzdx1 / ls
-            a3 =  2. * zbrink/ls**3 +      dzdx1 / ls**2
+            #a2 = -3 * z[j,i]/ls**2 - 2 * dzdx1 / ls
+            #a3 =  2 * z[j,i]/ls**3 +      dzdx1 / ls**2
           
             i_max = min(i+int(ls/dx),int(nx-1))
             xs = x[j,i:i_max] - x[j,i]
             
-            zsep1[j,i:i_max] = (a3*xs**3 + a2*xs**2 + dzdx1*xs + zbrink)
+            zsep1[j,i:i_max] = (a3*xs**3 + a2*xs**2 + dzdx0*xs + z[j,i])
             
-            zsep[j,i:i_max] = zsep1[j,i:i_max]
+            zsep[j,i:i_max] = np.maximum(zsep1[j,i:i_max], z[j,i:i_max])
             
-            # plt.plot(x[j,i:i_max], zsep0[j,i:i_max], label='zsep0')
-            #plt.plot(x[j,i:i_max], zsep[j,i:i_max], label='zsep')
-            #plt.plot(x[j,i:i_max], z[j,i:i_max], label='zb')
+            #print ('j:', j)
+            
+            #plt.plot(x[j,i:i_max], zsep0[j,i:i_max], label='zsep0')
+            #plt.plot(x[j,i:i_max], zsep[j,i:i_max], 'cyan', label='zsep')
+            #plt.plot(x[j,:], z[j,:], 'orange', label='zb')
             #plt.xlabel('x [m]')
             #plt.ylabel('z [m]')
             #plt.title('Separation bubble')
@@ -600,11 +610,11 @@ class WindShear:
             
                    
         
-        #plt.pcolormesh(x, y, zsep, cmap='copper_r')
-        #bar = plt.colorbar()
-        #bar.set_label('zsep [m]')
-        #plt.title('zsep')
-        #plt.show()
+        # plt.pcolormesh(x, y, np.maximum(zsep,z), vmin=0, vmax=0.00001)
+        # bar = plt.colorbar()
+        # bar.set_label('z [m]')
+        # plt.title('zb incl. zsep')
+        # plt.show()
             
         return zsep
                 

@@ -342,7 +342,7 @@ def compute_roughness(s, p):
 
 def non_erodible(s,p): 
     '''Modify wind velocity threshold based on the presence of a 
-    non-erodible layer
+    non-erodible layer.
 
     Parameters
     ----------
