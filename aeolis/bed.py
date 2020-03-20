@@ -184,6 +184,13 @@ def update(s, p):
     m[ix_dep,-1,:] -= dm[ix_dep,:] * d[ix_dep,-1,:]
     m[ix_ero,-1,:] -= dm[ix_ero,:] * normalize(p['grain_dist'])[np.newaxis,:].repeat(np.sum(ix_ero), axis=0)
 
+#    # change mass at non-erodible grid cells (TP: does not yet work)
+#    if p['ne_file'] is not None:
+#        ix_ne = (s['zb'] <= s['zne']).flatten()
+#        gs = normalize(-pickup[ix_ne,:], axis=1)
+#        m[ix_ne,:,:] = p['rhop'] * (1. - p['porosity']) \
+#                        * s['thlyr'].reshape(-1,nl)[ix_ne,:,np.newaxis] * gs[:,np.newaxis,:]
+                        
     # remove tiny negatives
     m = prevent_tiny_negatives(m, p['max_error'])
 
@@ -194,7 +201,7 @@ def update(s, p):
                                   minvalue=m.min(),
                                   minwind=s['uw'].min(),
                                   time=p['_time']))
-        
+    
     # reshape mass matrix
     s['mass'] = m.reshape((ny+1,nx+1,nl,nf))
 

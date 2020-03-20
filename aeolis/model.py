@@ -235,7 +235,7 @@ class AeoLiS(IBmi):
             Time step in seconds. The time step specified in the model
             configuration file is used in case dt is smaller than
             zero. For explicit numerical schemes the time step is
-            maximized by the CFL confition.
+            maximized by the CFL condition.
 
         '''
 
@@ -749,25 +749,25 @@ class AeoLiS(IBmi):
         if p['boundary_onshore'] == 'noflux':
             Am2[:,-1] = 0.
             Am1[:,-1] = 0.
-        elif p['boundary_offshore'] == 'constant':
-            Ap2[:,0] = 0.
-            Ap1[:,0] = 0.
+        elif p['boundary_onshore'] == 'constant':
+            Am2[:,-1] = 0.
+            Am1[:,-1] = 0.
         elif p['boundary_onshore'] == 'uniform':
             Am2[:,-1] = 0.
             Am1[:,-1] = -1.
         elif p['boundary_onshore'] == 'gradient':
-            Am2[:,-1] = s['ds'][:,-1] / s['ds'][:,-2]
-            Am1[:,-1] = -1. - s['ds'][:,-1] / s['ds'][:,-2]
-        elif p['boundary_offshore'] == 'circular':
+            Am2[:,-1] = s['ds'][:,-2] / s['ds'][:,-3]
+            Am1[:,-1] = -1. - s['ds'][:,-2] / s['ds'][:,-3]
+        elif p['boundary_onshore'] == 'circular':
             logger.log_and_raise('Cross-shore cricular boundary condition not yet implemented', exc=NotImplementedError)
         else:
             logger.log_and_raise('Unknown onshore boundary condition [%s]' % self.p['boundary_onshore'], exc=ValueError)
 
         if p['boundary_lateral'] == 'noflux':
             logger.log_and_raise('Lateral no-flux boundary condition not yet implemented', exc=NotImplementedError)
-        if p['boundary_lateral'] == 'constant':
+        elif p['boundary_lateral'] == 'constant':
             logger.log_and_raise('Lateral constant boundary condition not yet implemented', exc=NotImplementedError)
-        if p['boundary_lateral'] == 'uniform':
+        elif p['boundary_lateral'] == 'uniform':
             logger.log_and_raise('Lateral uniform boundary condition not yet implemented', exc=NotImplementedError)
         elif p['boundary_lateral'] == 'gradient':
             logger.log_and_raise('Lateral gradient boundary condition not yet implemented', exc=NotImplementedError)

@@ -336,10 +336,21 @@ def compute_roughness(s, p):
     return s
 
 def non_erodible(s, p): #NEW!
+    '''Modify wind velocity threshold based on the presence of a 
+    non-erodible layer
     
-#    # Define non-erodible layer
-    
-    #nf     = p['nfractions']
+    Parameters
+    ----------
+    s : dict
+        Spatial grids
+    p : dict
+        Model configuration parameters
+    Returns
+    -------
+    dict
+        Spatial grids
+    '''
+        #nf     = p['nfractions']
     #ustar  = np.repeat(s['ustar'][:,:,np.newaxis], nf, axis = 2)
     
     s['zne'][:,:] = p['ne_file']
@@ -347,7 +358,8 @@ def non_erodible(s, p): #NEW!
     # Hard method
 
     ix = s['zb'] <= s['zne']
-    s['uth'][ix,:] = 1e9 # np.inf
+    s['uth'][ix,:] = np.inf
+    s['uthf'][ix,:] = np.inf
     
     # Smooth method
 #    
@@ -355,7 +367,7 @@ def non_erodible(s, p): #NEW!
 #    
 #    nf = p['nfractions']
 #    thuthlyr = -0.1
-#    ix = s['zb']<=s['zne']+thuthlyr
+#    ix = s['zb'] <= s['zne']+thuthlyr
 #    
 #    for i in range(nf):
 #        s['uth'][ix,i] += np.maximum((1-(s['zb'][ix]-s['zne'][ix])/thuthlyr)*(s['ustar'][ix]*2.0-s['uth'][ix,i]),s['uth'][ix,i])
