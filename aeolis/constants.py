@@ -80,7 +80,6 @@ MODEL_STATE = {
     ('ny','nx','nfractions') : (
         'Cu',                               # [kg/m^2] Equilibrium sediment concentration integrated over saltation height
         'Cuf',                              # [kg/m^2] Equilibrium sediment concentration integrated over saltation height, assuming the fluid shear velocity threshold
-        'Cu0', 
         'Ct',                               # [kg/m^2] Instantaneous sediment concentration integrated over saltation height
         'q',                                # [kg/m/s] Instantaneous sediment flux
         'qs',                               # [kg/m/s] Instantaneous sediment flux in x-direction
@@ -93,10 +92,10 @@ MODEL_STATE = {
         'uth',                              # [m/s] Shear velocity threshold
         'uthf',                             # [m/s] Fluid shear velocity threshold
         'uth0',                             # [m/s] Shear velocity threshold based on grainsize only (aerodynamic entrainment)
-        'ug',                               # [m/s] Mean horizontal grain velocity in saturated state
-        'ugs',                              # [m/s] Component of the grain velocity in x-direction
-        'ugn',                              # [m/s] Component of the grain velocity in y-direction
-        'ug0',
+        'u',                               # [m/s] Mean horizontal saltation velocity in saturated state
+        'us',                              # [m/s] Component of the saltation velocity in x-direction
+        'un',                              # [m/s] Component of the saltation velocity in y-direction
+        'u0',
     ),
     ('ny','nx','nlayers') : (
         'thlyr',                            # [m] Bed composition layer thickness
@@ -186,7 +185,10 @@ DEFAULT_CONFIG = {
     'z'                             : 10.,                # [m] Measurement height of wind velocity
     'h'                             : None,               # [m] Representative height of saltation layer
     'k'                             : 0.001,              # [m] Bed roughness
-    'Cb'                            : 1.5,                # [-] Constant in formulation for equilibrium sediment concentration
+    'Cb'                            : 1.5,                # [-] Constant in bagnold formulation for equilibrium sediment concentration
+    'Ck'                            : 2.78,               # [-] Constant in kawamura formulation for equilibrium sediment concentration
+    'Cl'                            : 6.7,                # [-] Constant in lettau formulation for equilibrium sediment concentration
+    'Cdk'                           : 5.,                 # [-] Constant in DK formulation for equilibrium sediment concentration
     'm'                             : 0.5,                # [-] Factor to account for difference between average and maximum shear stress
     'alpha'                         : 0.4,                # [-] Relation of vertical component of ejection velocity and horizontal velocity difference between impact and ejection 
     'kappa'                         : 0.41,               # [-] Von Kármán constant
@@ -211,13 +213,13 @@ DEFAULT_CONFIG = {
     'germinate'                     : 0.,           # NEW # [1/year] Possibility of germination per year
     'lateral'                       : 0.,           # NEW # -/year
     'veg_gamma'                     : 1.,           # NEW #
-    'sedimentinput'                 : 0.,           # NEW #
+    'sedimentinput'                 : 0.,           # NEW # [-] Constant boundary sediment influx (only used in solve_pieter)
     'scheme'                        : 'euler_backward',   # Name of numerical scheme (euler_forward, euler_backward or crank_nicolson)
     'boundary_lateral'              : 'circular',         # Name of lateral boundary conditions (circular, noflux)
     'boundary_offshore'             : 'noflux',           # Name of offshore boundary conditions (gradient, noflux, constant, uniform)
-    'boundary_offshore_flux'        : 0.,                 # Constant offshore boundary flux
+    'boundary_offshore_flux'        : 0.,                 # [-] Constant offshore boundary flux
     'boundary_onshore'              : 'gradient',         # Name of onshore boundary conditions (gradient, noflux, constant, uniform)
-    'boundary_onshore_flux'         : 0.,                 # Constant onshore boundary flux
+    'boundary_onshore_flux'         : 0.,                 # [-] Constant onshore boundary flux
     'method_moist'                  : 'belly_johnson',    # Name of method to compute wind velocity threshold based on soil moisture content
     'method_transport'              : 'bagnold',          # Name of method to compute equilibrium sediment transport rate
     'max_error'                     : 1e-6,               # [-] Maximum error at which to quit iterative solution in implicit numerical schemes
@@ -225,7 +227,8 @@ DEFAULT_CONFIG = {
     'max_iter_ava'                  : 1000,               # [-] Maximum number of iterations at which to quit iterative solution in avalanching calculation
     'refdate'                       : '2020-01-01 00:00', # [-] Reference datetime in netCDF output
     'callback'                      : None,               # Reference to callback function (e.g. example/callback.py':callback)
-    'wind_convention'               : 'nautical',        # Convention used for the wind direction in the input files
+    'wind_convention'               : 'nautical',         # Convention used for the wind direction in the input files
+    'solver'                        : 'trunk',      # NEW # Choose the solver to be used (trunk / pieter)
 }
 
 

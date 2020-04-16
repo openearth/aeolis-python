@@ -90,7 +90,7 @@ def initialize(s, p):
 
     # initialize bathymetry
     s['zb'][:,:] = p['bed_file']
-    s['zb'][:,:] = p['bed_file']
+    s['zb0'][:,:] = p['bed_file']
     
 
     # initialize bed layers

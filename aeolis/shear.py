@@ -89,7 +89,7 @@ class WindShear:
     
     def __init__(self, x, y, z, dx=1., dy=1.,
                  buffer_width=100., buffer_relaxation=None,
-                 L=100., l=10., z0=.001):
+                 L=100., l=1., z0=.0001):
         '''Class initialization
             
         Parameters
@@ -118,7 +118,7 @@ class WindShear:
         l : float, optional
             Height of inner layer (default: 10)
         z0 : float, optional
-            Aerodynamic roughness (default: .001)
+            Aerodynamic roughness (default: .0001)
 
         '''
         
@@ -176,7 +176,7 @@ class WindShear:
         ix = u0 > 0
         u [ix] = u0 [ix] / u0[ix] #* 0.76
         
-        self.compute_shear(u0)
+        self.compute_shear(u)
         
         #gc['dtaux']= np.maximum(gc['dtaux'], -1.)
         
@@ -428,7 +428,7 @@ class WindShear:
         x = gc['x']
         y = gc['y']
         z = gc['z']
-        
+                
         nx = len(gc['z'][1])
         ny = len(gc['z'][0])
         dx = gc['dx']
@@ -448,7 +448,6 @@ class WindShear:
         
         zsep = np.zeros(gc['z'].shape)                                          # total separation bubble
         zsep0 = np.zeros(gc['z'].shape)                                         # zero-order separation bubble       
-        zsep1 = np.zeros(gc['z'].shape)                                         # first-order separation bubble
         
 #        zsep2 = np.zeros(g['z'].shape)                                         # separation bubble after cutting dune profile       
 #        zmin = np.zeros(ny)
@@ -470,13 +469,13 @@ class WindShear:
         follow behind an obstacle (mu_b = ..)'''
         
         mu_b = 30.                                                                
-        stall += np.logical_and(abs(dzx) > mu_b, dzx < 0) 
+        stall += np.logical_and(abs(dzx) > mu_b, dzx < 0.) 
         
-        stall[1:-1,:] += np.logical_and(stall[1:-1,:]==0, stall[:-2,:]>0, stall[2:,:]>0)
-        stall[:,1:-1] += np.logical_and(stall[:,1:-1]==0, stall[:,:-2]>0, stall[:,2:]>0)
+        #stall[1:-1,:] += np.logical_and(stall[1:-1,:]==0, stall[:-2,:]>0., stall[2:,:]>0.)
+        stall[:,1:-1] += np.logical_and(stall[:,1:-1]==0, stall[:,:-2]>0., stall[:,2:]>0.)
         
         # Define separation bubble
-        bubble[:,:-1] = np.logical_and(stall[:,:-1] == 0, stall[:,1:] > 0) 
+        bubble[:,:-1] = np.logical_and(stall[:,:-1] == 0., stall[:,1:] > 0.) 
         # print ('bubble:', bubble)
         
         # Shift bubble back to x0: start of separation bubble 
@@ -495,7 +494,7 @@ class WindShear:
         
         # Count separation bubbles
         n = np.sum(bubble)
-        # print ('number of sep bubbles', n)
+        #print ('number of sep bubbles', n)
         bubble_n = np.asarray(np.where(bubble == True)).T
         # print ('bubble_n:', bubble_n)
         
@@ -507,10 +506,7 @@ class WindShear:
             j = bubble_n[k,0]
 
             ix_neg = (dzx[j, i+5:] >= 0)                                         # i + 5??
-
-            # print(n)
-            # print(k)
-            #
+                        
             # plt.plot(x[j, i:], dzx[j, i:])
             # plt.show()
 
@@ -519,21 +515,27 @@ class WindShear:
             else:
                 zbrink = z[j,i] - z[j,i+5+np.where(ix_neg)[0][0]]
 
+            # print ('j:', j)   
+            # print ('zbrink:', zbrink)
+
             # Zero order polynom
-            dzdx0 = (z[j,i-1] - z[j,i-2])/dx
+            dzdx0 = (z[j,i-2] - z[j,i-3])/dx
             
             if dzdx0 > 0.2:
                 dzdx0 = 0.2
             
             a = dzdx0 / c
         
-            ls = np.minimum(np.maximum((3.*zbrink/(2.*c) * (1. + a/4. + a**2/8.)), 1.5*zbrink), 200.)
+            ls = np.minimum(np.maximum((3.*zbrink/(2.*c) * (1. + a/4. + a**2/8.)), 0.1), 200.)
             # print ('ls:', ls)
             
             a2 = -3 * zbrink/ls**2 - 2 * dzdx0 / ls
+            # print('a2:', a2)
             a3 =  2 * zbrink/ls**3 +     dzdx0 / ls**2
+            # print('a3:', a3)
           
             i_max = min(i+int(ls/dx),int(nx-1))
+            # print('imax:', i_max)
 
             xs = x[j,i:i_max] - x[j,i]
             
@@ -548,73 +550,23 @@ class WindShear:
             zfft[j,:] *= np.exp(-(dk*k*dx)**2/(2.*Cut**2))
             zsep0[j,:] = np.real(np.fft.ifft(zfft[j,:]))
             
-            # First order polynom
-            #dzdx1 = (zsep0[j, i+1]-zsep0[j,i])/dx
-            
-            #if dzdx1 > 0.2:
-            #    dzdx1 = 0.2
-            
-            #a = dzdx1 / c
-            
-            ls = np.minimum(np.maximum((3.*z[j,i]/(2.*c) * (1 + a/4. + a**2/8.)), 1.5*zbrink), 200.)
-            
-                
-            #a2 = -3 * z[j,i]/ls**2 - 2 * dzdx1 / ls
-            #a3 =  2 * z[j,i]/ls**3 +      dzdx1 / ls**2
-          
-            i_max = min(i+int(ls/dx),int(nx-1))
-            xs = x[j,i:i_max] - x[j,i]
-            
-            zsep1[j,i:i_max] = (a3*xs**3 + a2*xs**2 + dzdx0*xs + z[j,i])
-            
-            zsep[j,i:i_max] = np.maximum(zsep1[j,i:i_max], z[j,i:i_max])
-            
-            #print ('j:', j)
-            
-            #plt.plot(x[j,i:i_max], zsep0[j,i:i_max], label='zsep0')
-            #plt.plot(x[j,i:i_max], zsep[j,i:i_max], 'cyan', label='zsep')
+            zsep[j,i:i_max] = np.maximum(zsep0[j,i:i_max], z[j,i:i_max])
+                        
+            #plt.figure()
+            #plt.plot(x[j,i:i_max], zsep[j,i:i_max], label='zsep0')
             #plt.plot(x[j,:], z[j,:], 'orange', label='zb')
             #plt.xlabel('x [m]')
             #plt.ylabel('z [m]')
             #plt.title('Separation bubble')
             #plt.legend()
-            #plt.show()
-            
-            # Dune cutting
-#            cut_list = np.logical_and(zsep0[j,i:i_max] >= z[j,i:i_max], 
-#                                      zsep0[j,i+1:i_max+1] < z[j,i:i_max])
-            
-#            cut_list = cut_list.astype(int)
-#            print ('cut_list:', cut_list)
-#            print ('cut list sum:', np.sum(cut_list[5:int(ls[j,i]/dx)]))
-
-#            if np.sum(cut_list[5:int(ls[j,i]/dx)]) > 0:
-#                
-#                i_cut_list = np.asarray(np.where(cut_list[5:] == True)).T
-#                i_cut = int(i_cut_list[0]) + i
-
-#                dzdx1 = (z[j,i_cut] - z[j,i_cut-1])/dx
-#                ls_cut = x[j,i_cut] - x[j,i]
-                
-#                a2_cut = -3. * zbrink/ls_cut**2 - 2. * dzdx0 / ls_cut     +3. * z[j,i_cut] / ls_cut**2 - dzdx1 / ls_cut
-#                a3_cut =  2. * zbrink/ls_cut**3  +     dzdx0 / ls_cut**2  -2. * z[j,i_cut] / ls_cut**3 + dzdx1 / ls_cut**2
-
-#                i_max = min(i+int(ls_cut/dx),int(nx-1))
-                
-#                zsep[j,i:i_max] = a3_cut*xs**3 + a2_cut*xs**2 + dzdx0*xs + zbrink 
-                
-#                zsep[j,i:i_max]  = np.maximum(zsep[j,i:i_max], zsep0[j,i:i_max])
-                
-#            else:
-#                zsep[j,i:i_max] = zsep0[j,i:i_max]
-            
+            #plt.show()         
                    
         
-        # plt.pcolormesh(x, y, np.maximum(zsep,z), vmin=0, vmax=0.00001)
-        # bar = plt.colorbar()
-        # bar.set_label('z [m]')
-        # plt.title('zb incl. zsep')
-        # plt.show()
+        #plt.pcolormesh(x, y, np.maximum(zsep,z))#, vmin=0, vmax=0.00001)
+        #bar = plt.colorbar()
+        #bar.set_label('z [m]')
+        #plt.title('zb incl. zsep')
+        #plt.show()
             
         return zsep
                 
@@ -644,27 +596,32 @@ class WindShear:
                              2. * np.pi * np.fft.fftfreq(ny+1, gc['dy'])[1:])
         
         hs = np.fft.fft2(gc['z'])
-        hs = self.filter_highfrequenies(kx, ky, hs, nfilter, p=0.01)
+        hs = self.filter_highfrequenies(kx, ky, hs, nfilter, p=0.001)
+        
+        z0 = self.z0            # roughness length which takes into account saltation
+        L  = self.L             # typical length scale of the hill (L=1/|kx|??)
         
         # Inner layer height
-        l = self.l
+        l  = 10         
+        
         for i in range(5):
-            l = 2 * 0.41**2*self.L /np.log(l/self.z0)
+            l = 2 * 0.41**2 * L /np.log(l/z0)
         
         # Middle layer height
-        zm = 1.0
+        hm = 1.0
         for i in range(5):
-            zm = self.L / np.sqrt(np.log(zm/self.z0))
+            hm = L / np.sqrt(np.log(hm/z0))
+            
         # Non-dimensional velocity    
-        ul = np.log(l/self.z0) / np.log(zm/self.z0)
+        ul = np.log(l/z0) / np.log(hm/z0)
         
         # Arrays in Fourier 
         k = np.sqrt(kx**2 + ky**2)
-        sigma = np.sqrt(1j * self.L * kx * self.z0 / self.l)
+        sigma = np.sqrt(1j * L * kx * z0 /l)
         
         # Shear stress perturbation
         dtaux_t = hs * kx**2 / k * 2 / ul**2 * \
-                  (-1. + (2. * np.log(self.l/self.z0) + k**2/kx**2) * sigma * \
+                  (-1. + (2. * np.log(l/z0) + k**2/kx**2) * sigma * \
                    scipy.special.kv(1., 2. * sigma) / scipy.special.kv(0., 2. * sigma))
         
         dtauy_t = hs * kx * ky / k * 2 / ul**2 * \

@@ -58,9 +58,11 @@ def initialize(s, p):
                                  % p['wind_convention'], exc=ValueError)
 
     # initialize wind shear model
+    z0 = (np.sum(p['grain_size'])/p['nfractions']) / 30.                        # z0 = p['k'] if not dependent on grainsize?
+    
     if p['process_shear']:
         s['shear'] = aeolis.shear.WindShear(s['x'], s['y'], s['zb'],
-                                            L=100., l=10., z0=.001, 
+                                            L=100., l=1., z0=z0, 
                                             buffer_width=10.) 
     return s
    
@@ -102,9 +104,9 @@ def interpolate(s, p, t):
                                     interp_circular(t, uw_t, np.cos(uw_d))) * 180. / np.pi
 
     s['uws'] = - s['uw'] * np.sin(-s['alfa'] + s['udir'] / 180. * np.pi)        # alfa [rad] is real world grid cell orientation (clockwise)
-    # print ('uws:', s['uws'])
+
     s['uwn'] = - s['uw'] * np.cos(-s['alfa'] + s['udir'] / 180. * np.pi)
-    # print ('uwn:', s['uwn'])
+
     
     if p['ny'] == 0:
         s['uwn'][:,:] = 0.
@@ -114,8 +116,7 @@ def interpolate(s, p, t):
     # Compute wind shear velocity
     kappa = p['kappa']
     z     = p['z']
-    z0    = p['grain_size'][0] / 20                                                              # dependent on grain size? - z0 = d/20                                             
-    
+    z0    = (np.sum(p['grain_size'])/p['nfractions']) / 30.                                                                                                              
     
     s['ustar'] = s['uw'] * kappa / np.log(z/z0)
     s['ustars'] = s['uws'] * kappa / np.log(z/z0)
