@@ -742,7 +742,7 @@ class AeoLiS(IBmi):
             Ap2[:,0] = s['ds'][:,1] / s['ds'][:,2]
             Ap1[:,0] = -1. - s['ds'][:,1] / s['ds'][:,2]
         elif p['boundary_offshore'] == 'circular':
-            logger.log_and_raise('Cross-shore cricular boundary condition not yet implemented', exc=NotImplementedError)
+            logger.log_and_raise('Cross-shore circular boundary condition not yet implemented', exc=NotImplementedError)
         else:
             logger.log_and_raise('Unknown offshore boundary condition [%s]' % self.p['boundary_offshore'], exc=ValueError)
             
@@ -759,7 +759,7 @@ class AeoLiS(IBmi):
             Am2[:,-1] = s['ds'][:,-2] / s['ds'][:,-3]
             Am1[:,-1] = -1. - s['ds'][:,-2] / s['ds'][:,-3]
         elif p['boundary_onshore'] == 'circular':
-            logger.log_and_raise('Cross-shore cricular boundary condition not yet implemented', exc=NotImplementedError)
+            logger.log_and_raise('Cross-shore circular boundary condition not yet implemented', exc=NotImplementedError)
         else:
             logger.log_and_raise('Unknown onshore boundary condition [%s]' % self.p['boundary_onshore'], exc=ValueError)
 
