@@ -39,6 +39,7 @@ INITIAL_STATE = {
         'udir',                             # [rad] Wind direction
         'zs',                               # [m] Water level above reference
         'Hs',                               # [m] Wave height
+        'zne',                              # NEW! [m] Non-erodible layer
     ),
 }
 
@@ -133,6 +134,7 @@ DEFAULT_CONFIG = {
     'meteo_file'                    : None,               # Filename of ASCII file with time series of meteorlogical conditions
     'bedcomp_file'                  : None,               # Filename of ASCII file with initial bed composition
     'threshold_file'                : None,               # Filename of ASCII file with shear velocity threshold
+    'ne_file'                       : None,               # NEW! Filename of ASCII file with non-erodible layer
     'wave_mask'                     : None,               # Filename of ASCII file with mask for wave height
     'tide_mask'                     : None,               # Filename of ASCII file with mask for tidal elevation
     'threshold_mask'                : None,               # Filename of ASCII file with mask for the shear velocity threshold

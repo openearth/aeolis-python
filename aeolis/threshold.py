@@ -94,6 +94,10 @@ def compute(s, p):
         s['uth'] = apply_mask(s['uth'], s['threshold_mask'])
         s['uthf'] = s['uth'].copy()
 
+    # Non-erodible layer NEW!
+    if p['ne_file'] is not None:
+        s = non_erodible(s, p)
+    
     return s
 
 
@@ -331,4 +335,41 @@ def compute_roughness(s, p):
     
     return s
 
+def non_erodible(s, p): #NEW!
+    '''Modify wind velocity threshold based on the presence of a 
+    non-erodible layer
+    
+    Parameters
+    ----------
+    s : dict
+        Spatial grids
+    p : dict
+        Model configuration parameters
+    Returns
+    -------
+    dict
+        Spatial grids
+    '''
+        #nf     = p['nfractions']
+    #ustar  = np.repeat(s['ustar'][:,:,np.newaxis], nf, axis = 2)
+    
+    s['zne'][:,:] = p['ne_file']
+    
+    # Hard method
 
+    ix = s['zb'] <= s['zne']
+    s['uth'][ix,:] = np.inf
+    s['uthf'][ix,:] = np.inf
+    
+    # Smooth method
+#    
+#    alfa = .05
+#    
+#    nf = p['nfractions']
+#    thuthlyr = -0.1
+#    ix = s['zb'] <= s['zne']+thuthlyr
+#    
+#    for i in range(nf):
+#        s['uth'][ix,i] += np.maximum((1-(s['zb'][ix]-s['zne'][ix])/thuthlyr)*(s['ustar'][ix]*2.0-s['uth'][ix,i]),s['uth'][ix,i])
+#    
+    return s
