@@ -25,7 +25,7 @@ setup(
     url='http://aeolis.readthedocs.io/',
     license='GNU GPLv3',
     description='A process-based model for simulating supply-limited aeolian sediment transport',
-    long_description=open('README.md').read(),
+    long_description=open('README.rst').read(),
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
