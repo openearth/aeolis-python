@@ -3,4 +3,4 @@ coverage
 codecov
 nose
 scipy
-
+bmi-python
