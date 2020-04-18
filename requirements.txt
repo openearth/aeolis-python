@@ -1,4 +1,6 @@
 netCDF4==1.4.1
 coverage
 codecov
-
+nose
+scipy
+bmi-python
