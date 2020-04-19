@@ -20,8 +20,8 @@ if len(sys.argv) > 1:
 setup(
     name='AeoLiS',
     version=open('aeolis/VERSION').read().strip(),
-    author='Bas Hoonhout',
-    author_email='b.m.hoonhout@tudelft.nl',
+    author='Sierd de Vries',
+    author_email='sierd.devries@tudelft.nl',
     url='http://aeolis.readthedocs.io/',
     license='GNU GPLv3',
     description='A process-based model for simulating supply-limited aeolian sediment transport',
@@ -52,6 +52,7 @@ setup(
     install_requires=[
         'docopt==0.6.1',
         'bmi-python',
+	    'netCDF4',
         'scipy',
         'numpy',
     ],

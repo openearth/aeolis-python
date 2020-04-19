@@ -300,17 +300,18 @@ def initialize(outputfile, outputvars, s, p, dimensions):
         nc.variables['lat_bounds'][:,:] = 0.
         nc.variables['lon_bounds'][:,:] = 0.
         
-        # store model settings
-        for k, v in p.items():
-            if k.startswith('_'):
-                continue
-            k = 'par_%s' % k
-            if v is None:
-                nc.setncattr(k, -1)
-            elif isinstance(v, bool):
-                nc.setncattr(k, int(v))
-            else:
-                nc.setncattr(k, np.real(v))
+        # store model settings writing arrays as attributes is not supported anymore
+        if 0:
+            for k, v in p.items():
+                if k.startswith('_'):
+                    continue
+                k = 'par_%s' % k
+                if v is None:
+                    nc.setncattr(k, -1)
+                elif isinstance(v, bool):
+                    nc.setncattr(k, int(v))
+                else:
+                    nc.setncattr(k, np.real(v))
 
 
 def append(outputfile, variables):
