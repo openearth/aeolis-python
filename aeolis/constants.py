@@ -36,6 +36,8 @@ INITIAL_STATE = {
         'taun',                             # [N/m^2] Component of wind shear stress in y-direction
         'dtaus',                            # [-] Component of the wind shear perturbation in x-direction
         'dtaun',                            # [-] Component of the wind shear perturbation in y-direction
+        'taus_u',                      #NEW # [N/m^2] Saved direction of wind shear stress in x-direction
+        'taun_u',                      #NEW # [N/m^2] Saved direction of wind shear stress in y-direction
         'udir',                             # [rad] Wind direction
         'zs',                               # [m] Water level above reference
         'Hs',                               # [m] Wave height
@@ -66,8 +68,8 @@ MODEL_STATE = {
 #        'bubble',                     # NEW # [ ]
         'theta_stat',                 # NEW # [degrees] Updated, spatially varying static angle of repose
         'theta_dyn',                  # NEW # [degrees] Updated, spatially varying dynamic angle of repose
-        'dzb_year',                   # NEW # Bed level change averaged over collected time steps 
-        'rhoveg',                     # NEW # Vegetation cover
+        'dzb_year',                   # NEW # [m] Bed level change averaged over collected time steps 
+        'rhoveg',                     # NEW # [-] Vegetation cover
         'drhoveg',                    # NEW # Change in vegetation cover
         'hveg',                       # NEW # [m] height of vegetation
         'dhveg',                      # NEW # [m] Difference in vegetation height per time step
@@ -185,6 +187,7 @@ DEFAULT_CONFIG = {
     'z'                             : 10.,                # [m] Measurement height of wind velocity
     'h'                             : None,               # [m] Representative height of saltation layer
     'k'                             : 0.001,              # [m] Bed roughness
+    'L'                             : 100.,          #NEW # [m] Typical length scale of dune feature
     'Cb'                            : 1.5,                # [-] Constant in bagnold formulation for equilibrium sediment concentration
     'Ck'                            : 2.78,               # [-] Constant in kawamura formulation for equilibrium sediment concentration
     'Cl'                            : 6.7,                # [-] Constant in lettau formulation for equilibrium sediment concentration
@@ -208,11 +211,11 @@ DEFAULT_CONFIG = {
     'theta_dyn'                     : 33.,          # NEW # [degrees] Initial Dynamic angle of repose, critical dynamic slope for avalanching 
     'theta_stat'                    : 34.,          # NEW # [degrees] Initial Static angle of repose, critical static slope for avalanching
     'hveg_max'                      : 1.,           # NEW # [m] Max height of vegetation 
-    'V_ver'                         : 0.,           # NEW # [1/year]
+    'V_ver'                         : 0.,           # NEW # [m/year] 
     'V_lat'                         : 0.,           # NEW # [m/year]
     'germinate'                     : 0.,           # NEW # [1/year] Possibility of germination per year
-    'lateral'                       : 0.,           # NEW # -/year
-    'veg_gamma'                     : 1.,           # NEW #
+    'lateral'                       : 0.,           # NEW # [1/year] 
+    'veg_gamma'                     : 1.,           # NEW # [-] Constant on influence of sediment burial
     'sedimentinput'                 : 0.,           # NEW # [-] Constant boundary sediment influx (only used in solve_pieter)
     'scheme'                        : 'euler_backward',   # Name of numerical scheme (euler_forward, euler_backward or crank_nicolson)
     'boundary_lateral'              : 'circular',         # Name of lateral boundary conditions (circular, noflux)

@@ -285,6 +285,10 @@ class AeoLiS(IBmi):
         # update bed
         self.s = aeolis.bed.update(self.s, self.p)
         
+        # avalanching
+        self.s = aeolis.avalanching.angele_of_repose(self.s, self.p)
+        self.s = aeolis.avalanching.avalanche(self.s, self.p)
+        
         # calculate average bedlevel change over time
         self.s = aeolis.bed.average_change(self.s, self.p)
         
@@ -292,10 +296,6 @@ class AeoLiS(IBmi):
         if self.p['process_vegetation']:
             self.s = aeolis.vegetation.germinate(self.s, self.p)
             self.s = aeolis.vegetation.grow(self.s, self.p)
-        
-        # avalanching
-        self.s = aeolis.avalanching.angele_of_repose(self.s, self.p)
-        self.s = aeolis.avalanching.avalanche(self.s, self.p)
 
         # increment time
         self.t += self.dt * self.p['accfac']
@@ -692,32 +692,47 @@ class AeoLiS(IBmi):
                         dt=self.dt)
             
         nf = p['nfractions']     
-        
-        
-        Cs = np.zeros(s['u'].shape)
-        Cn = np.zeros(s['u'].shape)
+                
+        us = np.zeros((p['ny']+1,p['nx']+1))
+        un = np.zeros((p['ny']+1,p['nx']+1))
 
+        Cs = np.zeros(us.shape)
+        Cn = np.zeros(un.shape)
         
         for i in range(nf):
+            us[:,1:] = 0.5*s['us'][:,:-1,i] + 0.5*s['us'][:,1:,i]
+            un[1:,:] = 0.5*s['un'][:-1,:,i] + 0.5*s['un'][1:,:,i]
+        
+            #boundary values
+            us[:,0]  = s['us'][:,0,i]
+            #us[:,-1] = s['us'][:,-1,i]
+        
+            if p['boundary_lateral'] == 'circular':
+                un[0,:] = 0.5*s['un'][0,:,i] + 0.5*s['un'][-1,:,i]
+                #un[-1,:] = un[0,:]
+            else:
+                un[0,:]  = s['un'][0,:,i]
+                #un[-1,:] = s['un'][-1,:,i]
+            
             # define matrix coefficients to solve linear system of equations        
-            Cs = s['dn'] * s['dsdni'] * s['us'][:,:,i]
-            Cn = s['ds'] * s['dsdni'] * s['un'][:,:,i]
+            Cs = s['dn'] * s['dsdni'] * us[:,:]  #s['us'][:,:,i]
+            Cn = s['ds'] * s['dsdni'] * un[:,:]  #s['un'][:,:,i]
             Ti = 1 / p['T']
             
             beta = abs(beta)
             if beta >= 1.:
                 # define upwind direction
-                ixs = np.asarray(s['us'][:,:,i] >= 0., dtype=np.float)
-                ixn = np.asarray(s['un'][:,:,i] >= 0., dtype=np.float)
+                ixs = np.asarray(us[:,:] >= 0., dtype=np.float)
+                ixn = np.asarray(un[:,:] >= 0., dtype=np.float)
                 sgs = 2. * ixs - 1.
                 sgn = 2. * ixn - 1.
             
             else:
                 # or centralizing weights
-                ixs = beta + np.zeros(Cs.shape)
-                ixn = beta + np.zeros(Cn.shape)
-                sgs = np.zeros(Cs.shape)
-                sgn = np.zeros(Cn.shape)
+                ixs = beta + np.zeros(us)
+                ixn = beta + np.zeros(un)
+                sgs = np.zeros(us)
+                sgn = np.zeros(un)
 
             # initialize matrix diagonals
             A0 = np.zeros(s['zb'].shape)
@@ -1005,15 +1020,32 @@ class AeoLiS(IBmi):
             
         nf = p['nfractions']
         
-        Cs = np.zeros(s['u'].shape)
-        Cn = np.zeros(s['u'].shape)
+        us = np.zeros((p['ny']+1,p['nx']+1))
+        un = np.zeros((p['ny']+1,p['nx']+1))
 
+        Cs = np.zeros(us.shape)
+        Cn = np.zeros(un.shape)
         
         for i in range(nf):
+            us[:,1:] = 0.5*s['us'][:,:-1,i] + 0.5*s['us'][:,1:,i]
+            un[1:,:] = 0.5*s['un'][:-1,:,i] + 0.5*s['un'][1:,:,i]
+        
+            #boundary values
+            us[:,0]  = s['us'][:,0,i]
+            #us[:,-1] = s['us'][:,-1,i]
+        
+            if p['boundary_lateral'] == 'circular':
+                un[0,:] = 0.5*s['un'][0,:,i] + 0.5*s['un'][-1,:,i]
+                #un[-1,:] = un[0,:]
+            else:
+                un[0,:]  = s['un'][0,:,i]
+                #un[-1,:] = s['un'][-1,:,i]
+
             # define matrix coefficients to solve linear system of equations        
             Cs = self.dt * s['dn'] * s['dsdni'] * s['us'][:,:,i]
             Cn = self.dt * s['ds'] * s['dsdni'] * s['un'][:,:,i]
-            Ti = self.dt / p['T']
+            Ti = self.dt / p['T']          
+
             
             beta = abs(beta)
             if beta >= 1.:
@@ -1071,7 +1103,7 @@ class AeoLiS(IBmi):
                 Ap2[:,0] = s['ds'][:,1] / s['ds'][:,2]
                 Ap1[:,0] = -1. - s['ds'][:,1] / s['ds'][:,2]
             elif p['boundary_offshore'] == 'circular':
-                logger.log_and_raise('Cross-shore cricular boundary condition not yet implemented', exc=NotImplementedError)
+                logger.log_and_raise('Cross-shore circular boundary condition not yet implemented', exc=NotImplementedError)
             else:
                 logger.log_and_raise('Unknown offshore boundary condition [%s]' % self.p['boundary_offshore'], exc=ValueError)
 
@@ -1088,7 +1120,7 @@ class AeoLiS(IBmi):
                 Am2[:,-1] = s['ds'][:,-2] / s['ds'][:,-3]
                 Am1[:,-1] = -1. - s['ds'][:,-2] / s['ds'][:,-3]
             elif p['boundary_offshore'] == 'circular':
-                logger.log_and_raise('Cross-shore cricular boundary condition not yet implemented', exc=NotImplementedError)
+                logger.log_and_raise('Cross-shore circular boundary condition not yet implemented', exc=NotImplementedError)
             else:
                 logger.log_and_raise('Unknown onshore boundary condition [%s]' % self.p['boundary_onshore'], exc=ValueError)
 
@@ -1528,7 +1560,7 @@ class AeoLiS(IBmi):
                 
                 # calculate pickup
                 D_i = s['dsdn'] / Ts * ( alpha * Ct[:,:,i]  \
-                                            -+ (1. - alpha ) * l['Ct'][:,:,i] )
+                                            + (1. - alpha ) * l['Ct'][:,:,i] )
                 A_i = s['dsdn'] / Ts * s['mass'][:,:,0,i] + D_i # Availability
                 U_i = s['dsdn'] / Ts * ( w[:,:,i] * alpha * s['Cu'][:,:,i] \
                                             + (1. - alpha ) * l['w'][:,:,i] * l['Cu'][:,:,i] )

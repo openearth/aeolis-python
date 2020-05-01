@@ -62,24 +62,35 @@ def saltationvelocity(s, p):
     uws = s['uws']
     uwn = s['uwn']
         
-    ustar = s['ustar']
-
-    # Fill matrix 
+    ustar  = s['ustar']
+    ustars = s['ustars']
+    ustarn = s['ustarn']
     
-    us = np.full(uw.shape, 1.) * uws / uw
-    un = np.full(uw.shape, 1.) * uwn / uw
-    u  = np.hypot(us, un)
+    us = np.zeros(ustar.shape)
+    un = np.zeros(ustar.shape)
+    u  = np.zeros(ustar.shape)
 
-    # set the grain velocity to zero inside the separation bubble
-    #ix = ustar[:,:] == 0.
-
-    #us[ix] = 0.
-    #un[ix] = 0.
-    #u[ix]  = 0.
-                    
+    # u with direction of perturbation theory
+    
+    ix = ustar != 0
+    
+    us[ix] += 1 * ustars[ix] / ustar[ix]
+    un[ix] += 1 * ustarn[ix] / ustar[ix]
+            
+    u[ix] = np.hypot(us[ix], un[ix])
+    
+    # u under the sep bubble
+    
+    ix = ustar == 0
+    
+    us[ix] += 0.2 * uws[ix] / uw[ix]
+    un[ix] += 0.2 * uwn[ix] / uw[ix]
+            
+    u[ix] = np.hypot(us[ix], un[ix])
+                       
     s['us'] = us[:,:,np.newaxis].repeat(nf, axis=2)
     s['un'] = un[:,:,np.newaxis].repeat(nf, axis=2)
-    s['u'] = u[:,:,np.newaxis].repeat(nf, axis=2)
+    s['u']  = u[:,:,np.newaxis].repeat(nf, axis=2)
         
     return s
 
@@ -118,6 +129,7 @@ def equilibrium(s, p):
         
         s['Cu']  = np.zeros(uth.shape)
         s['Cuf'] = np.zeros(uth.shape)
+    
                 
         ix = (ustar != 0.)*(u != 0.)
         
@@ -141,7 +153,6 @@ def equilibrium(s, p):
             logger.log_and_raise('Unknown transport formulation [%s]' % method, exc=ValueError)   
                                        
     s['Cu']  *= p['accfac']
-    # print ('Cu:', s['Cu'].shape, s['Cu'])
     s['Cuf'] *= p['accfac']
     
     return s

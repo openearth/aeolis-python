@@ -62,7 +62,7 @@ def initialize(s, p):
     
     if p['process_shear']:
         s['shear'] = aeolis.shear.WindShear(s['x'], s['y'], s['zb'],
-                                            L=100., l=1., z0=z0, 
+                                            L=p['L'], l=1., z0=z0, 
                                             buffer_width=10.) 
     return s
    
@@ -118,9 +118,9 @@ def interpolate(s, p, t):
     z     = p['z']
     z0    = (np.sum(p['grain_size'])/p['nfractions']) / 30.                                                                                                              
     
-    s['ustar'] = s['uw'] * kappa / np.log(z/z0)
     s['ustars'] = s['uws'] * kappa / np.log(z/z0)
     s['ustarn'] = s['uwn'] * kappa / np.log(z/z0) 
+    s['ustar']  = np.hypot(s['ustars'], s['ustarn'])
     
     s['ustar0'] = s['ustar'].copy()
     
@@ -140,6 +140,7 @@ def shear(s,p):
                    udir=s['udir'][0,0],
                    process_separation = p['process_separation'])
         
+        #s['taus_u'], s['taun_u'] = s['shear'].get_sheardirection()
         s['taus'], s['taun'] = s['shear'].get_shear()
                
         s['tau'] = np.hypot(s['taus'], s['taun'])                               # set minimum of tau to zero

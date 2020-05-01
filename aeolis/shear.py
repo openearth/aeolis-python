@@ -87,9 +87,9 @@ class WindShear:
     istransect = False
     
     
-    def __init__(self, x, y, z, dx=1., dy=1.,
+    def __init__(self, x, y, z, L, dx=1., dy=1.,
                  buffer_width=100., buffer_relaxation=None,
-                 L=100., l=1., z0=.0001):
+                 l=1., z0=.0001):
         '''Class initialization
             
         Parameters
@@ -166,20 +166,14 @@ class WindShear:
         
         # Compute separation bubble
         if process_separation:
-            gc['zsep'] = self.separation()
+            zsep = self.separation()
             z_origin = gc['z'].copy()
-            gc['z'] = np.maximum(gc['z'], gc['zsep'])
+            gc['z'] = np.maximum(gc['z'], zsep)
                     
         # Compute wind shear stresses on computational grid 
-        u = np.zeros(u0.shape)
         
-        ix = u0 > 0
-        u [ix] = u0 [ix] / u0[ix] #* 0.76
-        
-        self.compute_shear(u)
-        
-        #gc['dtaux']= np.maximum(gc['dtaux'], -1.)
-        
+        self.compute_shear(u0)
+                
         gc['dtaux'], gc['dtauy'] = self.rotate(gc['dtaux'], gc['dtauy'], udir+90)
         
         # Add shear and apply reduction factor for shear in sep. bubble
@@ -202,7 +196,7 @@ class WindShear:
                                               gi['x'], gi['y'])
         gi['tauy'] = self.interpolate(gc['x'], gc['y'], gc['tauy'],
                                               gi['x'], gi['y'])
-        
+                
         if process_separation:
             gi['hsep'] = self.interpolate(gc['x'], gc['y'], gc['hsep'], 
                                           gi['x'], gi['y'] )
@@ -212,6 +206,7 @@ class WindShear:
         gi['x'], gi['y'] = self.rotate(gi['x'], gi['y'], +(udir+90.), origin=(self.x0, self.y0))
                        
         gi['taux'], gi['tauy'] = self.rotate(gi['taux'], gi['tauy'], +(udir+90))
+
         
         # PLOTTING! -------------------------------------------------------
         # d = 10
@@ -308,6 +303,7 @@ class WindShear:
         self.cgrid['tauy'][ix] = tau[ix] * (tauy[ix] / tau[ix] + dtauy[ix])
         
         return self
+
     
     def get_separation(self):
         '''Returns difference in height between z-coordinate of 
@@ -448,7 +444,7 @@ class WindShear:
         
         zsep = np.zeros(gc['z'].shape)                                          # total separation bubble
         zsep0 = np.zeros(gc['z'].shape)                                         # zero-order separation bubble       
-        
+        zsep1 = np.zeros(gc['z'].shape)
 #        zsep2 = np.zeros(g['z'].shape)                                         # separation bubble after cutting dune profile       
 #        zmin = np.zeros(ny)
         
@@ -507,22 +503,14 @@ class WindShear:
 
             ix_neg = (dzx[j, i+5:] >= 0)                                         # i + 5??
                         
-            # plt.plot(x[j, i:], dzx[j, i:])
-            # plt.show()
 
             if np.sum(ix_neg) == 0:
                 zbrink = z[j,i]                                                 # z level of brink at z(x0) 
             else:
                 zbrink = z[j,i] - z[j,i+5+np.where(ix_neg)[0][0]]
 
-            # print ('j:', j)   
-            # print ('zbrink:', zbrink)
-
             # Zero order polynom
             dzdx0 = (z[j,i-2] - z[j,i-3])/dx
-            
-            if dzdx0 > 0.2:
-                dzdx0 = 0.2
             
             a = dzdx0 / c
         
@@ -541,27 +529,49 @@ class WindShear:
             
             zsep0[j,i:i_max] = (a3*xs**3 + a2*xs**2 + dzdx0*xs + z[j,i])
             
-            zsep0[j,i:i_max] = np.maximum(zsep0[j,i:i_max], z[j,i:i_max])
             
             # Zero order filter
             Cut = 1.5
             dk = 2.0 * np.pi / (np.max(x))
             zfft[j,:] = np.fft.fft(zsep0[j,:])
             zfft[j,:] *= np.exp(-(dk*k*dx)**2/(2.*Cut**2))
-            zsep0[j,:] = np.real(np.fft.ifft(zfft[j,:]))
+            zsep[j,:] = np.real(np.fft.ifft(zfft[j,:]))
             
-            zsep[j,i:i_max] = np.maximum(zsep0[j,i:i_max], z[j,i:i_max])
-                        
+            # First order polynom
+            dzdx1 = (zsep[j,i-2] - zsep[j,i-3])/dx
+            
+            #if dzdx1 > 0.2:
+            #    dzdx1 = 0.2
+                
+            a = dzdx1 / c
+        
+            ls = np.minimum(np.maximum((3.*z[j,i]/(2.*c) * (1. + a/4. + a**2/8.)), 0.1), 200.)
+            # print ('ls:', ls)
+            
+            a2 = -3 * z[j,i]/ls**2 - 2 * dzdx1 / ls
+            # print('a2:', a2)
+            a3 =  2 * z[j,i]/ls**3 +     dzdx1 / ls**2
+            # print('a3:', a3)
+          
+            i_max1 = min(i+int(ls/dx),int(nx-1))
+            # print('imax:', i_max)
+
+            xs1 = x[j,i:i_max1] - x[j,i]
+            
+            zsep1[j,i:i_max1] = (a3*xs1**3 + a2*xs1**2 + dzdx1*xs1 + z[j,i])
+                                                          
             #plt.figure()
-            #plt.plot(x[j,i:i_max], zsep[j,i:i_max], label='zsep0')
+            #plt.plot(x[j,i:i_max], zsep0[j,i:i_max], label='zsep0')
+            #plt.plot(x[j,i:i_max1], zsep1[j,i:i_max1], label='zsep1')
             #plt.plot(x[j,:], z[j,:], 'orange', label='zb')
             #plt.xlabel('x [m]')
             #plt.ylabel('z [m]')
             #plt.title('Separation bubble')
             #plt.legend()
-            #plt.show()         
-                   
-        
+            #plt.show()     
+            
+            zsep[j,i:i_max1] = np.maximum(zsep1[j,i:i_max1], z[j,i:i_max1])
+                          
         #plt.pcolormesh(x, y, np.maximum(zsep,z))#, vmin=0, vmax=0.00001)
         #bar = plt.colorbar()
         #bar.set_label('z [m]')
@@ -602,7 +612,7 @@ class WindShear:
         L  = self.L             # typical length scale of the hill (L=1/|kx|??)
         
         # Inner layer height
-        l  = 10         
+        l  = 1.         
         
         for i in range(5):
             l = 2 * 0.41**2 * L /np.log(l/z0)

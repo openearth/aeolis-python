@@ -46,7 +46,7 @@ def initialize (s,p):
 
         ix = s['rhoveg'] < 0.03
         s['rhoveg'][ix] *= 0.
-        s['hveg'][:, :] = p['hveg_max']*np.sqrt(s['rhoveg'])
+        s['hveg'][:,:] = p['hveg_max']*np.sqrt(s['rhoveg'])
 
         s['germinate'][:,:] = (s['rhoveg']>0)
         s['lateral'][:,:] = 0.
