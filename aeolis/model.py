@@ -186,8 +186,12 @@ class AeoLiS(IBmi):
             self.p['nx'] -= 1 # change nx from number of points to number of cells
             self.p['ny'] -= 1 # change ny from number of points to number of cells
         else:
-            self.p['nx'] = self.p['xgrid_file'].shape
-            self.p['nx'] -= 1 # change nx from number of points to number of cells
+            xlen = self.p['xgrid_file'].shape
+#            self.p['nx'] = self.p['xgrid_file'].shape
+#            print(type(xlen))
+#            print(self.p['nx'])
+#            self.p['nx'] -= 1 # change nx from number of points to number of cells
+            self.p['nx'] = xlen[0] - 1
             self.p['ny'] = 0
     
         self.p['nfractions'] = len(self.p['grain_dist'])
@@ -253,7 +257,7 @@ class AeoLiS(IBmi):
 
         # interpolate hydrodynamic time series
         self.s = aeolis.hydro.interpolate(self.s, self.p, self.t)
-        self.s = aeolis.hydro.update(self.s, self.p, self.dt)
+        self.s = aeolis.hydro.update(self.s, self.p, self.dt,self.t)
 
         # mix top layer
         self.s = aeolis.bed.mixtoplayer(self.s, self.p)
@@ -1104,7 +1108,7 @@ class AeoLiSRunner(AeoLiS):
             self.p.update(dict(nx         = 99,
                                ny         = 0,
                                xgrid_file = np.arange(0.,100.,1.),
-                               bed_file   = np.linspace(-5.,5.,100.),
+                               bed_file   = np.linspace(-5.,5.,100),
                                wind_file  = np.asarray([[0.,10.,0.],
                                                         [3601.,10.,0.]])))
         else:

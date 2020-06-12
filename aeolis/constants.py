@@ -37,7 +37,8 @@ INITIAL_STATE = {
         'dtaus',                            # [-] Component of the wind shear perturbation in x-direction
         'dtaun',                            # [-] Component of the wind shear perturbation in y-direction
         'udir',                             # [rad] Wind direction
-        'zs',                               # [m] Water level above reference
+        'zs',                               # [m] Total water level above reference
+        'swl',                              # [m] Still water level above reference
         'Hs',                               # [m] Wave height
         'zne',                              # NEW! [m] Non-erodible layer
     ),
@@ -76,7 +77,11 @@ MODEL_STATE = {
         'alfa',                             # [rad] Real-world grid cell orientation #Sierd_comm in later releases this needs a revision 
         'zb',                               # [m] Bed level above reference
         'S',                                # [-] Level of saturation
-    ),
+        'moist',                            # [-] Moisure content (volumetric)
+        'moist_swr',                        # [-] Moisture content soil water retention relationship
+        'gw',                               # [m] Groundwater level above reference
+        'wetting'                           # [bool] Flag indicating wetting or drying of soil profile
+    ), 
     ('ny','nx','nfractions') : (
         'Cu',                               # [kg/m^2] Equilibrium sediment concentration integrated over saltation height
         'Cuf',                              # [kg/m^2] Equilibrium sediment concentration integrated over saltation height, assuming the fluid shear velocity threshold
@@ -94,7 +99,6 @@ MODEL_STATE = {
     ),
     ('ny','nx','nlayers') : (
         'thlyr',                            # [m] Bed composition layer thickness
-        'moist',                            # [-] Moisure content
         'salt',                             # [-] Salt content
     ),
     ('ny','nx','nlayers','nfractions') : (
@@ -115,10 +119,9 @@ DEFAULT_CONFIG = {
     'process_threshold'             : True,               # Enable the process of threshold
     'process_transport'             : True,               # Enable the process of transport
     'process_bedupdate'             : True,               # Enable the process of bed updating
-    'process_meteo'                 : False,              # Enable the process of meteo
     'process_salt'                  : False,              # Enable the process of salt
-    'process_humidity'              : False,              # Enable the process of humidity
     'process_avalanche'             : True,               # NEW! Enable the process of avalanching
+    'process_groundwater'           : False,              # Enable the process of groundwater
     'th_grainsize'                  : True,               # Enable wind velocity threshold based on grainsize
     'th_bedslope'                   : False,              # Enable wind velocity threshold based on bedslope
     'th_moisture'                   : True,               # Enable wind velocity threshold based on moisture
@@ -135,6 +138,7 @@ DEFAULT_CONFIG = {
     'bedcomp_file'                  : None,               # Filename of ASCII file with initial bed composition
     'threshold_file'                : None,               # Filename of ASCII file with shear velocity threshold
     'ne_file'                       : None,               # NEW! Filename of ASCII file with non-erodible layer
+    'gw_file'                       : None,               # Filename of ASCII file with time series of groundwater level in grid cells
     'wave_mask'                     : None,               # Filename of ASCII file with mask for wave height
     'tide_mask'                     : None,               # Filename of ASCII file with mask for tidal elevation
     'threshold_mask'                : None,               # Filename of ASCII file with mask for the shear velocity threshold
@@ -177,16 +181,29 @@ DEFAULT_CONFIG = {
     'xi'                            : .3,                 # [-] Surf similarity parameter
     'facDOD'                        : .1,                 # [-] Ratio between depth of disturbance and local wave height
     'csalt'                         : 35e-3,              # [-] Maximum salt concentration in bed surface layer
-    'cpair'                         : 1.0035e-3,          # [MJ/kg/oC] Specific heat capacity air
-    'Mcr_stat'                      : 34.,                # critical static slope for avalanching
-    'Mcr_dyn'                       : 33.,                # critical dynamic slope for avalanching 
+    'cpair'                         : 1.013e-3,           # [MJ/kg/oC] Specific heat capacity of moist air
+    'Mcr_stat'                      : 34.,                # [-] Critical static slope for avalanching
+    'Mcr_dyn'                       : 33.,                # [-] Critical dynamic slope for avalanching
+    'fc'                            : 0.12,               # [-] Moisture content at field capacity (volumetric) (Schmutz, 2014)
+    'res_moist'                     : 0.001,              # [-] Residual soil moisture content (volumetric) (Schmutz, 2014)
+    'sat_moist'                     : 0.45,               # [-] Satiated soil moisture content (volumetric) (Schmutz, 2014)
+    'n_moist'                       : 4.8,                # [-] Pore-size distribution index in the soil water retention function (Schmutz, 2014)
+    'alfaw_moist'                   : 0.025,              # [m^-1] Inverse of the air-entry value for a wetting branch of the soil water retention function (Schmutz, 2014)
+    'alfad_moist'                   : 0.019,              # [m^-1] Inverse of the air-entry value for a drying branch of the soil water retention function (Schmutz, 2014)
+    'thick_moist'                   : 0.0002,             # [m] Thickness of surface moisture soil layer
+    'K_gw'                          : 0.0007,             # [m/s] Hydraulic conductivity
+    'ne_gw'                         : 0.3,                # [-] Effective porosity
+    'D_gw'                          : 5,                  # [m] Aquifer depth
+    'tfac_gw'                       : 10,                 # [-] Reduction factor for time step in ground water calculations
+    'Cl_gw'                         : 0.216,              # [-] Runup infiltration coefficient
     'scheme'                        : 'euler_backward',   # Name of numerical scheme (euler_forward, euler_backward or crank_nicolson)
     'boundary_lateral'              : 'circular',         # Name of lateral boundary conditions (circular, noflux)
     'boundary_offshore'             : 'noflux',           # Name of offshore boundary conditions (gradient, noflux, constant, uniform)
     'boundary_offshore_flux'        : 0.,                 # Constant offshore boundary flux
     'boundary_onshore'              : 'gradient',         # Name of onshore boundary conditions (gradient, noflux, constant, uniform)
     'boundary_onshore_flux'         : 0.,                 # Constant onshore boundary flux
-    'method_moist'                  : 'belly_johnson',    # Name of method to compute wind velocity threshold based on soil moisture content
+    'method_moist_threshold'        : 'belly_johnson',    # Name of method to compute wind velocity threshold based on soil moisture content
+    'method_moist_process'          : 'infiltration',     # Name of method to compute soil moisture content(infiltration or surface_moisture)
     'method_transport'              : 'bagnold',          # Name of method to compute equilibrium sediment transport rate
     'max_error'                     : 1e-6,               # [-] Maximum error at which to quit iterative solution in implicit numerical schemes
     'max_iter'                      : 1000,               # [-] Maximum number of iterations at which to quit iterative solution in implicit numerical schemes

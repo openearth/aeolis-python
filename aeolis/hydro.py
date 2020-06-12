@@ -71,6 +71,9 @@ def interpolate(s, p, t):
 
         # apply complex mask
         s['zs'] = apply_mask(s['zs'], s['tide_mask'])
+        
+        #define SWL
+        s['swl'] = s['zs']
 
     if p['process_wave'] and p['wave_file'] is not None:
 
@@ -93,16 +96,21 @@ def interpolate(s, p, t):
         # maximize wave height by depth ratio ``gamma``
         s['Hs'] = np.minimum(h * p['gamma'], s['Hs'])
         
-    if p['process_meteo'] and  p['meteo_file'] is not None:
+    if p['process_moist'] and p['method_moist_process'].lower() == 'surf_moisture' and p['meteo_file'] is not None:  ## här lägg till process
 
         m = interp_array(t,
                          p['meteo_file'][:,0],
                          p['meteo_file'][:,1:], circular=True)
 
-        # Symbols according to KNMI files: T = temperature [oC], RH =
-        # precipitation [mm/hr], U = relative humidity [%], Q = global
-        # radiation [J/m2], P = air pressure [kPa]
-        s['meteo'] = dict(zip(('T','RH','U','Q','P') , m))
+        #Meteorological parameters (Symbols according to KNMI, units fitting the Penman's equation)
+        # T: Temperature, Degrees Celsius
+        # Q : Global radiation, MJ/m2/d
+        # RH : Precipitation, mm/h
+        # P : Atmospheric pressure, kPa
+        # U: Relative humidity, %
+        
+        s['meteo'] = dict(zip(('T','Q','RH','P','U') , m))
+        
 
     # ensure compatibility with XBeach: zs >= zb
     s['zs'] = np.maximum(s['zs'], s['zb'])
@@ -110,7 +118,7 @@ def interpolate(s, p, t):
     return s
 
 
-def update(s, p, dt):
+def update(s, p, dt, t):
     '''Update soil moisture content
 
     Updates soil moisture content in all cells. The soil moisure
@@ -147,53 +155,190 @@ def update(s, p, dt):
         Spatial grids
 
     '''
+    # Groundwater level using Boussinesq (1D CS-transects)
+    if p['process_groundwater']:
+        
+        #Adjust timestep of groundwater calculations to achieve numerical stability
+        dt_gw = int(dt / p['tfac_gw'])
+        for i in range(int(dt / dt_gw)):
+            t_gw = t + i * dt_gw
+            interpolate(s,p,t_gw)
+        
+            #Compute setup
+            setup=np.average(s['swl']) + 0.35 * p['xi'] #Stockdon et al (2006) CH:Should we include a function to compute the Irribaren number?
+
+            #initialize GW levels
+            if t==0:
+                s['gw'][:,:]=setup
+                
+            #Define index of shoreline location
+            shl_ix = np.argmax(s['zb']>setup,axis=1) - 1
+
+        
+            #Runge-Kutta timestepping
+            f1 = Boussinesq(s['gw'],s,p,setup, shl_ix)
+            f2 = Boussinesq(s['gw'] + dt_gw / 2 * f1,s,p,setup, shl_ix)
+            f3 = Boussinesq(s['gw'] + dt_gw / 2 * f2,s,p,setup, shl_ix)
+            f4 = Boussinesq(s['gw'] + dt_gw * f3,s,p,setup, shl_ix)
+            
+            #update groundwater level
+            s['gw'] = s['gw'] + dt_gw / 6 * (f1 + 2 * f2 + 2 * f3 + f4)
+            
+        
+            #add infiltration from wave runup according to Nielsen 
+            if p['process_wave']:
+                #Define index of runup limit
+                runup_ix = np.argmax(s['zb'] >= s['zs'],axis=1) - 1
+                
+                #Compute f(x) = distribution of infiltrated water
+                fx=np.zeros(s['gw'].shape)
+                fx_ix=np.zeros_like(runup_ix)
+                for i in range(len(s['gw'][:,0])):
+                    #Define index of peak f(x)
+                    fx_ix[i] = (shl_ix[i]) + (2/3 * (runup_ix[i] - shl_ix[i]))
+                    #Compute f(X)
+                    fx[i,shl_ix[i]:fx_ix[i]] = (s['x'][i,shl_ix[i]:fx_ix[i]] - s['x'][i,shl_ix[i]]) / (2 / 3 * (s['x'][i,runup_ix[i]] - s['x'][i,shl_ix[i]]))
+                    fx[i,fx_ix[i]+1:runup_ix[i]] = 3 - (s['x'][i,fx_ix[i]+1:runup_ix[i]]- s['x'][i,shl_ix[i]])  / (1 / 3 * (s['x'][i,runup_ix[i]] - s['x'][i,shl_ix[i]]))
+                    
+
+                # Compute groundwater overheight due to runup
+                s['gw'] = s['gw'] + p['Cl_gw'] * fx * p['K_gw'] / p['ne_gw']
+                
+        
+            # Define cells below setup level
+            ix=s['zb'] < setup
+            #set GW level to the setup level in submerged cells
+            s['gw'][ix] = setup 
+         
+            # Do not allow GW levels above ground level in areas that are not submerged
+            s['gw'][~ix]=np.minimum(s['gw'][~ix], s['zb'][~ix])
+        
+
 
     # infiltration using Darcy
     if p['process_moist']:
-        F1 = -np.log(.5) / p['Tdry']
-        ix = s['zs'] - s['zb'] > p['eps']
-        s['moist'][ ix,0] = p['porosity']
-        s['moist'][~ix,0] *= np.exp(-F1 * dt)
+        if p['method_moist_process'].lower() == 'infiltration':
+            F1 = -np.log(.5) / p['Tdry']
+            ix = s['zs'] - s['zb'] > p['eps']
+            s['moist'][ ix] = p['porosity']
+            s['moist'][~ix] *= np.exp(-F1 * dt)
+            s['moist'][:,:] = np.maximum(0.,np.minimum(p['porosity'],\
+                                                  s['moist'][:,:]))
+        
+        elif p['method_moist_process'].lower() == 'surf_moisture':
+            if p['process_moist'] is None : #Skriv varning att grundvattnet inte beräknas
+                logger.log_and_raise('process_groundwater is not activated, the groundwater level is not computed within the program but set constant at 0 m', exc=ValueError)
+                
+            #cells that were flooded in previous time step (by rain or runup) drains to field capacity 
+            s['moist'] = np.minimum(s['moist'],p['sat_moist'])
+            
+            #if the cell is flooded (runup) in this timestep, assume satiation
+            ix = s['zs'] - s['zb'] > p['eps']
+            s['moist'][ ix] = p['sat_moist']
+
+            
+            #update surface moisture with respect to evaporation, condensation, and precipitation
+            met = s['meteo']
+            evo = evaporation(s,p,met)
+            evo = evo / 24. / 3600. / 1000. # convert evaporation from mm/day to m/s
+            pcp = met['RH'] / 3600. / 1000. # convert precipitation from mm/hr to m/s
+            s['moist'][~ix] = np.maximum(s['moist'][~ix] + (pcp - evo[~ix]) * dt / p['thick_moist'], p['res_moist'])
+            s['moist'][~ix] = np.minimum(s['moist'][~ix],p['sat_moist'])
+            
+            #compute surface moisture due to capillary processes
+            h=s['zb']-s['gw']
+            ixw=s['wetting']==True
+            #wetting
+            s['moist_swr'][ixw] = np.maximum(s['moist_swr'][ixw],p['res_moist'] + (p['sat_moist'] - p['res_moist']) \
+                                 / (1 + abs(p['alfaw_moist'] * h[ixw])**p['n_moist'])**(1 - 1 / p['n_moist']))
+            #drying
+            s['moist_swr'][~ixw] = np.minimum(s['moist_swr'][~ixw], p['res_moist'] + (p['sat_moist'] - p['res_moist']) \
+                                 / (1 + abs(p['alfad_moist'] * h[~ixw])**p['n_moist'])**(1 - 1 / p['n_moist']))
+            
+            #update surface moisture with respect to capillary processes
+            s['moist'] = np.maximum(s['moist'],s['moist_swr'])
+
+        
+        else:
+            logger.log_and_raise('Unknown moisture process formulation [%s]' % p['method_moist_process'], exc=ValueError)
+        
 
     # salinitation
     if p['process_salt']:
+        met = s['meteo']
         F2 = -np.log(.5) / p['Tsalt']
         s['salt'][ ix,0] = 1.
         s['salt'][~ix,0] *= np.exp(-F2 * dt)
-
-    # evaporation using Penman
-    if 'meteo' in s:
-
-        met = s['meteo']
-        
-        # convert radiation from J/m2 to MJ/m2/day
-        rad = met['Q'] / 1e6 / dt * 3600. * 24.
-
-        l = 2.26
-        m = vaporation_pressure_slope(met['T']) # [kPa/K]
-        delta = saturation_pressure(met['T']) * (1. - met['RH']) # [kPa]
-        gamma = (p['cpair'] * met['P']) / (.622 * l) # [kPa/K]
-        u2 = .174 / np.log10(p['z'] / 2.) * s['uw'] # [m/s]
-   
-        evo = np.maximum(0., (m * rad \
-                              + gamma * 6.43 * (1. + 0.536 * u2) * delta) \
-                         / (l * (m + gamma)))
-
-        # convert evaporation from mm/day to m/s
-        evo = evo / 24. / 3600. / 1000.
-
-        # convert precipitation from mm/hr to m/s
-        pcp = met['RH'] / 3600. / 1000.
-
-        # update moisture and salt content
-        s['moist'][:,:,0] = np.maximum(0.,
-                                       np.minimum(p['porosity'],
-                                                  s['moist'][:,:,0] \
-                                                  + (pcp - evo) * dt \
-                                                  / p['layer_thickness'] / p['nlayers']))
+        pcp = met['RH'] / 3600. / 1000. # convert precipitation from mm/hr to m/s
         s['salt'][:,:,0] = np.minimum(1., s['salt'][:,:,0] + pcp * dt / p['layer_thickness'])
 
     return s
+
+
+
+
+def Boussinesq (dGW,s,p,setup,shl_ix):
+    '''
+    Add description
+    
+    '''
+    
+
+    #Define seaward boundary gw=setup
+    s['gw'][:,shl_ix]=setup
+    s['gw'][:,shl_ix-1]=setup
+    
+    #Define landward boundary dgw/dx=0
+    s['gw'][:,-1]=s['gw'][:,-3]
+    s['gw'][:,-2]=s['gw'][:,-3]
+    
+    #Compute groundwater level change dGW/dt (Boussinesq equation)
+    dGW = np.zeros(s['gw'].shape)
+    a = np.zeros(s['gw'].shape)
+    b = np.zeros(s['gw'].shape)
+    c = np.zeros(s['gw'].shape)
+
+    for i in range(len(a[:,0])):
+                   a[i,shl_ix[i]:-2]=(s['gw'][i,shl_ix[i]+1:-1] - 2 * s['gw'][i,shl_ix[i]:-2] + s['gw'][i,shl_ix[i]-1:-3]) / s['ds'][i,shl_ix[i]:-2] ** 2
+                   b[i,shl_ix[i]:-2]=(s['gw'][i,shl_ix[i]:-2] * (s['gw'][i,shl_ix[i]+1:-1] + s['gw'][i,shl_ix[i]-1:-3])) / s['ds'][i,shl_ix[i]:-2]                  
+                   #c[i,shl_ix[i]+1:-2]=(b[i,shl_ix[i]+2:-1]-b[i,shl_ix[i]:-3])/s['ds'][i,shl_ix[i]+1:-2]
+                   c[i,shl_ix[i]+1:-3]=(b[i,shl_ix[i]+2:-2]-b[i,shl_ix[i]:-4])/s['ds'][i,shl_ix[i]+1:-3]
+                   #dGW[i,shl_ix[i]+1:-2]=p['K_gw'] / p['ne_gw'] * (p['D_gw'] * a[i,shl_ix[i]+1:-2] + c[i,shl_ix[i]+1:-2])
+                   dGW[i,shl_ix[i]+1:-3]=p['K_gw'] / p['ne_gw'] * (p['D_gw'] * a[i,shl_ix[i]+1:-3] + c[i,shl_ix[i]+1:-3])
+    return dGW
+
+def evaporation(s,p,met):
+    '''Compute evaporation according to the Penman equation (Shuttleworth, 1993)
+
+    Parameters
+    ----------
+    s : dict
+        Spatial grids
+    p : dict
+        Model configuration parameters
+    met : dict
+        meteorologial parameters
+        T: Temperature, degrees Celsius
+        Q : Global radiation, MJ/m2/d
+        P : Atmospheric pressure, kPa
+        U: Relative humidity, %
+
+    Returns
+    -------
+    float
+        Evaporation (mm/day)
+
+    '''
+    l = 2.26 #latent heat of vaporization of water (MJ/kg)
+    m = vaporation_pressure_slope(met['T']) # [kPa/K]
+    delta = saturation_pressure(met['T']) * (1. - met['U'] / 100) # vapor pressure deficit [kPa]
+    gamma = (p['cpair'] * met['P']) / (.622 * l) # [kPa/K]
+    u2 = .174 / np.log10(p['z'] / 2.) * s['uw'] # [m/s]
+    evo =(m * met['Q'] + 6.43 * gamma * delta * (1. + 0.86 * u2)) \
+          / (l * (m + gamma))
+    return evo
+
+
 
 
 def vaporation_pressure_slope(T):
@@ -212,13 +357,13 @@ def vaporation_pressure_slope(T):
     '''
     
     # Tetens, 1930; Murray, 1967
-    s = 4098. * 0.6108 * np.exp((17.27 * T) / (T - 237.3)) / (T + 237.3)**2 # [kPa/K]
+    s = 4098. * saturation_pressure(T) / (T + 237.3)**2 # [kPa/K]
 
     return s
 
 
 def saturation_pressure(T):
-    '''Compute saturation pressure based on air temperature
+    '''Compute saturation pressure based on air temperature, Tetens equation
 
     Parameters
     ----------
@@ -232,13 +377,7 @@ def saturation_pressure(T):
 
     '''
 
-    TK = T + 273.15
-    A  = -1.88e4
-    B  = -13.1
-    C  = -1.5e-2
-    D  =  8e-7
-    E  = -1.69e-11
-    F  =  6.456
-    vp = np.exp(A/TK + B + C*TK + D*TK**2 + E*TK**3 + F*np.log(TK)) # [kPa]
+
+    vp = 0.6108 * np.exp(17.27 * T / (T + 237.3)) # [kPa]
 
     return vp
