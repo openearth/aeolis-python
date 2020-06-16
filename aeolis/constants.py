@@ -56,12 +56,12 @@ MODEL_STATE = {
         'alfa',                             # [rad] Real-world grid cell orientation (clockwise)
         'zb',                               # [m] Bed level above reference
         'zb0',                        # NEW # [m] Initial bed level above reference
-        'dzb',                        # NEW # [m] Bed level change per time step
+        'dzb',                        # NEW # [m] Bed level change per time step (computed after avalanching!)
         'S',                                # [-] Level of saturation
         'ustar',                      # NEW # [m/s] Shear velocity by wind
         'ustars',                     # NEW # [m/s] Component of shear velocity in x-direction by wind
         'ustarn',                     # NEW # [m/s] Component of shear velocity in y-direction by wind
-        'ustar0',                     # NEW # [m/s] Initial shear velocity
+        'ustar0',                     # NEW # [m/s] Initial shear velocity (without perturbation)
         'zsep',                       # NEW # [m] Z level of polynomial that defines the separation bubble
         'hsep',                       # NEW # [m] Height of separation bubbel = difference between z-level of zsep and of the bed level zb
 #        'stall',                      # NEW # [ ] 
@@ -82,6 +82,7 @@ MODEL_STATE = {
     ('ny','nx','nfractions') : (
         'Cu',                               # [kg/m^2] Equilibrium sediment concentration integrated over saltation height
         'Cuf',                              # [kg/m^2] Equilibrium sediment concentration integrated over saltation height, assuming the fluid shear velocity threshold
+        'Cu0',                              # [kg/m^2] Flat bad equilibrium sediment concentration integrated over saltation height
         'Ct',                               # [kg/m^2] Instantaneous sediment concentration integrated over saltation height
         'q',                                # [kg/m/s] Instantaneous sediment flux
         'qs',                               # [kg/m/s] Instantaneous sediment flux in x-direction
@@ -108,7 +109,7 @@ MODEL_STATE = {
         'mass',                             # [kg/m^2] Sediment mass in bed
     ),
     ('ny','nx','nsavetimes') : (
-        'dzb_avg',                     # NEW []    
+        'dzb_avg',                    # NEW # []    
 
     )
 }
@@ -132,14 +133,15 @@ DEFAULT_CONFIG = {
     'process_avalanche'             : True,         # NEW # Enable the process of avalanching
     'process_inertia'               : False,        # NEW 
     'process_separation'            : True,         # NEW # Enable the including of separation bubble
-    'process_vegetation'            : True,         # NEW # Enable the including of vegetation
+    'process_nelayer'               : False,        # NEW # Enable a non-erodible layer
+    'process_vegetation'            : False,        # NEW # Enable the process of vegetation 
     'th_grainsize'                  : True,               # Enable wind velocity threshold based on grainsize
     'th_bedslope'                   : False,              # Enable wind velocity threshold based on bedslope
     'th_moisture'                   : True,               # Enable wind velocity threshold based on moisture
     'th_humidity'                   : False,              # Enable wind velocity threshold based on humidity
     'th_salt'                       : False,              # Enable wind velocity threshold based on salt
     'th_roughness'                  : True,               # Enable wind velocity threshold based on roughness
-    'th_nelayer'                    : True,         # NEW # Enable wind velocity threshold based on a non-erodible layer
+    'th_nelayer'                    : False,        # NEW # Enable wind velocity threshold based on a non-erodible layer
     'xgrid_file'                    : None,               # Filename of ASCII file with x-coordinates of grid cells
     'ygrid_file'                    : None,               # Filename of ASCII file with y-coordinates of grid cells
     'bed_file'                      : None,               # Filename of ASCII file with bed level heights of grid cells
@@ -157,16 +159,17 @@ DEFAULT_CONFIG = {
     'nx'                            : 0,                  # [-] Number of grid cells in x-dimension
     'ny'                            : 0,                  # [-] Number of grid cells in y-dimension
     'dt'                            : 60.,                # [s] Time step size
+    'dx'                            : 1.,
+    'dy'                            : 1.,
     'CFL'                           : 1.,                 # [-] CFL number to determine time step in explicit scheme
     'accfac'                        : 1.,                 # [-] Numerical acceleration factor
     'tstart'                        : 0.,                 # [s] Start time of simulation
     'tstop'                         : 3600.,              # [s] End time of simulation
     'restart'                       : None,               # [s] Interval for which to write restart files
-    'dzb_interval'                  : 604800,       # NEW # [s] Interval used for calcuation of vegetation growth
+    'dzb_interval'                  : 86400,        # NEW # [s] Interval used for calcuation of vegetation growth
     'output_times'                  : 60.,                # [s] Output interval in seconds of simulation time
     'output_file'                   : None,               # Filename of netCDF4 output file
     'output_vars'                   : ['zb', 'zs',
-                                       'zsep', 'hsep',
                                        'Ct', 'Cu',
                                        'uw', 'udir', 
                                        'uth', 'mass'
@@ -187,13 +190,14 @@ DEFAULT_CONFIG = {
     'z'                             : 10.,                # [m] Measurement height of wind velocity
     'h'                             : None,               # [m] Representative height of saltation layer
     'k'                             : 0.001,              # [m] Bed roughness
-    'L'                             : 100.,          #NEW # [m] Typical length scale of dune feature
+    'L'                             : 100.,          #NEW # [m] Typical length scale of dune feature (perturbation)
+    'l'                             : 10.,           #NEW # [m] Inner layer height (perturbation) 
     'Cb'                            : 1.5,                # [-] Constant in bagnold formulation for equilibrium sediment concentration
     'Ck'                            : 2.78,               # [-] Constant in kawamura formulation for equilibrium sediment concentration
     'Cl'                            : 6.7,                # [-] Constant in lettau formulation for equilibrium sediment concentration
     'Cdk'                           : 5.,                 # [-] Constant in DK formulation for equilibrium sediment concentration
     'm'                             : 0.5,                # [-] Factor to account for difference between average and maximum shear stress
-    'alpha'                         : 0.4,                # [-] Relation of vertical component of ejection velocity and horizontal velocity difference between impact and ejection 
+#    'alpha'                         : 0.4,                # [-] Relation of vertical component of ejection velocity and horizontal velocity difference between impact and ejection 
     'kappa'                         : 0.41,               # [-] Von Kármán constant
     'sigma'                         : 4.2,                # [-] Ratio between basal area and frontal area of roughness elements
     'beta'                          : 130.,               # [-] Ratio between drag coefficient of roughness elements and bare surface
@@ -211,18 +215,18 @@ DEFAULT_CONFIG = {
     'theta_dyn'                     : 33.,          # NEW # [degrees] Initial Dynamic angle of repose, critical dynamic slope for avalanching 
     'theta_stat'                    : 34.,          # NEW # [degrees] Initial Static angle of repose, critical static slope for avalanching
     'hveg_max'                      : 1.,           # NEW # [m] Max height of vegetation 
-    'V_ver'                         : 0.,           # NEW # [m/year] 
-    'V_lat'                         : 0.,           # NEW # [m/year]
+    'V_ver'                         : 0.,           # NEW # [m/year] Vertical growth 
+    'V_lat'                         : 0.,           # NEW # [m/year] Lateral growth
     'germinate'                     : 0.,           # NEW # [1/year] Possibility of germination per year
-    'lateral'                       : 0.,           # NEW # [1/year] 
+    'lateral'                       : 0.,           # NEW # [1/year] Posibility of lateral expension per year
     'veg_gamma'                     : 1.,           # NEW # [-] Constant on influence of sediment burial
     'sedimentinput'                 : 0.,           # NEW # [-] Constant boundary sediment influx (only used in solve_pieter)
     'scheme'                        : 'euler_backward',   # Name of numerical scheme (euler_forward, euler_backward or crank_nicolson)
-    'boundary_lateral'              : 'circular',         # Name of lateral boundary conditions (circular, noflux)
-    'boundary_offshore'             : 'noflux',           # Name of offshore boundary conditions (gradient, noflux, constant, uniform)
-    'boundary_offshore_flux'        : 0.,                 # [-] Constant offshore boundary flux
-    'boundary_onshore'              : 'gradient',         # Name of onshore boundary conditions (gradient, noflux, constant, uniform)
-    'boundary_onshore_flux'         : 0.,                 # [-] Constant onshore boundary flux
+    'boundary_lateral'              : 'circular',         # Name of lateral boundary conditions (circular, constant ==noflux)
+    'boundary_offshore'             : 'constant',         # Name of offshore boundary conditions (constant, uniform, gradient)
+    'boundary_offshore_flux'        : 0.,                 # [-] Constant offshore boundary flux (= 1 for saturated flux , = 0 for noflux)
+    'boundary_onshore'              : 'gradient',         # Name of onshore boundary conditions (constant, uniform, gradient)
+    'boundary_onshore_flux'         : 0.,                 # [-] Constant onshore boundary flux (= 1 for saturated flux , = 0 for noflux)
     'method_moist'                  : 'belly_johnson',    # Name of method to compute wind velocity threshold based on soil moisture content
     'method_transport'              : 'bagnold',          # Name of method to compute equilibrium sediment transport rate
     'max_error'                     : 1e-6,               # [-] Maximum error at which to quit iterative solution in implicit numerical schemes

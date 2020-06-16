@@ -58,11 +58,13 @@ def initialize(s, p):
                                  % p['wind_convention'], exc=ValueError)
 
     # initialize wind shear model
-    z0 = (np.sum(p['grain_size'])/p['nfractions']) / 30.                        # z0 = p['k'] if not dependent on grainsize?
+    #z0 = (np.sum(p['grain_size'])/p['nfractions']) / 30.                        # z0 = p['k'] if not dependent on grainsize?
+    z0 = p['k']
     
     if p['process_shear']:
         s['shear'] = aeolis.shear.WindShear(s['x'], s['y'], s['zb'],
-                                            L=p['L'], l=1., z0=z0, 
+                                            dx=p['dx'], dy=p['dy'],
+                                            L=p['L'], l=p['l'], z0=z0, 
                                             buffer_width=10.) 
     return s
    
@@ -116,7 +118,8 @@ def interpolate(s, p, t):
     # Compute wind shear velocity
     kappa = p['kappa']
     z     = p['z']
-    z0    = (np.sum(p['grain_size'])/p['nfractions']) / 30.                                                                                                              
+#    z0    = (np.sum(p['grain_size'])/p['nfractions']) / 30.
+    z0    = p['k']                                                                                                              
     
     s['ustars'] = s['uws'] * kappa / np.log(z/z0)
     s['ustarn'] = s['uwn'] * kappa / np.log(z/z0) 
@@ -140,7 +143,7 @@ def shear(s,p):
                    udir=s['udir'][0,0],
                    process_separation = p['process_separation'])
         
-        #s['taus_u'], s['taun_u'] = s['shear'].get_sheardirection()
+
         s['taus'], s['taun'] = s['shear'].get_shear()
                
         s['tau'] = np.hypot(s['taus'], s['taun'])                               # set minimum of tau to zero
@@ -152,6 +155,15 @@ def shear(s,p):
         if p['process_separation']:
             s['hsep'] = s['shear'].get_separation()
             s['zsep'] = s['hsep'] + s['zb']
+            
+    if p['process_nelayer']:
+            
+        s['zne'][:,:] = p['ne_file']
+            
+        ix = s['zb'] <= s['zne'] 
+
+        s['ustar'][ix] = np.maximum(0., s['ustar'][ix] - (s['zne'][ix]-s['zb'][ix])* (1/p['layer_thickness']) * s['ustar'][ix])
+
 
     return s
 

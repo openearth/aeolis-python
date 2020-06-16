@@ -65,7 +65,7 @@ def initialize(s, p):
     nf = p['nfractions']
 
     # initialize x-dimension
-    s['x'][:,:] = p['xgrid_file']
+    s['x'][:,:] = p['xgrid_file'] 
     s['ds'][:,1:] = np.diff(s['x'], axis=1)
     s['ds'][:,0] = s['ds'][:,1]
     
@@ -75,7 +75,7 @@ def initialize(s, p):
         s['dn'][:,:] = 1.
         s['alfa'][:,:] = 0.
     else:
-        s['y'][:,:] = p['ygrid_file']
+        s['y'][:,:] = p['ygrid_file'] 
         s['dn'][1:,:] = np.diff(s['y'], axis=0)
         s['dn'][0,:] = s['dn'][1,:]
 
@@ -274,7 +274,7 @@ def update(s, p):
     if p['process_bedupdate']:
         dz = dm[:,0].reshape((ny+1,nx+1)) / (p['rhog'] * (1. - p['porosity']))
         
-        s['dzb'] = dz
+        #s['dzb'] = dz
         
         # redistribute sediment from inactive zone to marine interaction zone
         
@@ -425,16 +425,20 @@ def prevent_negative_mass(m, dm, pickup):
     return m, dm, pickup
 
 
-def average_change(s, p):
+def average_change(l, s, p):
+    
+    #Compute bed level change with previous time step [m/timestep]
+    s['dzb'] = s['zb'] - l['zb']
         
     # Collect time steps
+    s['dzb_year'] = s['dzb'] * (3600. * 24. * 365.25) / (p['dt'] * p['accfac'])
     
-    s['dzb_year'] = s['dzb'] * (3600. * 24. * 365.25) / p['dt']
-
     s['dzb_avg'] = np.delete(s['dzb_avg'], 0, axis=2)
+    
     s['dzb_avg'] = np.dstack((s['dzb_avg'], s['dzb_year']))
-
-    # Calculate average as input for vegetation growth
+    
+    # Calculate average bed level change as input for vegetation growth [m/year]
     s['dzb_veg'] = np.average(s['dzb_avg'], axis=2)
+
     
     return s

@@ -39,8 +39,10 @@ import numpy as np
 import scipy.sparse
 import pickle
 import scipy.sparse.linalg
+import matplotlib.pyplot as plt
 from datetime import timedelta
 from bmi.api import IBmi
+from functools import reduce
 
 # package modules
 import aeolis.inout
@@ -183,6 +185,19 @@ class AeoLiS(IBmi):
         # read configuration file
         self.p = aeolis.inout.read_configfile(self.configfile)
         aeolis.inout.check_configuration(self.p)
+        
+        # set nx, ny and nfractions
+        if self.p['xgrid_file'].ndim == 2:
+            self.p['ny'], self.p['nx'] = self.p['xgrid_file'].shape
+            
+            # change from number of points to number of cells
+            self.p['nx'] -= 1  
+            self.p['ny'] -= 1
+            
+        else:
+            self.p['nx'] = len(self.p['xgrid_file'])
+            self.p['nx'] -= 1 
+            self.p['ny'] = 0
 
         # initialize time
         self.t = self.p['tstart']
@@ -197,9 +212,6 @@ class AeoLiS(IBmi):
         for var, dims in self.dimensions().items():
             self.s[var] = np.zeros(self._dims2shape(dims))
             self.l[var] = self.s[var].copy()
-                        
-        # initialize grid parameters
-        # self.s = aeolis.gridparams.initialize(self.s, self.p)
 
         # initialize bed composition
         self.s = aeolis.bed.initialize(self.s, self.p)
@@ -290,7 +302,7 @@ class AeoLiS(IBmi):
         self.s = aeolis.avalanching.avalanche(self.s, self.p)
         
         # calculate average bedlevel change over time
-        self.s = aeolis.bed.average_change(self.s, self.p)
+        self.s = aeolis.bed.average_change(self.l, self.s, self.p)
         
         # grow vegetation
         if self.p['process_vegetation']:
@@ -705,18 +717,22 @@ class AeoLiS(IBmi):
         
             #boundary values
             us[:,0]  = s['us'][:,0,i]
-            #us[:,-1] = s['us'][:,-1,i]
+
+            un[0,:]  = s['un'][0,:,i]
+
         
-            if p['boundary_lateral'] == 'circular':
-                un[0,:] = 0.5*s['un'][0,:,i] + 0.5*s['un'][-1,:,i]
-                #un[-1,:] = un[0,:]
-            else:
-                un[0,:]  = s['un'][0,:,i]
-                #un[-1,:] = s['un'][-1,:,i]
+            #if p['boundary_lateral'] == 'circular':
+            #    un[0,:] = 0.5*s['un'][0,:,i] + 0.5*s['un'][-1,:,i]
+
+            #else:
+            #    un[0,:]  = s['un'][0,:,i]
+
             
             # define matrix coefficients to solve linear system of equations        
-            Cs = s['dn'] * s['dsdni'] * us[:,:]  #s['us'][:,:,i]
-            Cn = s['ds'] * s['dsdni'] * un[:,:]  #s['un'][:,:,i]
+            Cs = s['dn'] * s['dsdni'] * us[:,:]  
+            Cn = s['ds'] * s['dsdni'] * un[:,:]  
+            
+            
             Ti = 1 / p['T']
             
             beta = abs(beta)
@@ -760,12 +776,10 @@ class AeoLiS(IBmi):
             A0[:,-1] = 1.
             Apx[:,-1] = 0.
             Ap1[:,-1] = 0.
+            #Ap2[:,-1] = 0.
             Amx[:,-1] = 0.
 
-            if p['boundary_offshore'] == 'noflux':
-                Ap2[:,0] = 0.
-                Ap1[:,0] = 0.
-            elif p['boundary_offshore'] == 'constant':
+            if p['boundary_offshore'] == 'constant':
                 Ap2[:,0] = 0.
                 Ap1[:,0] = 0.
             elif p['boundary_offshore'] == 'uniform':
@@ -779,10 +793,7 @@ class AeoLiS(IBmi):
             else:
                 logger.log_and_raise('Unknown offshore boundary condition [%s]' % self.p['boundary_offshore'], exc=ValueError)
 
-            if p['boundary_onshore'] == 'noflux':
-                Am2[:,-1] = 0.
-                Am1[:,-1] = 0.
-            elif p['boundary_onshore'] == 'constant':                              
+            if p['boundary_onshore'] == 'constant':                              
                 Am2[:,-1] = 0.
                 Am1[:,-1] = 0.
             elif p['boundary_onshore'] == 'uniform':
@@ -796,10 +807,20 @@ class AeoLiS(IBmi):
             else:
                 logger.log_and_raise('Unknown onshore boundary condition [%s]' % self.p['boundary_onshore'], exc=ValueError)
 
-            if p['boundary_lateral'] == 'noflux':
-                logger.log_and_raise('Lateral no-flux boundary condition not yet implemented', exc=NotImplementedError)
-            elif p['boundary_lateral'] == 'constant':
-                logger.log_and_raise('Lateral constant boundary condition not yet implemented', exc=NotImplementedError)
+            if p['boundary_lateral'] == 'constant':
+                A0[0,:] = 1.
+                Apx[0,:] = 0.
+                Ap1[0,:] = 0.
+                Amx[0,:] = 0.
+                Am1[0,:] = 0.
+                
+                A0[-1,:] = 1.
+                Apx[-1,:] = 0.
+                Ap1[-1,:] = 0.
+                Amx[-1,:] = 0.
+                Am1[-1,:] = 0.
+            
+                #logger.log_and_raise('Lateral constant boundary condition not yet implemented', exc=NotImplementedError)
             elif p['boundary_lateral'] == 'uniform':
                 logger.log_and_raise('Lateral uniform boundary condition not yet implemented', exc=NotImplementedError)
             elif p['boundary_lateral'] == 'gradient':
@@ -859,15 +880,15 @@ class AeoLiS(IBmi):
 
                 # add boundaries
                 if p['boundary_offshore'] == 'constant':
-                    y_i[:,0] = p['boundary_offshore_flux'] #/ s['ug'][:,0,i]
+                    y_i[:,0] = p['boundary_offshore_flux'] * s['Cu0'][:,0,i] / p['T']
                 if p['boundary_onshore'] == 'constant':
-                    y_i[:,-1] = p['boundary_onshore_flux'] #/ s['ug'][:,-1,i]
+                    y_i[:,-1] = p['boundary_onshore_flux'] * s['Cu0'][:,-1,i] / p['T']
 
                 # solve system with current weights
                 Ct_i = scipy.sparse.linalg.spsolve(A, y_i.flatten())
                 Ct_i = prevent_tiny_negatives(Ct_i, p['max_error'])
                 
-
+                    
                 # check for negative values
                 if Ct_i.min() < 0.:
                     ix = Ct_i < 0.
@@ -1032,18 +1053,21 @@ class AeoLiS(IBmi):
         
             #boundary values
             us[:,0]  = s['us'][:,0,i]
-            #us[:,-1] = s['us'][:,-1,i]
+            
+            un[0,:]  = s['un'][0,:,i]
+
         
-            if p['boundary_lateral'] == 'circular':
-                un[0,:] = 0.5*s['un'][0,:,i] + 0.5*s['un'][-1,:,i]
-                #un[-1,:] = un[0,:]
-            else:
-                un[0,:]  = s['un'][0,:,i]
-                #un[-1,:] = s['un'][-1,:,i]
+            #if p['boundary_lateral'] == 'circular':
+            #    un[0,:] = 0.5*s['un'][0,:,i] + 0.5*s['un'][-1,:,i]
+
+            #else:
+            #    un[0,:]  = s['un'][0,:,i]
+
 
             # define matrix coefficients to solve linear system of equations        
             Cs = self.dt * s['dn'] * s['dsdni'] * s['us'][:,:,i]
             Cn = self.dt * s['ds'] * s['dsdni'] * s['un'][:,:,i]
+            
             Ti = self.dt / p['T']          
 
             
@@ -1088,12 +1112,10 @@ class AeoLiS(IBmi):
             A0[:,-1] = 1.
             Apx[:,-1] = 0.
             Ap1[:,-1] = 0.
+            #Ap2[:,-1] = 0.
             Amx[:,-1] = 0.
 
-            if p['boundary_offshore'] == 'noflux':
-                Ap2[:,0] = 0.
-                Ap1[:,0] = 0.
-            elif p['boundary_offshore'] == 'constant':
+            if p['boundary_offshore'] == 'constant':
                 Ap2[:,0] = 0.
                 Ap1[:,0] = 0.
             elif p['boundary_offshore'] == 'uniform':
@@ -1103,14 +1125,11 @@ class AeoLiS(IBmi):
                 Ap2[:,0] = s['ds'][:,1] / s['ds'][:,2]
                 Ap1[:,0] = -1. - s['ds'][:,1] / s['ds'][:,2]
             elif p['boundary_offshore'] == 'circular':
-                logger.log_and_raise('Cross-shore circular boundary condition not yet implemented', exc=NotImplementedError)
+                logger.log_and_raise('Cross-shore cricular boundary condition not yet implemented', exc=NotImplementedError)
             else:
                 logger.log_and_raise('Unknown offshore boundary condition [%s]' % self.p['boundary_offshore'], exc=ValueError)
 
-            if p['boundary_onshore'] == 'noflux':
-                Am2[:,-1] = 0.
-                Am1[:,-1] = 0.
-            elif p['boundary_onshore'] == 'constant':                              
+            if p['boundary_onshore'] == 'constant':                              
                 Am2[:,-1] = 0.
                 Am1[:,-1] = 0.
             elif p['boundary_onshore'] == 'uniform':
@@ -1120,14 +1139,24 @@ class AeoLiS(IBmi):
                 Am2[:,-1] = s['ds'][:,-2] / s['ds'][:,-3]
                 Am1[:,-1] = -1. - s['ds'][:,-2] / s['ds'][:,-3]
             elif p['boundary_offshore'] == 'circular':
-                logger.log_and_raise('Cross-shore circular boundary condition not yet implemented', exc=NotImplementedError)
+                logger.log_and_raise('Cross-shore cricular boundary condition not yet implemented', exc=NotImplementedError)
             else:
                 logger.log_and_raise('Unknown onshore boundary condition [%s]' % self.p['boundary_onshore'], exc=ValueError)
 
-            if p['boundary_lateral'] == 'noflux':
-                logger.log_and_raise('Lateral no-flux boundary condition not yet implemented', exc=NotImplementedError)
-            elif p['boundary_lateral'] == 'constant':
-                logger.log_and_raise('Lateral constant boundary condition not yet implemented', exc=NotImplementedError)
+            if p['boundary_lateral'] == 'constant':
+                A0[0,:] = 1.
+                Apx[0,:] = 0.
+                Ap1[0,:] = 0.
+                Amx[0,:] = 0.
+                Am1[0,:] = 0.
+                
+                A0[-1,:] = 1.
+                Apx[-1,:] = 0.
+                Ap1[-1,:] = 0.
+                Amx[-1,:] = 0.
+                Am1[-1,:] = 0.
+            
+                #logger.log_and_raise('Lateral constant boundary condition not yet implemented', exc=NotImplementedError)
             elif p['boundary_lateral'] == 'uniform':
                 logger.log_and_raise('Lateral uniform boundary condition not yet implemented', exc=NotImplementedError)
             elif p['boundary_lateral'] == 'gradient':
@@ -1204,9 +1233,9 @@ class AeoLiS(IBmi):
 
                 # add boundaries
                 if p['boundary_offshore'] == 'constant':
-                    y_i[:,0] = p['boundary_offshore_flux'] #/ s['ug'][:,0,i]
+                    y_i[:,0] = p['boundary_offshore_flux'] * s['Cu0'][:,0,i] / p['T']
                 if p['boundary_onshore'] == 'constant':
-                    y_i[:,-1] = p['boundary_onshore_flux'] #/ s['ug'][:,-1,i]
+                    y_i[:,-1] = p['boundary_onshore_flux'] * s['Cu0'][:,-1,i] / p['T']
 
                 # solve system with current weights
                 Ct_i = scipy.sparse.linalg.spsolve(A, y_i.flatten())

@@ -38,6 +38,8 @@ from aeolis.utils import *
 # initialize logger
 logger = logging.getLogger(__name__)
 
+
+
 def saltationvelocity(s, p):
     '''Define saltation velocity u [m/s]
 
@@ -83,8 +85,8 @@ def saltationvelocity(s, p):
     
     ix = ustar == 0
     
-    us[ix] += 0.2 * uws[ix] / uw[ix]
-    un[ix] += 0.2 * uwn[ix] / uw[ix]
+    us[ix] += 0.1 * uws[ix] / uw[ix]
+    un[ix] += 0.1 * uwn[ix] / uw[ix]
             
     u[ix] = np.hypot(us[ix], un[ix])
                        
@@ -115,14 +117,19 @@ def equilibrium(s, p):
     if p['process_transport']:
                 
         nf = p['nfractions']
+            
+        # u via saltation velocity
         
         us = s['us']
         un = s['un']   
         u  = s['u']
         
         ustar  = s['ustar'][:,:,np.newaxis].repeat(nf, axis=2)
+        ustar0 = s['ustar0'][:,:,np.newaxis].repeat(nf, axis=2)
+        
         uth    = s['uth']
         uthf   = s['uthf']
+        uth0 = s['uth0']
 
         rhoa   = p['rhoa'] 
         g      = p['g']
@@ -136,10 +143,12 @@ def equilibrium(s, p):
         if p['method_transport'].lower() == 'bagnold':
             s['Cu'][ix]  = np.maximum(0., p['Cb'] * rhoa / g * (ustar[ix] - uth[ix])**3 / u[ix])
             s['Cuf'][ix] = np.maximum(0., p['Cb'] * rhoa / g * (ustar[ix] - uthf[ix])**3 / u[ix])
+            
+            s['Cu0'][ix] = np.maximum(0., p['Cb'] * rhoa / g * (ustar0[ix] - uth0[ix])**3 / u[ix])
         
         elif p['method_transport'].lower() == 'kawamura':
-            s['Cu'][ix]  = np.maximum(0., p['Ck'] * rhoa / g * (ustar[ix] - uth[ix])**2 * (ustar[ix] + uth[ix]) / u[ix])
-            s['Cuf'][ix] = np.maximum(0, p['Ck'] * rhoa / g * (ustar[ix] - uthf[ix])**2 * (ustar[ix] + uthf[ix]) / u[ix])
+            s['Cu'][ix]  = np.maximum(0., p['Ck'] * rhoa / g * (ustar[ix] + uth[ix])**2 * (ustar[ix] - uth[ix]) / u[ix])
+            s['Cuf'][ix] = np.maximum(0, p['Ck'] * rhoa / g * (ustar[ix] + uthf[ix])**2 * (ustar[ix] - uthf[ix]) / u[ix])
         
         elif p['method_transport'].lower() == 'lettau':
             s['Cu'][ix]  = np.maximum(0., p['Cl'] * rhoa / g * ustar[ix]**2 * (ustar[ix] - uth[ix]) / u[ix])
@@ -148,12 +157,15 @@ def equilibrium(s, p):
         elif p['method_transport'].lower() == 'dk':
             s['Cu'][ix]  = np.maximum(0., p['Cdk'] * rhoa / g * uth[ix] * (ustar[ix]**2 - uth[ix]**2) / u[ix])
             s['Cuf'][ix] = np.maximum(0., p['Cdk'] * rhoa / g * uthf[ix] * (ustar[ix]**2 - uthf[ix]**2) / u[ix])
+            
+            s['Cu0'][ix]  = np.maximum(0., p['Cdk'] * rhoa / g * uth0[ix] * (ustar0[ix]**2 - uth0[ix]**2) / u[ix])
         
         else:
             logger.log_and_raise('Unknown transport formulation [%s]' % method, exc=ValueError)   
                                        
     s['Cu']  *= p['accfac']
     s['Cuf'] *= p['accfac']
+    s['Cu0'] *= p['accfac']
     
     return s
 

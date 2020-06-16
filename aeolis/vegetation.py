@@ -59,35 +59,27 @@ def vegshear(s, p):
     # Raupach, 1993
     
     roughness = 16.
-
-    ets = np.zeros(s['zb'].shape)
-    etn = np.zeros(s['zb'].shape)
-    ets[:,:] = 1.
-
-    ix = s['ustar'] != 0.
-    ets[ix] = s['ustars'][ix]/s['ustar'][ix]
-    etn[ix] = s['ustarn'][ix]/s['ustar'][ix]
     
-    #print ('ets:', ets)
-    #print ('etn:', etn)
-
     s['vegfac'] = 1. / np.sqrt(1. + roughness * s['rhoveg'])
     # print (s['vegfac'])
-
-    s['ustar']  *= s['vegfac']
-    s['ustars']  = s['ustar'] * ets
-    s['ustarn']  = s['ustar'] * etn
     
-    #d = 5        
+    # PLOTIING ----------------------------------------
+    #n = 5        
     #plt.figure()
-    #plt.pcolormesh(s['x'], s['y'], s['zb'], cmap='copper_r')
+    #plt.pcolormesh(s['x'], s['y'], s['vegfac'], cmap='YlGn_r', vmin=0, vmax=1)
     #bar = plt.colorbar()
-    #bar.set_label('zb [m]')
-    #plt.quiver(s['x'][::d, ::d], s['y'][::d, ::d], s['ustars'][::d, ::d], s['ustarn'][::d, ::d], color='white')
+    #bar.set_label('vegfac')
+    #plt.contour(s['x'], s['y'], s['zb'], n, colors='black')
     #plt.xlabel('x [m]')
     #plt.ylabel('y [m]')
-    #plt.title('Shear velocities vegetation')
+    #plt.title('Vegetation factor')
     #plt.show()
+    # ------------------------------------------------
+    
+    s['ustar']  *= s['vegfac']
+    s['ustars'] *= s['vegfac'] 
+    s['ustarn'] *= s['vegfac']
+
     
     return s
 
@@ -96,33 +88,54 @@ def germinate (s,p):
     
     # time [year]
     
-    n = (365.25*24*3600 / p['dt'])
+    n = (365.25*24.*3600. / (p['dt'] * p['accfac']))
     
     # Germination
     
     p_germinate_year = p['germinate']                                
-    p_germinate_dt = 1-(1-p_germinate_year)**(1/n)
+    p_germinate_dt = 1-(1-p_germinate_year)**(1./n)
     germination = np.random.random((s['germinate'].shape))
     
     s['germinate'] += (s['dzb_veg'] >= -0.01) * (p['_time'] > p['dzb_interval']) * (germination <= p_germinate_dt)
     s['germinate'] = np.minimum(s['germinate'], 1.)
 
 
-    # Lateral expension = not included for now
+    # Lateral expension 
+    
+    dx = s['ds'][2,2]
+    
+    p_lateral_year = p['lateral']  
+    p_lateral_dt = 1-(1-p_lateral_year)**(1./n)
+    p_lateral_cell = 1 - (1-p_lateral_dt)**(1./dx)
+    
+    drhoveg = np.zeros((p['ny']+1, p['nx']+1, 4))
+    
+    drhoveg[:,1:,0] = np.maximum((s['rhoveg'][:,:-1]-s['rhoveg'][:,1:]) / s['ds'][:,1:], 0.)    # positive x-direction
+    drhoveg[:,:-1,1] = np.maximum((s['rhoveg'][:,1:]-s['rhoveg'][:,:-1]) / s['ds'][:,:-1], 0.)  # negative x-direction
+    drhoveg[1:,:,2] = np.maximum((s['rhoveg'][:-1,:]-s['rhoveg'][1:,:]) / s['dn'][1:,:], 0.)    # positive y-direction
+    drhoveg[:-1,:,3] = np.maximum((s['rhoveg'][1:,:]-s['rhoveg'][:-1,:]) / s['dn'][:-1,:], 0.)  # negative y-direction
+    
+    lat_veg = drhoveg > 0.
+    
+    s['drhoveg'] = np.sum(lat_veg[:,:,:], 2)
+    
+    p_lateral = p_lateral_cell * s['drhoveg']
+    
+    s['lateral'] += (germination <= p_lateral)
+    s['lateral'] = np.minimum(s['lateral'], 1.)
 
     return s
 
 def grow (s, p): #DURAN 2006
     
     ix = np.logical_or(s['germinate'] != 0., s['lateral'] != 0.) * ( p['V_ver'] > 0.)
-
-    s['drhoveg'][:,:] *= 0.                                                     #is this used?
+                                                    
 
     # Reduction of vegetation growth due to sediment burial
     s['dhveg'][ix] = p['V_ver'] * (1 - s['hveg'][ix]/p['hveg_max']) - np.abs(s['dzb_veg'][ix])*p['veg_gamma'] # m/year
     s['dhveg'] = np.maximum(s['dhveg'], -3.)
 
-    # if p['_time'] > p['dz_interval']:
+    # if p['_time'] > p['dzb_interval']:
         # plt.pcolormesh(s['x'],s['y'], s['dhveg'], vmin=-1, vmax=1, cmap='YlGn')
         # plt.gca().invert_yaxis()
         # bar = plt.colorbar()
@@ -133,7 +146,7 @@ def grow (s, p): #DURAN 2006
         # plt.show()
 
     # Adding growth
-    s['hveg'] += s['dhveg']*p['dt']/(365.25*24*3600)
+    s['hveg'] += s['dhveg']*(p['dt'] * p['accfac']) / (365.25*24.*3600.)
 
     # Compute the density
 
@@ -141,18 +154,17 @@ def grow (s, p): #DURAN 2006
     s['rhoveg'] = (s['hveg']/p['hveg_max'])**2
     
     
-
     # Plot has to vegetate again after dying
 
     s['germinate'] *= (s['rhoveg']!=0.)
-    # s['lateral'] *= (s['rhoveg']!=0.)
+    s['lateral'] *= (s['rhoveg']!=0.)
 
     # Dying of vegetation due to hydrodynamics (Dynamic Vegetation Limit)
 
     s['rhoveg'] *= (s['zb']+0.01 >= s['zs'])
     s['hveg'] *= (s['zb'] + 0.01 >= s['zs'])
     s['germinate'] *= (s['zb']+0.01 >=s['zs'])
-    # s['lateral'] *= (s['zb']+0.01 >=s['zs'])
+    s['lateral'] *= (s['zb']+0.01 >=s['zs'])
     
     return s
 

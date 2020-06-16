@@ -87,9 +87,8 @@ class WindShear:
     istransect = False
     
     
-    def __init__(self, x, y, z, L, dx=1., dy=1.,
-                 buffer_width=100., buffer_relaxation=None,
-                 l=1., z0=.0001):
+    def __init__(self, x, y, z, dx, dy, L, l, z0,
+                 buffer_width=100., buffer_relaxation=None):
         '''Class initialization
             
         Parameters
@@ -118,7 +117,7 @@ class WindShear:
         l : float, optional
             Height of inner layer (default: 10)
         z0 : float, optional
-            Aerodynamic roughness (default: .0001)
+            Aerodynamic roughness (default: .001)
 
         '''
         
@@ -349,6 +348,8 @@ class WindShear:
         self.y0 = y0
         gc['xi'] = xc
         gc['yi'] = yc
+        
+        return self
     
         
     def populate_computational_grid(self, alpha):                               
@@ -442,29 +443,26 @@ class WindShear:
         
         k = np.array(range(0, nx))
         
-        zsep = np.zeros(gc['z'].shape)                                          # total separation bubble
-        zsep0 = np.zeros(gc['z'].shape)                                         # zero-order separation bubble       
-        zsep1 = np.zeros(gc['z'].shape)
-#        zsep2 = np.zeros(g['z'].shape)                                         # separation bubble after cutting dune profile       
-#        zmin = np.zeros(ny)
+        zsep =  z.copy()                                                        # total separation bubble      
         
+        zsep0 = np.zeros(z.shape)                                               # zero-order separation bubble surface      
+        zsep1 = np.zeros(z.shape)                                               # first-oder separation bubble surface
+                
         zfft = np.zeros((ny,nx), dtype=np.complex)
 
         c = 0.2                                                                # max slope of separation surface
-                                                                                # c = 0.2 according to Durán 2010 (Sauermann 2001: c = 0.25 for 14 degrees)
+                                                                               # c = 0.2 according to Durán 2010 (Sauermann 2001: c = 0.25 for 14 degrees)
         # Compute bed slope angle  
         dzx[:,:-1] = np.rad2deg(np.arctan((z[:,1:]-z[:,:-1])/dx))
         dzx[:,0] = dzx[:,1]
         dzx[:,-1] = dzx[:,-2]
-        
-        # print ('dzx:', dzx)
         
         # Determine location of separation bubbles
         '''Separation bubble exist if bed slope angle (lee side) 
         is larger than max angle that wind stream lines can 
         follow behind an obstacle (mu_b = ..)'''
         
-        mu_b = 30.                                                                
+        mu_b = 20.                                                                
         stall += np.logical_and(abs(dzx) > mu_b, dzx < 0.) 
         
         #stall[1:-1,:] += np.logical_and(stall[1:-1,:]==0, stall[:-2,:]>0., stall[2:,:]>0.)
@@ -475,9 +473,9 @@ class WindShear:
         # print ('bubble:', bubble)
         
         # Shift bubble back to x0: start of separation bubble 
-        p = 2
-        bubble[:,:-p] = bubble[:,p:]
-        bubble[:,:p] = 0
+        #p = 2
+        #bubble[:,:-p] = bubble[:,p:]
+        #bubble[:,:p] = 0
 
         # print ('bubble:', bubble)
         # plt.pcolormesh(x, y, bubble)
@@ -502,15 +500,17 @@ class WindShear:
             j = bubble_n[k,0]
 
             ix_neg = (dzx[j, i+5:] >= 0)                                         # i + 5??
-                        
-
+                                    
             if np.sum(ix_neg) == 0:
                 zbrink = z[j,i]                                                 # z level of brink at z(x0) 
             else:
                 zbrink = z[j,i] - z[j,i+5+np.where(ix_neg)[0][0]]
 
             # Zero order polynom
-            dzdx0 = (z[j,i-2] - z[j,i-3])/dx
+            dzdx0 = (z[j,i] - z[j,i-1])/dx
+            
+            #if dzdx0 > 0.1:
+            #    dzdx0 = 0.1
             
             a = dzdx0 / c
         
@@ -535,13 +535,10 @@ class WindShear:
             dk = 2.0 * np.pi / (np.max(x))
             zfft[j,:] = np.fft.fft(zsep0[j,:])
             zfft[j,:] *= np.exp(-(dk*k*dx)**2/(2.*Cut**2))
-            zsep[j,:] = np.real(np.fft.ifft(zfft[j,:]))
+            zsep0[j,:] = np.real(np.fft.ifft(zfft[j,:]))
             
             # First order polynom
-            dzdx1 = (zsep[j,i-2] - zsep[j,i-3])/dx
-            
-            #if dzdx1 > 0.2:
-            #    dzdx1 = 0.2
+            dzdx1 = (zsep0[j,i-1] - zsep0[j,i-2])/dx
                 
             a = dzdx1 / c
         
@@ -609,10 +606,10 @@ class WindShear:
         hs = self.filter_highfrequenies(kx, ky, hs, nfilter, p=0.001)
         
         z0 = self.z0            # roughness length which takes into account saltation
-        L  = self.L             # typical length scale of the hill (L=1/|kx|??)
+        L  = self.L /4.         # typical length scale of the hill (=1/kx) ??
         
         # Inner layer height
-        l  = 1.         
+        l  = self.l         
         
         for i in range(5):
             l = 2 * 0.41**2 * L /np.log(l/z0)
@@ -652,10 +649,9 @@ class WindShear:
             Height of seperation bubble (in x direction)
 
         '''
-        theta_dyn = 33.
         
-        tau_sep = 0.2 #0.05
-        slope = 0.2 #np.tan(np.rad2deg(theta_dyn))                                       # according to Durán 2010 (Sauermann 2001: c = 0.25 for 14 degrees)
+        tau_sep = 0.5 
+        slope = 0.2                                                             # according to Durán 2010 (Sauermann 2001: c = 0.25 for 14 degrees)
         delta = 1./(slope*tau_sep)
         
         zsepdelta = np.minimum(np.maximum(1. - delta * hsep, 0.), 1.)
