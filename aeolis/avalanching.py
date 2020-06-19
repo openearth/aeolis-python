@@ -55,7 +55,8 @@ def angele_of_repose(s,p):
     dict
         Spatial grids'''
         
-    # comment Lisa: dependence on moisture content is not yet implemented     
+    # comment Lisa: dependence on moisture content is not yet implemented 
+    # Can we do something with theta dependent on vegetation cover (larger rhoveg = larger theta?)    
         
     theta_stat = p['theta_stat']
     theta_dyn  = p['theta_dyn']

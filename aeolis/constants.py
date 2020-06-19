@@ -56,7 +56,10 @@ MODEL_STATE = {
         'alfa',                             # [rad] Real-world grid cell orientation (clockwise)
         'zb',                               # [m] Bed level above reference
         'zb0',                        # NEW # [m] Initial bed level above reference
-        'dzb',                        # NEW # [m] Bed level change per time step (computed after avalanching!)
+        'dzb',                        # NEW # [m/dt] Bed level change per time step (computed after avalanching!)
+        'dzbyear',                    # NEW # [m/y] Bed level change translated to m/y
+        'dzbavg',                     # NEW # [m/y] Bed level change averaged over collected time steps
+        'dzbveg',                     # NEW # [m/y] Bed level change used for calculation of vegetation growth 
         'S',                                # [-] Level of saturation
         'ustar',                      # NEW # [m/s] Shear velocity by wind
         'ustars',                     # NEW # [m/s] Component of shear velocity in x-direction by wind
@@ -64,16 +67,12 @@ MODEL_STATE = {
         'ustar0',                     # NEW # [m/s] Initial shear velocity (without perturbation)
         'zsep',                       # NEW # [m] Z level of polynomial that defines the separation bubble
         'hsep',                       # NEW # [m] Height of separation bubbel = difference between z-level of zsep and of the bed level zb
-#        'stall',                      # NEW # [ ] 
-#        'bubble',                     # NEW # [ ]
         'theta_stat',                 # NEW # [degrees] Updated, spatially varying static angle of repose
-        'theta_dyn',                  # NEW # [degrees] Updated, spatially varying dynamic angle of repose
-        'dzb_year',                   # NEW # [m] Bed level change averaged over collected time steps 
+        'theta_dyn',                  # NEW # [degrees] Updated, spatially varying dynamic angle of repose       
         'rhoveg',                     # NEW # [-] Vegetation cover
         'drhoveg',                    # NEW # Change in vegetation cover
         'hveg',                       # NEW # [m] height of vegetation
         'dhveg',                      # NEW # [m] Difference in vegetation height per time step
-        'dzb_veg',                    # NEW # [m] Bed level change used for calculation of vegetation growth
         'germinate',                  # NEW # 
         'lateral',                    # NEW #
         'dxrhoveg',                   # NEW #
@@ -108,10 +107,6 @@ MODEL_STATE = {
     ('ny','nx','nlayers','nfractions') : (
         'mass',                             # [kg/m^2] Sediment mass in bed
     ),
-    ('ny','nx','nsavetimes') : (
-        'dzb_avg',                    # NEW # []    
-
-    )
 }
 
 
@@ -166,6 +161,7 @@ DEFAULT_CONFIG = {
     'tstart'                        : 0.,                 # [s] Start time of simulation
     'tstop'                         : 3600.,              # [s] End time of simulation
     'restart'                       : None,               # [s] Interval for which to write restart files
+    'savefactor'                    : 0.5,          # NEW # [-] Factor that determines the influence of average bed level change from previous time steps
     'dzb_interval'                  : 86400,        # NEW # [s] Interval used for calcuation of vegetation growth
     'output_times'                  : 60.,                # [s] Output interval in seconds of simulation time
     'output_file'                   : None,               # Filename of netCDF4 output file

@@ -28,6 +28,7 @@ from __future__ import absolute_import, division
 import logging
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy import ndimage
 
 # package modules
 import aeolis.wind
@@ -60,22 +61,12 @@ def vegshear(s, p):
     
     roughness = 16.
     
-    s['vegfac'] = 1. / np.sqrt(1. + roughness * s['rhoveg'])
-    # print (s['vegfac'])
+    vegfac = 1. / np.sqrt(1. + roughness * s['rhoveg'])
     
-    # PLOTIING ----------------------------------------
-    #n = 5        
-    #plt.figure()
-    #plt.pcolormesh(s['x'], s['y'], s['vegfac'], cmap='YlGn_r', vmin=0, vmax=1)
-    #bar = plt.colorbar()
-    #bar.set_label('vegfac')
-    #plt.contour(s['x'], s['y'], s['zb'], n, colors='black')
-    #plt.xlabel('x [m]')
-    #plt.ylabel('y [m]')
-    #plt.title('Vegetation factor')
-    #plt.show()
-    # ------------------------------------------------
+    # vegfac is averaged from 5 surrounded cells in both directions
+    s['vegfac'] = ndimage.uniform_filter(vegfac, size=5, mode='constant') 
     
+    # Apply the vegetation reduction factor to the shear stress    
     s['ustar']  *= s['vegfac']
     s['ustars'] *= s['vegfac'] 
     s['ustarn'] *= s['vegfac']
@@ -96,7 +87,7 @@ def germinate (s,p):
     p_germinate_dt = 1-(1-p_germinate_year)**(1./n)
     germination = np.random.random((s['germinate'].shape))
     
-    s['germinate'] += (s['dzb_veg'] >= -0.01) * (p['_time'] > p['dzb_interval']) * (germination <= p_germinate_dt)
+    s['germinate'] += (s['dzbveg'] >= -0.01) * (p['_time'] > p['dzb_interval']) * (germination <= p_germinate_dt)
     s['germinate'] = np.minimum(s['germinate'], 1.)
 
 
@@ -132,7 +123,7 @@ def grow (s, p): #DURAN 2006
                                                     
 
     # Reduction of vegetation growth due to sediment burial
-    s['dhveg'][ix] = p['V_ver'] * (1 - s['hveg'][ix]/p['hveg_max']) - np.abs(s['dzb_veg'][ix])*p['veg_gamma'] # m/year
+    s['dhveg'][ix] = p['V_ver'] * (1 - s['hveg'][ix]/p['hveg_max']) - np.abs(s['dzbveg'][ix])*p['veg_gamma'] # m/year
     s['dhveg'] = np.maximum(s['dhveg'], -3.)
 
     # if p['_time'] > p['dzb_interval']:
