@@ -144,7 +144,7 @@ class WindShear:
         self.set_computational_grid()
         
 
-    def __call__(self, u0, udir, process_separation):                           
+    def __call__(self, u0, udir, process_separation, c, mu_b):
         '''Compute wind shear for given wind speed and direction
         
         Parameters
@@ -165,7 +165,7 @@ class WindShear:
         
         # Compute separation bubble
         if process_separation:
-            zsep = self.separation()
+            zsep = self.separation(c, mu_b)
             z_origin = gc['z'].copy()
             gc['z'] = np.maximum(gc['z'], zsep)
                     
@@ -416,7 +416,7 @@ class WindShear:
 
         return self
     
-    def separation(self):
+    def separation(self, c, mu_b):
         
         # Initialize grid and bed dimensions
         
@@ -450,8 +450,6 @@ class WindShear:
                 
         zfft = np.zeros((ny,nx), dtype=np.complex)
 
-        c = 0.2                                                                # max slope of separation surface
-                                                                               # c = 0.2 according to Durán 2010 (Sauermann 2001: c = 0.25 for 14 degrees)
         # Compute bed slope angle  
         dzx[:,:-1] = np.rad2deg(np.arctan((z[:,1:]-z[:,:-1])/dx))
         dzx[:,0] = dzx[:,1]
@@ -461,8 +459,7 @@ class WindShear:
         '''Separation bubble exist if bed slope angle (lee side) 
         is larger than max angle that wind stream lines can 
         follow behind an obstacle (mu_b = ..)'''
-        
-        mu_b = 20.                                                                
+
         stall += np.logical_and(abs(dzx) > mu_b, dzx < 0.) 
         
         #stall[1:-1,:] += np.logical_and(stall[1:-1,:]==0, stall[:-2,:]>0., stall[2:,:]>0.)

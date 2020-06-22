@@ -26,9 +26,9 @@ The Netherlands                  The Netherlands
 from __future__ import absolute_import, division
 
 import logging
+from scipy import ndimage, misc
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy import ndimage
 
 # package modules
 import aeolis.wind
@@ -58,27 +58,37 @@ def initialize (s,p):
 def vegshear(s, p):
 
     # Raupach, 1993
-    
     roughness = 16.
     
     vegfac = 1. / np.sqrt(1. + roughness * s['rhoveg'])
+    # s['vegfac'] = ndimage.uniform_filter(vegfac, size=5, mode='constant')
+    s['vegfac'] = ndimage.gaussian_filter(vegfac, sigma=0.8)
     
-    # vegfac is averaged from 5 surrounded cells in both directions
-    s['vegfac'] = ndimage.uniform_filter(vegfac, size=5, mode='constant') 
+    # PLOTIING ----------------------------------------
+    #n = 5        
+    #plt.figure()
+    #plt.pcolormesh(s['x'], s['y'], s['vegfac'], cmap='YlGn_r', vmin=0, vmax=1)
+    #bar = plt.colorbar()
+    #bar.set_label('vegfac')
+    #plt.contour(s['x'], s['y'], s['zb'], n, colors='black')
+    #plt.xlabel('x [m]')
+    #plt.ylabel('y [m]')
+    #plt.title('Vegetation factor')
+    #plt.show()
+    # ------------------------------------------------
     
-    # Apply the vegetation reduction factor to the shear stress    
     s['ustar']  *= s['vegfac']
-    s['ustars'] *= s['vegfac'] 
-    s['ustarn'] *= s['vegfac']
-
+    # s['ustars'] *= s['vegfac']
+    # s['ustarn'] *= s['vegfac']
     
     return s
 
 
 def germinate (s,p):
+
+    s['germinate'][:, :] = (s['rhoveg'] > 0.)
     
     # time [year]
-    
     n = (365.25*24.*3600. / (p['dt'] * p['accfac']))
     
     # Germination
@@ -87,12 +97,11 @@ def germinate (s,p):
     p_germinate_dt = 1-(1-p_germinate_year)**(1./n)
     germination = np.random.random((s['germinate'].shape))
     
-    s['germinate'] += (s['dzbveg'] >= -0.01) * (p['_time'] > p['dzb_interval']) * (germination <= p_germinate_dt)
+    s['germinate'] += (s['dzbveg'] >= 0.) * (germination <= p_germinate_dt)
     s['germinate'] = np.minimum(s['germinate'], 1.)
 
 
-    # Lateral expension 
-    
+    # Lateral expension
     dx = s['ds'][2,2]
     
     p_lateral_year = p['lateral']  
@@ -123,8 +132,9 @@ def grow (s, p): #DURAN 2006
                                                     
 
     # Reduction of vegetation growth due to sediment burial
-    s['dhveg'][ix] = p['V_ver'] * (1 - s['hveg'][ix]/p['hveg_max']) - np.abs(s['dzbveg'][ix])*p['veg_gamma'] # m/year
-    s['dhveg'] = np.maximum(s['dhveg'], -3.)
+    # s['dhveg'][ix] = p['V_ver'] * (1 - s['hveg'][ix]/p['hveg_max']) - np.abs(s['dzbveg'][ix])*p['veg_gamma'] # m/year
+    s['dhveg'][ix] = p['V_ver'] * (1 - s['hveg'][ix] / p['hveg_max']) - np.abs(s['dzbveg'][ix]) * p['veg_gamma']  # TEMP!
+    # s['dhveg'] = np.maximum(s['dhveg'], -3.)
 
     # if p['_time'] > p['dzb_interval']:
         # plt.pcolormesh(s['x'],s['y'], s['dhveg'], vmin=-1, vmax=1, cmap='YlGn')

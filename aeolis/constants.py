@@ -57,9 +57,8 @@ MODEL_STATE = {
         'zb',                               # [m] Bed level above reference
         'zb0',                        # NEW # [m] Initial bed level above reference
         'dzb',                        # NEW # [m/dt] Bed level change per time step (computed after avalanching!)
-        'dzbyear',                    # NEW # [m/y] Bed level change translated to m/y
-        'dzbavg',                     # NEW # [m/y] Bed level change averaged over collected time steps
-        'dzbveg',                     # NEW # [m/y] Bed level change used for calculation of vegetation growth 
+        'dzbyear',                    # NEW # [m/yer] Bed level change tranlated to m/y
+        'dzbavg',                     # NEW # [m/year] Bed level change averaged over collected time steps
         'S',                                # [-] Level of saturation
         'ustar',                      # NEW # [m/s] Shear velocity by wind
         'ustars',                     # NEW # [m/s] Component of shear velocity in x-direction by wind
@@ -68,11 +67,12 @@ MODEL_STATE = {
         'zsep',                       # NEW # [m] Z level of polynomial that defines the separation bubble
         'hsep',                       # NEW # [m] Height of separation bubbel = difference between z-level of zsep and of the bed level zb
         'theta_stat',                 # NEW # [degrees] Updated, spatially varying static angle of repose
-        'theta_dyn',                  # NEW # [degrees] Updated, spatially varying dynamic angle of repose       
+        'theta_dyn',                  # NEW # [degrees] Updated, spatially varying dynamic angle of repose
         'rhoveg',                     # NEW # [-] Vegetation cover
         'drhoveg',                    # NEW # Change in vegetation cover
         'hveg',                       # NEW # [m] height of vegetation
         'dhveg',                      # NEW # [m] Difference in vegetation height per time step
+        'dzbveg',                     # NEW # [m] Bed level change used for calculation of vegetation growth
         'germinate',                  # NEW # 
         'lateral',                    # NEW #
         'dxrhoveg',                   # NEW #
@@ -94,9 +94,9 @@ MODEL_STATE = {
         'uth',                              # [m/s] Shear velocity threshold
         'uthf',                             # [m/s] Fluid shear velocity threshold
         'uth0',                             # [m/s] Shear velocity threshold based on grainsize only (aerodynamic entrainment)
-        'u',                               # [m/s] Mean horizontal saltation velocity in saturated state
-        'us',                              # [m/s] Component of the saltation velocity in x-direction
-        'un',                              # [m/s] Component of the saltation velocity in y-direction
+        'u',                                # [m/s] Mean horizontal saltation velocity in saturated state
+        'us',                               # [m/s] Component of the saltation velocity in x-direction
+        'un',                               # [m/s] Component of the saltation velocity in y-direction
         'u0',
     ),
     ('ny','nx','nlayers') : (
@@ -161,7 +161,6 @@ DEFAULT_CONFIG = {
     'tstart'                        : 0.,                 # [s] Start time of simulation
     'tstop'                         : 3600.,              # [s] End time of simulation
     'restart'                       : None,               # [s] Interval for which to write restart files
-    'savefactor'                    : 0.5,          # NEW # [-] Factor that determines the influence of average bed level change from previous time steps
     'dzb_interval'                  : 86400,        # NEW # [s] Interval used for calcuation of vegetation growth
     'output_times'                  : 60.,                # [s] Output interval in seconds of simulation time
     'output_file'                   : None,               # Filename of netCDF4 output file
@@ -232,8 +231,10 @@ DEFAULT_CONFIG = {
     'callback'                      : None,               # Reference to callback function (e.g. example/callback.py':callback)
     'wind_convention'               : 'nautical',         # Convention used for the wind direction in the input files
     'solver'                        : 'trunk',      # NEW # Choose the solver to be used (trunk / pieter)
+    'avg_time'                      : 604800.,      # NEW # [s] Indication of the period over which the time is averaged for vegetation growth
+    'c_b'                           : 0.2,          # NEW # [-] Slope at the leeside of the separation bubble # c = 0.2 according to Durán 2010 (Sauermann 2001: c = 0.25 for 14 degrees)
+    'mu_b'                          : 30,           # NEW # [deg] Minimum required slope for the start of flow separation
 }
-
 
 #: Required model configuration parameters
 REQUIRED_CONFIG = ['nx', 'ny']

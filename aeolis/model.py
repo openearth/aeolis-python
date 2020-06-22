@@ -249,25 +249,26 @@ class AeoLiS(IBmi):
 
         '''
 
+
         self.p['_time'] = self.t
 
         # store previous state
         self.l = self.s.copy()
         self.l['zb'] = self.s['zb'].copy()
-        self.l['dzbyear'] = self.s['dzbyear'].copy()
-               
+        self.l['dzbavg'] = self.s['dzbavg'].copy()
+
         # interpolate wind time series
         self.s = aeolis.wind.interpolate(self.s, self.p, self.t)
         
         if np.sum(self.s['uw']) != 0:
         
             # calculate wind shear (bed + separation bubble)
-            self.s = aeolis.wind.shear(self.s, self.p)          
+            self.s = aeolis.wind.shear(self.s, self.p)
 
         # compute vegetation shear
         if self.p['process_vegetation']: 
-            self.s = aeolis.vegetation.vegshear(self.s, self.p)   
-                   
+            self.s = aeolis.vegetation.vegshear(self.s, self.p)
+        
         # determine optimal time step
         if not self.set_timestep(dt):
             return
@@ -275,17 +276,16 @@ class AeoLiS(IBmi):
         # interpolate hydrodynamic time series
         self.s = aeolis.hydro.interpolate(self.s, self.p, self.t)
         self.s = aeolis.hydro.update(self.s, self.p, self.dt)
-        
+
         # mix top layer
         self.s = aeolis.bed.mixtoplayer(self.s, self.p)
-                
+        
         # compute threshold
         self.s = aeolis.threshold.compute(self.s, self.p)
 
         # compute saltation velocity and equilibrium transport
         self.s = aeolis.transport.saltationvelocity(self.s, self.p)
         self.s = aeolis.transport.equilibrium(self.s, self.p)
-        
 
         # compute instantaneous transport
         if self.p['scheme'] == 'euler_forward':
@@ -296,8 +296,7 @@ class AeoLiS(IBmi):
             self.s.update(self.crank_nicolson())
         else:
             logger.log_and_raise('Unknown scheme [%s]' % self.p['scheme'], exc=ValueError)
-    
-            
+
         # update bed
         self.s = aeolis.bed.update(self.s, self.p)
         
@@ -312,7 +311,6 @@ class AeoLiS(IBmi):
         if self.p['process_vegetation']:
             self.s = aeolis.vegetation.germinate(self.s, self.p)
             self.s = aeolis.vegetation.grow(self.s, self.p)
-            
 
         # increment time
         self.t += self.dt * self.p['accfac']
@@ -635,7 +633,7 @@ class AeoLiS(IBmi):
         elif self.p['solver'].lower() == 'pieter': 
             solve = self.solve_pieter(alpha=0., beta=1.)
         elif self.p['solver'].lower() == 'steadystate':
-            solve = self.solve_steadystate()        
+            solve = self.solve_steadystate()
         elif self.p['solver'].lower() == 'steadystatepieter':
             solve = self.solve_steadystatepieter()
 
@@ -1342,6 +1340,7 @@ class AeoLiS(IBmi):
                     w_air=w_air,
                     w_bed=w_bed)
         
+        
     def solve_steadystatepieter(self):
         
         beta = 1. 
@@ -1737,9 +1736,8 @@ class AeoLiS(IBmi):
                     w_init=w_init,
                     w_air=w_air,
                     w_bed=w_bed)
-        
-        
-        
+    
+    
     def solve_pieter(self, alpha=.5, beta=1.):
         '''Implements the explicit Euler forward, implicit Euler backward and semi-implicit Crank-Nicolson numerical schemes
 
@@ -2168,10 +2166,9 @@ class AeoLiS(IBmi):
 #                                   nrcells=np.sum(ix),
 #                                   minweight=np.sum(w, axis=-1).min(),
 #                                   **logprops))
-            
+
         qs = Ct * s['us'] 
         qn = Ct * s['un']
-
                     
         return dict(Ct=Ct,
                     qs=qs,

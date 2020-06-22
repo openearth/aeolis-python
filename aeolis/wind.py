@@ -134,6 +134,7 @@ def interpolate(s, p, t):
 def shear(s,p):
     
     # Compute shear velocity field (including separation)
+
     if 'shear' in s.keys() and p['process_shear']:
         
         s['shear'].set_topo(s['zb'].copy())
@@ -141,13 +142,12 @@ def shear(s,p):
         
         s['shear'](u0=s['uw'][0,0],
                    udir=s['udir'][0,0],
-                   process_separation = p['process_separation'])
-        
+                   process_separation = p['process_separation'],
+                   c = p['c_b'],
+                   mu_b = p['mu_b'])
 
         s['taus'], s['taun'] = s['shear'].get_shear()
-               
         s['tau'] = np.hypot(s['taus'], s['taun'])                               # set minimum of tau to zero
-
                
         s = stress_velocity(s,p)
                                
@@ -155,15 +155,19 @@ def shear(s,p):
         if p['process_separation']:
             s['hsep'] = s['shear'].get_separation()
             s['zsep'] = s['hsep'] + s['zb']
-            
+
     if p['process_nelayer']:
+
+        ustar = s['ustar'].copy()
+        ustars = s['ustars'].copy()
+        ustarn = s['ustarn'].copy()
             
         s['zne'][:,:] = p['ne_file']
             
-        ix = s['zb'] <= s['zne'] 
-
+        ix = s['zb'] <= s['zne']
         s['ustar'][ix] = np.maximum(0., s['ustar'][ix] - (s['zne'][ix]-s['zb'][ix])* (1/p['layer_thickness']) * s['ustar'][ix])
-
+        s['ustars'][ix] = s['ustar'][ix] * (ustars[ix] / ustar[ix])
+        s['ustarn'][ix] = s['ustar'][ix] * (ustarn[ix] / ustar[ix])
 
     return s
 

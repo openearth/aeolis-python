@@ -277,15 +277,13 @@ def update(s, p):
         #s['dzb'] = dz
         
         # redistribute sediment from inactive zone to marine interaction zone
-                
+        
         s['zb'] += dz
         s['zs'] += dz
-
         
         Tswash = 0.01 # p['Tswash'] / p['dt']
         ix = s['zs'] > (s['zb'] + 0.01)
         s['zb'][ix] += (s['zb0'][ix] - s['zb'][ix]) * Tswash
-        
         
     # plt.pcolormesh(s['x'], s['y'], s['zb'], cmap='copper_r')
     # bar = plt.colorbar()
@@ -434,13 +432,12 @@ def average_change(l, s, p):
         
     # Collect time steps
     s['dzbyear'] = s['dzb'] * (3600. * 24. * 365.25) / (p['dt'] * p['accfac'])
+
+    n = p['dt']/p['avg_time']
+
+    s['dzbavg'] = n*s['dzbyear']+(1-n)*l['dzbavg']
     
-    s['dzbavg'] = p['savefactor'] * s['dzbyear'] + (1 - p['savefactor']) * l['dzbyear']
-
-    
-    # Store average bed level change as input for vegetation growth [m/year]
-    s['dzbveg'] = s['dzbyear'].copy()
-
-
+    # Calculate average bed level change as input for vegetation growth [m/year]
+    s['dzbveg'] = s['dzbavg'].copy()
     
     return s

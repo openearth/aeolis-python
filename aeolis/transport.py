@@ -60,35 +60,29 @@ def saltationvelocity(s, p):
     
     nf = p['nfractions']
     
-    uw  = s['uw']
-    uws = s['uws']
-    uwn = s['uwn']
+    uw  = s['uw'].copy()
+    uws = s['uws'].copy()
+    uwn = s['uwn'].copy()
         
-    ustar  = s['ustar']
-    ustars = s['ustars']
-    ustarn = s['ustarn']
+    ustar  = s['ustar'].copy()
+    ustars = s['ustars'].copy()
+    ustarn = s['ustarn'].copy()
     
     us = np.zeros(ustar.shape)
     un = np.zeros(ustar.shape)
     u  = np.zeros(ustar.shape)
 
     # u with direction of perturbation theory
-    
     ix = ustar != 0
-    
-    us[ix] += 1 * ustars[ix] / ustar[ix]
-    un[ix] += 1 * ustarn[ix] / ustar[ix]
-            
-    u[ix] = np.hypot(us[ix], un[ix])
-    
+    us[ix] = 1. * ustars[ix] / ustar[ix]
+    un[ix] = 1. * ustarn[ix] / ustar[ix]
+
     # u under the sep bubble
-    
     ix = ustar == 0
-    
-    us[ix] += 0.1 * uws[ix] / uw[ix]
-    un[ix] += 0.1 * uwn[ix] / uw[ix]
-            
-    u[ix] = np.hypot(us[ix], un[ix])
+    us[ix] += 1. * uws[ix] / uw[ix]
+    un[ix] += 1. * uwn[ix] / uw[ix]
+
+    u = np.hypot(us, un)
                        
     s['us'] = us[:,:,np.newaxis].repeat(nf, axis=2)
     s['un'] = un[:,:,np.newaxis].repeat(nf, axis=2)
