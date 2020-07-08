@@ -78,8 +78,10 @@ MODEL_STATE = {
         'zb',                               # [m] Bed level above reference
         'S',                                # [-] Level of saturation
         'moist',                            # [-] Moisure content (volumetric)
-        'moist_swr',                        # [-] Moisture content soil water retention relationship
+        'moist_swr',                        # [-] Moisture content soil water retention relationship (volumetric)
+        'h_delta',                          # [-] Suction at reversal between wetting/drying conditions
         'gw',                               # [m] Groundwater level above reference
+        'gw_prev',                          # [m] Groundwater level above reference in previous timestep
         'wetting'                           # [bool] Flag indicating wetting or drying of soil profile
     ), 
     ('ny','nx','nfractions') : (
@@ -191,7 +193,7 @@ DEFAULT_CONFIG = {
     'alfaw_moist'                   : 0.025,              # [m^-1] Inverse of the air-entry value for a wetting branch of the soil water retention function (Schmutz, 2014)
     'alfad_moist'                   : 0.019,              # [m^-1] Inverse of the air-entry value for a drying branch of the soil water retention function (Schmutz, 2014)
     'thick_moist'                   : 0.0002,             # [m] Thickness of surface moisture soil layer
-    'K_gw'                          : 0.0007,             # [m/s] Hydraulic conductivity
+    'K_gw'                          : 0.000085,           # [m/s] Hydraulic conductivity (Schmutz, 2014)
     'ne_gw'                         : 0.3,                # [-] Effective porosity
     'D_gw'                          : 5,                  # [m] Aquifer depth
     'tfac_gw'                       : 10,                 # [-] Reduction factor for time step in ground water calculations

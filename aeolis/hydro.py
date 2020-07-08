@@ -102,7 +102,7 @@ def interpolate(s, p, t):
                          p['meteo_file'][:,0],
                          p['meteo_file'][:,1:], circular=True)
 
-        #Meteorological parameters (Symbols according to KNMI, units fitting the Penman's equation)
+        #Meteorological parameters (Symbols according to KNMI, units according to the Penman's equation)
         # T: Temperature, Degrees Celsius
         # Q : Global radiation, MJ/m2/d
         # RH : Precipitation, mm/h
@@ -155,10 +155,10 @@ def update(s, p, dt, t):
         Spatial grids
 
     '''
-    # Groundwater level using Boussinesq (1D CS-transects)
+    # Groundwater level Boussinesq (1D CS-transects)
     if p['process_groundwater']:
         
-        #Adjust timestep of groundwater calculations to achieve numerical stability
+        #Decrease timestep for GW computations
         dt_gw = int(dt / p['tfac_gw'])
         for i in range(int(dt / dt_gw)):
             t_gw = t + i * dt_gw
@@ -167,12 +167,13 @@ def update(s, p, dt, t):
             #Compute setup
             setup=np.average(s['swl']) + 0.35 * p['xi'] #Stockdon et al (2006) CH:Should we include a function to compute the Irribaren number?
 
-            #initialize GW levels
+            #Initialize GW levels and h_delta (GW depth when changing from wetting/drying)
             if t==0:
                 s['gw'][:,:]=setup
+                s['h_delta'][:,:]=np.maximum(0,(s['zb'] - s['gw'])*100)
                 
             #Define index of shoreline location
-            shl_ix = np.argmax(s['zb']>setup,axis=1) - 1
+            shl_ix = np.argmax(s['zb'] > setup,axis=1) - 1
 
         
             #Runge-Kutta timestepping
@@ -181,11 +182,10 @@ def update(s, p, dt, t):
             f3 = Boussinesq(s['gw'] + dt_gw / 2 * f2,s,p,setup, shl_ix)
             f4 = Boussinesq(s['gw'] + dt_gw * f3,s,p,setup, shl_ix)
             
-            #update groundwater level
+            #Update groundwater level
             s['gw'] = s['gw'] + dt_gw / 6 * (f1 + 2 * f2 + 2 * f3 + f4)
-            
         
-            #add infiltration from wave runup according to Nielsen 
+            #Add infiltration from wave runup according to Nielsen (1990)
             if p['process_wave']:
                 #Define index of runup limit
                 runup_ix = np.argmax(s['zb'] >= s['zs'],axis=1) - 1
@@ -201,21 +201,33 @@ def update(s, p, dt, t):
                     fx[i,fx_ix[i]+1:runup_ix[i]] = 3 - (s['x'][i,fx_ix[i]+1:runup_ix[i]]- s['x'][i,shl_ix[i]])  / (1 / 3 * (s['x'][i,runup_ix[i]] - s['x'][i,shl_ix[i]]))
                     
 
-                # Compute groundwater overheight due to runup
+                # Update groundwater level with overheight due to runup
                 s['gw'] = s['gw'] + p['Cl_gw'] * fx * p['K_gw'] / p['ne_gw']
-                
-        
+            
             # Define cells below setup level
-            ix=s['zb'] < setup
-            #set GW level to the setup level in submerged cells
-            s['gw'][ix] = setup 
-         
-            # Do not allow GW levels above ground level in areas that are not submerged
-            s['gw'][~ix]=np.minimum(s['gw'][~ix], s['zb'][~ix])
+            ixg=s['zb'] < setup
+            
+            #Set GW level to the setup level in submerged cells
+            s['gw'][ixg] = setup 
+                
+            # Do not allow GW levels above ground level in areas that are not submerged (=above setup level)
+            s['gw'][~ixg]=np.minimum(s['gw'][~ixg], s['zb'][~ixg])
+            
+        #Update h_delta if there is a reversal between wetting/drying conditions
+        for i in range(len(s['wetting'][:,0])):
+            for j in range(len(s['wetting'][0,:])):
+                if (s['wetting'][i,j] == True and s['gw'][i,j] < s['gw_prev'][i,j]) or (s['wetting'][i,j] == False and s['gw'][i,j] > s['gw_prev'][i,j]):
+                    s['h_delta'][i,j]=np.maximum(0,(s['zb'][i,j] - s['gw'][i,j])*100)
+
+        #Specify wetting or drying conditions
+        s['wetting'] = s['gw'] > s['gw_prev']+0.00001
+            
+        #Save groundwater level for next timestep
+        s['gw_prev'] = s['gw']
         
 
 
-    # infiltration using Darcy
+    # Compute surface moisture with infiltration method using Darcy
     if p['process_moist']:
         if p['method_moist_process'].lower() == 'infiltration':
             F1 = -np.log(.5) / p['Tdry']
@@ -225,38 +237,61 @@ def update(s, p, dt, t):
             s['moist'][:,:] = np.maximum(0.,np.minimum(p['porosity'],\
                                                   s['moist'][:,:]))
         
+        # Compute surface moisture accounting for runup, capillary rise and precipitation/evaporation
         elif p['method_moist_process'].lower() == 'surf_moisture':
-            if p['process_moist'] is None : #Skriv varning att grundvattnet inte beräknas
+            if p['process_moist'] is None :
                 logger.log_and_raise('process_groundwater is not activated, the groundwater level is not computed within the program but set constant at 0 m', exc=ValueError)
                 
-            #cells that were flooded in previous time step (by rain or runup) drains to field capacity 
-            s['moist'] = np.minimum(s['moist'],p['sat_moist'])
+            #Cells that were flooded in previous time step (by rain or runup) drains to field capacity 
+            s['moist'] = np.minimum(s['moist'],p['fc'])
             
-            #if the cell is flooded (runup) in this timestep, assume satiation
-            ix = s['zs'] - s['zb'] > p['eps']
-            s['moist'][ ix] = p['sat_moist']
+            #If the cell is flooded (runup) in this timestep, assume satiation
+            ix = s['zs'] > s['zb']
+            s['moist'][ix] = p['sat_moist']
 
             
-            #update surface moisture with respect to evaporation, condensation, and precipitation
+            #Update surface moisture with respect to evaporation, condensation, and precipitation
             met = s['meteo']
             evo = evaporation(s,p,met)
             evo = evo / 24. / 3600. / 1000. # convert evaporation from mm/day to m/s
             pcp = met['RH'] / 3600. / 1000. # convert precipitation from mm/hr to m/s
             s['moist'][~ix] = np.maximum(s['moist'][~ix] + (pcp - evo[~ix]) * dt / p['thick_moist'], p['res_moist'])
             s['moist'][~ix] = np.minimum(s['moist'][~ix],p['sat_moist'])
+                        
+            #Compute surface moisture due to capillary processes (van Genuchten and Mualem II)
+            h=np.maximum(0,(s['zb'] - s['gw']) * 100) #h in cm to match convention of alfa (cm-1)
             
-            #compute surface moisture due to capillary processes
-            h=s['zb']-s['gw']
-            ixw=s['wetting']==True
-            #wetting
-            s['moist_swr'][ixw] = np.maximum(s['moist_swr'][ixw],p['res_moist'] + (p['sat_moist'] - p['res_moist']) \
-                                 / (1 + abs(p['alfaw_moist'] * h[ixw])**p['n_moist'])**(1 - 1 / p['n_moist']))
-            #drying
-            s['moist_swr'][~ixw] = np.minimum(s['moist_swr'][~ixw], p['res_moist'] + (p['sat_moist'] - p['res_moist']) \
-                                 / (1 + abs(p['alfad_moist'] * h[~ixw])**p['n_moist'])**(1 - 1 / p['n_moist']))
+            #Initialize value of surface moisture due to capillary rise
+            if t == 0:
+                s['moist_swr'] = p['res_moist'] + (p['sat_moist'] - p['res_moist']) \
+                      / (1 + abs(p['alfaw_moist'] * h) ** p['n_moist']) ** (1 - 1 / p['n_moist'])
+            else:
+                #Compute moisture of h for the wetting curve
+                w_h = p['res_moist'] + (p['sat_moist'] - p['res_moist']) \
+                                  / (1 + abs(p['alfaw_moist'] * h) ** p['n_moist']) ** (1 - 1 / p['n_moist'])
+                #Compute moisture of h_delta for the wetting curve
+                w_hdelta = p['res_moist'] + (p['sat_moist'] - p['res_moist']) \
+                                  / (1 + abs(p['alfaw_moist'] * s['h_delta']) ** p['n_moist']) ** (1 - 1 / p['n_moist'])
+                #Compute moisture of h for the drying curve
+                d_h = p['res_moist'] + (p['sat_moist'] - p['res_moist']) \
+                                  / (1 + abs(p['alfad_moist'] * h) ** p['n_moist']) ** (1 - 1 / p['n_moist'])
+                #Compute moisture of h_delta for the drying curve
+                d_hdelta = p['res_moist'] + (p['sat_moist'] - p['res_moist']) \
+                                  / (1 + abs(p['alfad_moist'] * s['h_delta']) ** p['n_moist']) ** (1 - 1 / p['n_moist'])
+                                  
+                ixw = s['wetting'] == True    
+                
+                #Wetting (select largest of scanning curve and main wetting curve)
+                s['moist_swr'][ixw] = np.maximum(w_h[ixw] + (p['sat_moist'] - w_h[ixw]) / np.maximum(p['sat_moist'] - w_hdelta[ixw],0.0001) \
+                                                 * (d_hdelta[ixw] - w_hdelta[ixw]),w_h[ixw])
+                #Drying (select smallest of scanning curve and main drying curve)
+                s['moist_swr'][~ixw] = np.minimum(w_h[~ixw] + (w_hdelta[~ixw] - w_h[~ixw]) / np.maximum(p['sat_moist'] - w_h[~ixw],0.0001) \
+                                                  * (d_h[~ixw] - w_h[~ixw]), d_h[~ixw])
+
             
-            #update surface moisture with respect to capillary processes
+            #Update surface moisture with respect to capillary processes
             s['moist'] = np.maximum(s['moist'],s['moist_swr'])
+        
 
         
         else:
@@ -277,7 +312,7 @@ def update(s, p, dt, t):
 
 
 
-def Boussinesq (dGW,s,p,setup,shl_ix):
+def Boussinesq (GW,s,p,setup,shl_ix):
     '''
     Add description
     
@@ -285,12 +320,18 @@ def Boussinesq (dGW,s,p,setup,shl_ix):
     
 
     #Define seaward boundary gw=setup
-    s['gw'][:,shl_ix]=setup
-    s['gw'][:,shl_ix-1]=setup
+    GW[:,shl_ix] = setup
+    GW[:,shl_ix-1] = setup
     
     #Define landward boundary dgw/dx=0
-    s['gw'][:,-1]=s['gw'][:,-3]
-    s['gw'][:,-2]=s['gw'][:,-3]
+    GW[:,-1] = GW[:,-3]
+    GW[:,-2] = GW[:,-3]
+    
+    # Set GW levels to ground level within seepage face
+    ixs = np.argmin(GW + 0.001 >= s['zb'],axis=1)
+    for i in range(len(ixs)):
+        if shl_ix[i] < ixs[i] - 1:
+            GW[i,shl_ix[i]:ixs[i]-1] = s['zb'][i,shl_ix[i]:ixs[i]-1]
     
     #Compute groundwater level change dGW/dt (Boussinesq equation)
     dGW = np.zeros(s['gw'].shape)
@@ -299,12 +340,10 @@ def Boussinesq (dGW,s,p,setup,shl_ix):
     c = np.zeros(s['gw'].shape)
 
     for i in range(len(a[:,0])):
-                   a[i,shl_ix[i]:-2]=(s['gw'][i,shl_ix[i]+1:-1] - 2 * s['gw'][i,shl_ix[i]:-2] + s['gw'][i,shl_ix[i]-1:-3]) / s['ds'][i,shl_ix[i]:-2] ** 2
-                   b[i,shl_ix[i]:-2]=(s['gw'][i,shl_ix[i]:-2] * (s['gw'][i,shl_ix[i]+1:-1] + s['gw'][i,shl_ix[i]-1:-3])) / s['ds'][i,shl_ix[i]:-2]                  
-                   #c[i,shl_ix[i]+1:-2]=(b[i,shl_ix[i]+2:-1]-b[i,shl_ix[i]:-3])/s['ds'][i,shl_ix[i]+1:-2]
-                   c[i,shl_ix[i]+1:-3]=(b[i,shl_ix[i]+2:-2]-b[i,shl_ix[i]:-4])/s['ds'][i,shl_ix[i]+1:-3]
-                   #dGW[i,shl_ix[i]+1:-2]=p['K_gw'] / p['ne_gw'] * (p['D_gw'] * a[i,shl_ix[i]+1:-2] + c[i,shl_ix[i]+1:-2])
-                   dGW[i,shl_ix[i]+1:-3]=p['K_gw'] / p['ne_gw'] * (p['D_gw'] * a[i,shl_ix[i]+1:-3] + c[i,shl_ix[i]+1:-3])
+        a[i,shl_ix[i]:-2]=(GW[i,shl_ix[i]+1:-1] - 2 * GW[i,shl_ix[i]:-2] + GW[i,shl_ix[i]-1:-3]) / s['ds'][i,shl_ix[i]:-2] ** 2
+        b[i,shl_ix[i]:-2]=(GW[i,shl_ix[i]:-2] * (GW[i,shl_ix[i]+1:-1] + GW[i,shl_ix[i]-1:-3])) / s['ds'][i,shl_ix[i]:-2]                  
+        c[i,shl_ix[i]+1:-3]=(b[i,shl_ix[i]+2:-2]-b[i,shl_ix[i]:-4])/s['ds'][i,shl_ix[i]+1:-3]
+        dGW[i,shl_ix[i]+1:-3]=p['K_gw'] / p['ne_gw'] * (p['D_gw'] * a[i,shl_ix[i]+1:-3] + c[i,shl_ix[i]+1:-3])
     return dGW
 
 def evaporation(s,p,met):
