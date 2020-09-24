@@ -28,6 +28,7 @@ import logging
 import numpy as np
 import scipy.special
 import scipy.interpolate
+from scipy import ndimage, misc
 import matplotlib
 import matplotlib.pyplot as plt
 #import scipy.interpolate as spint
@@ -433,11 +434,11 @@ class WindShear:
     
         # Initialize arrays
 
-        dzx = np.zeros(gc['z'].shape)    
+        dzx = np.zeros(gc['z'].shape)  
 
         dzdx0 = np.zeros(gc['z'].shape)
         dzdx1 = np.zeros(gc['z'].shape)
-        
+                
         stall = np.zeros(gc['z'].shape)
         bubble = np.zeros(gc['z'].shape)
         
@@ -450,11 +451,11 @@ class WindShear:
                 
         zfft = np.zeros((ny,nx), dtype=np.complex)
 
-        # Compute bed slope angle  
+        # Compute bed slope angle in x-dir
         dzx[:,:-1] = np.rad2deg(np.arctan((z[:,1:]-z[:,:-1])/dx))
         dzx[:,0] = dzx[:,1]
         dzx[:,-1] = dzx[:,-2]
-        
+              
         # Determine location of separation bubbles
         '''Separation bubble exist if bed slope angle (lee side) 
         is larger than max angle that wind stream lines can 
@@ -462,39 +463,31 @@ class WindShear:
 
         stall += np.logical_and(abs(dzx) > mu_b, dzx < 0.) 
         
-        #stall[1:-1,:] += np.logical_and(stall[1:-1,:]==0, stall[:-2,:]>0., stall[2:,:]>0.)
+        
         stall[:,1:-1] += np.logical_and(stall[:,1:-1]==0, stall[:,:-2]>0., stall[:,2:]>0.)
         
         # Define separation bubble
         bubble[:,:-1] = np.logical_and(stall[:,:-1] == 0., stall[:,1:] > 0.) 
-        # print ('bubble:', bubble)
         
         # Shift bubble back to x0: start of separation bubble 
-        #p = 2
-        #bubble[:,:-p] = bubble[:,p:]
-        #bubble[:,:p] = 0
-
-        # print ('bubble:', bubble)
-        # plt.pcolormesh(x, y, bubble)
-        # plt.colorbar()
-        # plt.title('bubble')
-        # plt.show()
+        p = 2
+        bubble[:,:-p] = bubble[:,p:]
+        bubble[:,:p] = 0
         
         bubble = bubble.astype(int)
-        #print ('bubble int:', bubble)
         
         # Count separation bubbles
         n = np.sum(bubble)
         #print ('number of sep bubbles', n)
         bubble_n = np.asarray(np.where(bubble == True)).T
-        # print ('bubble_n:', bubble_n)
+
         
         # Walk through all separation bubbles and determine polynoms
         
         for k in range(0, n):
             
             i = bubble_n[k,1]
-            j = bubble_n[k,0]
+            j = bubble_n[k,0]       
 
             ix_neg = (dzx[j, i+5:] >= 0)                                         # i + 5??
                                     
@@ -504,7 +497,7 @@ class WindShear:
                 zbrink = z[j,i] - z[j,i+5+np.where(ix_neg)[0][0]]
 
             # Zero order polynom
-            dzdx0 = (z[j,i] - z[j,i-1])/dx
+            dzdx0 = (z[j,i-1] - z[j,i-2])/dx
             
             #if dzdx0 > 0.1:
             #    dzdx0 = 0.1
@@ -525,8 +518,7 @@ class WindShear:
             xs = x[j,i:i_max] - x[j,i]
             
             zsep0[j,i:i_max] = (a3*xs**3 + a2*xs**2 + dzdx0*xs + z[j,i])
-            
-            
+
             # Zero order filter
             Cut = 1.5
             dk = 2.0 * np.pi / (np.max(x))
@@ -556,21 +548,26 @@ class WindShear:
                                                           
             #plt.figure()
             #plt.plot(x[j,i:i_max], zsep0[j,i:i_max], label='zsep0')
-            #plt.plot(x[j,i:i_max1], zsep1[j,i:i_max1], label='zsep1')
-            #plt.plot(x[j,:], z[j,:], 'orange', label='zb')
+            #plt.plot(x[j,i:i_max], zsep1[j,i:i_max], label='zsep1')
+            #plt.plot(x[j,:], z[j,:], 'grey', label='zb')
             #plt.xlabel('x [m]')
             #plt.ylabel('z [m]')
             #plt.title('Separation bubble')
             #plt.legend()
             #plt.show()     
             
-            zsep[j,i:i_max1] = np.maximum(zsep1[j,i:i_max1], z[j,i:i_max1])
+            zsep[j,i:i_max] = np.maximum(zsep0[j,i:i_max], z[j,i:i_max])
                           
+        
+        # Smooth surface of separation bubbles over y direction
+        zsep = ndimage.gaussian_filter1d(zsep, sigma=0.2, axis=0)
+        
         #plt.pcolormesh(x, y, np.maximum(zsep,z))#, vmin=0, vmax=0.00001)
         #bar = plt.colorbar()
         #bar.set_label('z [m]')
-        #plt.title('zb incl. zsep')
+        #plt.title('Zsep gaussian filter in y')
         #plt.show()
+        
             
         return zsep
                 
@@ -809,57 +806,4 @@ class WindShear:
             zi = inter(xyi).reshape(xi.shape)
             
         return zi
-        
-#    def interpolation_weights(self, udir):
-#        '''Covers the first 3 steps of interpolate.griddata 
-#        Is only executed as initialization '''
-        
-#        gi = self.igrid
-#        gc = self.cgrid
-        
-#        x = gi['x']
-#        y = gi['y']
-
-#        xi = gc['xi']
-#        yi = gc['yi']
-                      
-#        xy = np.concatenate((x.reshape((-1,1)),
-#                             y.reshape((-1,1))), axis=1)
-        
-#        xi, yi = self.rotate(xi, yi, udir+90, origin=(self.x0, self.y0))
-    
-#        xyi = np.concatenate((xi.reshape((-1,1)),
-#                              yi.reshape((-1,1))), axis=1)
-        
-#        tri = qhull.Delaunay(xy)                                             
-#        simplex = tri.find_simplex(xyi)
-#        vertices = np.take(tri.simplices, simplex, axis=0)
-#        temp = np.take(tri.transform, simplex, axis=0)
-#        delta = xyi- temp[:, 2]
-#        bary = np.einsum('njk,nk->nj', temp[:, :2, :], delta) 
-        
-#        return vertices, np.hstack((bary, 1 - bary.sum(axis=1, keepdims=True)))
-        
-#    def interpolate_qhull(self, x, y, z, xi, yi, udir):
-#        '''Execute step 4 of interpolation for each time step
-#        (= different udir)'''
-        
-#        xy = np.concatenate((x.reshape((-1,1)),
-#                             y.reshape((-1,1))), axis=1)
-
-#        xyi = np.concatenate((xi.reshape((-1,1)),
-#                              yi.reshape((-1,1))), axis=1)
-
-#        if self.istransect:
-#            zi = np.interp(xi.flatten(), x.flatten(), z.flatten()).reshape(xi.shape)
-#        else:
-            # Calculate step 4 of interpolate.griddata:
-#            if 0. < udir <=5.:
-#                zi = np.einsum('nj,nj->n', np.take(z.flatten, vtx0), wts0).reshape(xi.shape)
-#            if 5. < udir <=15.:
-#               zi = np.einsum('nj,nj->n', np.take(z.flatten, vtx10), wts10).reshape(xi.shape)
-            
-            
-
-#        return zi
     

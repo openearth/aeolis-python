@@ -53,9 +53,11 @@ MODEL_STATE = {
         'dn',                               # [m] Real-world grid cell size in y-direction
         'dsdn',                             # [m^2] Real-world grid cell surface area
         'dsdni',                            # [m^-2] Inverse of real-world grid cell surface area
-        'alfa',                             # [rad] Real-world grid cell orientation (clockwise)
+#        'alfa',                             # [rad] Real-world grid cell orientation #Sierd_comm in later releases this needs a revision 
         'zb',                               # [m] Bed level above reference
         'zb0',                        # NEW # [m] Initial bed level above reference
+        'zdry',                       # NEW # [m]
+        'dzdry',                      # NEW # [m]
         'dzb',                        # NEW # [m/dt] Bed level change per time step (computed after avalanching!)
         'dzbyear',                    # NEW # [m/yer] Bed level change tranlated to m/y
         'dzbavg',                     # NEW # [m/year] Bed level change averaged over collected time steps
@@ -133,6 +135,7 @@ DEFAULT_CONFIG = {
     'th_grainsize'                  : True,               # Enable wind velocity threshold based on grainsize
     'th_bedslope'                   : False,              # Enable wind velocity threshold based on bedslope
     'th_moisture'                   : True,               # Enable wind velocity threshold based on moisture
+    'th_drylayer'                   : False,        # NEW # Enable threshold based on drying of layer
     'th_humidity'                   : False,              # Enable wind velocity threshold based on humidity
     'th_salt'                       : False,              # Enable wind velocity threshold based on salt
     'th_roughness'                  : True,               # Enable wind velocity threshold based on roughness
@@ -186,7 +189,9 @@ DEFAULT_CONFIG = {
     'h'                             : None,               # [m] Representative height of saltation layer
     'k'                             : 0.001,              # [m] Bed roughness
     'L'                             : 100.,          #NEW # [m] Typical length scale of dune feature (perturbation)
-    'l'                             : 10.,           #NEW # [m] Inner layer height (perturbation) 
+    'l'                             : 10.,           #NEW # [m] Inner layer height (perturbation)
+    'c_b'                           : 0.2,          # NEW # [-] Slope at the leeside of the separation bubble # c = 0.2 according to Durán 2010 (Sauermann 2001: c = 0.25 for 14 degrees)
+    'mu_b'                          : 30,           # NEW # [deg] Minimum required slope for the start of flow separation
     'Cb'                            : 1.5,                # [-] Constant in bagnold formulation for equilibrium sediment concentration
     'Ck'                            : 2.78,               # [-] Constant in kawamura formulation for equilibrium sediment concentration
     'Cl'                            : 6.7,                # [-] Constant in lettau formulation for equilibrium sediment concentration
@@ -209,19 +214,26 @@ DEFAULT_CONFIG = {
     'cpair'                         : 1.0035e-3,          # [MJ/kg/oC] Specific heat capacity air
     'theta_dyn'                     : 33.,          # NEW # [degrees] Initial Dynamic angle of repose, critical dynamic slope for avalanching 
     'theta_stat'                    : 34.,          # NEW # [degrees] Initial Static angle of repose, critical static slope for avalanching
-    'hveg_max'                      : 1.,           # NEW # [m] Max height of vegetation 
+    'avg_time'                      : 86400.,       # NEW # [s] Indication of the time period over which the bed level change is averaged for vegetation growth
+    'gamma_vegshear'                : 16.,          # NEW # [-] Roughness factor for the shear stress reduction by vegetation
+    'hveg_max'                      : 1.,           # NEW # [m] Max height of vegetation
+    'dzb_opt'                       : 0.,           # NEW # [m/year] Sediment burial for optimal growth
     'V_ver'                         : 0.,           # NEW # [m/year] Vertical growth 
     'V_lat'                         : 0.,           # NEW # [m/year] Lateral growth
     'germinate'                     : 0.,           # NEW # [1/year] Possibility of germination per year
     'lateral'                       : 0.,           # NEW # [1/year] Posibility of lateral expension per year
     'veg_gamma'                     : 1.,           # NEW # [-] Constant on influence of sediment burial
+    'veg_sigma'                     : 0.8,          # NEW # [-] Sigma in gaussian distrubtion of vegetation cover filter  
     'sedimentinput'                 : 0.,           # NEW # [-] Constant boundary sediment influx (only used in solve_pieter)
     'scheme'                        : 'euler_backward',   # Name of numerical scheme (euler_forward, euler_backward or crank_nicolson)
     'boundary_lateral'              : 'circular',         # Name of lateral boundary conditions (circular, constant ==noflux)
-    'boundary_offshore'             : 'constant',         # Name of offshore boundary conditions (constant, uniform, gradient)
-    'boundary_offshore_flux'        : 0.,                 # [-] Constant offshore boundary flux (= 1 for saturated flux , = 0 for noflux)
-    'boundary_onshore'              : 'gradient',         # Name of onshore boundary conditions (constant, uniform, gradient)
-    'boundary_onshore_flux'         : 0.,                 # [-] Constant onshore boundary flux (= 1 for saturated flux , = 0 for noflux)
+    'boundary_offshore'             : 'constant',         # Name of offshore boundary conditions (flux, constant, uniform, gradient)
+    'boundary_onshore'              : 'gradient',         # Name of onshore boundary conditions (flux, constant, uniform, gradient)
+    'offshore_flux'                 : 0.,           # NEW # [-] Factor to determine offshore boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
+    'constant_offshore_flux'        : 0.,           # NEW # [kg/m/s] Constant input flux at offshore boundary
+    'onshore_flux'                  : 0.,           # NEW # [-] Factor to determine onshore boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
+    'constant_onshore_flux'         : 0.,           # NEW # [kg/m/s] Constant input flux at offshore boundary
+    'lateral_flux'                  : 0.,           # NEW # [-] Factor to determine lateral boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
     'method_moist'                  : 'belly_johnson',    # Name of method to compute wind velocity threshold based on soil moisture content
     'method_transport'              : 'bagnold',          # Name of method to compute equilibrium sediment transport rate
     'max_error'                     : 1e-6,               # [-] Maximum error at which to quit iterative solution in implicit numerical schemes
@@ -230,10 +242,8 @@ DEFAULT_CONFIG = {
     'refdate'                       : '2020-01-01 00:00', # [-] Reference datetime in netCDF output
     'callback'                      : None,               # Reference to callback function (e.g. example/callback.py':callback)
     'wind_convention'               : 'nautical',         # Convention used for the wind direction in the input files
-    'solver'                        : 'trunk',      # NEW # Choose the solver to be used (trunk / pieter)
-    'avg_time'                      : 604800.,      # NEW # [s] Indication of the period over which the time is averaged for vegetation growth
-    'c_b'                           : 0.2,          # NEW # [-] Slope at the leeside of the separation bubble # c = 0.2 according to Durán 2010 (Sauermann 2001: c = 0.25 for 14 degrees)
-    'mu_b'                          : 30,           # NEW # [deg] Minimum required slope for the start of flow separation
+    'alfa'                         : 0,                   # [deg] Real-world grid cell orientation wrt the North (clockwise)
+    'solver'                        : 'trunk',      # NEW # Choose the solver to be used (steadystate / trunk / pieter)
 }
 
 #: Required model configuration parameters

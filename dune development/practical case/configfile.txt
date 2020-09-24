@@ -1,0 +1,58 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% AeoLiS model configuration                                       %%
+%% Date: 2020-05-06 11:31:11                                        %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                   
+				   
+				   T = 1.
+                Tdry = 7200.000000
+				   k = 0.00001
+				   L = 100.
+			    beta = 130.000000
+                  bi = 0.50000
+				  dt = 3600.000
+				  dx = 1.000
+                  dy = 1.000
+				alfa = 39.
+		      tstart = 0
+               tstop = 62899200.000
+        output_times = 604800.000
+		  grain_dist = 1.0
+          grain_size = 0.00025
+     layer_thickness = 0.05000
+          nfractions = 1
+             nlayers = 1
+				  nx = 250
+                  ny = 250				 
+   boundary_offshore = gradient   
+    boundary_onshore = gradient
+	boundary_lateral = circular
+		 output_file = aeolis.nc 
+	     output_vars = zb zs zsep ustar0 ustar ustarn ustars uth u us un Cu Ct vegfac rhoveg dzbyear dzb dzbyear dzbavg hveg dhveg	 
+             ne_file = ne_file.txt
+		   tide_file = tide_file.txt
+		   wave_file = wave_file.txt
+		   wind_file = wind_file.txt
+		    veg_file = veg_file.txt
+          xgrid_file = x.txt
+          ygrid_file = y.txt
+		    bed_file = z.txt
+		   bedupdate = T
+               runup = T
+	     th_moisture = T
+	    th_roughness = F
+		 th_drylayer = F
+	   process_shear = T 
+  process_separation = T
+   process_avalanche = T
+  process_vegetation = T
+     process_nelayer = T
+			  solver = pieter
+              scheme = euler_backward
+	method_transport = bagnold
+			max_iter = 100
+		  theta_stat = 43
+		   theta_dyn = 42
+	  gamma_vegshear = 16.		    
+			   V_ver = 1.1
+		   germinate = 1.0
+			    mu_b = 30

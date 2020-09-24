@@ -56,30 +56,35 @@ def initialize (s,p):
 
 
 def vegshear(s, p):
+    
+    ustar  = s['ustar'].copy()
+    ustars = s['ustars'].copy()
+    ustarn = s['ustarn'].copy()
+    
+    ets = np.zeros(s['zb'].shape)
+    etn = np.zeros(s['zb'].shape)
+    
+    ix = ustar != 0
+    
+    ets[ix] = ustars[ix] / ustar[ix]
+    etn[ix] = ustarn[ix] / ustar[ix]
+    
 
     # Raupach, 1993
-    roughness = 16.
+    roughness = p['gamma_vegshear']
     
     vegfac = 1. / np.sqrt(1. + roughness * s['rhoveg'])
-    # s['vegfac'] = ndimage.uniform_filter(vegfac, size=5, mode='constant')
-    s['vegfac'] = ndimage.gaussian_filter(vegfac, sigma=0.8)
     
-    # PLOTIING ----------------------------------------
-    #n = 5        
-    #plt.figure()
-    #plt.pcolormesh(s['x'], s['y'], s['vegfac'], cmap='YlGn_r', vmin=0, vmax=1)
-    #bar = plt.colorbar()
-    #bar.set_label('vegfac')
-    #plt.contour(s['x'], s['y'], s['zb'], n, colors='black')
-    #plt.xlabel('x [m]')
-    #plt.ylabel('y [m]')
-    #plt.title('Vegetation factor')
-    #plt.show()
-    # ------------------------------------------------
+    # Smoothen the change in vegfac between surrounding cells following a gaussian distribution filter 
+
+    s['vegfac'] = ndimage.gaussian_filter(vegfac, sigma=p['veg_sigma'])
+    
+    
+    # Apply reduction factor of vegetation to the total shear stress 
     
     s['ustar']  *= s['vegfac']
-    # s['ustars'] *= s['vegfac']
-    # s['ustarn'] *= s['vegfac']
+    s['ustars'] = s['ustar'] * ets
+    s['ustarn'] = s['ustar'] * etn
     
     return s
 
@@ -132,9 +137,8 @@ def grow (s, p): #DURAN 2006
                                                     
 
     # Reduction of vegetation growth due to sediment burial
-    # s['dhveg'][ix] = p['V_ver'] * (1 - s['hveg'][ix]/p['hveg_max']) - np.abs(s['dzbveg'][ix])*p['veg_gamma'] # m/year
-    s['dhveg'][ix] = p['V_ver'] * (1 - s['hveg'][ix] / p['hveg_max']) - np.abs(s['dzbveg'][ix]) * p['veg_gamma']  # TEMP!
-    # s['dhveg'] = np.maximum(s['dhveg'], -3.)
+    s['dhveg'][ix] = p['V_ver'] * (1 - s['hveg'][ix] / p['hveg_max']) - np.abs(s['dzbveg'][ix]-p['dzb_opt']) * p['veg_gamma']  # m/year
+
 
     # if p['_time'] > p['dzb_interval']:
         # plt.pcolormesh(s['x'],s['y'], s['dhveg'], vmin=-1, vmax=1, cmap='YlGn')
@@ -162,10 +166,10 @@ def grow (s, p): #DURAN 2006
 
     # Dying of vegetation due to hydrodynamics (Dynamic Vegetation Limit)
 
-    s['rhoveg'] *= (s['zb']+0.01 >= s['zs'])
-    s['hveg'] *= (s['zb'] + 0.01 >= s['zs'])
-    s['germinate'] *= (s['zb']+0.01 >=s['zs'])
-    s['lateral'] *= (s['zb']+0.01 >=s['zs'])
+    s['rhoveg']     *= (s['zb'] +0.01 >= s['zs'])
+    s['hveg']       *= (s['zb'] +0.01 >= s['zs'])
+    s['germinate']  *= (s['zb'] +0.01 >= s['zs'])
+    s['lateral']    *= (s['zb'] +0.01 >= s['zs'])
     
     return s
 

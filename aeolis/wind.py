@@ -105,9 +105,8 @@ def interpolate(s, p, t):
         s['udir'][:,:] = np.arctan2(interp_circular(t, uw_t, np.sin(uw_d)),
                                     interp_circular(t, uw_t, np.cos(uw_d))) * 180. / np.pi
 
-    s['uws'] = - s['uw'] * np.sin(-s['alfa'] + s['udir'] / 180. * np.pi)        # alfa [rad] is real world grid cell orientation (clockwise)
-
-    s['uwn'] = - s['uw'] * np.cos(-s['alfa'] + s['udir'] / 180. * np.pi)
+    s['uws'] = - s['uw'] * np.sin((-p['alfa'] + s['udir']) / 180. * np.pi)        # alfa [deg] is real world grid cell orientation (clockwise)
+    s['uwn'] = - s['uw'] * np.cos((-p['alfa'] + s['udir']) / 180. * np.pi)
 
     
     if p['ny'] == 0:
@@ -141,7 +140,7 @@ def shear(s,p):
         s['shear'].set_shear(s['taus'], s['taun'])
         
         s['shear'](u0=s['uw'][0,0],
-                   udir=s['udir'][0,0],
+                   udir=s['udir'][0,0] + p['alfa'],
                    process_separation = p['process_separation'],
                    c = p['c_b'],
                    mu_b = p['mu_b'])
@@ -155,7 +154,7 @@ def shear(s,p):
         if p['process_separation']:
             s['hsep'] = s['shear'].get_separation()
             s['zsep'] = s['hsep'] + s['zb']
-
+    
     if p['process_nelayer']:
 
         ustar = s['ustar'].copy()
@@ -166,8 +165,11 @@ def shear(s,p):
             
         ix = s['zb'] <= s['zne']
         s['ustar'][ix] = np.maximum(0., s['ustar'][ix] - (s['zne'][ix]-s['zb'][ix])* (1/p['layer_thickness']) * s['ustar'][ix])
+        
+        ix = ustar != 0.
         s['ustars'][ix] = s['ustar'][ix] * (ustars[ix] / ustar[ix])
         s['ustarn'][ix] = s['ustar'][ix] * (ustarn[ix] / ustar[ix])
+
 
     return s
 

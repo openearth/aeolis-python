@@ -63,6 +63,11 @@ def angele_of_repose(s,p):
     
     s['theta_stat'] = theta_stat
     s['theta_dyn'] = theta_dyn
+
+    
+    #s['theta_stat'] += theta_stat
+    #s['theta_dyn'] += theta_dyn
+        
         
     return s
 
@@ -97,6 +102,8 @@ def avalanche(s, p):
 
         tan_stat = np.tan(np.deg2rad(s['theta_stat']))
         tan_dyn = np.tan(np.deg2rad(s['theta_dyn']))
+        
+
 
         E = 0.2
 
@@ -108,6 +115,8 @@ def avalanche(s, p):
         max_iter_ava = p['max_iter_ava']
         
         max_grad_h, grad_h, grad_h_down = calc_gradients(s['zb'], nx, ny, s['ds'], s['dn'], s[ 'zne'])
+        
+
         
         s['gradh'] = grad_h.copy()
 

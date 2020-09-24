@@ -84,6 +84,8 @@ def compute(s, p):
             # no aeolian transport when the bed level is lower than the water level
             ix = s['zb'] - s['zs'] < - p['eps']
             s['uth'][ix] = np.inf
+        if p['th_drylayer']:
+            s = dry_layer(s, p)
         if p['th_humidity']:
             s = compute_humidity(s, p)
         if p['th_salt']:
@@ -185,6 +187,23 @@ def compute_moisture(s, p):
     s['uth'][ix] = np.inf
     
     return s
+
+def dry_layer(s, p):
+
+    Tdry_top = 12. * 3600.
+    zdry_max = 0.05
+
+    s['dzdry'] = (zdry_max - s['zdry']) * (p['dt'] * p['accfac'])  / Tdry_top + s['dzb'] 
+    s['zdry'] += s['dzdry']
+    s['zdry'] = np.minimum(np.maximum(s['zdry'], 0), zdry_max)
+
+    ix = (s['zdry'] == 0.)
+    
+    s['uth'][ix] = np.inf
+
+
+    return s 
+
 
 
 def compute_humidity(s, p):

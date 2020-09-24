@@ -79,10 +79,10 @@ def initialize(s, p):
         s['dn'][1:,:] = np.diff(s['y'], axis=0)
         s['dn'][0,:] = s['dn'][1,:]
 
-        s['alfa'][1:-1,:] = np.arctan2(s['x'][2:,:] - s['x'][:-2,:],
-                                       s['y'][2:,:] - s['y'][:-2,:])
-        s['alfa'][0,:] = s['alfa'][1,:]
-        s['alfa'][-1,:] = s['alfa'][-2,:]
+        #s['alfa'][1:-1,:] = np.arctan2(s['x'][2:,:] - s['x'][:-2,:],
+        #                               s['y'][2:,:] - s['y'][:-2,:])
+        #s['alfa'][0,:] = s['alfa'][1,:]
+        #s['alfa'][-1,:] = s['alfa'][-2,:]
 
     # compute cell areas
     s['dsdn'][:,:] = s['ds'] * s['dn']
@@ -91,6 +91,9 @@ def initialize(s, p):
     # initialize bathymetry
     s['zb'][:,:] = p['bed_file']
     s['zb0'][:,:] = p['bed_file']
+    
+    #initialize thickness of erodable or dry top layer
+    s['zdry'][:,:] = 0.05
     
 
     # initialize bed layers
@@ -281,7 +284,7 @@ def update(s, p):
         s['zb'] += dz
         s['zs'] += dz
         
-        Tswash = 0.01 # p['Tswash'] / p['dt']
+        Tswash = 0.1 #p['Tswash'] / p['dt']
         ix = s['zs'] > (s['zb'] + 0.01)
         s['zb'][ix] += (s['zb0'][ix] - s['zb'][ix]) * Tswash
         
@@ -433,7 +436,7 @@ def average_change(l, s, p):
     # Collect time steps
     s['dzbyear'] = s['dzb'] * (3600. * 24. * 365.25) / (p['dt'] * p['accfac'])
 
-    n = p['dt']/p['avg_time']
+    n = (p['dt'] * p['accfac']) / p['avg_time']
 
     s['dzbavg'] = n*s['dzbyear']+(1-n)*l['dzbavg']
     

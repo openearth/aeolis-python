@@ -38,6 +38,152 @@ from aeolis.utils import *
 # initialize logger
 logger = logging.getLogger(__name__)
 
+def grainspeed(s, p):
+    '''Compute grain speed according to Duran 2007 (p. 42)
+
+    Parameters
+    ----------
+    s : dict
+        Spatial grids
+    p : dict
+        Model configuration parameters
+
+    Returns
+    -------
+    dict
+        Spatial grids
+        '''
+    
+    # Create each grain fraction
+    
+    nf = p['nfractions']
+    d = p['grain_size']
+    
+    z = s['zb']
+    x = s['x']
+    y = s['y']
+    
+    uth = s['uth']  
+    uth0 = s['uth0']    
+    ustar = s['ustar']
+    ustars = s['ustars']
+    ustarn = s['ustarn']
+
+    
+    rhog = p['rhog']
+    rhoa = p['rhoa']
+    s = rhog/rhoa
+    
+    A = 0.95
+    B = 5.12        
+    
+    g = np.repeat(p['g'], nf, axis = 0)
+    v = np.repeat(p['v'], nf, axis = 0)
+    
+    kappa = p['kappa']
+        
+    # Drag coefficient (Duran, 2007 -> Jimenez and Madsen, 2003)
+    
+    r       = 1. # Duran 2007, p. 33
+    c       = 14./(1.+1.4*r)
+    
+    tv      = (v/g**2)**(1/3) # +- 5.38 ms                                      # Andreotti, 2004
+    
+    lv      = (v**2/(p['Aa']**2*g*(s-1)))**(1/3)
+
+    zm      = c * uth * tv  # characteristic height of the saltation layer +- 20 mm
+    z0      = d/20.  # grain based roughness layer +- 10 mu m - Duran 2007 p.32
+    z1      = 35. * lv # reference height +- 35 mm
+  
+    alpha   = 0.17 * d / lv
+#    s['alpha'] = alpha
+
+    Sstar   = d/(4*v)*np.sqrt(g*d*(s-1.))
+    Cd      = (4/3)*(A+np.sqrt(2*alpha)*B/Sstar)**2
+    
+    uf = np.sqrt(4/(3*Cd)*(s-1.)*g*d)                                            # Grain settling velocity - Jimnez and Madsen, 2003
+   
+    # Initiate arrays
+    
+    ets = np.zeros(uth.shape)
+    etn = np.zeros(uth.shape)
+    
+    
+
+    ueff = np.zeros(uth.shape)
+    ueff0 = np.zeros(uth.shape)
+    
+    ustar = np.repeat(ustar[:,:,np.newaxis], nf, axis=2)
+    ustars = np.repeat(ustars[:,:,np.newaxis], nf, axis=2)
+    ustarn = np.repeat(ustarn[:,:,np.newaxis], nf, axis=2)
+    
+    # Efficient wind velocity (Duran, 2006 - Partelli, 2013)
+    ueff = (uth0 / kappa) * (np.log(z1 / z0))
+    ueff0 = (uth0 / kappa) * (np.log(z1 / z0)) 
+    
+    # Surface gradient
+    dzs = np.zeros(z.shape)
+    dzn = np.zeros(z.shape)
+    
+    dzs[:,1:-1] = (z[:,2:]-z[:,:-2])/(x[:,2:]-x[:,:-2])
+    dzn[1:-1,:] = (z[:-2,:]-z[2:,:])/(y[:-2,:]-y[2:,:])
+    
+    # Boundaries
+    
+    dzs[:,0] = dzs[:,1]
+    dzn[0,:] = dzn[1,:]    
+    dzs[:,-1] = dzs[:,-2]
+    dzn[-1,:] = dzn[-2,:]
+    
+    dhs = np.repeat(dzs[:,:,np.newaxis], nf, axis = 2)
+    dhn = np.repeat(dzn[:,:,np.newaxis], nf, axis = 2)
+    
+    # Wind direction
+        
+    ix = (ustar > 0.) #* (ustar >= uth) 
+    
+    ets[ix] = ustars[ix] / ustar[ix]
+    etn[ix] = ustarn[ix] / ustar[ix]
+    
+    Axs = ets + 2*alpha*dhs
+    Axn = etn + 2*alpha*dhn
+    Ax = np.hypot(Axs, Axn)
+    
+    # Compute grain speed
+    
+    u0 = np.zeros(uth.shape)
+    us = np.zeros(uth.shape)
+    un = np.zeros(uth.shape)
+    u  = np.zeros(uth.shape)
+
+    for i in range(nf):  
+        # determine ueff for different grainsizes
+        
+        ix = (ustar[:,:,i] >= uth[:,:,i])*(ustar[:,:,i] > 0.)
+        
+        ueff[ix,i] = (uth[ix,i] / kappa) * (np.log(z1[i] / z0[i]) + 2*(np.sqrt(1+z1[i]/zm[ix,i]*(ustar[ix,i]**2/uth[ix,i]**2-1))-1))
+         
+        # loop over fractions
+        u0[:,:,i] = (ueff0[:,:,i] - uf[i] / (np.sqrt(2 * alpha[i])))
+ 
+        us[:,:,i] = (ueff[:,:,i] - uf[i] / (np.sqrt(2. * alpha[i]) * Ax[:,:,i])) * ets[:,:,i] \
+                        - (np.sqrt(2*alpha[i]) * uf[i] / Ax[:,:,i]) * dhs[:,:,i]  
+        
+        un[:,:,i] = (ueff[:,:,i] - uf[i] / (np.sqrt(2. * alpha[i]) * Ax[:,:,i])) * etn[:,:,i] \
+                        - (np.sqrt(2*alpha[i]) * uf[i] / Ax[:,:,i]) * dhn[:,:,i] 
+        
+        u[:,:,i] = np.hypot(us[:,:,i], un[:,:,i])                
+        
+        # set the grain velocity to zero inside the separation bubble
+        ix = (ustar[:,:,i] == 0.)
+        
+        u0[ix,i] = 0.
+        us[ix,i] = 0.
+        un[ix,i] = 0.
+        u[ix,i] = 0.
+                        
+        
+    return u0, us, un, u
 
 
 def saltationvelocity(s, p):
@@ -60,7 +206,7 @@ def saltationvelocity(s, p):
     
     nf = p['nfractions']
     
-    uw  = s['uw'].copy()
+    uw  = s['uw'].copy() 
     uws = s['uws'].copy()
     uwn = s['uwn'].copy()
         
@@ -78,9 +224,9 @@ def saltationvelocity(s, p):
     un[ix] = 1. * ustarn[ix] / ustar[ix]
 
     # u under the sep bubble
-    ix = ustar == 0
-    us[ix] += 1. * uws[ix] / uw[ix]
-    un[ix] += 1. * uwn[ix] / uw[ix]
+    ix = (ustar == 0.)*(uw != 0.)
+    us[ix] += .1 * uws[ix] / uw[ix]
+    un[ix] += .1 * uwn[ix] / uw[ix]
 
     u = np.hypot(us, un)
                        
@@ -111,12 +257,21 @@ def equilibrium(s, p):
     if p['process_transport']:
                 
         nf = p['nfractions']
+        
+        # u via grainvelocity:
+        
+        u0, us, un, u = grainspeed(s,p)
+        
+        s['u0'] = u0
+        s['us'] = us
+        s['un'] = un
+        s['u']  = u
             
         # u via saltation velocity
         
-        us = s['us']
-        un = s['un']   
-        u  = s['u']
+        #us = s['us']
+        #un = s['un']   
+        #u  = s['u']
         
         ustar  = s['ustar'][:,:,np.newaxis].repeat(nf, axis=2)
         ustar0 = s['ustar0'][:,:,np.newaxis].repeat(nf, axis=2)

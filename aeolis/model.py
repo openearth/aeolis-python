@@ -284,7 +284,7 @@ class AeoLiS(IBmi):
         self.s = aeolis.threshold.compute(self.s, self.p)
 
         # compute saltation velocity and equilibrium transport
-        self.s = aeolis.transport.saltationvelocity(self.s, self.p)
+        #self.s = aeolis.transport.saltationvelocity(self.s, self.p)
         self.s = aeolis.transport.equilibrium(self.s, self.p)
 
         # compute instantaneous transport
@@ -716,30 +716,52 @@ class AeoLiS(IBmi):
                 
         us = np.zeros((p['ny']+1,p['nx']+1))
         un = np.zeros((p['ny']+1,p['nx']+1))
+        
+        us_plus = np.zeros((p['ny']+1,p['nx']+1))
+        un_plus = np.zeros((p['ny']+1,p['nx']+1))
+        
+        us_min = np.zeros((p['ny']+1,p['nx']+1))
+        un_min = np.zeros((p['ny']+1,p['nx']+1))
 
         Cs = np.zeros(us.shape)
         Cn = np.zeros(un.shape)
         
+        Cs_plus = np.zeros(us.shape)
+        Cn_plus = np.zeros(un.shape)
+        
+        Cs_min = np.zeros(us.shape)
+        Cn_min = np.zeros(un.shape)
+        
         for i in range(nf):
-            us[:,1:] = 0.5*s['us'][:,:-1,i] + 0.5*s['us'][:,1:,i]
-            un[1:,:] = 0.5*s['un'][:-1,:,i] + 0.5*s['un'][1:,:,i]
+            us[:,:] = s['us'][:,:,i] 
+            un[:,:] = s['un'][:,:,i] 
+            
+            us_plus[:,1:] = s['us'][:,:-1,i] 
+            un_plus[1:,:] = s['un'][:-1,:,i] 
+            
+            us_min[:,:-1] = s['us'][:,1:,i]
+            un_min[:-1,:] = s['un'][1:,:,i]
         
             #boundary values
             us[:,0]  = s['us'][:,0,i]
-
             un[0,:]  = s['un'][0,:,i]
-
-        
-            #if p['boundary_lateral'] == 'circular':
-            #    un[0,:] = 0.5*s['un'][0,:,i] + 0.5*s['un'][-1,:,i]
-
-            #else:
-            #    un[0,:]  = s['un'][0,:,i]
-
+            
+            us_plus[:,0]  = s['us'][:,0,i]
+            un_plus[0,:]  = s['un'][0,:,i]
+            
+            us_min[:,-1]  = s['us'][:,-1,i]
+            un_min[-1,:]  = s['un'][-1,:,i]
+            
             
             # define matrix coefficients to solve linear system of equations        
             Cs = s['dn'] * s['dsdni'] * us[:,:]  
-            Cn = s['ds'] * s['dsdni'] * un[:,:]  
+            Cn = s['ds'] * s['dsdni'] * un[:,:] 
+
+            Cs_plus = s['dn'] * s['dsdni'] * us_plus[:,:]  
+            Cn_plus = s['ds'] * s['dsdni'] * un_plus[:,:]
+            
+            Cs_min = s['dn'] * s['dsdni'] * us_min[:,:]  
+            Cn_min = s['ds'] * s['dsdni'] * un_min[:,:]
             
             
             Ti = 1 / p['T']
@@ -770,10 +792,10 @@ class AeoLiS(IBmi):
 
             # populate matrix diagonals
             A0  = sgs * Cs + sgn * Cn + Ti
-            Apx = Cn * (1. - ixn)
-            Ap1 = Cs * (1. - ixs)
-            Amx = -Cn * ixn
-            Am1 = -Cs * ixs    
+            Apx = Cn_min * (1. - ixn)
+            Ap1 = Cs_min * (1. - ixs)
+            Amx = -Cn_plus * ixn
+            Am1 = -Cs_plus * ixs    
 
             # add boundaries
             A0[:,0] = 1.
@@ -785,10 +807,13 @@ class AeoLiS(IBmi):
             A0[:,-1] = 1.
             Apx[:,-1] = 0.
             Ap1[:,-1] = 0.
-            #Ap2[:,-1] = 0.
+            Ap2[:,-1] = 0.
             Amx[:,-1] = 0.
 
-            if p['boundary_offshore'] == 'constant':
+            if p['boundary_offshore'] == 'flux':
+                Ap2[:,0] = 0.
+                Ap1[:,0] = 0.
+            elif p['boundary_offshore'] == 'constant':
                 Ap2[:,0] = 0.
                 Ap1[:,0] = 0.
             elif p['boundary_offshore'] == 'uniform':
@@ -802,7 +827,10 @@ class AeoLiS(IBmi):
             else:
                 logger.log_and_raise('Unknown offshore boundary condition [%s]' % self.p['boundary_offshore'], exc=ValueError)
 
-            if p['boundary_onshore'] == 'constant':                              
+            if p['boundary_onshore'] == 'flux':                              
+                Am2[:,-1] = 0.
+                Am1[:,-1] = 0.            
+            elif p['boundary_onshore'] == 'constant':                              
                 Am2[:,-1] = 0.
                 Am1[:,-1] = 0.
             elif p['boundary_onshore'] == 'uniform':
@@ -888,10 +916,15 @@ class AeoLiS(IBmi):
                     )
 
                 # add boundaries
+                if p['boundary_offshore'] == 'flux':
+                    y_i[:,0] = p['offshore_flux'] * s['Cu0'][:,0,i] 
+                if p['boundary_onshore'] == 'flux':
+                    y_i[:,-1] = p['onshore_flux'] * s['Cu0'][:,-1,i] 
+                    
                 if p['boundary_offshore'] == 'constant':
-                    y_i[:,0] = p['boundary_offshore_flux'] * s['Cu0'][:,0,i] / p['T']
+                    y_i[:,0] = p['constant_offshore_flux'] / s['u'][:,0,i] 
                 if p['boundary_onshore'] == 'constant':
-                    y_i[:,-1] = p['boundary_onshore_flux'] * s['Cu0'][:,-1,i] / p['T']
+                    y_i[:,-1] = p['constant_onshore_flux'] / s['u'][:,-1,i]
 
                 # solve system with current weights
                 Ct_i = scipy.sparse.linalg.spsolve(A, y_i.flatten())
@@ -1052,30 +1085,51 @@ class AeoLiS(IBmi):
         
         us = np.zeros((p['ny']+1,p['nx']+1))
         un = np.zeros((p['ny']+1,p['nx']+1))
+        
+        us_plus = np.zeros((p['ny']+1,p['nx']+1))
+        un_plus = np.zeros((p['ny']+1,p['nx']+1))
+        
+        us_min = np.zeros((p['ny']+1,p['nx']+1))
+        un_min = np.zeros((p['ny']+1,p['nx']+1))
 
         Cs = np.zeros(us.shape)
         Cn = np.zeros(un.shape)
         
+        Cs_plus = np.zeros(us.shape)
+        Cn_plus = np.zeros(un.shape)
+        
+        Cs_min = np.zeros(us.shape)
+        Cn_min = np.zeros(un.shape)
+        
+        
         for i in range(nf):
-            us[:,1:] = 0.5*s['us'][:,:-1,i] + 0.5*s['us'][:,1:,i]
-            un[1:,:] = 0.5*s['un'][:-1,:,i] + 0.5*s['un'][1:,:,i]
-        
-            #boundary values
-            us[:,0]  = s['us'][:,0,i]
             
-            un[0,:]  = s['un'][0,:,i]
-
+            us[:,:] = s['us'][:,:,i] 
+            un[:,:] = s['un'][:,:,i] 
+            
+            us_plus[:,1:] = s['us'][:,:-1,i] 
+            un_plus[1:,:] = s['un'][:-1,:,i] 
+            
+            us_min[:,:-1] = s['us'][:,1:,i]
+            un_min[:-1,:] = s['un'][1:,:,i]
         
-            #if p['boundary_lateral'] == 'circular':
-            #    un[0,:] = 0.5*s['un'][0,:,i] + 0.5*s['un'][-1,:,i]
-
-            #else:
-            #    un[0,:]  = s['un'][0,:,i]
-
-
+            #boundary values            
+            us_plus[:,0]  = s['us'][:,0,i]
+            un_plus[0,:]  = s['un'][0,:,i]
+            
+            us_min[:,-1]  = s['us'][:,-1,i]
+            un_min[-1,:]  = s['un'][-1,:,i]
+            
+            
             # define matrix coefficients to solve linear system of equations        
-            Cs = self.dt * s['dn'] * s['dsdni'] * s['us'][:,:,i]
-            Cn = self.dt * s['ds'] * s['dsdni'] * s['un'][:,:,i]
+            Cs = self.dt * s['dn'] * s['dsdni'] * us[:,:]  
+            Cn = self.dt * s['ds'] * s['dsdni'] * un[:,:] 
+
+            Cs_plus = self.dt * s['dn'] * s['dsdni'] * us_plus[:,:]  
+            Cn_plus = self.dt * s['ds'] * s['dsdni'] * un_plus[:,:]
+            
+            Cs_min = self.dt * s['dn'] * s['dsdni'] * us_min[:,:]  
+            Cn_min = self.dt * s['ds'] * s['dsdni'] * un_min[:,:]
             
             Ti = self.dt / p['T']          
 
@@ -1106,10 +1160,10 @@ class AeoLiS(IBmi):
 
             # populate matrix diagonals
             A0  = 1. + (sgs * Cs + sgn * Cn + Ti) * alpha
-            Apx = Cn * alpha * (1. - ixn)
-            Ap1 = Cs * alpha * (1. - ixs)
-            Amx = -Cn * alpha * ixn
-            Am1 = -Cs * alpha * ixs    
+            Apx = Cn_min * alpha * (1. - ixn)
+            Ap1 = Cs_min * alpha * (1. - ixs)
+            Amx = -Cn_plus * alpha * ixn
+            Am1 = -Cs_plus * alpha * ixs    
 
             # add boundaries
             A0[:,0] = 1.
@@ -1121,10 +1175,13 @@ class AeoLiS(IBmi):
             A0[:,-1] = 1.
             Apx[:,-1] = 0.
             Ap1[:,-1] = 0.
-            #Ap2[:,-1] = 0.
+            Ap2[:,-1] = 0.
             Amx[:,-1] = 0.
 
-            if p['boundary_offshore'] == 'constant':
+            if p['boundary_offshore'] == 'flux':
+                Ap2[:,0] = 0.
+                Ap1[:,0] = 0.
+            elif p['boundary_offshore'] == 'constant':
                 Ap2[:,0] = 0.
                 Ap1[:,0] = 0.
             elif p['boundary_offshore'] == 'uniform':
@@ -1138,7 +1195,10 @@ class AeoLiS(IBmi):
             else:
                 logger.log_and_raise('Unknown offshore boundary condition [%s]' % self.p['boundary_offshore'], exc=ValueError)
 
-            if p['boundary_onshore'] == 'constant':                              
+            if p['boundary_onshore'] == 'flux':                              
+                Am2[:,-1] = 0.
+                Am1[:,-1] = 0.            
+            elif p['boundary_onshore'] == 'constant':                              
                 Am2[:,-1] = 0.
                 Am1[:,-1] = 0.
             elif p['boundary_onshore'] == 'uniform':
@@ -1232,19 +1292,24 @@ class AeoLiS(IBmi):
                         sgs[:,1:-1] * Cs[:,1:-1] +\
                         sgn[:,1:-1] * Cn[:,1:-1] + Ti
                     ) * l['Ct'][:,1:-1,i] \
-                    + ixs[:,1:-1] * Cs[:,1:-1] * l['Ct'][:,:-2,i] \
-                    - (1. - ixs[:,1:-1]) * Cs[:,1:-1] * l['Ct'][:,2:,i] \
-                    + ixn[:,1:-1] * Cn[:,1:-1] * np.roll(l['Ct'][:,1:-1,i], 1, axis=0) \
-                    - (1. - ixn[:,1:-1]) * Cn[:,1:-1] * np.roll(l['Ct'][:,1:-1,i], -1, axis=0) \
+                    + ixs[:,1:-1] * Cs_plus[:,1:-1] * l['Ct'][:,:-2,i] \
+                    - (1. - ixs[:,1:-1]) * Cs_min[:,1:-1] * l['Ct'][:,2:,i] \
+                    + ixn[:,1:-1] * Cn_plus[:,1:-1] * np.roll(l['Ct'][:,1:-1,i], 1, axis=0) \
+                    - (1. - ixn[:,1:-1]) * Cn_min[:,1:-1] * np.roll(l['Ct'][:,1:-1,i], -1, axis=0) \
                     )
                 
                 y_i[:,1:-1] = l['Ct'][:,1:-1,i] + alpha * y_im[:,1:-1] + (1. - alpha) * y_ex[:,1:-1]
 
                 # add boundaries
+                if p['boundary_offshore'] == 'flux':
+                    y_i[:,0] = p['offshore_flux'] * s['Cu0'][:,0,i] 
+                if p['boundary_onshore'] == 'flux':
+                    y_i[:,-1] = p['onshore_flux'] * s['Cu0'][:,-1,i] 
+                    
                 if p['boundary_offshore'] == 'constant':
-                    y_i[:,0] = p['boundary_offshore_flux'] * s['Cu0'][:,0,i] / p['T']
+                    y_i[:,0] = p['constant_offshore_flux'] / s['u'][:,0,i] 
                 if p['boundary_onshore'] == 'constant':
-                    y_i[:,-1] = p['boundary_onshore_flux'] * s['Cu0'][:,-1,i] / p['T']
+                    y_i[:,-1] = p['constant_onshore_flux'] / s['u'][:,-1,i]
 
                 # solve system with current weights
                 Ct_i = scipy.sparse.linalg.spsolve(A, y_i.flatten())
@@ -1376,9 +1441,6 @@ class AeoLiS(IBmi):
         
         nf = p['nfractions']
         
-        ugs = np.zeros(s['u'].shape)
-        ugn = np.zeros(s['u'].shape)
-        
         ufs = np.zeros((p['ny']+1,p['nx']+2))
         ufn = np.zeros((p['ny']+2,p['nx']+1))    
         
@@ -1431,13 +1493,8 @@ class AeoLiS(IBmi):
         
             # add boundaries
             # offshore boundary (i=0)
-            if p['boundary_offshore'] == 'noflux':
-                #nothing to be done
-                pass
-            elif p['boundary_offshore'] == 'saturatedflux':
-                #nothing to be done
-                pass
-            elif p['boundary_offshore'] == 'input':
+
+            if p['boundary_offshore'] == 'flux':
                 #nothing to be done
                 pass
             elif p['boundary_offshore'] == 'constant':
@@ -1457,10 +1514,8 @@ class AeoLiS(IBmi):
                 raise ValueError('Unknown offshore boundary condition [%s]' % self.p['boundary_offshore'])
 
             #onshore boundary (i=nx)
-            if p['boundary_onshore'] == 'noflux':
-                #nothing to be done
-                pass
-            elif p['boundary_onshore'] == 'saturatedflux':
+
+            if p['boundary_onshore'] == 'flux':
                 #nothing to be done
                 pass
             elif p['boundary_onshore'] == 'constant':
@@ -1480,10 +1535,8 @@ class AeoLiS(IBmi):
                 raise ValueError('Unknown offshore boundary condition [%s]' % self.p['boundary_onshore'])
         
             #lateral boundaries (j=0; j=ny)    
-            if p['boundary_lateral'] == 'noflux':
-                #nothing to be done
-                pass
-            elif p['boundary_lateral'] == 'saturatedflux':
+
+            if p['boundary_lateral'] == 'flux':
                 #nothing to be done
                 pass
             elif p['boundary_lateral'] == 'constant':
@@ -1571,58 +1624,56 @@ class AeoLiS(IBmi):
                 # create the right hand side of the linear system
                 # sediment concentration
                 yCt_i = np.zeros(s['zb'].shape)
-                
-                yCt_i += E_i - D_i                                      #source term
+                                
+                yCt_i         += E_i - D_i                                      #source term
+                yCt_i[:,1:]   += s['dn'][:,1:]  * ufs[:,1:-1] * Ctxfs_i[:,1:-1] #lower x-face
+                yCt_i[:,:-1]  -= s['dn'][:,:-1] * ufs[:,1:-1] * Ctxfs_i[:,1:-1] #upper x-face
+                yCt_i[1:,:]   += s['ds'][1:,:]  * ufn[1:-1,:] * Ctxfn_i[1:-1,:] #lower y-face
+                yCt_i[:-1,:]  -= s['ds'][:-1,:] * ufn[1:-1,:] * Ctxfn_i[1:-1,:] #upper y-face
              
                     
                 # boundary conditions
                 # offshore boundary (i=0)
-                if p['boundary_offshore'] == 'noflux':
-                    pass
-                elif p['boundary_offshore'] == 'input':
-                    yCt_i[:,0]   += s['dn'][:,0] * p['sedimentinput'] #units still to be found
-                elif p['boundary_offshore'] == 'saturatedflux':
-                    yCt_i[:,0]   += s['dn'][:,0]  * ufs[:,0] * s['Cu0'][:,0,i] * p['sedimentinput'] #lower x-face
 
+                if p['boundary_offshore'] == 'flux':
+                    yCt_i[:,0]  += s['dn'][:,0] * ufs[:,0] * s['Cu0'][:,0,i] * p['offshore_flux'] 
                 elif p['boundary_offshore'] == 'constant':
-                    #constant sediment concentration (Ct) in the air (for now = 0)
-                    yCt_i[:,0]   = 0.
+                    #constant sediment concentration (Ct) in the air 
+                    yCt_i[:,0]  = p['constant_offshore_flux']
 
                 elif p['boundary_offshore'] == 'gradient':
                     #remove the flux at the inner face of the cell
-                    yCt_i[:,0]  += s['dn'][:,1] * ufs[:,1] * Ctxfs_i[:,1] #upper x-face
+                    yCt_i[:,0]  += s['dn'][:,1] * ufs[:,1] * Ctxfs_i[:,1] 
 
                 elif p['boundary_offshore'] == 'circular':
                     raise NotImplementedError('Cross-shore cricular boundary condition not yet implemented')
                 else:
                     raise ValueError('Unknown offshore boundary condition [%s]' % self.p['boundary_offshore'])
+                    
                 # onshore boundary (i=nx)
-                if p['boundary_onshore'] == 'noflux':
-                    pass
-                elif p['boundary_onshore'] == 'saturatedflux':
-                    yCt_i[:,-1]   += s['dn'][:,-1]  * ufs[:,-1] * s['Cu0'][:,-1,i] #upper x-face
+
+                if p['boundary_onshore'] == 'flux':
+                    yCt_i[:,-1]  += s['dn'][:,-1]  * ufs[:,-1] * s['Cu0'][:,-1,i] * p['onshore_flux']
 
                 elif p['boundary_onshore'] == 'constant':
-                    #constant sediment concentration (Ct) in the air (for now = 0)
-                    yCt_i[:,-1]   = 0.
+                    #constant sediment concentration (Ct) in the air 
+                    yCt_i[:,-1]  = p['constant_onshore_flux']
 
                 elif p['boundary_onshore'] == 'gradient':
                     #remove the flux at the inner face of the cell
-                    yCt_i[:,-1]  -= s['dn'][:,-2] * ufs[:,-2] * Ctxfs_i[:,-2] #lower x-face
+                    yCt_i[:,-1]  -= s['dn'][:,-2] * ufs[:,-2] * Ctxfs_i[:,-2] 
 
                 elif p['boundary_onshore'] == 'circular':
                     raise NotImplementedError('Cross-shore cricular boundary condition not yet implemented')
                 else:
                     raise ValueError('Unknown onshore boundary condition [%s]' % self.p['boundary_onshore'])
+                    
                 #lateral boundaries (j=0; j=ny)    
-                if p['boundary_lateral'] == 'noflux':
-                    #nothing to be done
-                    pass
-                elif p['boundary_lateral'] == 'saturatedflux':
+
+                if p['boundary_lateral'] == 'flux':
                     
-                    yCt_i[0,:]   += s['ds'][0,:] * ufn[0,:]  * s['Cu0'][0,:,i] * p['sedimentinput'] #lower y-face
-                    yCt_i[-1,:]  -= s['ds'][-1,:] * ufn[-1,:] * s['Cu0'][-1,:,i] * p['sedimentinput'] #upper y-face
-                    
+                    yCt_i[0,:]   += s['ds'][0,:] * ufn[0,:]  * s['Cu0'][0,:,i] * p['lateral_flux'] #lower y-face
+                    yCt_i[-1,:]  -= s['ds'][-1,:] * ufn[-1,:] * s['Cu0'][-1,:,i] * p['lateral_flux'] #upper y-face                    
                 elif p['boundary_lateral'] == 'constant':
                     #constant sediment concentration (hC) in the air
                     yCt_i[0,:]  = 0.
@@ -1859,13 +1910,8 @@ class AeoLiS(IBmi):
         
             # add boundaries
             # offshore boundary (i=0)
-            if p['boundary_offshore'] == 'noflux':
-                #nothing to be done
-                pass
-            elif p['boundary_offshore'] == 'saturatedflux':
-                #nothing to be done
-                pass
-            elif p['boundary_offshore'] == 'input':
+
+            if p['boundary_offshore'] == 'flux':
                 #nothing to be done
                 pass
             elif p['boundary_offshore'] == 'constant':
@@ -1885,10 +1931,8 @@ class AeoLiS(IBmi):
                 raise ValueError('Unknown offshore boundary condition [%s]' % self.p['boundary_offshore'])
 
             #onshore boundary (i=nx)
-            if p['boundary_onshore'] == 'noflux':
-                #nothing to be done
-                pass
-            elif p['boundary_onshore'] == 'saturatedflux':
+
+            if p['boundary_onshore'] == 'flux':
                 #nothing to be done
                 pass
             elif p['boundary_onshore'] == 'constant':
@@ -1908,10 +1952,8 @@ class AeoLiS(IBmi):
                 raise ValueError('Unknown offshore boundary condition [%s]' % self.p['boundary_onshore'])
         
             #lateral boundaries (j=0; j=ny)    
-            if p['boundary_lateral'] == 'noflux':
-                #nothing to be done
-                pass
-            elif p['boundary_lateral'] == 'saturatedflux':
+
+            if p['boundary_lateral'] == 'flux':
                 #nothing to be done
                 pass
             elif p['boundary_lateral'] == 'constant':
@@ -2018,16 +2060,13 @@ class AeoLiS(IBmi):
                     
                 # boundary conditions
                 # offshore boundary (i=0)
-                if p['boundary_offshore'] == 'noflux':
-                    pass
-                elif p['boundary_offshore'] == 'input':
-                    yCt_i[:,0]   += s['dn'][:,0] * p['sedimentinput'] #units still to be found
-                elif p['boundary_offshore'] == 'saturatedflux':
-                    yCt_i[:,0]   += s['dn'][:,0]  * ufs[:,0] * s['Cu0'][:,0,i] * p['sedimentinput'] #lower x-face
+
+                if p['boundary_offshore'] == 'flux':
+                    yCt_i[:,0]  += s['dn'][:,0] * ufs[:,0] * s['Cu0'][:,0,i] * p['offshore_flux'] 
 
                 elif p['boundary_offshore'] == 'constant':
                     #constant sediment concentration (Ct) in the air (for now = 0)
-                    yCt_i[:,0]   = 0.
+                    yCt_i[:,0]  = 0.
 
                 elif p['boundary_offshore'] == 'gradient':
                     #remove the flux at the inner face of the cell
@@ -2037,15 +2076,15 @@ class AeoLiS(IBmi):
                     raise NotImplementedError('Cross-shore cricular boundary condition not yet implemented')
                 else:
                     raise ValueError('Unknown offshore boundary condition [%s]' % self.p['boundary_offshore'])
+                    
                 # onshore boundary (i=nx)
-                if p['boundary_onshore'] == 'noflux':
-                    pass
-                elif p['boundary_onshore'] == 'saturatedflux':
-                    yCt_i[:,-1]   += s['dn'][:,-1]  * ufs[:,-1] * s['Cu0'][:,-1,i] #upper x-face
+
+                if p['boundary_onshore'] == 'flux':
+                    yCt_i[:,-1]  += s['dn'][:,-1]  * ufs[:,-1] * s['Cu0'][:,-1,i] * p['onshore_flux'] 
 
                 elif p['boundary_onshore'] == 'constant':
                     #constant sediment concentration (Ct) in the air (for now = 0)
-                    yCt_i[:,-1]   = 0.
+                    yCt_i[:,-1]  = 0.
 
                 elif p['boundary_onshore'] == 'gradient':
                     #remove the flux at the inner face of the cell
@@ -2055,14 +2094,13 @@ class AeoLiS(IBmi):
                     raise NotImplementedError('Cross-shore cricular boundary condition not yet implemented')
                 else:
                     raise ValueError('Unknown onshore boundary condition [%s]' % self.p['boundary_onshore'])
-                #lateral boundaries (j=0; j=ny)    
-                if p['boundary_lateral'] == 'noflux':
-                    #nothing to be done
-                    pass
-                elif p['boundary_lateral'] == 'saturatedflux':
                     
-                    yCt_i[0,:]   += s['ds'][0,:] * ufn[0,:]  * s['Cu0'][0,:,i] * p['sedimentinput'] #lower y-face
-                    yCt_i[-1,:]  -= s['ds'][-1,:] * ufn[-1,:] * s['Cu0'][-1,:,i] * p['sedimentinput'] #upper y-face
+                #lateral boundaries (j=0; j=ny)    
+
+                if p['boundary_lateral'] == 'flux':
+                    
+                    yCt_i[0,:]  += s['ds'][0,:] * ufn[0,:]  * s['Cu0'][0,:,i] * p['lateral_flux'] #lower y-face
+                    yCt_i[-1,:] -= s['ds'][-1,:] * ufn[-1,:] * s['Cu0'][-1,:,i] * p['lateral_flux'] #upper y-face
                     
                 elif p['boundary_lateral'] == 'constant':
                     #constant sediment concentration (hC) in the air
