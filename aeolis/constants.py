@@ -190,9 +190,9 @@ DEFAULT_CONFIG = {
     'res_moist'                     : 0.001,              # [-] Residual soil moisture content (volumetric) (Schmutz, 2014)
     'sat_moist'                     : 0.45,               # [-] Satiated soil moisture content (volumetric) (Schmutz, 2014)
     'n_moist'                       : 4.8,                # [-] Pore-size distribution index in the soil water retention function (Schmutz, 2014)
-    'alfaw_moist'                   : 0.025,              # [m^-1] Inverse of the air-entry value for a wetting branch of the soil water retention function (Schmutz, 2014)
-    'alfad_moist'                   : 0.019,              # [m^-1] Inverse of the air-entry value for a drying branch of the soil water retention function (Schmutz, 2014)
-    'thick_moist'                   : 0.0002,             # [m] Thickness of surface moisture soil layer
+    'alfaw_moist'                   : 0.025,              # [cm^-1] Inverse of the air-entry value for a wetting branch of the soil water retention function (Schmutz, 2014)
+    'alfad_moist'                   : 0.019,              # [cm^-1] Inverse of the air-entry value for a drying branch of the soil water retention function (Schmutz, 2014)
+    'thick_moist'                   : 0.002,              # [m] Thickness of surface moisture soil layer
     'K_gw'                          : 0.000085,           # [m/s] Hydraulic conductivity (Schmutz, 2014)
     'ne_gw'                         : 0.3,                # [-] Effective porosity
     'D_gw'                          : 5,                  # [m] Aquifer depth

@@ -169,7 +169,7 @@ def update(s, p, dt, t):
 
             #Initialize GW levels and h_delta (GW depth when changing from wetting/drying)
             if t==0:
-                s['gw'][:,:]=setup
+                s['gw'][:,:]=0#setup
                 s['h_delta'][:,:]=np.maximum(0,(s['zb'] - s['gw'])*100)
                 
             #Define index of shoreline location
@@ -327,7 +327,7 @@ def Boussinesq (GW,s,p,setup,shl_ix):
     GW[:,-1] = GW[:,-3]
     GW[:,-2] = GW[:,-3]
     
-    # Set GW levels to ground level within seepage face
+    #Set GW levels to ground level within seepage face
     ixs = np.argmin(GW + 0.001 >= s['zb'],axis=1)
     for i in range(len(ixs)):
         if shl_ix[i] < ixs[i] - 1:
