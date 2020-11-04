@@ -93,8 +93,6 @@ def interpolate(s, p, t):
             R = p['xi'] * s['Hs']
             s['zs'][ix] += R[ix] * (1. - np.minimum(1., h[ix] * p['gamma'] / s['Hs'][ix]))
         
-        # maximize wave height by depth ratio ``gamma``
-        s['Hs'] = np.minimum(h * p['gamma'], s['Hs'])
         
     if p['process_moist'] and p['method_moist_process'].lower() == 'surf_moisture' and p['meteo_file'] is not None:  ## här lägg till process
 
@@ -165,7 +163,7 @@ def update(s, p, dt, t):
             interpolate(s,p,t_gw)
         
             #Compute setup
-            setup=np.average(s['swl']) + 0.35 * p['xi'] #Stockdon et al (2006) CH:Should we include a function to compute the Irribaren number?
+            setup=np.average(s['swl']) + 0.35 * p['xi'] * s['Hs'] #Stockdon et al (2006)
 
             #Initialize GW levels and h_delta (GW depth when changing from wetting/drying)
             if t==0:
