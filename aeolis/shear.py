@@ -28,6 +28,15 @@ import logging
 import numpy as np
 import scipy.special
 import scipy.interpolate
+from scipy import ndimage, misc
+import matplotlib
+import matplotlib.pyplot as plt
+#import scipy.interpolate as spint
+#import scipy.spatial.qhull as qhull
+#import time
+
+# package modules
+from aeolis.utils import *
 
 
 # initialize logger
@@ -68,9 +77,8 @@ class WindShear:
 
     * Actual resulting values are still to be compared with the results
        from Kroy et al. (2002)
-    * Grid interpolation can still be optimized
-    * Separation bubble is still to be implemented
-    * Avalanching is still to be implemented
+    * Grid interpolation can still be optimized                                 
+    * Separation bubble is still to be improved                                                                 
 
     '''
 
@@ -80,9 +88,8 @@ class WindShear:
     istransect = False
     
     
-    def __init__(self, x, y, z, dx=1., dy=1.,
-                 buffer_width=100., buffer_relaxation=None,
-                 L=100., z0=.001, l=10.):
+    def __init__(self, x, y, z, dx, dy, L, l, z0,
+                 buffer_width=100., buffer_relaxation=None):
         '''Class initialization
             
         Parameters
@@ -92,7 +99,7 @@ class WindShear:
         y : numpy.ndarray
             2D array with y-coordinates of input grid
         z : numpy.ndarray
-            2D array with topography of input grid
+            2D array with topography of input grid    
         dx : float, optional
             Grid spacing in x dimension of computational grid
             (default: 1)
@@ -107,11 +114,11 @@ class WindShear:
             boundary to computational grid boundary (default:
             buffer_width / 4)
         L : float, optional
-            Length scale of topographic features (default: 100)
-        z0 : float, optional
-            Aerodynamic roughness (default: .001)
+            Length scale of topographic features (default: 100) 
         l : float, optional
             Height of inner layer (default: 10)
+        z0 : float, optional
+            Aerodynamic roughness (default: .001)
 
         '''
         
@@ -132,13 +139,13 @@ class WindShear:
         self.buffer_relaxation = buffer_relaxation
                           
         self.L = L
-        self.z0 = z0
         self.l = l
+        self.z0 = z0
                           
         self.set_computational_grid()
+        
 
-
-    def __call__(self, u0, udir):
+    def __call__(self, u0, udir, process_separation, c, mu_b):
         '''Compute wind shear for given wind speed and direction
         
         Parameters
@@ -147,47 +154,125 @@ class WindShear:
             Free-flow wind speed
         udir : float
             Wind direction in degrees
+        process_separattion : 
         
         '''
-            
-        self.populate_computational_grid(udir)
-        self.compute_shear(u0)
+        gc = self.cgrid # computational grid
+        gi = self.igrid # initial grid
+        
+        
+        # Populate computational grid (rotate to wind direction + interpolate input topography)
+        self.populate_computational_grid(udir+90.)
+        
+        # Compute separation bubble
+        if process_separation:
+            zsep = self.separation(c, mu_b)
+            z_origin = gc['z'].copy()
+            gc['z'] = np.maximum(gc['z'], zsep)
                     
-        gc = self.cgrid
-        gi = self.igrid
-                            
-        dtaux, dtauy = self.rotate(gc['dtaux'], gc['dtauy'], udir)
-                                
-        self.cgrid['dtaux'] = dtaux
-        self.cgrid['dtauy'] = dtauy
-                                        
-        self.igrid['dtaux'] = self.interpolate(gc['x'], gc['y'], dtaux,
-                                               gi['x'], gi['y'])
-        self.igrid['dtauy'] = self.interpolate(gc['x'], gc['y'], dtauy,
-                                               gi['x'], gi['y'])
+        # Compute wind shear stresses on computational grid 
+        
+        self.compute_shear(u0)
+                
+        gc['dtaux'], gc['dtauy'] = self.rotate(gc['dtaux'], gc['dtauy'], udir+90)
+        
+        # Add shear and apply reduction factor for shear in sep. bubble
+        self.add_shear()
+        
+        if process_separation:
+            gc['hsep'] = gc['z'] - z_origin
+            self.separation_shear(gc['hsep'])
+        
+        # Rotate both (i&c) grids + results in opposite dir.
+        gi['x'], gi['y'] = self.rotate(gi['x'], gi['y'], -(udir+90.), origin=(self.x0, self.y0))
+        
+        gc['x'], gc['y'] = self.rotate(gc['x'], gc['y'], -(udir+90.), origin=(self.x0, self.y0))
+        
+        gc['taux'], gc['tauy'] = self.rotate(gc['taux'], gc['tauy'], -(udir+90))
+        
+    
+        # Interpolate wind shear results to real grid
+        gi['taux'] = self.interpolate(gc['x'], gc['y'], gc['taux'],
+                                              gi['x'], gi['y'])
+        gi['tauy'] = self.interpolate(gc['x'], gc['y'], gc['tauy'],
+                                              gi['x'], gi['y'])
+                
+        if process_separation:
+            gi['hsep'] = self.interpolate(gc['x'], gc['y'], gc['hsep'], 
+                                          gi['x'], gi['y'] )
+            
+        # Rotate real grid and wind shear results back to orignal orientation
+        gc['x'], gc['y'] = self.rotate(gc['x'], gc['y'], udir+90., origin=(self.x0, self.y0))
+        gi['x'], gi['y'] = self.rotate(gi['x'], gi['y'], +(udir+90.), origin=(self.x0, self.y0))
+                       
+        gi['taux'], gi['tauy'] = self.rotate(gi['taux'], gi['tauy'], +(udir+90))
+
+        
+        # PLOTTING! -------------------------------------------------------
+        # d = 10
+        # plt.figure(figsize=(8,4))
+        # plt.pcolormesh(gi['x'], gi['y'], gi['z'], cmap='copper_r')  
+        # bar = plt.colorbar()
+        # bar.set_label('z [m]')                        
+        #plt.quiver(gi['x'][::d, ::d], gi['y'][::d, ::d],
+        #           gi['taux'][::d, ::d], gi['tauy'][::d, ::d], color='white')
+        # plt.xlabel('x [m]')
+        # plt.ylabel('y [m]')
+        # plt.title('Shear stresses i.grid including separation bubble')
+        # plt.show()
+        # -------------------------------------------------        
         
         return self
+ 
+    
+    # Input functions for wind.py
+    def set_topo(self, z):
+        '''Update topography
 
+        Parameters
+        ----------
+        z : numpy.ndarray
+            2D array with topography of input grid
 
+        '''
+
+        self.igrid['z'] = z
+
+        return self
+    
+    def set_shear(self, taus, taun):
+        '''Update shear
+
+        Parameters
+        ----------
+        tau : numpy.ndarray
+            array with wind shear stresses of input grid
+
+        '''
+        self.igrid['taux'] = taus
+        self.igrid['tauy'] = taun
+        
+        return self
+    
     def get_shear(self):
         '''Returns wind shear perturbation field
         
         Returns
         -------
-        dtaux : numpy.ndarray
+        taux : numpy.ndarray
             Wind shear perturbation in x-direction
-        dtauy : numpy.ndarray
+        tauy : numpy.ndarray
             Wind shear perturbation in y-direction
         
         '''
 
-        dtaux = self.igrid['dtaux']
-        dtauy = self.igrid['dtauy']
+        taux = self.igrid['taux']
+        tauy = self.igrid['tauy']
             
-        return dtaux, dtauy
+        return taux, tauy
         
         
-    def add_shear(self, taux, tauy):
+    def add_shear(self):
         '''Add wind shear perturbations to a given wind shear field
         
         Parameters
@@ -205,41 +290,76 @@ class WindShear:
             Wind shear including perturbations in y-direction
         
         '''
-
+        taux = self.cgrid['taux']
+        tauy = self.cgrid['tauy']
+        
         tau = np.sqrt(taux**2 + tauy**2)
         ix = tau != 0.
 
-        dtaux = self.igrid['dtaux']
-        dtauy = self.igrid['dtauy']
+        dtaux = self.cgrid['dtaux']
+        dtauy = self.cgrid['dtauy']
         
-        taux[ix] = tau[ix] * (taux[ix] / tau[ix] + dtaux[ix])
-        tauy[ix] = tau[ix] * (tauy[ix] / tau[ix] + dtauy[ix])
+        self.cgrid['taux'][ix] = tau[ix] * (taux[ix] / tau[ix] + dtaux[ix])
+        self.cgrid['tauy'][ix] = tau[ix] * (tauy[ix] / tau[ix] + dtauy[ix])
+        
+        return self
 
-        return taux, tauy
-
-
-    def set_topo(self, z):
-        '''Update topography
-
-        Parameters
-        ----------
-        z : numpy.ndarray
-            2D array with topography of input grid
+    
+    def get_separation(self):
+        '''Returns difference in height between z-coordinate of 
+        the separation polynomial and of the bed level 
+        
+        Returns
+        -------
+        hsep : numpy.ndarray
+            Height of seperation bubble
+            
+        '''  
+        hsep = self.igrid['hsep']
+        
+        return hsep
+    
+    
+    # Input functions for __call()
+    def set_computational_grid(self):
+        '''Define computational grid
+        
+        The computational grid is square with dimensions equal to the
+        diagonal of the bounding box of the input grid, plus twice the
+        buffer width. 
 
         '''
-
-        self.igrid['z'] = z
-
-        return self
-        
-
-    def populate_computational_grid(self, alpha):
-        '''Interpolate input topography to computational grid
             
-        Rotates computational grid to current wind direction and
-        interpolates the input topography to the rotated grid. Any
-        grid cells that are not covered by the input grid are filled
-        using a sigmoid function.
+        gi = self.igrid
+        gc = self.cgrid
+                
+        # grid center
+        x0, y0 = np.mean(gi['x']), np.mean(gi['y'])
+                    
+        # grid size
+        self.D = np.sqrt((gi['x'].max() - gi['x'].min())**2 +
+                         (gi['y'].max() - gi['y'].min())**2) + 2 * self.buffer_width
+                        
+        # determine equidistant, square grid
+        xc, yc = self.get_exact_grid(x0 - self.D/2., x0 + self.D/2.,
+                                     y0 - self.D/2., y0 + self.D/2.,
+                                     gc['dx'], gc['dy'])
+        
+        self.x0 = x0
+        self.y0 = y0
+        gc['xi'] = xc
+        gc['yi'] = yc
+        
+        return self
+    
+        
+    def populate_computational_grid(self, alpha):                               
+        '''Interpolate input topography to computational grid
+                
+        Adds and fills buffer zone around the initial grid and  
+        rotates the computational grid to current wind direction.
+        The computational grid is filled by interpolating the input 
+        topography and initial wind induced shear stresses to it.
             
         Parameters
         ----------
@@ -247,51 +367,223 @@ class WindShear:
             Rotation angle in degrees
 
         '''
+        gi = self.igrid
+        gc = self.cgrid
+        x = gi['x']
+        shp = x.shape
+        try:
+            ny = shp[2]
+        except:
+            ny = 0
+
+        # Add buffer zone around grid                                           # buffer is based on version bart, sigmoid function is no longer required
+        if ny <= 0:
+            dxi = gi['x'][0,0]
+            dyi = gi['y'][0,0]
+        else:
+            dxi = gi['x'][1,1] - gi['x'][0,0]
+            dyi = gi['y'][1,1] - gi['y'][0,0]
+
+        buf = 200                                                                # amount of cells
+
+
+        xi, yi = np.meshgrid(np.linspace(gi['x'][0,0]-buf*dxi, gi['x'][-1,-1]+buf*dxi, gi['x'].shape[1]+2*buf),
+                            np.linspace(gi['y'][0,0]-buf*dyi, gi['y'][-1,-1]+buf*dyi, gi['y'].shape[0]+2*buf))
+        
+        
+        zi = np.zeros((xi.shape))
+        zi[buf:-buf, buf:-buf] = gi['z']
+        
+        # Filling buffer zone edges
+        zi[buf:-buf,:buf] = np.repeat(zi[buf:-buf,buf+1][:,np.newaxis], buf, axis = 1)
+        zi[buf:-buf,-buf:] = np.repeat(zi[buf:-buf,-buf-1][:,np.newaxis], buf, axis = 1)
+
+        zi[:buf,buf:-buf] = np.repeat(zi[buf+1,buf:-buf][np.newaxis], buf, axis = 0)
+        zi[-buf:,buf:-buf] = np.repeat(zi[-buf-1,buf:-buf][np.newaxis], buf, axis = 0)
+        
+        # Filling buffer zone corners
+        zi[:buf,:buf] = zi[buf+1,buf+1]
+        zi[-buf:,:buf] = zi[-buf-1,buf+1]
+        zi[:buf,-buf:] = zi[buf+1,-buf-1]
+        zi[-buf:,-buf:] = zi[-buf-1,-buf-1]
+        
+        # Rotate computational grid to the current wind direction
+        xc, yc = self.rotate(gc['xi'], gc['yi'], alpha, origin=(self.x0, self.y0))
+        
+        # Interpolate input topography to computational grid
+        zc = self.interpolate(xi, yi, zi, xc, yc)
+        
+        # Interpolate input wind - shear
+        tauxc = self.interpolate(gi['x'], gi['y'], gi['taux'], xc, yc)
+        tauyc = self.interpolate(gi['x'], gi['y'], gi['tauy'], xc, yc)
+        
+        gc['x'] = xc
+        gc['y'] = yc
+        gc['z'] = zc
+        
+        gc['taux'] = tauxc
+        gc['tauy'] = tauyc
+
+        return self
+    
+    def separation(self, c, mu_b):
+        
+        # Initialize grid and bed dimensions
         
         gc = self.cgrid
-        gi = self.igrid
-        
-        xc, yc = self.rotate(gc['xi'], gc['yi'], alpha, origin=(self.x0, self.y0))
-        zc = self.interpolate(gi['x'], gi['y'], gi['z'], xc, yc)
-        self.cgrid['z'] = zc
-        self.cgrid['x'] = xc
-        self.cgrid['y'] = yc
-        
-        bx = self.get_borders(gi['x'])
-        by = self.get_borders(gi['y'])
-        bz = self.get_borders(gi['z'])
-
-        ix = np.isnan(zc)
-        if np.any(ix):
-            
-            d = np.zeros((np.sum(ix),))
-            z = np.zeros((np.sum(ix),))
-            
-            for i, (xn, yn) in enumerate(zip(xc[ix], yc[ix])):
+         
+        x = gc['x']
+        y = gc['y']
+        z = gc['z']
                 
-                distances = np.hypot(bx - xn, by - yn)
-                idx = np.argmin(distances)
-                d[i] = np.min(distances)
-                z[i] = bz[idx]
+        nx = len(gc['z'][1])
+        ny = len(gc['z'][0])
+        dx = gc['dx']
+        dy = gc['dy']
+    
+        # Initialize arrays
+
+        dzx = np.zeros(gc['z'].shape)  
+
+        dzdx0 = np.zeros(gc['z'].shape)
+        dzdx1 = np.zeros(gc['z'].shape)
                 
-                for j in range(2):
-                    i1 = idx+j-1
-                    i2 = idx+j
-                    
-                    k = self.interpolate_projected_point((bx[i1], by[i1], bz[i1]),
-                                                         (bx[i2], by[i2], bz[i2]),
-                                                         (xn, yn))
-                    
-                    if k:
-                        d[i] = k[0]
-                        z[i] = k[1]
-                        break
-                    
-            self.cgrid['z'][ix] = z * self.get_sigmoid(d)
+        stall = np.zeros(gc['z'].shape)
+        bubble = np.zeros(gc['z'].shape)
+        
+        k = np.array(range(0, nx))
+        
+        zsep =  z.copy()                                                        # total separation bubble      
+        
+        zsep0 = np.zeros(z.shape)                                               # zero-order separation bubble surface      
+        zsep1 = np.zeros(z.shape)                                               # first-oder separation bubble surface
+                
+        zfft = np.zeros((ny,nx), dtype=np.complex)
+
+        # Compute bed slope angle in x-dir
+        dzx[:,:-1] = np.rad2deg(np.arctan((z[:,1:]-z[:,:-1])/dx))
+        dzx[:,0] = dzx[:,1]
+        dzx[:,-1] = dzx[:,-2]
+              
+        # Determine location of separation bubbles
+        '''Separation bubble exist if bed slope angle (lee side) 
+        is larger than max angle that wind stream lines can 
+        follow behind an obstacle (mu_b = ..)'''
+
+        stall += np.logical_and(abs(dzx) > mu_b, dzx < 0.) 
+        
+        
+        stall[:,1:-1] += np.logical_and(stall[:,1:-1]==0, stall[:,:-2]>0., stall[:,2:]>0.)
+        
+        # Define separation bubble
+        bubble[:,:-1] = np.logical_and(stall[:,:-1] == 0., stall[:,1:] > 0.) 
+        
+        # Shift bubble back to x0: start of separation bubble 
+        p = 2
+        bubble[:,:-p] = bubble[:,p:]
+        bubble[:,:p] = 0
+        
+        bubble = bubble.astype(int)
+        
+        # Count separation bubbles
+        n = np.sum(bubble)
+        #print ('number of sep bubbles', n)
+        bubble_n = np.asarray(np.where(bubble == True)).T
 
         
-    def compute_shear(self, u0, nfilter=(1.,2.)):
-        '''Compute wind shear perturbation for given free-flow wind speed on computational grid
+        # Walk through all separation bubbles and determine polynoms
+        
+        for k in range(0, n):
+            
+            i = bubble_n[k,1]
+            j = bubble_n[k,0]       
+
+            ix_neg = (dzx[j, i+5:] >= 0)                                         # i + 5??
+                                    
+            if np.sum(ix_neg) == 0:
+                zbrink = z[j,i]                                                 # z level of brink at z(x0) 
+            else:
+                zbrink = z[j,i] - z[j,i+5+np.where(ix_neg)[0][0]]
+
+            # Zero order polynom
+            dzdx0 = (z[j,i-1] - z[j,i-2])/dx
+            
+            #if dzdx0 > 0.1:
+            #    dzdx0 = 0.1
+            
+            a = dzdx0 / c
+        
+            ls = np.minimum(np.maximum((3.*zbrink/(2.*c) * (1. + a/4. + a**2/8.)), 0.1), 200.)
+            # print ('ls:', ls)
+            
+            a2 = -3 * zbrink/ls**2 - 2 * dzdx0 / ls
+            # print('a2:', a2)
+            a3 =  2 * zbrink/ls**3 +     dzdx0 / ls**2
+            # print('a3:', a3)
+          
+            i_max = min(i+int(ls/dx),int(nx-1))
+            # print('imax:', i_max)
+
+            xs = x[j,i:i_max] - x[j,i]
+            
+            zsep0[j,i:i_max] = (a3*xs**3 + a2*xs**2 + dzdx0*xs + z[j,i])
+
+            # Zero order filter
+            Cut = 1.5
+            dk = 2.0 * np.pi / (np.max(x))
+            zfft[j,:] = np.fft.fft(zsep0[j,:])
+            zfft[j,:] *= np.exp(-(dk*k*dx)**2/(2.*Cut**2))
+            zsep0[j,:] = np.real(np.fft.ifft(zfft[j,:]))
+            
+            # First order polynom
+            dzdx1 = (zsep0[j,i-1] - zsep0[j,i-2])/dx
+                
+            a = dzdx1 / c
+        
+            ls = np.minimum(np.maximum((3.*z[j,i]/(2.*c) * (1. + a/4. + a**2/8.)), 0.1), 200.)
+            # print ('ls:', ls)
+            
+            a2 = -3 * z[j,i]/ls**2 - 2 * dzdx1 / ls
+            # print('a2:', a2)
+            a3 =  2 * z[j,i]/ls**3 +     dzdx1 / ls**2
+            # print('a3:', a3)
+          
+            i_max1 = min(i+int(ls/dx),int(nx-1))
+            # print('imax:', i_max)
+
+            xs1 = x[j,i:i_max1] - x[j,i]
+            
+            zsep1[j,i:i_max1] = (a3*xs1**3 + a2*xs1**2 + dzdx1*xs1 + z[j,i])
+                                                          
+            #plt.figure()
+            #plt.plot(x[j,i:i_max], zsep0[j,i:i_max], label='zsep0')
+            #plt.plot(x[j,i:i_max], zsep1[j,i:i_max], label='zsep1')
+            #plt.plot(x[j,:], z[j,:], 'grey', label='zb')
+            #plt.xlabel('x [m]')
+            #plt.ylabel('z [m]')
+            #plt.title('Separation bubble')
+            #plt.legend()
+            #plt.show()     
+            
+            zsep[j,i:i_max] = np.maximum(zsep0[j,i:i_max], z[j,i:i_max])
+                          
+        
+        # Smooth surface of separation bubbles over y direction
+        zsep = ndimage.gaussian_filter1d(zsep, sigma=0.2, axis=0)
+        
+        #plt.pcolormesh(x, y, np.maximum(zsep,z))#, vmin=0, vmax=0.00001)
+        #bar = plt.colorbar()
+        #bar.set_label('z [m]')
+        #plt.title('Zsep gaussian filter in y')
+        #plt.show()
+        
+            
+        return zsep
+                
+    
+    def compute_shear(self, u0, nfilter=(1.5,6.)):                               
+        '''Compute wind shear perturbation for given free-flow wind
+        speed on computational grid
         
         Parameters
         ----------
@@ -302,83 +594,76 @@ class WindShear:
             :func:`filter_highfrequencies`
 
         '''
-            
-        g = self.cgrid
-                
+        gc = self.cgrid
+        
         if u0 == 0.:
-            self.cgrid['dtaux'] = np.zeros(g['z'].shape)
-            self.cgrid['dtauy'] = np.zeros(g['z'].shape)
+            self.cgrid['dtaux'] = np.zeros(gc['z'].shape)
+            self.cgrid['dtauy'] = np.zeros(gc['z'].shape)
             return
                                 
-        ny, nx = g['z'].shape
-        kx, ky = np.meshgrid(2. * np.pi * np.fft.fftfreq(nx+1, g['dx'])[1:],
-                             2. * np.pi * np.fft.fftfreq(ny+1, g['dy'])[1:])
-        hs = np.fft.fft2(g['z'])
-        hs = self.filter_highfrequenies(kx, ky, hs, nfilter)
-
-        k = np.sqrt(kx**2 + ky**2)
-        sigma = np.sqrt(1j * self.L / 4. * kx * self.z0 / self.l)
+        ny, nx = gc['z'].shape
+        kx, ky = np.meshgrid(2. * np.pi * np.fft.fftfreq(nx+1, gc['dx'])[1:],
+                             2. * np.pi * np.fft.fftfreq(ny+1, gc['dy'])[1:])
         
-        dtaux_t = hs * kx**2 / k * 2 / u0**2 * \
-                  (-1 + (2 * np.log(self.l/self.z0) + k**2/kx**2) * sigma * \
-                   scipy.special.kv(1, 2 * sigma) / scipy.special.kv(0, 2 * sigma))
-        dtauy_t = hs * kx * ky / k * 2 / u0**2 * \
-                  2 * np.sqrt(2) * sigma * scipy.special.kv(1, 2 * np.sqrt(2) * sigma)
+        hs = np.fft.fft2(gc['z'])
+        hs = self.filter_highfrequenies(kx, ky, hs, nfilter, p=0.001)
         
-        self.cgrid['dtaux'] = np.real(np.fft.ifft2(dtaux_t))
-        self.cgrid['dtauy'] = np.real(np.fft.ifft2(dtauy_t))
+        z0 = self.z0            # roughness length which takes into account saltation
+        L  = self.L /4.         # typical length scale of the hill (=1/kx) ??
         
+        # Inner layer height
+        l  = self.l         
         
-    def set_computational_grid(self):
-        '''Define computational grid
+        for i in range(5):
+            l = 2 * 0.41**2 * L /np.log(l/z0)
         
-        The computational grid is square with dimensions equal to the
-        diagonal of the bounding box of the input grid, plus twice the
-        buffer width.
-
-        '''
+        # Middle layer height
+        hm = 1.0
+        for i in range(5):
+            hm = L / np.sqrt(np.log(hm/z0))
             
-        g = self.igrid
-                
-        # grid center
-        x0, y0 = np.mean(g['x']), np.mean(g['y'])
-                    
-        # grid size
-        self.D = np.sqrt((g['x'].max() - g['x'].min())**2 +
-                         (g['y'].max() - g['y'].min())**2) + 2 * self.buffer_width
-                        
-        # determine equidistant, square grid
-        xc, yc = self.get_exact_grid(x0 - self.D/2., x0 + self.D/2.,
-                                     y0 - self.D/2., y0 + self.D/2.,
-                                     self.cgrid['dx'], self.cgrid['dy'])
+        # Non-dimensional velocity    
+        ul = np.log(l/z0) / np.log(hm/z0)
         
-        self.x0 = x0
-        self.y0 = y0
-        self.cgrid['xi'] = xc
-        self.cgrid['yi'] = yc
+        # Arrays in Fourier 
+        k = np.sqrt(kx**2 + ky**2)
+        sigma = np.sqrt(1j * L * kx * z0 /l)
+        
+        # Shear stress perturbation
+        dtaux_t = hs * kx**2 / k * 2 / ul**2 * \
+                  (-1. + (2. * np.log(l/z0) + k**2/kx**2) * sigma * \
+                   scipy.special.kv(1., 2. * sigma) / scipy.special.kv(0., 2. * sigma))
+        
+        dtauy_t = hs * kx * ky / k * 2 / ul**2 * \
+                  2. * np.sqrt(2.) * sigma * scipy.special.kv(1., 2. * np.sqrt(2.) * sigma)
+        
+        gc['dtaux'] = np.real(np.fft.ifft2(dtaux_t))
+        gc['dtauy'] = np.real(np.fft.ifft2(dtauy_t))
         
         
-    def get_sigmoid(self, x):
-        '''Get sigmoid function value
-        
-        Get bed level multiplication factor in buffer area based on
-        buffer specificationa and distance to input grid boundary.
+    def separation_shear(self, hsep):
+        '''Reduces the computed wind shear perturbation below the 
+        separation surface to mimic the turbulence effects in the 
+        separation bubble
         
         Parameters
         ----------
-        x : float or numpy.ndarray
-            Distance(s) to input grid boundary
-        
-        Returns
-        -------
-        float or numpy.ndarray
-            Bed level multiplication factor (z = factor * z_boundary)
+        hsep : numpy.ndarray
+            Height of seperation bubble (in x direction)
 
         '''
-            
-        return 1. / (1. + np.exp(-(self.buffer_width-x) / self.buffer_relaxation))
         
-
+        tau_sep = 0.5 
+        slope = 0.2                                                             # according to Durán 2010 (Sauermann 2001: c = 0.25 for 14 degrees)
+        delta = 1./(slope*tau_sep)
+        
+        zsepdelta = np.minimum(np.maximum(1. - delta * hsep, 0.), 1.)
+        
+        self.cgrid['taux'] *= zsepdelta
+        self.cgrid['tauy'] *= zsepdelta
+        
+        
+    
     def filter_highfrequenies(self, kx, ky, hs, nfilter=(1, 2), p=.01):
         '''Filter high frequencies from a 2D spectrum
 
@@ -420,9 +705,9 @@ class WindShear:
             f2 = 1. / (1. + np.exp(-(py + n1 - n2) / s2))
             hs *= f1 * f2
 
-        return hs
+        return hs 
+
     
-                                                                                                                                
     def plot(self, ax=None, cmap='Reds', stride=10, computational_grid=False, **kwargs):
         '''Plot wind shear perturbation
             
@@ -450,7 +735,7 @@ class WindShear:
         d = stride
         
         if ax is None:
-            fig, ax = subplots()
+            fig, ax = plt.subplots()
         
         if computational_grid:
             g = self.cgrid
@@ -509,61 +794,25 @@ class WindShear:
                          
         return (np.asarray(xy[:,0].reshape(x.shape) + origin[0]),
                 np.asarray(xy[:,1].reshape(y.shape) + origin[1]))
-    
-    
-    def interpolate(self, x, y, z, xi, yi):
-        '''Interpolate a grid onto another grid'''
         
-        xy = np.concatenate((x.reshape((-1,1)),
-                             y.reshape((-1,1))), axis=1)
-        xyi = np.concatenate((xi.reshape((-1,1)),
-                              yi.reshape((-1,1))), axis=1)
+    def interpolate(self, x, y, z, xi, yi):
+        '''Interpolate one grid to an other'''
+        
+        xy = np.concatenate((y.reshape((-1,1)),
+                             x.reshape((-1,1))), axis=1)
+
+        xyi = np.concatenate((yi.reshape((-1,1)),
+                              xi.reshape((-1,1))), axis=1)
 
         if self.istransect:
-            z = np.interp(xi.flatten(), x.flatten(), z.flatten()).reshape(xi.shape)
+            zi = np.interp(xi.flatten(), x.flatten(), z.flatten()).reshape(xi.shape)
         else:
-            z = scipy.interpolate.griddata(xy, z.reshape((-1,1)), xyi, method='cubic').reshape(xi.shape)
-                             
-        return z
-
-
-    @staticmethod
-    def interpolate_projected_point(a, b, p):
-        '''Project point to line segment and return distance and interpolated value
-        
-        Parameters
-        ----------
-        a : iterable
-            Start vector for line segment
-        b : iterable
-            End vector for line segment
-        p : iterable
-            Point vector to be projected
+            # Trunk interpolation
+            # zi = scipy.interpolate.griddata(xy, z.reshape((-1,1)), xyi, method='cubic').reshape(xi.shape)
             
-        Returns
-        -------
-        d : numpy.ndarray
-            Distance from point p to projected point q
-        z : float
-            Interpolated value at projected point q
+            # version Bart
+            inter = scipy.interpolate.RegularGridInterpolator((y[:,0], x[0,:]), z, bounds_error = False, fill_value = 0.)
+            zi = inter(xyi).reshape(xi.shape)
             
-        '''
-        
-        a = np.asarray(a)
-        b = np.asarray(b)
-        p = np.asarray(p)
-        
-        ab = b[:-1]-a[:-1]                     # line segment
-        ab2 = np.dot(ab, ab)                   # length of line segment squared
-        
-        if ab2 > 0.:
-            ap = p[:-1]-a[:-1]
-            t = np.dot(ap, ab) / ab2           # location of projected point along line segment as fraction of its length
-            if t >= 0. and t <= 1.:
-                q = a[:-1] + t * ab            # projected point
-                pq = p-q                       # vector from original to projected point
-                d = np.sqrt(np.dot(pq, pq))    # distance from original to projected point
-                z = a[-1] * (1.-t) + b[-1] * t # linearly interpolated height of projected point
-                return d, z
-            
-        return
+        return zi
+    

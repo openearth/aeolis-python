@@ -42,12 +42,12 @@ def compute(s, p):
     '''Compute wind velocity threshold based on bed surface properties
 
     Computes wind velocity threshold based on grain size fractions,
-    bed slope, soil moisture content, air humidity and the presence of
-    roughness elements. All bed surface properties increase the
-    current wind velocity threshold, except for the grain size
-    fractions. Therefore, the computation is initialized by the grain
-    size fractions and subsequently altered by the other bed surface
-    properties.
+    bed slope, soil moisture content, air humidity, the presence of
+    roughness elements and a non-erodible layer. All bed surface 
+    properties increase the current wind velocity threshold, except
+    for the grain size fractions. Therefore, the computation is 
+    initialized by the grain size fractions and subsequently altered 
+    by the other bed surface properties.
 
     Parameters
     ----------
@@ -68,6 +68,7 @@ def compute(s, p):
     compute_moisture
     compute_humidity
     compute_roughness
+    non_erodible
 
     '''
 
@@ -81,8 +82,10 @@ def compute(s, p):
             s = compute_moisture(s, p)
         else:
             # no aeolian transport when the bed level is lower than the water level
-            ix = s['zb'] - s['zs'] < -p['eps']
+            ix = s['zb'] - s['zs'] < - p['eps']
             s['uth'][ix] = np.inf
+        if p['th_drylayer']:
+            s = dry_layer(s, p)
         if p['th_humidity']:
             s = compute_humidity(s, p)
         if p['th_salt']:
@@ -93,11 +96,11 @@ def compute(s, p):
         # apply complex mask
         s['uth'] = apply_mask(s['uth'], s['threshold_mask'])
         s['uthf'] = s['uth'].copy()
+        
+    #non-erodible layer (NEW)
+    if p['th_nelayer']:
+        s = non_erodible(s,p)
 
-    # Non-erodible layer NEW!
-    if p['ne_file'] is not None:
-        s = non_erodible(s, p)
-    
     return s
 
 
@@ -119,7 +122,11 @@ def compute_grainsize(s, p):
     '''
 
     s['uth'][:,:,:] = 1.
-    s['uth'][:,:,:] *= p['A'] * np.sqrt((p['rhop'] - p['rhoa']) / p['rhoa'] * p['g'] * p['grain_size'])
+    s['uth'][:,:,:] = p['Aa'] * np.sqrt((p['rhog'] - p['rhoa']) / p['rhoa'] * p['g'] * p['grain_size']) 
+    
+    # Shear velocity threshold based on grainsize only (aerodynamic entrainment)
+    s['uth0'] = s['uth'].copy()
+    
     return s
 
 
@@ -164,7 +171,7 @@ def compute_moisture(s, p):
     
     # convert from volumetric content (percentage of volume) to
     # geotechnical mass content (percentage of dry mass)
-    mg = (s['moist'][:,:,:1] * p['rhow'] / (p['rhop'] * (1. - p['porosity']))).repeat(nf, axis=2)
+    mg = (s['moist'][:,:,:1] * p['rhow'] / (p['rhog'] * (1. - p['porosity']))).repeat(nf, axis=2)
     ix = mg > 0.005
     
     if p['method_moist'].lower() == 'belly_johnson':
@@ -180,6 +187,23 @@ def compute_moisture(s, p):
     s['uth'][ix] = np.inf
     
     return s
+
+def dry_layer(s, p):
+
+    Tdry_top = 12. * 3600.
+    zdry_max = 0.05
+
+    s['dzdry'] = (zdry_max - s['zdry']) * (p['dt'] * p['accfac'])  / Tdry_top + s['dzb'] 
+    s['zdry'] += s['dzdry']
+    s['zdry'] = np.minimum(np.maximum(s['zdry'], 0), zdry_max)
+
+    ix = (s['zdry'] == 0.)
+    
+    s['uth'][ix] = np.inf
+
+
+    return s 
+
 
 
 def compute_humidity(s, p):
@@ -323,7 +347,7 @@ def compute_roughness(s, p):
     mass = s['mass'][:,:,0,:].reshape((-1,nf))
     gd = np.zeros((nx*ny,))
     for i in range(nf):
-        ix = (s['tau'] <= s['uth'][:,:,i]).flatten()
+        ix = (s['ustar'] <= s['uth'][:,:,i]).flatten()
         gd[ix] += mass[ix,i]
     gd /= mass.sum(axis=-1)
 
@@ -335,41 +359,46 @@ def compute_roughness(s, p):
     
     return s
 
-def non_erodible(s, p): #NEW!
+def non_erodible(s,p): 
     '''Modify wind velocity threshold based on the presence of a 
-    non-erodible layer
-    
+    non-erodible layer.
+
     Parameters
     ----------
     s : dict
         Spatial grids
     p : dict
         Model configuration parameters
+
     Returns
     -------
     dict
         Spatial grids
+
     '''
-        #nf     = p['nfractions']
-    #ustar  = np.repeat(s['ustar'][:,:,np.newaxis], nf, axis = 2)
+    
+    nf = p['nfractions']
     
     s['zne'][:,:] = p['ne_file']
     
-    # Hard method
-
-    ix = s['zb'] <= s['zne']
-    s['uth'][ix,:] = np.inf
-    s['uthf'][ix,:] = np.inf
+    #Hard method
     
-    # Smooth method
-#    
-#    alfa = .05
-#    
-#    nf = p['nfractions']
-#    thuthlyr = -0.1
-#    ix = s['zb'] <= s['zne']+thuthlyr
-#    
-#    for i in range(nf):
-#        s['uth'][ix,i] += np.maximum((1-(s['zb'][ix]-s['zne'][ix])/thuthlyr)*(s['ustar'][ix]*2.0-s['uth'][ix,i]),s['uth'][ix,i])
-#    
-    return s
+#    ix = s['zb'] <= s['zne']
+    
+#    s['uth'][ix] = np.inf
+    
+    
+    #Smooth method
+
+    thuthlyr = -0.01
+    
+    ix = s['zb'] <= s['zne'] + thuthlyr
+
+    ustar = s['ustar']
+    uth = s['uth']
+    
+    for i in range(nf):
+        s['uth'][ix,i] += np.maximum((1-(s['zb'][ix]-s['zne'][ix])/thuthlyr)*(ustar[ix]*2.0-uth[ix,i]), uth[ix,i])
+    
+    return s    
+

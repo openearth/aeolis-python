@@ -32,6 +32,7 @@ import numpy as np
 
 # package modules
 from aeolis.utils import *
+import matplotlib.pyplot as plt
 
 
 # initialize logger
@@ -73,16 +74,16 @@ def initialize(s, p):
     if ny == 0:
         s['y'][:,:] = 0.
         s['dn'][:,:] = 1.
-        s['alfa'][:,:] = 0.
+       # s['alfa'][:,:] = 0.
     else:
         s['y'][:,:] = p['ygrid_file']
         s['dn'][1:,:] = np.diff(s['y'], axis=0)
         s['dn'][0,:] = s['dn'][1,:]
 
-        s['alfa'][1:-1,:] = np.arctan2(s['x'][2:,:] - s['x'][:-2,:],
-                                       s['y'][2:,:] - s['y'][:-2,:])
-        s['alfa'][0,:] = s['alfa'][1,:]
-        s['alfa'][-1,:] = s['alfa'][-2,:]
+        #s['alfa'][1:-1,:] = np.arctan2(s['x'][2:,:] - s['x'][:-2,:],
+        #                               s['y'][2:,:] - s['y'][:-2,:])
+        #s['alfa'][0,:] = s['alfa'][1,:]
+        #s['alfa'][-1,:] = s['alfa'][-2,:]
 
     # compute cell areas
     s['dsdn'][:,:] = s['ds'] * s['dn']
@@ -90,6 +91,11 @@ def initialize(s, p):
 
     # initialize bathymetry
     s['zb'][:,:] = p['bed_file']
+    s['zb0'][:,:] = p['bed_file']
+
+    #initialize thickness of erodable or dry top layer
+    s['zdry'][:,:] = 0.05
+    
 
     # initialize bed layers
     s['thlyr'][:,:,:] = p['layer_thickness']
@@ -100,7 +106,7 @@ def initialize(s, p):
         gs = gs / np.sum(gs)
         for i in range(nl):
             for j in range(nf):
-                s['mass'][:,:,i,j] = p['rhop'] * (1. - p['porosity']) \
+                s['mass'][:,:,i,j] = p['rhog'] * (1. - p['porosity']) \
                                      * s['thlyr'][:,:,i] * gs[j]
     else:
         s['mass'][:,:,:,:] = p['bedcomp_file'].reshape(s['mass'].shape)                
@@ -119,6 +125,76 @@ def initialize(s, p):
         
     return s
 
+
+def mixtoplayer(s, p):
+    '''Mix grain size distribution in top layer of the bed.
+
+    Simulates mixing of the top layers of the bed by wave action. The
+    wave action is represented by a local wave height maximized by a
+    maximum wave hieght over depth ratio ``gamma``. The mixing depth
+    is a fraction of the local wave height indicated by
+    ``facDOD``. The mixing depth is used to compute the number of bed
+    layers that should be included in the mixing. The grain size
+    distribution in these layers is then replaced by the average grain
+    size distribution over these layers.
+
+    Parameters
+    ----------
+    s : dict
+        Spatial grids
+    p : dict
+        Model configuration parameters
+
+    Returns
+    -------
+    dict
+        Spatial grids
+
+    '''
+
+    if p['process_mixtoplayer']:
+        
+        # get model dimensions
+        nx = p['nx']+1
+        ny = p['ny']+1
+        nl = p['nlayers']
+        nf = p['nfractions']
+
+        # compute depth of disturbance for each cell and repeat for each layer
+        DOD = p['facDOD'] * s['Hs']
+
+        # compute ratio total layer thickness and depth of disturbance 
+        ix = DOD > 0.
+        f = np.ones(DOD.shape)
+        f[ix] = np.minimum(1., s['thlyr'].sum(axis=2)[ix] / DOD[ix])
+
+        # correct shapes
+        DOD = DOD[:,:,np.newaxis].repeat(nl, axis=2)
+        f = f[:,:,np.newaxis].repeat(nl, axis=2)
+
+        # determine what layers are above the depth of disturbance
+        ix = (s['thlyr'].cumsum(axis=2) <= DOD) & (DOD > 0.)
+        ix = ix[:,:,:,np.newaxis].repeat(nf, axis=3)
+        f = f[:,:,:,np.newaxis].repeat(nf, axis=3)
+        
+        # average mass over layers
+        if np.any(ix):
+            ix[:,:,0,:] = True # at least mix the top layer
+            mass = s['mass'].copy()
+            mass[~ix] = np.nan
+            
+            gd = normalize(p['grain_dist']) * p['rhog'] * (1. - p['porosity'])
+            gd = gd.reshape((1,1,1,-1)).repeat(ny, axis=0) \
+                                       .repeat(nx, axis=1) \
+                                       .repeat(nl, axis=2)
+
+            mass1 = np.nanmean(mass, axis=2, keepdims=True).repeat(nl, axis=2)
+            mass2 = gd * s['thlyr'][:,:,:,np.newaxis].repeat(nf, axis=-1)
+            mass = mass1 * f + mass2 * (1. - f)
+        
+            s['mass'][ix] = mass[ix]
+            
+    return s
 
 def update(s, p):
     '''Update bathymetry and bed composition
@@ -184,13 +260,7 @@ def update(s, p):
     m[ix_dep,-1,:] -= dm[ix_dep,:] * d[ix_dep,-1,:]
     m[ix_ero,-1,:] -= dm[ix_ero,:] * normalize(p['grain_dist'])[np.newaxis,:].repeat(np.sum(ix_ero), axis=0)
 
-#    # change mass at non-erodible grid cells (TP: does not yet work)
-#    if p['ne_file'] is not None:
-#        ix_ne = (s['zb'] <= s['zne']).flatten()
-#        gs = normalize(-pickup[ix_ne,:], axis=1)
-#        m[ix_ne,:,:] = p['rhop'] * (1. - p['porosity']) \
-#                        * s['thlyr'].reshape(-1,nl)[ix_ne,:,np.newaxis] * gs[:,np.newaxis,:]
-                        
+
     # remove tiny negatives
     m = prevent_tiny_negatives(m, p['max_error'])
 
@@ -207,10 +277,27 @@ def update(s, p):
 
     # update bathy
     if p['process_bedupdate']:
-        dz = dm[:,0].reshape((ny+1,nx+1)) / (p['rhop'] * (1. - p['porosity']))
+        dz = dm[:,0].reshape((ny+1,nx+1)) / (p['rhog'] * (1. - p['porosity']))
+        
+        #s['dzb'] = dz
+        
+        # redistribute sediment from inactive zone to marine interaction zone
+        
         s['zb'] += dz
         s['zs'] += dz
 
+        Tswash = 0.1 #p['Tswash'] / p['dt']
+        ix = s['zs'] > (s['zb'] + 0.01)
+        s['zb'][ix] += (s['zb0'][ix] - s['zb'][ix]) * Tswash
+        
+    # plt.pcolormesh(s['x'], s['y'], s['zb'], cmap='copper_r')
+    # bar = plt.colorbar()
+    # bar.set_label('zb [m]')
+    # plt.xlabel('x [m]')
+    # plt.ylabel('y [m]')
+    # plt.title('Bed elevation')
+    # plt.show()
+    
     return s
 
 
@@ -343,279 +430,15 @@ def prevent_negative_mass(m, dm, pickup):
     return m, dm, pickup
 
 
-def mixtoplayer(s, p):
-    '''Mix grain size distribution in top layer of the bed
+def average_change(l, s, p):
 
-    Simulates mixing of the top layers of the bed by wave action. The 
-    wave action is represented by a local wave height maximized by a
-    maximum wave hieght over depth ratio ``gamma``. The mixing depth
-    is a fraction of the local wave height indicated by
-    ``facDOD``. The mixing depth is used to compute the number of bed
-    layers that should be included in the mixing. The grain size
-    distribution in these layers is then replaced by the average grain
-    size distribution over these layers.
+    #Compute bed level change with previous time step [m/timestep]
+    s['dzb'] = s['zb'] - l['zb']
 
-    Parameters
-    ----------
-    s : dict
-        Spatial grids
-    p : dict
-        Model configuration parameters
-
-    Returns
-    -------
-    dict
-        Spatial grids
-
-    '''
-
-    if p['process_mixtoplayer']:
-        
-        # get model dimensions
-        nx = p['nx']+1
-        ny = p['ny']+1
-        nl = p['nlayers']
-        nf = p['nfractions']
-
-        # compute depth of disturbance for each cell and repeat for each layer
-        DOD = p['facDOD'] * s['Hs']
-
-        # compute ratio total layer thickness and depth of disturbance 
-        ix = DOD > 0.
-        f = np.ones(DOD.shape)
-        f[ix] = np.minimum(1., s['thlyr'].sum(axis=2)[ix] / DOD[ix])
-
-        # correct shapes
-        DOD = DOD[:,:,np.newaxis].repeat(nl, axis=2)
-        f = f[:,:,np.newaxis].repeat(nl, axis=2)
-
-        # determine what layers are above the depth of disturbance
-        ix = (s['thlyr'].cumsum(axis=2) <= DOD) & (DOD > 0.)
-        ix = ix[:,:,:,np.newaxis].repeat(nf, axis=3)
-        f = f[:,:,:,np.newaxis].repeat(nf, axis=3)
-        
-        # average mass over layers
-        if np.any(ix):
-            ix[:,:,0,:] = True # at least mix the top layer
-            mass = s['mass'].copy()
-            mass[~ix] = np.nan
-            
-            gd = normalize(p['grain_dist']) * p['rhop'] * (1. - p['porosity'])
-            gd = gd.reshape((1,1,1,-1)).repeat(ny, axis=0) \
-                                       .repeat(nx, axis=1) \
-                                       .repeat(nl, axis=2)
-
-            mass1 = np.nanmean(mass, axis=2, keepdims=True).repeat(nl, axis=2)
-            mass2 = gd * s['thlyr'][:,:,:,np.newaxis].repeat(nf, axis=-1)
-            mass = mass1 * f + mass2 * (1. - f)
-        
-            s['mass'][ix] = mass[ix]
-            
+    # Collect time steps
+    s['dzbyear'] = s['dzb'] * (3600. * 24. * 365.25) / (p['dt'] * p['accfac'])
+    n = (p['dt'] * p['accfac']) / p['avg_time']
+    s['dzbavg'] = n*s['dzbyear']+(1-n)*l['dzbavg']
+    # Calculate average bed level change as input for vegetation growth [m/year]
+    s['dzbveg'] = s['dzbavg'].copy()
     return s
-
-
-def avalanche(s, p):
-    '''Avalanche if bed slopes exceed critical slopes
-
-    Simulates the process of avalanching that is triggered by the exceedence
-    of a critical static slope ``Mcr_stat`` by the bed slope. The iteration
-    stops if the bed slope does not exceed the dynamic critical slope
-    ``Mcr_dyn``.
-
-    Parameters
-    ----------
-    s : dict
-        Spatial grids
-    p : dict
-        Model configuration parameters
-
-    Returns
-    -------
-    dict
-        Spatial grids
-
-    '''
-    
-    if p['process_avalanche']:
-    
-        nx = p['nx']+1
-        ny = p['ny']+1
-        
-        #parameters
-        
-        tan_stat = np.tan(np.deg2rad(p['Mcr_stat']))
-        tan_dyn = np.tan(np.deg2rad(p['Mcr_dyn']))
-        
-        E = 0.2
-        
-        grad_h_down = np.zeros((ny,nx,4))
-        flux_down = np.zeros((ny,nx,4))
-        slope_diff = np.zeros((ny,nx))
-        grad_h = np.zeros((ny,nx))
-    
-        max_iter_ava = 1000
-        
-        s, max_grad_h, grad_h, grad_h_down = calc_grad(s, p)
-        
-        initiate_avalanche = (max_grad_h > tan_stat) #* (np.max(s['zb']) > 2*tan_stat*s['dsu'][1,1]) # TEMP
-        
-        if initiate_avalanche:
-        
-            for i in range(0,max_iter_ava):
-                
-                grad_h_down *= 0.
-                flux_down *= 0.
-                slope_diff *= 0.
-                grad_h *= 0.
-                
-                s, max_grad_h, grad_h, grad_h_down = calc_grad(s, p)
-            
-                if max_grad_h < tan_dyn:
-                    break
-                
-                # Calculation of flux
-                              
-                grad_h_nonerod = (s['zb'] - s['zne']) / s['dsu'] # HAS TO BE ADJUSTED!    
-				
-                ix = np.logical_and(grad_h > tan_dyn, grad_h_nonerod > 0)
-                slope_diff[ix] = np.tanh(grad_h[ix]) - np.tanh(0.9*tan_dyn)    
-                
-                ix = grad_h_nonerod < grad_h - tan_dyn 
-                slope_diff[ix] = np.tanh(grad_h_nonerod[ix])
-				                     
-                ix = grad_h != 0
-                
-                
-                if ny==1:
-                    #1D interpretation
-                    flux_down[:,:,0][ix] = slope_diff[ix] * grad_h_down[:,:,0][ix] / grad_h[ix]
-                    flux_down[:,:,2][ix] = slope_diff[ix] * grad_h_down[:,:,2][ix] / grad_h[ix]
-                    
-                    # Calculation of change in bed level
-                    
-                    q_in = np.zeros((ny,nx))
-                    
-                    q_out = 0.5*np.abs(flux_down[:,:,0]) + 0.5*np.abs(flux_down[:,:,2])
-                    
-                    q_in[0,1:-1] =   0.5*(np.maximum(flux_down[0,:-2,0],0.) \
-                                        - np.minimum(flux_down[0,2:,0],0.) \
-                                                                               
-                                        + np.maximum(flux_down[0,2:,2],0.) \
-                                        - np.minimum(flux_down[0,:-2,2],0.) )
-                    
-                else:
-                    #2D interpretation
-                    flux_down[:,:,0][ix] = slope_diff[ix] * grad_h_down[:,:,0][ix] / grad_h[ix]
-                    flux_down[:,:,1][ix] = slope_diff[ix] * grad_h_down[:,:,1][ix] / grad_h[ix]
-                    flux_down[:,:,2][ix] = slope_diff[ix] * grad_h_down[:,:,2][ix] / grad_h[ix]
-                    flux_down[:,:,3][ix] = slope_diff[ix] * grad_h_down[:,:,3][ix] / grad_h[ix]
-                    
-                    # Calculation of change in bed level
-                    
-                    q_in = np.zeros((ny,nx))
-                    
-                    q_out = 0.5*np.abs(flux_down[:,:,0]) + 0.5* np.abs(flux_down[:,:,1]) + 0.5*np.abs(flux_down[:,:,2]) + 0.5* np.abs(flux_down[:,:,3])
-                    
-                    q_in[1:-1,1:-1] =   0.5*(np.maximum(flux_down[1:-1,:-2,0],0.) \
-                                        - np.minimum(flux_down[1:-1,2:,0],0.) \
-                                        + np.maximum(flux_down[:-2,1:-1,1],0.) \
-                                        - np.minimum(flux_down[2:,1:-1,1],0.) \
-                                        
-                                        + np.maximum(flux_down[1:-1,2:,2],0.) \
-                                        - np.minimum(flux_down[1:-1,:-2,2],0.) \
-                                        + np.maximum(flux_down[2:,1:-1,3],0.) \
-                                        - np.minimum(flux_down[:-2,1:-1,3],0.) )
-                    
-                s['zb'] += E * (q_in - q_out)
-                
-    return s
-
-def calc_grad(s,p):
-    '''Calculates the downslope gradients in the bed that are needed for
-    avalanching module
-
- 
-    Parameters
-    ----------
-    s : dict
-        Spatial grids
-    p : dict
-        Model configuration parameters
-
-    Returns
-    -------
-    dict
-        Spatial grids
-    np.ndarray
-        Downslope gradients in 4 different directions (nx*ny, 4)
-    BART CAN YOU HELP UPDATING THIS
-
-    '''
-    
-    zb = s['zb']
-    
-    nx = p['nx']+1
-    ny = p['ny']+1
-    
-    ds = s['ds']
-    dn = s['dn']
-    
-    grad_h_down = np.zeros((ny,nx,4))
-    
-    # Calculation of slope (positive x-direction)
-    grad_h_down[:,1:-1,0] = zb[:,1:-1] - zb[:,2:] 
-    ix = zb[:,2:] > zb[:,:-2]
-    grad_h_down[:,1:-1,0][ix] = - (zb[:,1:-1][ix] - zb[:,:-2][ix])    
-    ix = np.logical_and(zb[:,2:]>zb[:,1:-1], zb[:,:-2]>zb[:,1:-1])
-    grad_h_down[:,1:-1,0][ix] = 0.
-    
-    # Calculation of slope (positive y-direction)
-    grad_h_down[1:-1,:,1] = zb[1:-1,:] - zb[2:,:]    
-    ix = zb[2:,:] > zb[:-2,:]
-    grad_h_down[1:-1,:,1][ix] = - (zb[1:-1,:][ix] - zb[:-2,:][ix])    
-    ix = np.logical_and(zb[2:,:]>zb[1:-1,:], zb[:-2,:]>zb[1:-1,:])
-    grad_h_down[1:-1,:,1][ix] = 0.
-    
-    # Calculation of slope (negative x-direction)
-    grad_h_down[:,1:-1,2] = zb[:,1:-1] - zb[:,:-2]    
-    ix = zb[:,:-2] > zb[:,2:]
-    grad_h_down[:,1:-1,2][ix] = - (zb[:,1:-1][ix] - zb[:,2:][ix])    
-    ix = np.logical_and(zb[:,:-2]>zb[:,1:-1], zb[:,2:]>zb[:,1:-1])
-    grad_h_down[:,1:-1,2][ix] = 0.
-    
-    # Calculation of slope (negative y-direction)
-    grad_h_down[1:-1,:,3] = zb[1:-1,:] - zb[:-2,:]    
-    ix = zb[:-2,:] > zb[2:,:]
-    grad_h_down[1:-1,:,3][ix] = - (zb[1:-1,:][ix] - zb[2:,:][ix])    
-    ix = np.logical_and(zb[:-2,:]>zb[1:-1,:], zb[2:,:]>zb[1:-1,:])
-    grad_h_down[1:-1,:,3][ix] = 0.
-
-    if ny==1:
-        #1D interpretation
-        grad_h_down[:,0,:] = 0
-        grad_h_down[:,-1,:] = 0
-    else:           
-        # 2D interpreation
-        grad_h_down[:,0,:] = 0
-        grad_h_down[:,-1,:] = 0
-        grad_h_down[0,:,:] = 0
-        grad_h_down[-1,:,:] = 0
-    
-    grad_h_down[:,:,0] /= ds
-    grad_h_down[:,:,1] /= dn
-    grad_h_down[:,:,2] /= ds
-    grad_h_down[:,:,3] /= dn
-    
-    
-    grad_h2 = 0.5*grad_h_down[:,:,0]**2 + 0.5*grad_h_down[:,:,1]**2 + 0.5*grad_h_down[:,:,2]**2 + 0.5*grad_h_down[:,:,3]**2
-    
-    ix = s['zb'] < s['zne'] + 0.005
-    grad_h2[ix] = 0.
-    
-    grad_h = np.sqrt(grad_h2)
-    
-    s['gradh'] = grad_h.copy()
-    
-    max_grad_h = np.max(grad_h)
-    
-    return s, max_grad_h, grad_h, grad_h_down

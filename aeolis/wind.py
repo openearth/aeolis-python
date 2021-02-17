@@ -24,12 +24,14 @@ The Netherlands                  The Netherlands
 
 '''
 
-
 from __future__ import absolute_import, division
 
 import numpy as np
 import logging
 import operator
+import matplotlib.pyplot as plt
+#import scipy.interpolate as spint
+#import scipy.spatial.qhull as qhull
 
 # package modules
 import aeolis.shear
@@ -47,22 +49,26 @@ def initialize(s, p):
 
     # apply wind direction convention
     if isarray(p['wind_file']):
-        if p['wind_convention'] == 'cartesian':
+        if p['wind_convention'] == 'nautical':
             pass
-        elif p['wind_convention'] == 'nautical':
+        elif p['wind_convention'] == 'cartesian':
             p['wind_file'][:,2] = 270.0 - p['wind_file'][:,2]
         else:
-            logger.log_and_raise('Unknown convention: %s' % p['wind_convention'], exc=ValueError)
+            logger.log_and_raise('Unknown convention: %s' 
+                                 % p['wind_convention'], exc=ValueError)
 
     # initialize wind shear model
+    #z0 = (np.sum(p['grain_size'])/p['nfractions']) / 30.                        # z0 = p['k'] if not dependent on grainsize?
+    z0 = p['k']
+    
     if p['process_shear']:
         s['shear'] = aeolis.shear.WindShear(s['x'], s['y'], s['zb'],
-                                            L=100., l=10., z0=0.001,
-                                            buffer_width=10.)
-        
+                                            dx=p['dx'], dy=p['dy'],
+                                            L=p['L'], l=p['l'], z0=z0, 
+                                            buffer_width=10.) 
     return s
-
-
+   
+    
 def interpolate(s, p, t):
     '''Interpolate wind velocity and direction to current time step
 
@@ -99,63 +105,105 @@ def interpolate(s, p, t):
         s['udir'][:,:] = np.arctan2(interp_circular(t, uw_t, np.sin(uw_d)),
                                     interp_circular(t, uw_t, np.cos(uw_d))) * 180. / np.pi
 
-    s['uws'] = s['uw'] * np.cos(s['alfa'] + s['udir'] / 180. * np.pi)
-    s['uwn'] = s['uw'] * np.sin(s['alfa'] + s['udir'] / 180. * np.pi)
+    s['uws'] = - s['uw'] * np.sin((-p['alfa'] + s['udir']) / 180. * np.pi)        # alfa [deg] is real world grid cell orientation (clockwise)
+    s['uwn'] = - s['uw'] * np.cos((-p['alfa'] + s['udir']) / 180. * np.pi)
 
+    
     if p['ny'] == 0:
         s['uwn'][:,:] = 0.
         
     s['uw'] = np.abs(s['uw'])
+    
+    # Compute wind shear velocity
+    kappa = p['kappa']
+    z     = p['z']
+#    z0    = (np.sum(p['grain_size'])/p['nfractions']) / 30.
+    z0    = p['k']                                                                                                              
+    
+    s['ustars'] = s['uws'] * kappa / np.log(z/z0)
+    s['ustarn'] = s['uwn'] * kappa / np.log(z/z0) 
+    s['ustar']  = np.hypot(s['ustars'], s['ustarn'])
+    
+    s['ustar0'] = s['ustar'].copy()
+    
+    s = velocity_stress(s,p)
+    
+    return s
 
-    # compute saltation velocity
-    s['uw'] = get_velocity_at_height(s['uw'], p['z'], p['k'], p['h'])
-    s['uws'] = get_velocity_at_height(s['uws'], p['z'], p['k'], p['h'])
-    s['uwn'] = get_velocity_at_height(s['uwn'], p['z'], p['k'], p['h'])
+def shear(s,p):
+    
+    # Compute shear velocity field (including separation)
 
-    # compute shear velocity
-    s['tau'] = get_velocity_at_height(s['uw'], p['h'], p['k'])
-    s['taus'] = get_velocity_at_height(s['uws'], p['h'], p['k'])
-    s['taun'] = get_velocity_at_height(s['uwn'], p['h'], p['k'])
-
-    # compute shear velocity field
-    if 'shear' in s.keys():
+    if 'shear' in s.keys() and p['process_shear']:
         
-        s['shear'].set_topo(s['zb'])
+        s['shear'].set_topo(s['zb'].copy())
+        s['shear'].set_shear(s['taus'], s['taun'])
+        
         s['shear'](u0=s['uw'][0,0],
-                   udir=s['udir'][0,0])
+                   udir=s['udir'][0,0] + p['alfa'],
+                   process_separation = p['process_separation'],
+                   c = p['c_b'],
+                   mu_b = p['mu_b'])
+
+        s['taus'], s['taun'] = s['shear'].get_shear()
+        s['tau'] = np.hypot(s['taus'], s['taun'])                               # set minimum of tau to zero
+               
+        s = stress_velocity(s,p)
+                               
+        # Returns separation surface     
+        if p['process_separation']:
+            s['hsep'] = s['shear'].get_separation()
+            s['zsep'] = s['hsep'] + s['zb']
+    
+    if p['process_nelayer']:
+
+        ustar = s['ustar'].copy()
+        ustars = s['ustars'].copy()
+        ustarn = s['ustarn'].copy()
+            
+        s['zne'][:,:] = p['ne_file']
+            
+        ix = s['zb'] <= s['zne']
+        s['ustar'][ix] = np.maximum(0., s['ustar'][ix] - (s['zne'][ix]-s['zb'][ix])* (1/p['layer_thickness']) * s['ustar'][ix])
         
-        s['dtaus'], s['dtaun'] = s['shear'].get_shear()
-        s['taus'], s['taun'] = s['shear'].add_shear(s['taus'], s['taun'])
-        s['tau'] = np.hypot(s['taus'], s['taun'])
+        ix = ustar != 0.
+        s['ustars'][ix] = s['ustar'][ix] * (ustars[ix] / ustar[ix])
+        s['ustarn'][ix] = s['ustar'][ix] * (ustarn[ix] / ustar[ix])
+
+
+    return s
+
+def velocity_stress(s, p):
+
+    s['tau'] = p['rhoa'] * s['ustar'] ** 2
+
+    ix = s['ustar'] > 0.
+    s['taus'][ix] = s['tau'][ix]*s['ustars'][ix]/s['ustar'][ix]
+    s['taun'][ix] = s['tau'][ix]*s['ustarn'][ix]/s['ustar'][ix]
+    s['tau'] = np.hypot(s['taus'], s['taun'])
+
+    ix = s['ustar'] == 0.
+    s['taus'][ix] = 0.
+    s['taun'][ix] = 0.
+    s['tau'][ix] = 0.
+
+    return s
+
+def stress_velocity(s, p):
+
+    s['ustar'] = np.sqrt(s['tau'] / p['rhoa'])
+
+    ix = s['tau'] > 0.
+    s['ustars'][ix] = s['ustar'][ix] * s['taus'][ix] / s['tau'][ix]
+    s['ustarn'][ix] = s['ustar'][ix] * s['taun'][ix] / s['tau'][ix]
+
+    ix = s['tau'] == 0.
+    s['ustar'][ix] = 0.
+    s['ustars'][ix] = 0.
+    s['ustarn'][ix] = 0.
 
     return s
 
 
-def get_velocity_at_height(u, z, z0, z1=None):
-    '''Compute shear velocity from wind velocity following Prandl-Karman's Law of the Wall
 
-    Parameters
-    ----------
-    u : numpy.ndarray
-        Spatial wind field
-    z : float
-        Height above bed where ``u`` is measured
-    z0 : float
-        Roughness length
-    z1 : float, optional
-        Height above bed for which to return wind speeds.
-        Returns wind shear if not given.
 
-    Returns
-    -------
-    numpy.ndarray
-        Array of size ``u`` with wind speeds at height ``z1``
-
-    '''
-
-    tau = .41 / np.log(z / z0) * u
-
-    if z1 is None:
-        return tau
-    else:
-        return tau * np.log(z1 / z0) / .41
