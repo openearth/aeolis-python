@@ -60,6 +60,6 @@ import aeolis.hydro
 import aeolis.threshold
 import aeolis.transport
 import aeolis.netcdf
-
+import aeolis.erosion
 # import aeolis.vegetation
 
