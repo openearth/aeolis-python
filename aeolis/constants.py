@@ -41,6 +41,7 @@ INITIAL_STATE = {
         'udir',                             # [rad] Wind direction
         'zs',                               # [m] Water level above reference
         'Hs',                               # [m] Wave height
+        'Tp',
         'zne',                         #NEW # [m] Non-erodible layer
     ),
 }
@@ -132,6 +133,8 @@ DEFAULT_CONFIG = {
     'process_separation'            : True,         # NEW # Enable the including of separation bubble
     'process_nelayer'               : False,        # NEW # Enable a non-erodible layer
     'process_vegetation'            : False,        # NEW # Enable the process of vegetation 
+    'process_fences'                : False,        # NEW # Enable the process of sand fencing
+    'process_dune_erosion'          : False,        # NEW # Enable the process of wave-driven dune erosion
     'th_grainsize'                  : True,               # Enable wind velocity threshold based on grainsize
     'th_bedslope'                   : False,              # Enable wind velocity threshold based on bedslope
     'th_moisture'                   : True,               # Enable wind velocity threshold based on moisture
@@ -149,6 +152,7 @@ DEFAULT_CONFIG = {
     'meteo_file'                    : None,               # Filename of ASCII file with time series of meteorlogical conditions
     'bedcomp_file'                  : None,               # Filename of ASCII file with initial bed composition
     'threshold_file'                : None,               # Filename of ASCII file with shear velocity threshold
+    'fence_file'                    : None,               # Filename of ASCII file with sand fence location/height (above the bed)
     'ne_file'                       : None,         # NEW # Filename of ASCII file with non-erodible layer
     'veg_file'                      : None,         # NEW # Filename of ASCII file with initial vegetation density
     'wave_mask'                     : None,               # Filename of ASCII file with mask for wave height
@@ -242,8 +246,15 @@ DEFAULT_CONFIG = {
     'refdate'                       : '2020-01-01 00:00', # [-] Reference datetime in netCDF output
     'callback'                      : None,               # Reference to callback function (e.g. example/callback.py':callback)
     'wind_convention'               : 'nautical',         # Convention used for the wind direction in the input files
-    'alfa'                         : 0,                   # [deg] Real-world grid cell orientation wrt the North (clockwise)
-    'solver'                        : 'trunk',      # NEW # Choose the solver to be used (steadystate / trunk / pieter)
+    'alfa'                          : 0,                   # [deg] Real-world grid cell orientation wrt the North (clockwise)
+    'dune_toe_elevation'            : 3,            # NEW # Choose dune toe elevation, only used in the PH12 dune erosion solver
+    'beach_slope'                   : 0.1,          # NEW # Define the beach slope, only used in the PH12 dune erosion solver
+    'veg_min_elevation'             : 3,            # NEW # Choose the minimum elevation where vegetation can grow
+    'vegshear_type'                 : 'raupach',    # NEW # Choose the Raupach grid based solver (1D or 2D) or the Okin approach (1D only)
+    'okin_c1_veg'                   : 0.48,         #x/h spatial reduction factor in Okin model for use with vegetation
+    'okin_c1_fence'                 : 0.48,         #x/h spatial reduction factor in Okin model for use with vegetation
+    'okin_initialred_veg'           : 0.32,         #initial shear reduction factor in Okin model for use with vegetation
+    'okin_initialred_fence'         : 0.32,         #initial shear reduction factor in Okin model for use with vegetation
 }
 
 #: Required model configuration parameters
