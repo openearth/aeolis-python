@@ -70,6 +70,7 @@ def initialize(s, p):
         else:
             s['shear'] = np.zeros(s['x'].shape)
 
+
     return s
    
     
