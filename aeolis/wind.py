@@ -62,10 +62,14 @@ def initialize(s, p):
     z0 = p['k']
     
     if p['process_shear']:
-        s['shear'] = aeolis.shear.WindShear(s['x'], s['y'], s['zb'],
-                                            dx=p['dx'], dy=p['dy'],
-                                            L=p['L'], l=p['l'], z0=z0, 
-                                            buffer_width=10.) 
+        if p['ny'] > 0:
+            s['shear'] = aeolis.shear.WindShear(s['x'], s['y'], s['zb'],
+                                                dx=p['dx'], dy=p['dy'],
+                                                L=p['L'], l=p['l'], z0=z0,
+                                                buffer_width=10.)
+        else:
+            s['shear'] = np.zeros(s['x'].shape)
+
     return s
    
     
@@ -134,7 +138,7 @@ def shear(s,p):
     
     # Compute shear velocity field (including separation)
 
-    if 'shear' in s.keys() and p['process_shear']:
+    if 'shear' in s.keys() and p['process_shear'] and p['ny'] > 0:
         
         s['shear'].set_topo(s['zb'].copy())
         s['shear'].set_shear(s['taus'], s['taun'])
@@ -154,6 +158,13 @@ def shear(s,p):
         if p['process_separation']:
             s['hsep'] = s['shear'].get_separation()
             s['zsep'] = s['hsep'] + s['zb']
+
+    elif 'shear' in s.keys() and p['process_shear'] and p['ny'] == 0: #NTC - Added in 1D only capabilities
+        s = compute_shear1d(s, p)
+        s = stress_velocity(s,p)
+
+        #NOTE: seperation bubble is not yet implemented in 1D
+
     
     if p['process_nelayer']:
 
@@ -205,5 +216,38 @@ def stress_velocity(s, p):
     return s
 
 
+def compute_shear1d(s, p):
+    '''Compute wind shear perturbation for given free-flow wind
+    speed on computational grid. based on same implementation in Duna'''
+
+    taus = s['taus'].copy()
+    taun = s['taun'].copy()
+
+
+    x = s['x'][0,:]
+    zb = s['zb'][0,:]
+    dzbdx = np.zeros(x.shape)
+    tau_over_tau0 = np.zeros(x.shape)
+    dx = x[1] - x[0]
+    dx = np.abs(dx)
+    dzbdx[1:-1] = (zb[2:] - zb[0:-2]) / 2 / dx
+    nx = x.size - 1
+    alfa = 3
+    beta = 1
+    for i in range(nx + 1):
+        integ = 0
+        startval = i - nx
+        endval = i - 1
+        for j in np.arange(startval, endval + 1):
+            if j != 0:
+                integ = integ + dzbdx[i - j] / (j * np.pi)
+        tau_over_tau0[i] = alfa * (integ + beta * dzbdx[i]) + 1
+        tau_over_tau0[i] = np.maximum(tau_over_tau0[i], 0.1)
+
+    s['taus'] = taus * np.sqrt(tau_over_tau0)
+    s['taun'] = taun * np.sqrt(tau_over_tau0)
+    s['tau'] = np.hypot(s['taus'], s['taun'])
+
+    return s
 
 
