@@ -81,6 +81,10 @@ def interpolate(s, p, t):
                                        p['wave_file'][:,0],
                                        p['wave_file'][:,1])
 
+        s['Tp'][:,:] = interp_circular(t,
+                                       p['wave_file'][:,0],
+                                       p['wave_file'][:,2])
+
         # apply complex mask
         s['Hs'] = apply_mask(s['Hs'], s['wave_mask'])
 
