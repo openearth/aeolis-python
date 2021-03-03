@@ -28,6 +28,7 @@ from __future__ import absolute_import, division
 import logging
 from scipy import ndimage, misc
 import numpy as np
+import math
 import matplotlib.pyplot as plt
 
 # package modules
@@ -56,36 +57,11 @@ def initialize (s,p):
 
 
 def vegshear(s, p):
-    
-    ustar  = s['ustar'].copy()
-    ustars = s['ustars'].copy()
-    ustarn = s['ustarn'].copy()
-    
-    ets = np.zeros(s['zb'].shape)
-    etn = np.zeros(s['zb'].shape)
-    
-    ix = ustar != 0
-    
-    ets[ix] = ustars[ix] / ustar[ix]
-    etn[ix] = ustarn[ix] / ustar[ix]
-    
+    if p['vegshear_type'] == 'okin' and p['ny'] == 0:
+        s = vegshear_okin(s, p)
+    else:
+        s = vegshear_raupach(s, p)
 
-    # Raupach, 1993
-    roughness = p['gamma_vegshear']
-    
-    vegfac = 1. / np.sqrt(1. + roughness * s['rhoveg'])
-    
-    # Smoothen the change in vegfac between surrounding cells following a gaussian distribution filter 
-
-    s['vegfac'] = ndimage.gaussian_filter(vegfac, sigma=p['veg_sigma'])
-    
-    
-    # Apply reduction factor of vegetation to the total shear stress 
-    
-    s['ustar']  *= s['vegfac']
-    s['ustars'] = s['ustar'] * ets
-    s['ustarn'] = s['ustar'] * etn
-    
     return s
 
 
@@ -168,10 +144,114 @@ def grow (s, p): #DURAN 2006
     s['lateral'] *= (s['rhoveg']!=0.)
 
     # Dying of vegetation due to hydrodynamics (Dynamic Vegetation Limit)
-
     s['rhoveg']     *= (s['zb'] +0.01 >= s['zs'])
     s['hveg']       *= (s['zb'] +0.01 >= s['zs'])
     s['germinate']  *= (s['zb'] +0.01 >= s['zs'])
     s['lateral']    *= (s['zb'] +0.01 >= s['zs'])
-    
+
+    ix = s['zb'] < p['veg_elev_min']
+    s['rhoveg'][ix] = 0
+    s['hveg'][ix] = 0
+    s['germinate'][ix] = 0
+    s['lateral'][ix] = 0
+
     return s
+
+def vegshear_okin(s, p):
+
+    #initialize shear variables
+    ustar = s['ustar'].copy()
+    ustars = s['ustars'].copy()
+    ustarn = s['ustarn'].copy()
+    ets = np.zeros(s['zb'].shape)
+    etn = np.zeros(s['zb'].shape)
+    ix = ustar != 0
+    ets[ix] = ustars[ix] / ustar[ix]
+    etn[ix] = ustarn[ix] / ustar[ix]
+
+    #intialize other grid parameters
+    x = s['x'][0,:]
+    zp = s['hveg'][0,:]
+    red = np.zeros(x.shape)
+    red_all = np.zeros(x.shape)
+    nx = x.size
+
+    # okin model defaults - hardcoded for now
+    c1 = p['okin_c1_veg']
+    intercept = p['okin_initialred_veg']
+
+    for igrid in range(nx):
+
+        # only look at cells with a roughness element
+        if zp[igrid] > 0:
+            # local parameters
+            xrel = x - x[igrid]
+            mult = np.zeros(x.shape)
+            h = zp[igrid]
+
+            for igrid2 in range(nx):
+
+                if xrel[igrid2] >= 0 and xrel[igrid2]/h < 20:
+
+                    # apply okin model
+                    mult[igrid2] = intercept + (1 - intercept) * (1 - math.exp(-xrel[igrid2] * c1 / h))
+
+            red = 1 - mult
+
+            # fix potential issues for summation
+            ix = red < 0.00001
+            red[ix] = 0
+            ix = red > 1
+            red[ix] = 1
+            ix = xrel < 0
+            red[ix] = 0
+
+            # combine all reductions between plants
+            red_all = red_all + red
+
+    # cant have more than 100% reduction
+    ix = red_all > 1
+    red_all[ix] = 1
+
+    # convert to a multiple
+    mult_all = 1 - red_all
+
+
+    s['ustar'][0,:] = s['ustar'][0,:] * mult_all
+    s['ustars'][0,:] = s['ustar'][0,:] * ets[0,:]
+    s['ustarn'][0,:] = s['ustar'][0,:] * etn[0,:]
+
+    return s
+
+
+def vegshear_raupach(s, p):
+    ustar = s['ustar'].copy()
+    ustars = s['ustars'].copy()
+    ustarn = s['ustarn'].copy()
+
+    ets = np.zeros(s['zb'].shape)
+    etn = np.zeros(s['zb'].shape)
+
+    ix = ustar != 0
+
+    ets[ix] = ustars[ix] / ustar[ix]
+    etn[ix] = ustarn[ix] / ustar[ix]
+
+    # Raupach, 1993
+    roughness = p['gamma_vegshear']
+
+    vegfac = 1. / np.sqrt(1. + roughness * s['rhoveg'])
+
+    # Smoothen the change in vegfac between surrounding cells following a gaussian distribution filter
+
+    s['vegfac'] = ndimage.gaussian_filter(vegfac, sigma=p['veg_sigma'])
+
+    # Apply reduction factor of vegetation to the total shear stress
+
+    s['ustar'] *= s['vegfac']
+    s['ustars'] = s['ustar'] * ets
+    s['ustarn'] = s['ustar'] * etn
+
+    return s
+
+
