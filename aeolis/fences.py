@@ -50,11 +50,12 @@ from aeolis.utils import *
 logger = logging.getLogger(__name__)
 
 def initialize(s,p):
-    s['fence_height'] = p['fence_file']
-    s['fence_base'] = copy(s['zb'])  # initial fence base is the bed elevation
-    s['fence_top'] = s['fence_base'] + s['fence_height']
-    s['fence_height_init'] = s['fence_height']
-    s['zf'] = s['fence_height']
+    if p['process_fences']:
+        s['fence_height'] = p['fence_file']
+        s['fence_base'] = copy(s['zb'])  # initial fence base is the bed elevation
+        s['fence_top'] = s['fence_base'] + s['fence_height']
+        s['fence_height_init'] = s['fence_height']
+        s['zf'] = s['fence_height']
     return s
 
 def update_fences(s,p):
@@ -88,8 +89,8 @@ def fence_shear2d(s, p):
     x = s['x']
     y = s['y']
     zf = s['fence_height']
-    ustarx = s['ustarx']
-    ustary = s['ustary']
+    ustarx = s['ustars']
+    ustary = s['ustarn']
     dx = p['dx'] / 4
     dy = p['dx'] / 4
     udir = s['udir'][0, 0]
@@ -101,7 +102,7 @@ def fence_shear2d(s, p):
         udir = + 0.1
 
     igrid, cgrid, x0, y0 = initialize_computational_grid(x, y, zf, ustarx, ustary, dx, dy)
-    igrid, cgrid = calc_fence_shear(igrid, cgrid, udir, x0, y0)
+    igrid, cgrid = calc_fence_shear(igrid, cgrid, udir, x0, y0, p)
 
     return igrid, cgrid
 
@@ -157,7 +158,7 @@ def set_computational_grid(igrid, cgrid, buffer_width):
     return x0, y0, gc
 
 
-def calc_fence_shear(igrid, cgrid, udir, x0, y0):
+def calc_fence_shear(igrid, cgrid, udir, x0, y0, p):
     '''Compute wind shear for given wind speed and direction
 
     Parameters
@@ -176,7 +177,7 @@ def calc_fence_shear(igrid, cgrid, udir, x0, y0):
     populate_computational_grid(igrid, cgrid, udir + 90., x0, y0)
 
     # Compute wind shear stresses on computational grid
-    gc = compute_fenceshear(gi, gc, udir)
+    gc = compute_fenceshear(gi, gc, udir, p)
 
     gc['ustarx'] = gc['ustarx'] * gc['mult_all']
     gc['ustary'] = np.zeros(gc['x'].shape)
@@ -285,7 +286,7 @@ def populate_computational_grid(igrid, cgrid, alpha, x0, y0):
     return gc
 
 
-def compute_fenceshear(igrid, cgrid, udir):
+def compute_fenceshear(igrid, cgrid, udir, p):
     '''Compute wind shear perturbation for given free-flow wind
     speed on computational grid
 

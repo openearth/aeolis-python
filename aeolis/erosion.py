@@ -127,12 +127,14 @@ def run_ph12(s, p, t):
             # update morphology
             zb_new = zb
             zb_new[st0:st] = zbT[st0:st]
-            if numcells <= 1:
-                zb_new[st] = zb_new[st] + dz
-            elif numcells < 3:
-                zb_new[st - 1] = zb_new[st - 1] + dz
-            else:
-                zb_new[(st0 + 1):st] = zb_new[(st0 + 1):st] + dz / [numcells - 1]
+
+            #approach to redistribute residual sediment to the lower portion of the dune. needs to be tested
+            #if numcells <= 1:
+            #    zb_new[st] = zb_new[st] + dz
+            #elif numcells < 3:
+            #    zb_new[st - 1] = zb_new[st - 1] + dz
+            #else:
+            #    zb_new[(st0 + 1):st] = zb_new[(st0 + 1):st] + dz / [numcells - 1]
 
             s['zb'][iy,:] = zb_new
             #s['dVT'] = dVT

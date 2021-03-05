@@ -149,7 +149,7 @@ def grow (s, p): #DURAN 2006
     s['germinate']  *= (s['zb'] +0.01 >= s['zs'])
     s['lateral']    *= (s['zb'] +0.01 >= s['zs'])
 
-    ix = s['zb'] < p['veg_elev_min']
+    ix = s['zb'] < p['veg_min_elevation']
     s['rhoveg'][ix] = 0
     s['hveg'][ix] = 0
     s['germinate'][ix] = 0

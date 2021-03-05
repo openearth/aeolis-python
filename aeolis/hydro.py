@@ -109,7 +109,10 @@ def interpolate(s, p, t):
         s['meteo'] = dict(zip(('T','RH','U','Q','P') , m))
 
     # ensure compatibility with XBeach: zs >= zb
-    s['zs'] = np.maximum(s['zs'], s['zb'])
+    if p['process_tide']:
+        s['zs'] = np.maximum(s['zs'], s['zb'])
+    #else:
+    #    s['zs'] = s['zb']
 
     return s
 

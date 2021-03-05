@@ -221,9 +221,14 @@ def compute_shear1d(s, p):
     '''Compute wind shear perturbation for given free-flow wind
     speed on computational grid. based on same implementation in Duna'''
 
+    tau = s['tau'].copy()
     taus = s['taus'].copy()
     taun = s['taun'].copy()
-
+    ets = np.zeros(s['tau'].shape)
+    etn = np.zeros(s['tau'].shape)
+    ix = tau != 0
+    ets[ix] = taus[ix] / tau[ix]
+    etn[ix] = taun[ix] / tau[ix]
 
     x = s['x'][0,:]
     zb = s['zb'][0,:]
@@ -245,9 +250,11 @@ def compute_shear1d(s, p):
         tau_over_tau0[i] = alfa * (integ + beta * dzbdx[i]) + 1
         tau_over_tau0[i] = np.maximum(tau_over_tau0[i], 0.1)
 
-    s['taus'] = taus * np.sqrt(tau_over_tau0)
-    s['taun'] = taun * np.sqrt(tau_over_tau0)
-    s['tau'] = np.hypot(s['taus'], s['taun'])
+    #should double check this - but i think this is right. duna is in u10, so slightly different
+
+    s['tau'] = tau * tau_over_tau0
+    s['taus'] = tau * ets
+    s['taun'] = tau * etn
 
     return s
 
