@@ -253,8 +253,8 @@ def compute_shear1d(s, p):
     #should double check this - but i think this is right. duna is in u10, so slightly different
 
     s['tau'] = tau * tau_over_tau0
-    s['taus'] = tau * ets
-    s['taun'] = tau * etn
+    s['taus'] = s['tau'] * ets
+    s['taun'] = s['tau'] * etn
 
     return s
 
