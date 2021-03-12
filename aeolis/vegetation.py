@@ -186,7 +186,7 @@ def vegshear_okin(s, p):
         if zp[igrid] > 0:
             # local parameters
             xrel = x - x[igrid]
-            mult = np.zeros(x.shape)
+            mult = np.ones(x.shape)
             h = zp[igrid]
 
             for igrid2 in range(nx):

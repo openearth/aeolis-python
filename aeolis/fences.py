@@ -31,9 +31,6 @@ import scipy.interpolate
 from scipy import ndimage, misc
 import matplotlib
 import matplotlib.pyplot as plt
-# import scipy.interpolate as spint
-# import scipy.spatial.qhull as qhull
-# import time
 from builtins import range, int
 import math
 from collections import namedtuple
@@ -41,7 +38,7 @@ from copy import copy
 from pprint import pprint as pp
 import sys
 import os
-import aeolis.wind
+from aeolis.wind import *
 
 # package modules
 from aeolis.utils import *
@@ -65,6 +62,7 @@ def update_fences(s,p):
     else:
         s = fence_shear1d(s, p)
 
+    s = velocity_stress(s,p)
     return s
 
 def update_fence_height(s, p):
@@ -328,7 +326,7 @@ def compute_fenceshear(igrid, cgrid, udir, p):
                     xrel = -(x - x[igrid])
 
                 red = np.zeros(x.shape)
-                mult = np.zeros(x.shape)
+                mult = np.ones(x.shape)
                 h = zp[igrid]
 
                 for igrid2 in range(nx2):
@@ -431,7 +429,7 @@ def fence_shear1d(s, p):
         if zp[igrid] > 0:
             # local parameters
             xrel = x - x[igrid]
-            mult = np.zeros(x.shape)
+            mult = np.ones(x.shape)
             h = zp[igrid]
 
             if udir >= 180 and udir <= 360:
