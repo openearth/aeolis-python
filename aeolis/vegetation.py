@@ -170,6 +170,7 @@ def vegshear_okin(s, p):
     ix = ustar != 0
     ets[ix] = ustars[ix] / ustar[ix]
     etn[ix] = ustarn[ix] / ustar[ix]
+    udir = s['udir'][0,0]
 
     #intialize other grid parameters
     x = s['x'][0,:]
@@ -187,9 +188,16 @@ def vegshear_okin(s, p):
         # only look at cells with a roughness element
         if zp[igrid] > 0:
             # local parameters
-            xrel = x - x[igrid]
             mult = np.ones(x.shape)
             h = zp[igrid]
+
+
+            if udir >= 180 and udir <= 360:
+                xrel = x - x[igrid]
+            else:
+                xrel = -(x - x[igrid])
+
+
 
             for igrid2 in range(nx):
 
