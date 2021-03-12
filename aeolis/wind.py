@@ -232,6 +232,13 @@ def compute_shear1d(s, p):
 
     x = s['x'][0,:]
     zb = s['zb'][0,:]
+
+    #Bart: check for negative wind direction
+    if np.sum(taus) < 0:
+        x = np.flip(x)
+        zb = np.flip(zb)
+
+
     dzbdx = np.zeros(x.shape)
     tau_over_tau0 = np.zeros(x.shape)
     dx = x[1] - x[0]
@@ -252,10 +259,12 @@ def compute_shear1d(s, p):
 
     #should double check this - but i think this is right. duna is in u10, so slightly different
 
+    #Bart: check for negative wind direction
+    if np.sum(taus) < 0:
+        tau_over_tau0 = np.flip(tau_over_tau0)
+
     s['tau'] = tau * tau_over_tau0
     s['taus'] = s['tau'] * ets
     s['taun'] = s['tau'] * etn
 
     return s
-
-
