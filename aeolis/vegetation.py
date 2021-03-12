@@ -30,6 +30,7 @@ from scipy import ndimage, misc
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+from aeolis.wind import *
 
 # package modules
 import aeolis.wind
@@ -62,6 +63,7 @@ def vegshear(s, p):
     else:
         s = vegshear_raupach(s, p)
 
+    s = velocity_stress(s,p)
     return s
 
 
