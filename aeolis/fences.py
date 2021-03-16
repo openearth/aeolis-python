@@ -38,7 +38,7 @@ from copy import copy
 from pprint import pprint as pp
 import sys
 import os
-from aeolis.wind import *
+from aeolis.wind import velocity_stress
 
 # package modules
 from aeolis.utils import *
@@ -89,27 +89,37 @@ def fence_shear2d(s, p):
     zf = s['fence_height']
     ustarx = s['ustars']
     ustary = s['ustarn']
-    dx = p['dx'] / 4
-    dy = p['dx'] / 4
+
+    #dx = p['dx']/10
+    #dy = p['dx']/10
+
+    dx = np.maximum(p['dx']/2, 0.25)
+    dy = dx
+
+
     udir = s['udir'][0, 0]
     if udir < 0:
         udir = udir + 360
     udir = udir - np.floor(udir / 360) * 360
 
     if udir == 0 or udir == 360 or udir == -360 or udir == -180 or udir == 180:
-        udir = + 0.1
+        udir += 0.00001
 
-    igrid, cgrid, x0, y0 = initialize_computational_grid(x, y, zf, ustarx, ustary, dx, dy)
+    igrid, cgrid, x0, y0 = initialize_computational_grid(x, y, zf, ustarx, ustary, dx, dy, buffer_width=100)
     igrid, cgrid = calc_fence_shear(igrid, cgrid, udir, x0, y0, p)
 
-    return igrid, cgrid
+    s['ustars'] = igrid['ustarx']
+    s['ustarn'] = igrid['ustary']
+    s['ustar'] = np.sqrt(s['ustars']**2 + s['ustarn']**2)
+
+    return s
 
 
 def initialize_computational_grid(x, y, z, ustarx, ustary, dx, dy, buffer_width=100., buffer_relaxation=None):
     if buffer_relaxation is None:
         buffer_relaxation = buffer_width / 4.
 
-    mult_all = np.zeros(x.shape)
+    mult_all = np.ones(x.shape)
 
     igrid = dict(x=x,
                  y=y,
@@ -177,8 +187,14 @@ def calc_fence_shear(igrid, cgrid, udir, x0, y0, p):
     # Compute wind shear stresses on computational grid
     gc = compute_fenceshear(gi, gc, udir, p)
 
+    ustarx_init = gc['ustarx'][0,0]
     gc['ustarx'] = gc['ustarx'] * gc['mult_all']
     gc['ustary'] = np.zeros(gc['x'].shape)
+
+    #ensure bad data doesnt make it through
+    #ix = gc['mindist'] > 20
+    #gc['ustarx'][ix] = ustarx_init
+
 
     gc['ustarx'], gc['ustary'] = rotate(gc['ustarx'], gc['ustary'], udir + 90)
 
@@ -200,6 +216,27 @@ def calc_fence_shear(igrid, cgrid, udir, x0, y0, p):
     gi['x'], gi['y'] = rotate(gi['x'], gi['y'], +(udir + 90.), origin=(x0, y0))
 
     gi['ustarx'], gi['ustary'] = rotate(gi['ustarx'], gi['ustary'], +(udir + 90))
+
+    #avoid any boundary effects
+    #gi['ustarx'][1,:] = gi['ustarx'][2,:]
+    #gi['ustarx'][:,1] = gi['ustarx'][:,2]
+    #gi['ustarx'][-2,:] = gi['ustarx'][-3,:]
+    #gi['ustarx'][:,-2] = gi['ustarx'][:,-3]
+
+    #gi['ustary'][1,:] = gi['ustary'][1,:]
+    #gi['ustary'][:,1] = gi['ustary'][:,1]
+    #gi['ustary'][-2,:] = gi['ustary'][-2,:]
+    #gi['ustary'][:,-2] = gi['ustary'][:,-2]
+
+    gi['ustarx'][0,:] = gi['ustarx'][1,:]
+    gi['ustarx'][:,0] = gi['ustarx'][:,1]
+    gi['ustarx'][-1,:] = gi['ustarx'][-2,:]
+    gi['ustarx'][:,-1] = gi['ustarx'][:,-2]
+
+    gi['ustary'][0,:] = gi['ustary'][1,:]
+    gi['ustary'][:,0] = gi['ustary'][:,1]
+    gi['ustary'][-1,:] = gi['ustary'][-2,:]
+    gi['ustary'][:,-1] = gi['ustary'][:,-2]
 
     return gi, gc
 
@@ -237,7 +274,7 @@ def populate_computational_grid(igrid, cgrid, alpha, x0, y0):
         dxi = gi['x'][1, 1] - gi['x'][0, 0]
         dyi = gi['y'][1, 1] - gi['y'][0, 0]
 
-    buf = 200  # amount of cells
+    buf = 100  # amount of cells
 
     xi, yi = np.meshgrid(
         np.linspace(gi['x'][0, 0] - buf * dxi, gi['x'][-1, -1] + buf * dxi, gi['x'].shape[1] + 2 * buf),
@@ -301,6 +338,7 @@ def compute_fenceshear(igrid, cgrid, udir, p):
     zf = gc['z']
     ny, nx = gc['z'].shape
     mult_all = np.ones(zf.shape)
+    #mindist = np.ones(zf.shape) * 1000
 
     for iy in range(ny):
 
@@ -333,20 +371,42 @@ def compute_fenceshear(igrid, cgrid, udir, p):
                     if xrel[igrid2] >= 0 and xrel[igrid2] / h < 20:
                         # apply okin model
 
-                        mult_temp = intercept + (1 - intercept) * (1 - np.exp(-xrel[igrid2] * c1 / h))
+                        # apply okin model
+                        mult[igrid2] = intercept + (1 - intercept) * (1 - math.exp(-xrel[igrid2] * c1 / h))
 
-                        if mult_temp > 0.99:
-                            mult_temp = 1
+                        #ifind = xrel > 0
+                        #if np.size(ifind) > 0:
+                        #    mindist[iy, igrid2] = np.minimum(np.min(xrel[ifind]), mindist[iy, igrid2])
 
-                        if mult_temp < 0:
-                            mult_temp = 0
+                red = 1 - mult
 
-                        mult_all[iy, igrid2] = mult_all[iy, igrid2] - mult_temp
+                # fix potential issues for summation
+                ix = red < 0.00001
+                red[ix] = 0
+                ix = red > 1
+                red[ix] = 1
+                ix = xrel < 0
+                red[ix] = 0
 
-        ix = mult_all < 0
-        mult_all[ix] = 0
+                # combine all reductions between plants
+                red_all = red_all + red
+
+        # cant have more than 100% reduction
+        ix = red_all > 1
+        red_all[ix] = 1
+
+        # convert to a multiple
+        mult_all[iy, :] = 1 - red_all
+        #mult_all[iy, igrid2] = mult_all[iy, igrid2] - mult_temp
+
+    #avoid any boundary effects
+    mult_all[0,:] = 1
+    mult_all[:,0] = 1
+    mult_all[-1,:] = 1
+    mult_all[:,-1] = 1
 
     cgrid['mult_all'] = mult_all
+    #cgrid['mindist'] = mindist
 
     return cgrid
 
