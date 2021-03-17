@@ -193,9 +193,9 @@ def vegshear_okin(s, p):
 
 
             if udir >= 180 and udir <= 360:
-                xrel = x - x[igrid]
-            else:
                 xrel = -(x - x[igrid])
+            else:
+                xrel = x - x[igrid]
 
 
 
