@@ -167,12 +167,11 @@ def update(s, p, dt, t):
 
             #Initialize GW levels and h_delta (GW depth when changing from wetting/drying)
             if t==0:
-                s['gw'][:,:]=0#setup
+                s['gw'][:,:]=0
                 s['h_delta'][:,:]=np.maximum(0,(s['zb'] - s['gw'])*100)
                 
             #Define index of shoreline location
-            shl_ix = np.argmax(s['zb'] > setup,axis=1) - 1
-
+            shl_ix =np.argmax(s['zb'] > setup,axis=1) - 1
         
             #Runge-Kutta timestepping
             f1 = Boussinesq(s['gw'],s,p,setup, shl_ix)
@@ -204,9 +203,18 @@ def update(s, p, dt, t):
             
             # Define cells below setup level
             ixg=s['zb'] < setup
-            
+
+            # #Set GW level to the setup level in submerged cells
+            # for i in range(len(s['gw'][:,0])):
+            #     for j in range(shl_ix[i]):
+            #         if s['zb'][i,j] < setup[i,j] and s['zb'][i,j-1] < setup[i,j-1] or s['zb'][i,j] < setup[i,j] and j == 0:
+            #             s['gw'][i,j] = setup[i,j]
+
             #Set GW level to the setup level in submerged cells
-            s['gw'][ixg] = setup 
+            for i in range(len(s['gw'][:,0])):
+                for j in range(shl_ix[i]):                        
+                    s['gw'][i,j] = setup[i,j]
+            
                 
             # Do not allow GW levels above ground level in areas that are not submerged (=above setup level)
             s['gw'][~ixg]=np.minimum(s['gw'][~ixg], s['zb'][~ixg])
@@ -315,11 +323,10 @@ def Boussinesq (GW,s,p,setup,shl_ix):
     Add description
     
     '''
-    
 
     #Define seaward boundary gw=setup
-    GW[:,shl_ix] = setup
-    GW[:,shl_ix-1] = setup
+    GW[:,shl_ix] = setup[:,shl_ix]
+    GW[:,shl_ix-1] = setup[:,shl_ix]
     
     #Define landward boundary dgw/dx=0
     GW[:,-1] = GW[:,-3]
@@ -337,11 +344,15 @@ def Boussinesq (GW,s,p,setup,shl_ix):
     b = np.zeros(s['gw'].shape)
     c = np.zeros(s['gw'].shape)
 
+    
+
     for i in range(len(a[:,0])):
-        a[i,shl_ix[i]:-2]=(GW[i,shl_ix[i]+1:-1] - 2 * GW[i,shl_ix[i]:-2] + GW[i,shl_ix[i]-1:-3]) / s['ds'][i,shl_ix[i]:-2] ** 2
-        b[i,shl_ix[i]:-2]=(GW[i,shl_ix[i]:-2] * (GW[i,shl_ix[i]+1:-1] + GW[i,shl_ix[i]-1:-3])) / s['ds'][i,shl_ix[i]:-2]                  
-        c[i,shl_ix[i]+1:-3]=(b[i,shl_ix[i]+2:-2]-b[i,shl_ix[i]:-4])/s['ds'][i,shl_ix[i]+1:-3]
-        dGW[i,shl_ix[i]+1:-3]=p['K_gw'] / p['ne_gw'] * (p['D_gw'] * a[i,shl_ix[i]+1:-3] + c[i,shl_ix[i]+1:-3])
+        #if shl_ix[i] > -1 & shl_ix[i] < len(a[0,:]) - 3:
+        if shl_ix[i] < len(a[0,:]) - 3:   
+            a[i,shl_ix[i]:-2]=(GW[i,shl_ix[i]+1:-1] - 2 * GW[i,shl_ix[i]:-2] + GW[i,shl_ix[i]-1:-3]) / s['ds'][i,shl_ix[i]:-2] ** 2
+            b[i,shl_ix[i]:-2]=(GW[i,shl_ix[i]:-2] * (GW[i,shl_ix[i]+1:-1] + GW[i,shl_ix[i]-1:-3])) / s['ds'][i,shl_ix[i]:-2]                  
+            c[i,shl_ix[i]+1:-3]=(b[i,shl_ix[i]+2:-2]-b[i,shl_ix[i]:-4])/s['ds'][i,shl_ix[i]+1:-3]
+            dGW[i,shl_ix[i]+1:-3]=p['K_gw'] / p['ne_gw'] * (p['D_gw'] * a[i,shl_ix[i]+1:-3] + c[i,shl_ix[i]+1:-3])
     return dGW
 
 def evaporation(s,p,met):
