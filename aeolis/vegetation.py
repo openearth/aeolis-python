@@ -56,7 +56,6 @@ def initialize (s,p):
 
     return s
 
-
 def vegshear(s, p):
     if p['vegshear_type'] == 'okin' and p['ny'] == 0:
         s = vegshear_okin(s, p)
@@ -65,7 +64,6 @@ def vegshear(s, p):
 
     s = velocity_stress(s,p)
     return s
-
 
 def germinate (s,p):
     ny = p['ny']
@@ -82,7 +80,6 @@ def germinate (s,p):
     
     s['germinate'] += (s['dzbveg'] >= 0.) * (germination <= p_germinate_dt)
     s['germinate'] = np.minimum(s['germinate'], 1.)
-
 
     # Lateral expension
     if ny > 1:
@@ -116,10 +113,8 @@ def grow (s, p): #DURAN 2006
     
     ix = np.logical_or(s['germinate'] != 0., s['lateral'] != 0.) * ( p['V_ver'] > 0.)
                                                     
-
     # Reduction of vegetation growth due to sediment burial
     s['dhveg'][ix] = p['V_ver'] * (1 - s['hveg'][ix] / p['hveg_max']) - np.abs(s['dzbveg'][ix]-p['dzb_opt']) * p['veg_gamma']  # m/year
-
 
     # if p['_time'] > p['dzb_interval']:
         # plt.pcolormesh(s['x'],s['y'], s['dhveg'], vmin=-1, vmax=1, cmap='YlGn')
@@ -138,7 +133,6 @@ def grow (s, p): #DURAN 2006
 
     s['hveg'] = np.maximum(np.minimum(s['hveg'], p['hveg_max']), 0.)
     s['rhoveg'] = (s['hveg']/p['hveg_max'])**2
-    
     
     # Plot has to vegetate again after dying
 
@@ -191,13 +185,10 @@ def vegshear_okin(s, p):
             mult = np.ones(x.shape)
             h = zp[igrid]
 
-
             if udir >= 180 and udir <= 360:
                 xrel = -(x - x[igrid])
             else:
                 xrel = x - x[igrid]
-
-
 
             for igrid2 in range(nx):
 
@@ -225,7 +216,6 @@ def vegshear_okin(s, p):
 
     # convert to a multiple
     mult_all = 1 - red_all
-
 
     s['ustar'][0,:] = s['ustar'][0,:] * mult_all
     s['ustars'][0,:] = s['ustar'][0,:] * ets[0,:]
@@ -263,5 +253,3 @@ def vegshear_raupach(s, p):
     s['ustarn'] = s['ustar'] * etn
 
     return s
-
-
