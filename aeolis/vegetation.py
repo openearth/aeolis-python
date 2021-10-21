@@ -56,6 +56,7 @@ def initialize (s,p):
 
     return s
 
+
 def vegshear(s, p):
     if p['vegshear_type'] == 'okin' and p['ny'] == 0:
         s = vegshear_okin(s, p)
@@ -64,6 +65,7 @@ def vegshear(s, p):
 
     s = velocity_stress(s,p)
     return s
+
 
 def germinate (s,p):
     ny = p['ny']
@@ -109,6 +111,7 @@ def germinate (s,p):
 
     return s
 
+
 def grow (s, p): #DURAN 2006
     
     ix = np.logical_or(s['germinate'] != 0., s['lateral'] != 0.) * ( p['V_ver'] > 0.)
@@ -152,6 +155,7 @@ def grow (s, p): #DURAN 2006
     s['lateral'][ix] = 0
 
     return s
+
 
 def vegshear_okin(s, p):
 
