@@ -9,29 +9,33 @@
 What's New
 ==========
 
-v2.0.0 (unreleased)
+v1.2.2 (18 April 2020)
 -------------------
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
 
 * Removed support for statistical variable names with dot-notation
-  (e.g. `.avg` and `.sum`).
+  (e.g. `.avg` and `.sum`) (Bas Hoonhout)
+
+
 
 Improvements
 ^^^^^^^^^^^^
-
-None.
+* Logger shows minute by minute updates (Tom Pak) 
 
 New functions/methods
 ^^^^^^^^^^^^^^^^^^^^^
 
-None.
+* Avalanching process included in bed.py (Tom Pak)
+* Implementation of non-erodible layers (Tom Pak)
 
 Bug fixes
 ^^^^^^^^^
 
-None.
+* boundary condition definition updated (Tom Pak)
+* compatiblity with new NETCDF4 version restored (Sierd de Vries)
+* compatiblity with 1D domains (Sierd de Vries)
 
 Tests
 ^^^^^

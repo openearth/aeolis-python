@@ -1,4 +1,4 @@
-netCDF4==1.4.1
+netCDF4
 coverage
 codecov
 nose
