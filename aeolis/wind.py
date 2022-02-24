@@ -50,9 +50,18 @@ def initialize(s, p):
     # apply wind direction convention
     if isarray(p['wind_file']):
         if p['wind_convention'] == 'nautical':
-            pass
+
+            #fix issue associated with longshore winds/divide by zero
+            ifix = p['wind_file'][:, 2] == 0.
+            p['wind_file'][ifix, 2] = 0.01
+
         elif p['wind_convention'] == 'cartesian':
+            #fix issue associated with longshore winds/divide by zero
+            ifix = p['wind_file'][:, 2] == 270.
+            p['wind_file'][ifix, 2] = 270.01
+
             p['wind_file'][:,2] = 270.0 - p['wind_file'][:,2]
+
         else:
             logger.log_and_raise('Unknown convention: %s' 
                                  % p['wind_convention'], exc=ValueError)
