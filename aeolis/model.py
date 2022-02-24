@@ -321,7 +321,12 @@ class AeoLiS(IBmi):
 
             # calculate average bed level change over time
             self.s = aeolis.bed.average_change(self.l, self.s, self.p)
-        
+        # compute dune erosion
+        if self.p['process_dune_erosion']:
+            self.s = aeolis.erosion.run_ph12(self.s, self.p, self.t)
+            self.s = aeolis.avalanching.angele_of_repose(self.s, self.p) #Since the aeolian module is only run for winds above threshold, also run avalanching routine here
+            self.s = aeolis.avalanching.avalanche(self.s, self.p)
+
         # grow vegetation
         if self.p['process_vegetation']:
             self.s = aeolis.vegetation.germinate(self.s, self.p)
