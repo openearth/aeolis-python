@@ -317,6 +317,7 @@ class AeoLiS(IBmi):
 
             # calculate average bed level change over time
             self.s = aeolis.bed.average_change(self.l, self.s, self.p)
+
         # compute dune erosion
         if self.p['process_dune_erosion']:
             self.s = aeolis.erosion.run_ph12(self.s, self.p, self.t)
