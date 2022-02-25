@@ -311,10 +311,6 @@ class AeoLiS(IBmi):
             # update bed
             self.s = aeolis.bed.update(self.s, self.p)
 
-            # compute dune erosion
-            if self.p['process_dune_erosion']:
-                self.s = aeolis.erosion.run_ph12(self.s, self.p, self.t)
-
             # avalanching
             self.s = aeolis.avalanching.angele_of_repose(self.s, self.p)
             self.s = aeolis.avalanching.avalanche(self.s, self.p)
