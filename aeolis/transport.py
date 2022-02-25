@@ -182,8 +182,8 @@ def grainspeed(s, p):
         us[ix,i] = 0.
         un[ix,i] = 0.
         u[ix,i] = 0.
-
-
+                        
+        
     return u0, us, un, u
 
 
@@ -217,7 +217,7 @@ def saltationvelocity(s, p):
     
     us = np.zeros(ustar.shape)
     un = np.zeros(ustar.shape)
-    u = np.zeros(ustar.shape)
+    u  = np.zeros(ustar.shape)
 
     # u with direction of perturbation theory
     ix = ustar != 0
@@ -261,40 +261,13 @@ def equilibrium(s, p):
         
         # u via grainvelocity:
         
-        #u0, us, un, u = grainspeed(s,p)
+        u0, us, un, u = grainspeed(s,p)
         
-        #s['u0'] = u0
-        #s['us'] = us
-        #s['un'] = un
-        #s['u']  = u
-
-        #NTC - this grain speed stuff seems to not be working, giving wonky answers
-
-        u = s['uw']
-        un = s['uwn']
-        us = s['uws']
-        u0 = s['uw']
-
-        uw = s['uw'].copy()
-        uws = s['uws'].copy()
-        uwn = s['uwn'].copy()
-        us =uws
-        un = uwn
-        u = uw
-        u0 = uw
-
-        us = us[:, :, np.newaxis].repeat(nf, axis=2)
-        un = un[:, :, np.newaxis].repeat(nf, axis=2)
-        u = u[:, :, np.newaxis].repeat(nf, axis=2)
-        u0 = u0[:, :, np.newaxis].repeat(nf, axis=2)
-
         s['u0'] = u0
         s['us'] = us
         s['un'] = un
-        s['u'] = u
-
-
-
+        s['u']  = u
+            
         # u via saltation velocity
         
         #us = s['us']

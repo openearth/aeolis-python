@@ -67,7 +67,7 @@ def vegshear(s, p):
     return s
 
 
-def germinate (s,p):
+def germinate(s,p):
     ny = p['ny']
     s['germinate'][:, :] = (s['rhoveg'] > 0.)
     
