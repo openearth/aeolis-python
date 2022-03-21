@@ -67,8 +67,8 @@ MODEL_STATE = {
         'dsu',                              # [m] Distances in s-direction
         'dsv',                              # [m] Distances in s-direction
         'dsc',                              # [m] Distances in s-direction
-        'dsdnz',                             # [m^2] Real-world grid cell surface area
-        'dsdnzi',                            # [m^-2] Inverse of real-world grid cell surface area   
+        'dsdnz',                            # [m^2] Real-world grid cell surface area
+        'dsdnzi',                           # [m^-2] Inverse of real-world grid cell surface area   
         'dsdn',                             # [m^2] Real-world grid cell surface area
         'dsdni',                            # [m^-2] Inverse of real-world grid cell surface area   
         'alfaz',                            # [rad] Real-world grid cell orientation around z
@@ -77,12 +77,20 @@ MODEL_STATE = {
         'alfa',                             # [rad] Real-world grid cell orientation #Sierd_comm in later releases this needs a revision 
         'zb',                               # [m] Bed level above reference
         'S',                                # [-] Level of saturation
-        'moist',                            # [-] Moisure content (volumetric)
+        'moist',                            # [-] Moisture content (volumetric)
         'moist_swr',                        # [-] Moisture content soil water retention relationship (volumetric)
         'h_delta',                          # [-] Suction at reversal between wetting/drying conditions
         'gw',                               # [m] Groundwater level above reference
         'gw_prev',                          # [m] Groundwater level above reference in previous timestep
-        'wetting'                           # [bool] Flag indicating wetting or drying of soil profile
+        'wetting',                          # [bool] Flag indicating wetting or drying of soil profile
+        'scan_w',                           # [bool] Flag indicating that the moisture is calculated on the wetting scanning curve
+        'scan_d',                           # [bool] Flag indicating that the moisture is calculated on the drying scanning curve
+        'scan_w_moist',                     # [-] Moisture content (volumetric) computed on the wetting scanning curve
+        'scan_d_moist',                     # [-] Moisture content (volumetric) computed on the drying scanning curve
+        'w_h',                              # [-] Moisture content (volumetric) computed on the main wetting curve
+        'd_h',                              # [-] Moisture content (volumetric) computed on the main drying curve
+        'w_hdelta',                         # [-] Moisture content (volumetric) computed on the main wetting curve for hdelta
+        'd_hdelta'                          # [-] Moisture content (volumetric) computed on the main drying curve for hdelta
     ), 
     ('ny','nx','nfractions') : (
         'Cu',                               # [kg/m^2] Equilibrium sediment concentration integrated over saltation height
@@ -124,6 +132,7 @@ DEFAULT_CONFIG = {
     'process_salt'                  : False,              # Enable the process of salt
     'process_avalanche'             : True,               # NEW! Enable the process of avalanching
     'process_groundwater'           : False,              # Enable the process of groundwater
+    'process_scanning'              : True,               # Enable the process of scanning curves
     'th_grainsize'                  : True,               # Enable wind velocity threshold based on grainsize
     'th_bedslope'                   : False,              # Enable wind velocity threshold based on bedslope
     'th_moisture'                   : True,               # Enable wind velocity threshold based on moisture
@@ -144,6 +153,7 @@ DEFAULT_CONFIG = {
     'wave_mask'                     : None,               # Filename of ASCII file with mask for wave height
     'tide_mask'                     : None,               # Filename of ASCII file with mask for tidal elevation
     'threshold_mask'                : None,               # Filename of ASCII file with mask for the shear velocity threshold
+    'gw_mask'                       : None,               # Filename of ASCII file with mask for the groundwater level
     'dt'                            : 60.,                # [s] Time step size
     'CFL'                           : 1.,                 # [-] CFL number to determine time step in explicit scheme
     'accfac'                        : 1.,                 # [-] Numerical acceleration factor
@@ -187,9 +197,14 @@ DEFAULT_CONFIG = {
     'Mcr_stat'                      : 34.,                # [-] Critical static slope for avalanching
     'Mcr_dyn'                       : 33.,                # [-] Critical dynamic slope for avalanching
     'fc'                            : 0.12,               # [-] Moisture content at field capacity (volumetric) (Schmutz, 2014)
-    'res_moist'                     : 0.001,              # [-] Residual soil moisture content (volumetric) (Schmutz, 2014)
-    'sat_moist'                     : 0.45,               # [-] Satiated soil moisture content (volumetric) (Schmutz, 2014)
-    'n_moist'                       : 4.8,                # [-] Pore-size distribution index in the soil water retention function (Schmutz, 2014)
+    'resw_moist'                    : 0.001,              # [-] Residual soil moisture content (volumetric) (Schmutz, 2014)
+    'satw_moist'                    : 0.45,               # [-] Satiated soil moisture content (volumetric) (Schmutz, 2014)
+    'resd_moist'                    : 0.001,              # [-] Residual soil moisture content (volumetric) (Schmutz, 2014)
+    'satd_moist'                    : 0.45,               # [-] Satiated soil moisture content (volumetric) (Schmutz, 2014)
+    'nw_moist'                      : 4.8,                # [-] Pore-size distribution index in the soil water retention function (Schmutz, 2014)
+    'nd_moist'                      : 4.8,                # [-] Pore-size distribution index in the soil water retention function (Schmutz, 2014)
+    'mw_moist'                      : 0.8,                # [-] 1-1/n
+    'md_moist'                      : 0.8,                # [-] 1-1/n
     'alfaw_moist'                   : 0.025,              # [cm^-1] Inverse of the air-entry value for a wetting branch of the soil water retention function (Schmutz, 2014)
     'alfad_moist'                   : 0.019,              # [cm^-1] Inverse of the air-entry value for a drying branch of the soil water retention function (Schmutz, 2014)
     'thick_moist'                   : 0.002,              # [m] Thickness of surface moisture soil layer
@@ -198,12 +213,15 @@ DEFAULT_CONFIG = {
     'D_gw'                          : 5,                  # [m] Aquifer depth
     'tfac_gw'                       : 10,                 # [-] Reduction factor for time step in ground water calculations
     'Cl_gw'                         : 0.216,              # [-] Runup infiltration coefficient
+    'in_gw'                         : 0,                  # [m] Initial groundwater level
+    'GW_stat'                       : 1,                  # [m] Landward static groundwater boundary (if static boundary is defined)                 
     'scheme'                        : 'euler_backward',   # Name of numerical scheme (euler_forward, euler_backward or crank_nicolson)
     'boundary_lateral'              : 'circular',         # Name of lateral boundary conditions (circular, noflux)
     'boundary_offshore'             : 'noflux',           # Name of offshore boundary conditions (gradient, noflux, constant, uniform)
     'boundary_offshore_flux'        : 0.,                 # Constant offshore boundary flux
     'boundary_onshore'              : 'gradient',         # Name of onshore boundary conditions (gradient, noflux, constant, uniform)
     'boundary_onshore_flux'         : 0.,                 # Constant onshore boundary flux
+    'boundary_gw'                   : 'no_flow',          # Landward groundwater boundary, dGw/dx = 0 (or 'static')
     'method_moist_threshold'        : 'belly_johnson',    # Name of method to compute wind velocity threshold based on soil moisture content
     'method_moist_process'          : 'infiltration',     # Name of method to compute soil moisture content(infiltration or surface_moisture)
     'method_transport'              : 'bagnold',          # Name of method to compute equilibrium sediment transport rate

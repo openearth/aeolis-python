@@ -26,9 +26,10 @@ The Netherlands                  The Netherlands
 
 
 from __future__ import absolute_import, division
-
+#from numba import jit
 import logging
 import numpy as np
+import sympy as sym
 
 # package modules
 from aeolis.utils import *
@@ -66,15 +67,16 @@ def interpolate(s, p, t):
             s['zs'][:,:] = interp_circular(t,
                                            p['tide_file'][:,0],
                                            p['tide_file'][:,1])
+            s['swl'][:,:] = interp_circular(t,
+                                           p['tide_file'][:,0],
+                                           p['tide_file'][:,1])
         else:
             s['zs'][:,:] = 0.
+            s['swl'][:,:] = 0.
 
         # apply complex mask
         s['zs'] = apply_mask(s['zs'], s['tide_mask'])
         
-        #define SWL
-        s['swl'] = s['zs']
-
     if p['process_wave'] and p['wave_file'] is not None:
 
         # determine water depth
@@ -93,7 +95,6 @@ def interpolate(s, p, t):
             R = p['xi'] * s['Hs']
             s['zs'][ix] += R[ix] * (1. - np.minimum(1., h[ix] * p['gamma'] / s['Hs'][ix]))
         
-        
     if p['process_moist'] and p['method_moist_process'].lower() == 'surf_moisture' and p['meteo_file'] is not None:  ## här lägg till process
 
         m = interp_array(t,
@@ -111,7 +112,7 @@ def interpolate(s, p, t):
         
 
     # ensure compatibility with XBeach: zs >= zb
-    s['zs'] = np.maximum(s['zs'], s['zb'])
+#    s['zs'] = np.maximum(s['zs'], s['zb'])
 
     return s
 
@@ -156,22 +157,35 @@ def update(s, p, dt, t):
     # Groundwater level Boussinesq (1D CS-transects)
     if p['process_groundwater']:
         
+
+        #Specify wetting or drying conditions in previous timestep
+        s['wetting'] = s['gw'] > s['gw_prev']
+        #Save groundwater from previous timestep
+        s['gw_prev'] = s['gw']        
+        
         #Decrease timestep for GW computations
         dt_gw = int(dt / p['tfac_gw'])
         for i in range(int(dt / dt_gw)):
             t_gw = t + i * dt_gw
             interpolate(s,p,t_gw)
         
-            #Compute setup
-            setup=np.average(s['swl']) + 0.35 * p['xi'] * s['Hs'] #Stockdon et al (2006)
+            #Compute setup and runup
+            setup=np.max(s['swl'] + 0.35 * p['xi'] * s['Hs']) #Stockdon et al (2006)
+            
+            runup=np.max(s['zs'])
 
-            #Initialize GW levels and h_delta (GW depth when changing from wetting/drying)
+            #Initialize GW levels
             if t==0:
-                s['gw'][:,:]=0
-                s['h_delta'][:,:]=np.maximum(0,(s['zb'] - s['gw'])*100)
+                s['gw'][:,:]=p['in_gw']
+                s['gw_prev'] = s['gw']
+                s['wetting'] = s['gw'] > s['gw_prev']
+
                 
             #Define index of shoreline location
             shl_ix =np.argmax(s['zb'] > setup,axis=1) - 1
+            
+            #Define index of runup limit
+            runup_ix =np.argmax(s['zb'] > runup,axis=1) - 1
         
             #Runge-Kutta timestepping
             f1 = Boussinesq(s['gw'],s,p,setup, shl_ix)
@@ -183,54 +197,42 @@ def update(s, p, dt, t):
             s['gw'] = s['gw'] + dt_gw / 6 * (f1 + 2 * f2 + 2 * f3 + f4)
         
             #Add infiltration from wave runup according to Nielsen (1990)
-            if p['process_wave']:
-                #Define index of runup limit
-                runup_ix = np.argmax(s['zb'] >= s['zs'],axis=1) - 1
-                
+            if p['process_wave']:              
                 #Compute f(x) = distribution of infiltrated water
                 fx=np.zeros(s['gw'].shape)
-                fx_ix=np.zeros_like(runup_ix)
+                fx_ix=np.zeros_like(shl_ix)
                 for i in range(len(s['gw'][:,0])):
                     #Define index of peak f(x)
                     fx_ix[i] = (shl_ix[i]) + (2/3 * (runup_ix[i] - shl_ix[i]))
                     #Compute f(X)
                     fx[i,shl_ix[i]:fx_ix[i]] = (s['x'][i,shl_ix[i]:fx_ix[i]] - s['x'][i,shl_ix[i]]) / (2 / 3 * (s['x'][i,runup_ix[i]] - s['x'][i,shl_ix[i]]))
                     fx[i,fx_ix[i]+1:runup_ix[i]] = 3 - (s['x'][i,fx_ix[i]+1:runup_ix[i]]- s['x'][i,shl_ix[i]])  / (1 / 3 * (s['x'][i,runup_ix[i]] - s['x'][i,shl_ix[i]]))
+                    fx[i,fx_ix[i]]=1
                     
-
                 # Update groundwater level with overheight due to runup
                 s['gw'] = s['gw'] + p['Cl_gw'] * fx * p['K_gw'] / p['ne_gw']
             
-            # Define cells below setup level
-            ixg=s['zb'] < setup
+
 
             # #Set GW level to the setup level in submerged cells
             # for i in range(len(s['gw'][:,0])):
-            #     for j in range(shl_ix[i]):
-            #         if s['zb'][i,j] < setup[i,j] and s['zb'][i,j-1] < setup[i,j-1] or s['zb'][i,j] < setup[i,j] and j == 0:
-            #             s['gw'][i,j] = setup[i,j]
+            #     for j in range(shl_ix[i]):                        
+            #         s['gw'][i,j] = setup
 
-            #Set GW level to the setup level in submerged cells
-            for i in range(len(s['gw'][:,0])):
-                for j in range(shl_ix[i]):                        
-                    s['gw'][i,j] = setup[i,j]
+            # Apply GW complex mask
+            s['gw'] = apply_mask(s['gw'], s['gw_mask'])
             
                 
-            # Do not allow GW levels above ground level in areas that are not submerged (=above setup level)
-            s['gw'][~ixg]=np.minimum(s['gw'][~ixg], s['zb'][~ixg])
-            
-        #Update h_delta if there is a reversal between wetting/drying conditions
-        for i in range(len(s['wetting'][:,0])):
-            for j in range(len(s['wetting'][0,:])):
-                if (s['wetting'][i,j] == True and s['gw'][i,j] < s['gw_prev'][i,j]) or (s['wetting'][i,j] == False and s['gw'][i,j] > s['gw_prev'][i,j]):
-                    s['h_delta'][i,j]=np.maximum(0,(s['zb'][i,j] - s['gw'][i,j])*100)
+            # Do not allow GW levels above ground level
+            s['gw']=np.minimum(s['gw'], s['zb'])
 
-        #Specify wetting or drying conditions
-        s['wetting'] = s['gw'] > s['gw_prev']+0.00001
+            # Define cells below setup level
+            ixg=s['zb'] < setup
             
-        #Save groundwater level for next timestep
-        s['gw_prev'] = s['gw']
-        
+            # Set gw level to setup level in cells below setup level
+            
+            s['gw'][ixg]=setup            
+
 
 
     # Compute surface moisture with infiltration method using Darcy
@@ -245,7 +247,7 @@ def update(s, p, dt, t):
         
         # Compute surface moisture accounting for runup, capillary rise and precipitation/evaporation
         elif p['method_moist_process'].lower() == 'surf_moisture':
-            if p['process_moist'] is None :
+            if p['process_groundwater'] is None :
                 logger.log_and_raise('process_groundwater is not activated, the groundwater level is not computed within the program but set constant at 0 m', exc=ValueError)
                 
             #Cells that were flooded in previous time step (by rain or runup) drains to field capacity 
@@ -253,7 +255,7 @@ def update(s, p, dt, t):
             
             #If the cell is flooded (runup) in this timestep, assume satiation
             ix = s['zs'] > s['zb']
-            s['moist'][ix] = p['sat_moist']
+            s['moist'][ix] = p['satd_moist']
 
             
             #Update surface moisture with respect to evaporation, condensation, and precipitation
@@ -261,42 +263,115 @@ def update(s, p, dt, t):
             evo = evaporation(s,p,met)
             evo = evo / 24. / 3600. / 1000. # convert evaporation from mm/day to m/s
             pcp = met['RH'] / 3600. / 1000. # convert precipitation from mm/hr to m/s
-            s['moist'][~ix] = np.maximum(s['moist'][~ix] + (pcp - evo[~ix]) * dt / p['thick_moist'], p['res_moist'])
-            s['moist'][~ix] = np.minimum(s['moist'][~ix],p['sat_moist'])
+            s['moist'][~ix] = np.maximum(s['moist'][~ix] + (pcp - evo[~ix]) * dt / p['thick_moist'], p['resw_moist'])
+            s['moist'][~ix] = np.minimum(s['moist'][~ix],p['satd_moist'])
                         
             #Compute surface moisture due to capillary processes (van Genuchten and Mualem II)
+            
+            #Compute distance from gw table to the soil surface
             h=np.maximum(0,(s['zb'] - s['gw']) * 100) #h in cm to match convention of alfa (cm-1)
             
+            if p['process_scanning']:
             #Initialize value of surface moisture due to capillary rise
-            if t == 0:
-                s['moist_swr'] = p['res_moist'] + (p['sat_moist'] - p['res_moist']) \
-                      / (1 + abs(p['alfaw_moist'] * h) ** p['n_moist']) ** (1 - 1 / p['n_moist'])
-            else:
-                #Compute moisture of h for the wetting curve
-                w_h = p['res_moist'] + (p['sat_moist'] - p['res_moist']) \
-                                  / (1 + abs(p['alfaw_moist'] * h) ** p['n_moist']) ** (1 - 1 / p['n_moist'])
-                #Compute moisture of h_delta for the wetting curve
-                w_hdelta = p['res_moist'] + (p['sat_moist'] - p['res_moist']) \
-                                  / (1 + abs(p['alfaw_moist'] * s['h_delta']) ** p['n_moist']) ** (1 - 1 / p['n_moist'])
-                #Compute moisture of h for the drying curve
-                d_h = p['res_moist'] + (p['sat_moist'] - p['res_moist']) \
-                                  / (1 + abs(p['alfad_moist'] * h) ** p['n_moist']) ** (1 - 1 / p['n_moist'])
-                #Compute moisture of h_delta for the drying curve
-                d_hdelta = p['res_moist'] + (p['sat_moist'] - p['res_moist']) \
-                                  / (1 + abs(p['alfad_moist'] * s['h_delta']) ** p['n_moist']) ** (1 - 1 / p['n_moist'])
-                                  
-                ixw = s['wetting'] == True    
+                if t == 0:
+                    s['moist_swr'] = p['resw_moist'] + (p['satw_moist'] - p['resw_moist']) \
+                          / (1 + abs(p['alfaw_moist'] * h) ** p['nw_moist']) ** p['mw_moist']
+                    s['h_delta'][:,:]=np.maximum(0,(s['zb'] - s['gw'])*100)
+                    s['scan_w'][:,:] == False
+                    s['scan_d'][:,:] == False
+                else:
+                    #Compute h_delta
+                    for i in range(len(s['wetting'][:,0])):
+                        for j in range(len(s['wetting'][0,:])):
+                            #Compute h delta on the main drying and wetting curve
+                            if s['scan_w'][i,j] == False and s['wetting'][i,j] == True and s['gw'][i,j] < s['gw_prev'][i,j] or s['scan_d'][i,j] == False and s['wetting'][i,j] == False and s['gw'][i,j] > s['gw_prev'][i,j]:
+                                s['h_delta'][i,j]=np.maximum(0,(s['zb'][i,j] - s['gw'][i,j])*100)
+                            #Compute h_delta if there is a reversal on the wetting scanning curve
+                            if s['scan_w'][i,j] == True and s['wetting'][i,j] == True and s['gw'][i,j] < s['gw_prev'][i,j]:
+                                #Solve hdelta from drying scanning curve for which moist(h) on drying scanning curve equals moist(h) on wetting scanning curve 
+                                #intermediate solution:
+                                w_hdelta_int = np.minimum((s['scan_w_moist'][i,j] - s['w_h'][i,j]) * (p['satd_moist'] - s['w_h'][i,j]) / (s['d_h'][i,j] - s['w_h'][i,j]) + s['w_h'][i,j], p['satw_moist'])
+                                #Solve hdelta from wetting curve
+                                s['h_delta'][i,j] = np.maximum( 1 / p['alfaw_moist'] * (((p['satw_moist'] - p['resw_moist']) \
+                                  / np.maximum((w_hdelta_int - p['resw_moist']),0.00001)) ** (1 / p['mw_moist']) - 1) ** (1 / p['nw_moist']),0)
+                            #Compute h_delta if there is a reversal on the drying scanning curve
+                            if s['scan_d'][i,j] == True and s['wetting'][i,j] == False and s['gw'][i,j] > s['gw_prev'][i,j]:
+                                #Solve hdelta from wetting scanning curve for which moist(h) on wetting scanning curve equals moist(h) on drying scanning curve
+                               
+                                #Simple iteration method
+                                hdelta=0 #initialize hdelta
+                                it_hdelta(hdelta,s,p,i,j)
+                                s['h_delta'][i,j] = hdelta
+                    
+                    #Compute moisture of h for the wetting curve
+                    s['w_h'] = p['resw_moist'] + (p['satw_moist'] - p['resw_moist']) \
+                                      / (1 + abs(p['alfaw_moist'] * h) ** p['nw_moist']) ** p['mw_moist']
+                    #Compute moisture of h_delta for the wetting curve
+                    s['w_hdelta'] = p['resw_moist'] + (p['satw_moist'] - p['resw_moist']) \
+                                      / (1 + abs(p['alfaw_moist'] * s['h_delta']) ** p['nw_moist']) ** p['mw_moist']
+                    #Compute moisture of h for the drying curve
+                    s['d_h'] = p['resd_moist'] + (p['satd_moist'] - p['resd_moist']) \
+                                      / (1 + abs(p['alfad_moist'] * h) ** p['nd_moist']) ** p['md_moist']
+                    #Compute moisture of h_delta for the drying curve
+                    s['d_hdelta'] = p['resd_moist'] + (p['satd_moist'] - p['resd_moist']) \
+                                      / (1 + abs(p['alfad_moist'] * s['h_delta']) ** p['nd_moist']) ** p['md_moist']
+                    #Compute moisture content with the wetting scanning curve
+                    s['scan_w_moist'] = np.maximum(np.minimum(s['w_h'] + (p['satw_moist'] - s['w_h']) / np.maximum(p['satw_moist'] - s['w_hdelta'],0.0001) \
+                                                     * (s['d_hdelta'] - s['w_hdelta']),s['d_h']),s['w_h'])                
+                    #Compute moisture content with the drying scanning curve
+                    s['scan_d_moist'] = np.maximum(np.minimum(s['w_h'] + (s['w_hdelta'] - s['w_h']) / np.maximum(p['satd_moist'] - s['w_h'],0.0001) \
+                                                      * (s['d_h'] - s['w_h']), s['d_h']),s['w_h'])
+                    
+                    #Select SWR curve to compute moisture content due to capillary processes
+                    for i in range(len(s['wetting'][:,0])):
+                        for j in range(len(s['wetting'][0,:])):
+                            #Wetting conditions main curve
+                            if s['gw'][i,j] >= s['gw_prev'][i,j] and s['wetting'][i,j] == True and s['scan_w'][i,j] == False:
+                                s['moist_swr'][i,j]=s['w_h'][i,j]
+                                s['scan_w'][i,j] = False
+                                s['scan_d'][i,j] = False
+                            #wetting conditions, timestep of reversal - move onto wetting scanning curve
+                            elif s['gw'][i,j] >= s['gw_prev'][i,j] and s['wetting'][i,j] == False:
+                                s['moist_swr'][i,j] = s['scan_w_moist'][i,j]
+                                s['scan_w'][i,j] = s['scan_w_moist'] [i,j] > s['w_h'][i,j]
+                                s['scan_d'][i,j] = False
+                            #wetting conditions - followed a wetting scanning curve in previous timestep - continue following scanning curve unless main curve is reached
+                            elif s['gw'][i,j] >= s['gw_prev'][i,j] and s['wetting'][i,j] == True and s['scan_w'][i,j] == True:
+                                s['moist_swr'][i,j] = s['scan_w_moist'][i,j]
+                                s['scan_w'][i,j] = s['scan_w_moist'] [i,j] > s['w_h'][i,j]
+                                s['scan_d'][i,j] = False
+                            #Drying conditions main curve
+                            elif s['gw'][i,j] < s['gw_prev'][i,j] and s['wetting'][i,j] == False and s['scan_d'][i,j] == False:
+                                s['moist_swr'][i,j]=s['d_h'][i,j]
+                                s['scan_d'][i,j] = False
+                                s['scan_w'][i,j] = False
+                            #Drying conditions, timestep of reversal - move onto a drying scanning curve
+                            elif s['gw'][i,j] < s['gw_prev'][i,j] and s['wetting'][i,j] == True:
+                                s['moist_swr'][i,j] = s['scan_d_moist'][i,j]
+                                s['scan_d'][i,j] = s['scan_d_moist'] [i,j] < s['d_h'][i,j]
+                                s['scan_w'][i,j] = False
+                            #Drying conditions - followed a drying scanning curve in previous timestep - continue following scanning curve unless main curve is reached
+                            elif s['gw'][i,j] < s['gw_prev'][i,j] and s['wetting'][i,j] == False and s['scan_d'][i,j] == True:
+                                s['moist_swr'][i,j] = s['scan_d_moist'][i,j]
+                                s['scan_d'][i,j] = s['scan_d_moist'] [i,j] < s['d_h'][i,j]
+                                s['scan_w'][i,j] = False
                 
-                #Wetting (select largest of scanning curve and main wetting curve)
-                s['moist_swr'][ixw] = np.maximum(w_h[ixw] + (p['sat_moist'] - w_h[ixw]) / np.maximum(p['sat_moist'] - w_hdelta[ixw],0.0001) \
-                                                 * (d_hdelta[ixw] - w_hdelta[ixw]),w_h[ixw])
-                #Drying (select smallest of scanning curve and main drying curve)
-                s['moist_swr'][~ixw] = np.minimum(w_h[~ixw] + (w_hdelta[~ixw] - w_h[~ixw]) / np.maximum(p['sat_moist'] - w_h[~ixw],0.0001) \
-                                                  * (d_h[~ixw] - w_h[~ixw]), d_h[~ixw])
-
-            
+            else:
+                ixw = s['wetting'] == True
+                s['moist_swr'][ixw] = p['resw_moist'] + (p['satw_moist'] - p['resw_moist']) \
+                                      / (1 + abs(p['alfaw_moist'] * h[ixw]) ** p['nw_moist']) ** p['mw_moist']
+                s['moist_swr'][~ixw] = p['resd_moist'] + (p['satd_moist'] - p['resd_moist']) \
+                                      / (1 + abs(p['alfad_moist'] * h[~ixw]) ** p['nd_moist']) ** p['md_moist']
+                
             #Update surface moisture with respect to capillary processes
-            s['moist'] = np.maximum(s['moist'],s['moist_swr'])
+            s['moist'] = np.minimum(np.maximum(s['moist'],s['moist_swr']),p['satd_moist'])
+            
+            
+            # if t > 0:
+            #     q= 111
+            #     w=1
+            #     print(s['moist'][w,q],s['moist_swr'][p,q],s['wetting'][p,q],s['scan_d'][p,q],s['scan_w'][p,q],s['scan_d_moist'][p,q],s['scan_w_moist'][p,q], w_h[p,q],d_h[p,q],w_hdelta[p,q],d_hdelta[p,q],h[p,q],s['h_delta'][p,q])
+
         
 
         
@@ -325,18 +400,29 @@ def Boussinesq (GW,s,p,setup,shl_ix):
     '''
 
     #Define seaward boundary gw=setup
-    GW[:,shl_ix] = setup[:,shl_ix]
-    GW[:,shl_ix-1] = setup[:,shl_ix]
+    GW[:,shl_ix] = setup
+    GW[:,shl_ix-1] = setup
     
-    #Define landward boundary dgw/dx=0
-    GW[:,-1] = GW[:,-3]
-    GW[:,-2] = GW[:,-3]
+    if p['boundary_gw'].lower() == 'no_flow':
+        #Define landward boundary dgw/dx=0
+        GW[:,-1] = GW[:,-4] 
+        GW[:,-2] = GW[:,-4] 
+        GW[:,-3] = GW[:,-4]
     
-    #Set GW levels to ground level within seepage face
-    ixs = np.argmin(GW + 0.001 >= s['zb'],axis=1)
-    for i in range(len(ixs)):
-        if shl_ix[i] < ixs[i] - 1:
-            GW[i,shl_ix[i]:ixs[i]-1] = s['zb'][i,shl_ix[i]:ixs[i]-1]
+    elif p['boundary_gw'].lower() == 'static':
+       #Define landward boundary 
+        GW[:,-1] = p['GW_stat']
+        GW[:,-2] = p['GW_stat']
+        GW[:,-3] = p['GW_stat'] 
+        
+    else:
+         logger.log_and_raise('Unknown landward groundwater boundary condition' % p['boundary_gw'], exc=ValueError)
+    
+    # #Set GW levels to ground level within seepage face
+    # ixs = np.argmin(GW + 0.001 >= s['zb'],axis=1)
+    # for i in range(len(ixs)):
+    #     if shl_ix[i] < ixs[i] - 1:
+    #         GW[i,shl_ix[i]:ixs[i]-1] = s['zb'][i,shl_ix[i]:ixs[i]-1]
     
     #Compute groundwater level change dGW/dt (Boussinesq equation)
     dGW = np.zeros(s['gw'].shape)
@@ -354,6 +440,23 @@ def Boussinesq (GW,s,p,setup,shl_ix):
             c[i,shl_ix[i]+1:-3]=(b[i,shl_ix[i]+2:-2]-b[i,shl_ix[i]:-4])/s['ds'][i,shl_ix[i]+1:-3]
             dGW[i,shl_ix[i]+1:-3]=p['K_gw'] / p['ne_gw'] * (p['D_gw'] * a[i,shl_ix[i]+1:-3] + c[i,shl_ix[i]+1:-3])
     return dGW
+
+#@jit
+def it_hdelta(hdelta,s,p,i,j):
+    '''
+    Add description
+    
+    '''
+    F_hdelta =1
+    while F_hdelta > 0.01:           
+        hdelta = hdelta + 0.01
+        w_hdelta = (p['resw_moist'] + (p['satw_moist'] - p['resw_moist']) / (1 + abs(p['alfaw_moist'] * hdelta) ** p['nw_moist']) ** p['mw_moist'])
+        d_hdelta = (p['resd_moist'] + (p['satd_moist'] - p['resd_moist']) / (1 + abs(p['alfad_moist'] * hdelta) ** p['nd_moist']) ** p['md_moist'])
+        F_hdelta = s['w_h'][i,j] + (p['satw_moist'] - s['w_h'][i,j]) / np.maximum(p['satw_moist'] - w_hdelta,0.0001) * (d_hdelta - w_hdelta) - s['scan_d_moist'][i,j]
+
+    return hdelta
+
+
 
 def evaporation(s,p,met):
     '''Compute evaporation according to the Penman equation (Shuttleworth, 1993)
