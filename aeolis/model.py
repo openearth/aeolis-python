@@ -667,7 +667,7 @@ class AeoLiS(IBmi):
         model.AeoLiS.solve
 
         '''
-        print(self.p['solver'])
+        
         if self.p['solver'].lower() == 'trunk':
             solve = self.solve(alpha=1., beta=1)
         elif self.p['solver'].lower() == 'pieter': 
@@ -1197,7 +1197,7 @@ class AeoLiS(IBmi):
             Ap2[:,-1] = 0.
             Amx[:,-1] = 0.
 
-            if p['boundary_offshore'] == 'flux':
+            if (p['boundary_offshore'] == 'flux') | (p['boundary_offshore'] == 'noflux'):
                 Ap2[:,0] = 0.
                 Ap1[:,0] = 0.
             elif p['boundary_offshore'] == 'constant':
@@ -1214,7 +1214,7 @@ class AeoLiS(IBmi):
             else:
                 logger.log_and_raise('Unknown offshore boundary condition [%s]' % self.p['boundary_offshore'], exc=ValueError)
 
-            if p['boundary_onshore'] == 'flux':                              
+            if (p['boundary_onshore'] == 'flux') | (p['boundary_offshore'] == 'noflux'):                              
                 Am2[:,-1] = 0.
                 Am1[:,-1] = 0.            
             elif p['boundary_onshore'] == 'constant':                              
