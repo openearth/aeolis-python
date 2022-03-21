@@ -29,7 +29,7 @@ from __future__ import absolute_import, division
 import numpy as np
 import logging
 import operator
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 #import scipy.interpolate as spint
 #import scipy.spatial.qhull as qhull
 

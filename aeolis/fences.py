@@ -29,8 +29,8 @@ import numpy as np
 import scipy.special
 import scipy.interpolate
 from scipy import ndimage, misc
-import matplotlib
-import matplotlib.pyplot as plt
+#import matplotlib
+#import matplotlib.pyplot as plt
 from builtins import range, int
 import math
 from collections import namedtuple

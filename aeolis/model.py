@@ -39,7 +39,7 @@ import numpy as np
 import scipy.sparse
 import pickle
 import scipy.sparse.linalg
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from datetime import timedelta
 from bmi.api import IBmi
 from functools import reduce

@@ -29,7 +29,7 @@ import logging
 from scipy import ndimage, misc
 import numpy as np
 import math
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from aeolis.wind import *
 
 # package modules

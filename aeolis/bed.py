@@ -32,7 +32,7 @@ import numpy as np
 
 # package modules
 from aeolis.utils import *
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 
 # initialize logger
