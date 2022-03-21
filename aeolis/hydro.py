@@ -89,17 +89,24 @@ def interpolate(s, p, t):
                                        p['wave_file'][:,0],
                                        p['wave_file'][:,2])
 
+        s['Hs'] = np.minimum(h * p['gamma'], s['Hs'])
+
         # apply complex mask
         s['Hs'] = apply_mask(s['Hs'], s['wave_mask'])
+        s['Tp'] = apply_mask(s['Tp'], s['wave_mask'])
 
-        # add wave runup
-        if p['process_runup']:
-            ix = s['Hs'] > 0.
-            R = p['xi'] * s['Hs']
-            s['zs'][ix] += R[ix] * (1. - np.minimum(1., h[ix] * p['gamma'] / s['Hs'][ix]))
-        
-        # maximize wave height by depth ratio ``gamma``
-        s['Hs'] = np.minimum(h * p['gamma'], s['Hs'])
+    if p['process_runup']:
+        ny = p['ny']
+        wl = interp_circular(t, p['tide_file'][:, 0], p['tide_file'][:, 1])
+        hs = interp_circular(t, p['wave_file'][:, 0], p['wave_file'][:, 1])
+        tp = interp_circular(t, p['wave_file'][:, 0], p['wave_file'][:, 2])
+        for iy in range(
+                ny + 1):  # do this computation seperately on every y for now so alongshore variable wave runup can be added in the future
+            eta, sigma_s, R = calc_runup_stockdon(hs, tp, p['beach_slope'])
+            s['R'][iy][0] = R
+            s['eta'][iy][0] = R
+            s['sigma_s'][iy][0] = R
+            s['TWL'][iy][0] = R + wl
         
     if p['process_moist'] and p['method_moist_process'].lower() == 'surf_moisture' and p['meteo_file'] is not None: 
 
@@ -527,3 +534,34 @@ def saturation_pressure(T):
     vp = 0.6108 * np.exp(17.27 * T / (T + 237.3)) # [kPa]
 
     return vp
+
+def calc_runup_stockdon(Ho, Tp, beta):
+    """
+    Calculate runup according to /Stockdon et al 2006.
+    """
+    Lo = 9.81 * Tp * Tp / (2 * np.pi) #wavelength
+    iribarren = beta / (Ho / Lo) ** (0.5) #irribarren number
+
+    if iribarren < 0.3:
+        R = 0.043 * np.sqrt(Ho * Lo) #formula for dissipative conditions
+        sigma_s = 0.046 * np.sqrt(Ho * Lo) /2
+        eta = R - sigma_s
+    else:
+        nsigma = 2  # nsigma=1 for R16% and nsigma=2 for R2%
+        Lo = 9.81 * Tp * Tp /(2 * np.pi)
+        eta = 0.35 * beta * np.sqrt(Ho * Lo)
+        sigma_s = np.sqrt(Ho * Lo * (0.563 * (beta * beta) + 0.0004)) * nsigma / 2 / 2
+        R = 1.1 * (eta + sigma_s) #result for non-dissipative conditions
+
+    return eta, sigma_s, R
+
+
+
+
+
+
+
+
+
+
+
