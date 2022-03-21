@@ -30,7 +30,7 @@ from scipy import ndimage, misc
 from scipy.stats import norm, mode
 import numpy as np
 import math
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 # package modules
 import aeolis.wind
