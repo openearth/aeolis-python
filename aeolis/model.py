@@ -667,7 +667,7 @@ class AeoLiS(IBmi):
         model.AeoLiS.solve
 
         '''
-        print(self.p['solver'])
+        
         if self.p['solver'].lower() == 'trunk':
             solve = self.solve(alpha=1., beta=1)
         elif self.p['solver'].lower() == 'pieter': 

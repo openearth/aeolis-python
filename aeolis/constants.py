@@ -157,8 +157,6 @@ DEFAULT_CONFIG = {
     'wave_mask'                     : None,               # Filename of ASCII file with mask for wave height
     'tide_mask'                     : None,               # Filename of ASCII file with mask for tidal elevation
     'threshold_mask'                : None,               # Filename of ASCII file with mask for the shear velocity threshold
-    'nx'                            : 0,                  # [-] Number of grid cells in x-dimension
-    'ny'                            : 0,                  # [-] Number of grid cells in y-dimension
     'dt'                            : 60.,                # [s] Time step size
     'dx'                            : 1.,
     'dy'                            : 1.,
@@ -178,7 +176,6 @@ DEFAULT_CONFIG = {
     'output_types'                  : [],                 # Names of statistical parameters to be included in output (avg, sum, var, min or max)
     'grain_size'                    : [225e-6],           # [m] Average grain size of each sediment fraction
     'grain_dist'                    : [1.],               # [-] Initial distribution of sediment fractions
-    'nfractions'                    : 1,                  # [-] Number of sediment fractions
     'nlayers'                       : 3,                  # [-] Number of bed layers
     'layer_thickness'               : .01,                # [m] Thickness of bed layers
     'g'                             : 9.81,               # [m/s^2] Gravitational constant
@@ -256,8 +253,6 @@ DEFAULT_CONFIG = {
     'okin_initialred_fence'         : 0.32,               #initial shear reduction factor in Okin model for use with sand fence module
 }
 
-#: Required model configuration parameters
-REQUIRED_CONFIG = ['nx', 'ny']
 
 #: Merge initial and model state
 MODEL_STATE.update({
