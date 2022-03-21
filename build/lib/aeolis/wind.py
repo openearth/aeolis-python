@@ -50,18 +50,9 @@ def initialize(s, p):
     # apply wind direction convention
     if isarray(p['wind_file']):
         if p['wind_convention'] == 'nautical':
-
-            #fix issue associated with longshore winds/divide by zero
-            ifix = p['wind_file'][:, 2] == 0.
-            p['wind_file'][ifix, 2] = 0.01
-
+            pass
         elif p['wind_convention'] == 'cartesian':
-            #fix issue associated with longshore winds/divide by zero
-            ifix = p['wind_file'][:, 2] == 270.
-            p['wind_file'][ifix, 2] = 270.01
-
             p['wind_file'][:,2] = 270.0 - p['wind_file'][:,2]
-
         else:
             logger.log_and_raise('Unknown convention: %s' 
                                  % p['wind_convention'], exc=ValueError)
@@ -71,15 +62,10 @@ def initialize(s, p):
     z0 = p['k']
     
     if p['process_shear']:
-        if p['ny'] > 0:
-            s['shear'] = aeolis.shear.WindShear(s['x'], s['y'], s['zb'],
-                                                dx=p['dx'], dy=p['dy'],
-                                                L=p['L'], l=p['l'], z0=z0,
-                                                buffer_width=10.)
-        else:
-            s['shear'] = np.zeros(s['x'].shape)
-
-
+        s['shear'] = aeolis.shear.WindShear(s['x'], s['y'], s['zb'],
+                                            dx=p['dx'], dy=p['dy'],
+                                            L=p['L'], l=p['l'], z0=z0, 
+                                            buffer_width=10.) 
     return s
    
     
@@ -148,7 +134,7 @@ def shear(s,p):
     
     # Compute shear velocity field (including separation)
 
-    if 'shear' in s.keys() and p['process_shear'] and p['ny'] > 0:
+    if 'shear' in s.keys() and p['process_shear']:
         
         s['shear'].set_topo(s['zb'].copy())
         s['shear'].set_shear(s['taus'], s['taun'])
@@ -168,13 +154,6 @@ def shear(s,p):
         if p['process_separation']:
             s['hsep'] = s['shear'].get_separation()
             s['zsep'] = s['hsep'] + s['zb']
-
-    elif 'shear' in s.keys() and p['process_shear'] and p['ny'] == 0: #NTC - Added in 1D only capabilities
-        s = compute_shear1d(s, p)
-        s = stress_velocity(s,p)
-
-        #NOTE: seperation bubble is not yet implemented in 1D
-
     
     if p['process_nelayer']:
 
@@ -226,54 +205,5 @@ def stress_velocity(s, p):
     return s
 
 
-def compute_shear1d(s, p):
-    '''Compute wind shear perturbation for given free-flow wind
-    speed on computational grid. based on same implementation in Duna'''
-
-    tau = s['tau'].copy()
-    taus = s['taus'].copy()
-    taun = s['taun'].copy()
-    ets = np.zeros(s['tau'].shape)
-    etn = np.zeros(s['tau'].shape)
-    ix = tau != 0
-    ets[ix] = taus[ix] / tau[ix]
-    etn[ix] = taun[ix] / tau[ix]
-
-    x = s['x'][0,:]
-    zb = s['zb'][0,:]
-
-    #Bart: check for negative wind direction
-    if np.sum(taus) < 0:
-        x = np.flip(x)
-        zb = np.flip(zb)
 
 
-    dzbdx = np.zeros(x.shape)
-    tau_over_tau0 = np.zeros(x.shape)
-    dx = x[1] - x[0]
-    dx = np.abs(dx)
-    dzbdx[1:-1] = (zb[2:] - zb[0:-2]) / 2 / dx
-    nx = x.size - 1
-    alfa = 3
-    beta = 1
-    for i in range(nx + 1):
-        integ = 0
-        startval = i - nx
-        endval = i - 1
-        for j in np.arange(startval, endval + 1):
-            if j != 0:
-                integ = integ + dzbdx[i - j] / (j * np.pi)
-        tau_over_tau0[i] = alfa * (integ + beta * dzbdx[i]) + 1
-        tau_over_tau0[i] = np.maximum(tau_over_tau0[i], 0.1)
-
-    #should double check this - but i think this is right. duna is in u10, so slightly different
-
-    #Bart: check for negative wind direction
-    if np.sum(taus) < 0:
-        tau_over_tau0 = np.flip(tau_over_tau0)
-
-    s['tau'] = tau * tau_over_tau0
-    s['taus'] = s['tau'] * ets
-    s['taun'] = s['tau'] * etn
-
-    return s

@@ -81,10 +81,6 @@ def interpolate(s, p, t):
                                        p['wave_file'][:,0],
                                        p['wave_file'][:,1])
 
-        s['Tp'][:,:] = interp_circular(t,
-                                       p['wave_file'][:,0],
-                                       p['wave_file'][:,2])
-
         # apply complex mask
         s['Hs'] = apply_mask(s['Hs'], s['wave_mask'])
 
@@ -109,10 +105,7 @@ def interpolate(s, p, t):
         s['meteo'] = dict(zip(('T','RH','U','Q','P') , m))
 
     # ensure compatibility with XBeach: zs >= zb
-    if p['process_tide']:
-        s['zs'] = np.maximum(s['zs'], s['zb'])
-    #else:
-    #    s['zs'] = s['zb']
+    s['zs'] = np.maximum(s['zs'], s['zb'])
 
     return s
 

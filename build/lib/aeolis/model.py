@@ -54,9 +54,8 @@ import aeolis.transport
 import aeolis.hydro
 import aeolis.netcdf
 import aeolis.constants
-import aeolis.erosion
+
 import aeolis.vegetation
-import aeolis.fences
 
 #import aeolis.gridparams
 
@@ -223,9 +222,6 @@ class AeoLiS(IBmi):
         #initialize vegetation model
         self.s = aeolis.vegetation.initialize(self.s, self.p)                  
 
-        #initialize fence model
-        self.s = aeolis.fences.initialize(self.s, self.p)
-
 
     def update(self, dt=-1):
         '''Time stepping function
@@ -253,6 +249,7 @@ class AeoLiS(IBmi):
 
         '''
 
+
         self.p['_time'] = self.t
 
         # store previous state
@@ -266,14 +263,7 @@ class AeoLiS(IBmi):
         if np.sum(self.s['uw']) != 0:
         
             # calculate wind shear (bed + separation bubble)
-            if self.p['ny'] > 0:
-                self.s = aeolis.wind.shear(self.s, self.p)
-            elif self.p['process_shear'] == 'T':
-                self.s = aeolis.wind.compute_shear1d(self.s, self.p)
-
-        #compute sand fence shear
-        if self.p['process_fences']:
-            self.s = aeolis.fences.update_fences(self.s, self.p)
+            self.s = aeolis.wind.shear(self.s, self.p)
 
         # compute vegetation shear
         if self.p['process_vegetation']: 
@@ -291,39 +281,32 @@ class AeoLiS(IBmi):
         self.s = aeolis.bed.mixtoplayer(self.s, self.p)
         
         # compute threshold
-        if np.sum(self.s['uw']) != 0:
-            self.s = aeolis.threshold.compute(self.s, self.p)
+        self.s = aeolis.threshold.compute(self.s, self.p)
 
-            # compute saltation velocity and equilibrium transport
-            #self.s = aeolis.transport.saltationvelocity(self.s, self.p)
-            self.s = aeolis.transport.equilibrium(self.s, self.p)
+        # compute saltation velocity and equilibrium transport
+        #self.s = aeolis.transport.saltationvelocity(self.s, self.p)
+        self.s = aeolis.transport.equilibrium(self.s, self.p)
 
-            # compute instantaneous transport
-            if self.p['scheme'] == 'euler_forward':
-                self.s.update(self.euler_forward())
-            elif self.p['scheme'] == 'euler_backward':
-                self.s.update(self.euler_backward())
-            elif self.p['scheme'] == 'crank_nicolson':
-                self.s.update(self.crank_nicolson())
-            else:
-                logger.log_and_raise('Unknown scheme [%s]' % self.p['scheme'], exc=ValueError)
+        # compute instantaneous transport
+        if self.p['scheme'] == 'euler_forward':
+            self.s.update(self.euler_forward())
+        elif self.p['scheme'] == 'euler_backward':
+            self.s.update(self.euler_backward())
+        elif self.p['scheme'] == 'crank_nicolson':
+            self.s.update(self.crank_nicolson())
+        else:
+            logger.log_and_raise('Unknown scheme [%s]' % self.p['scheme'], exc=ValueError)
 
-            # update bed
-            self.s = aeolis.bed.update(self.s, self.p)
-
-            # avalanching
-            self.s = aeolis.avalanching.angele_of_repose(self.s, self.p)
-            self.s = aeolis.avalanching.avalanche(self.s, self.p)
-
-            # calculate average bed level change over time
-            self.s = aeolis.bed.average_change(self.l, self.s, self.p)
-
-        # compute dune erosion
-        if self.p['process_dune_erosion']:
-            self.s = aeolis.erosion.run_ph12(self.s, self.p, self.t)
-            self.s = aeolis.avalanching.angele_of_repose(self.s, self.p) #Since the aeolian module is only run for winds above threshold, also run avalanching routine here
-            self.s = aeolis.avalanching.avalanche(self.s, self.p)
-
+        # update bed
+        self.s = aeolis.bed.update(self.s, self.p)
+        
+        # avalanching
+        self.s = aeolis.avalanching.angele_of_repose(self.s, self.p)
+        self.s = aeolis.avalanching.avalanche(self.s, self.p)
+        
+        # calculate average bedlevel change over time
+        self.s = aeolis.bed.average_change(self.l, self.s, self.p)
+        
         # grow vegetation
         if self.p['process_vegetation']:
             self.s = aeolis.vegetation.germinate(self.s, self.p)
@@ -646,9 +629,9 @@ class AeoLiS(IBmi):
         '''
         
         if self.p['solver'].lower() == 'trunk':
-            solve = self.solve(alpha=0., beta=1)
+            solve = self.solve(alpha=0., beta=1.)
         elif self.p['solver'].lower() == 'pieter': 
-            solve = self.solve_pieter(alpha=0., beta=1)
+            solve = self.solve_pieter(alpha=0., beta=1.)
         elif self.p['solver'].lower() == 'steadystate':
             solve = self.solve_steadystate()
         elif self.p['solver'].lower() == 'steadystatepieter':
@@ -667,9 +650,9 @@ class AeoLiS(IBmi):
         '''
         
         if self.p['solver'].lower() == 'trunk':
-            solve = self.solve(alpha=1., beta=1)
+            solve = self.solve(alpha=1., beta=1.)
         elif self.p['solver'].lower() == 'pieter': 
-            solve = self.solve_pieter(alpha=1., beta=1)
+            solve = self.solve_pieter(alpha=1., beta=1.)
         elif self.p['solver'].lower() == 'steadystate':
             solve = self.solve_steadystate()
         elif self.p['solver'].lower() == 'steadystatepieter':
@@ -687,9 +670,9 @@ class AeoLiS(IBmi):
         '''
 
         if self.p['solver'].lower() == 'trunk':
-            solve = self.solve(alpha=.5, beta=1)
+            solve = self.solve(alpha=.5, beta=1.)
         elif self.p['solver'].lower() == 'pieter': 
-            solve = self.solve_pieter(alpha=.5, beta=1)
+            solve = self.solve_pieter(alpha=.5, beta=1.)
         elif self.p['solver'].lower() == 'steadystate':
             solve = self.solve_steadystate()
         elif self.p['solver'].lower() == 'steadystatepieter':
@@ -1328,8 +1311,6 @@ class AeoLiS(IBmi):
                 if p['boundary_onshore'] == 'constant':
                     y_i[:,-1] = p['constant_onshore_flux'] / s['u'][:,-1,i]
 
-
-
                 # solve system with current weights
                 Ct_i = scipy.sparse.linalg.spsolve(A, y_i.flatten())
                 Ct_i = prevent_tiny_negatives(Ct_i, p['max_error'])
@@ -1347,12 +1328,7 @@ class AeoLiS(IBmi):
                                               coords=np.argwhere(ix.reshape(y_i.shape)),
                                               **logprops))
 
-                    if Ct_i[~ix].sum() != 0:
-                        Ct_i[~ix] *= 1. + Ct_i[ix].sum() / Ct_i[~ix].sum()
-                    else:
-                        Ct_i[~ix] = 0
-
-                    #Ct_i[~ix] *= 1. + Ct_i[ix].sum() / Ct_i[~ix].sum()
+                    Ct_i[~ix] *= 1. + Ct_i[ix].sum() / Ct_i[~ix].sum()
                     Ct_i[ix] = 0.
 
                 # determine pickup and deficit for current fraction
@@ -1415,8 +1391,7 @@ class AeoLiS(IBmi):
                                       minweight=np.sum(w, axis=-1).min(),
                                       **logprops))
            
-
-
+        
         qs = Ct * s['us'] 
         qn = Ct * s['un'] 
 
@@ -1602,16 +1577,16 @@ class AeoLiS(IBmi):
                                         Amx.flatten()[:j]),
                                        (-j*p['ny'],-j,-1,0,1,j,j*p['ny']), format='csr')
             else:
-                j = p['nx']+1
-                ny = 0
-                A = scipy.sparse.diags((Am1.flatten()[1:],
+                A = scipy.sparse.diags((Am2.flatten()[2:],
+                                        Am1.flatten()[1:],
                                         A0.flatten(),
-                                        Ap1.flatten()[:-1]),
-                                       (-1, 0, 1), format='csr')
+                                        Ap1.flatten()[:-1],
+                                        Ap2.flatten()[:-2]),
+                                       (-2,-1,0,1,2), format='csr')
 
             # solve transport for each fraction separately using latest
             # available weights
-
+        
 
             # renormalize weights for all fractions equal or larger
             # than the current one such that the sum of all weights is
@@ -2019,10 +1994,12 @@ class AeoLiS(IBmi):
                                         Amx.flatten()[:j]),
                                        (-j*p['ny'],-j,-1,0,1,j,j*p['ny']), format='csr')
             else:
-                A = scipy.sparse.diags((Am1.flatten()[1:],
+                A = scipy.sparse.diags((Am2.flatten()[2:],
+                                        Am1.flatten()[1:],
                                         A0.flatten(),
-                                        Ap1.flatten()[:-1]),
-                                       (-1,0,1), format='csr')
+                                        Ap1.flatten()[:-1],
+                                        Ap2.flatten()[:-2]),
+                                       (-2,-1,0,1,2), format='csr')
 
             # solve transport for each fraction separately using latest
             # available weights
