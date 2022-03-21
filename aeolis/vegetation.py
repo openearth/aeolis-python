@@ -75,7 +75,6 @@ def germinate(s,p):
     n = (365.25*24.*3600. / (p['dt'] * p['accfac']))
     
     # Germination
-    
     p_germinate_year = p['germinate']                                
     p_germinate_dt = 1-(1-p_germinate_year)**(1./n)
     germination = np.random.random((s['germinate'].shape))
@@ -119,16 +118,6 @@ def grow (s, p): #DURAN 2006
     # Reduction of vegetation growth due to sediment burial
     s['dhveg'][ix] = p['V_ver'] * (1 - s['hveg'][ix] / p['hveg_max']) - np.abs(s['dzbveg'][ix]-p['dzb_opt']) * p['veg_gamma']  # m/year
 
-    # if p['_time'] > p['dzb_interval']:
-        # plt.pcolormesh(s['x'],s['y'], s['dhveg'], vmin=-1, vmax=1, cmap='YlGn')
-        # plt.gca().invert_yaxis()
-        # bar = plt.colorbar()
-        # bar.set_label('rhoveg')
-        # plt.xlabel('x [m]')
-        # plt.ylabel('y [m]')
-        # plt.title('Vegetation cover')
-        # plt.show()
-
     # Adding growth
     s['hveg'] += s['dhveg']*(p['dt'] * p['accfac']) / (365.25*24.*3600.)
 
@@ -158,8 +147,11 @@ def grow (s, p): #DURAN 2006
 
 
 def vegshear_okin(s, p):
+    #Approach to calculate shear reduction in the lee of plants using the general approach of:
+    #Okin (2008), JGR, A new model of wind erosion in the presence of vegetation
+    #Note that implementation only works in 1D currently
 
-    #initialize shear variables
+    #Initialize shear variables and other grid parameters
     ustar = s['ustar'].copy()
     ustars = s['ustars'].copy()
     ustarn = s['ustarn'].copy()
@@ -169,25 +161,20 @@ def vegshear_okin(s, p):
     ets[ix] = ustars[ix] / ustar[ix]
     etn[ix] = ustarn[ix] / ustar[ix]
     udir = s['udir'][0,0]
-
-    #intialize other grid parameters
     x = s['x'][0,:]
     zp = s['hveg'][0,:]
     red = np.zeros(x.shape)
     red_all = np.zeros(x.shape)
     nx = x.size
-
-    # okin model defaults - hardcoded for now
     c1 = p['okin_c1_veg']
     intercept = p['okin_initialred_veg']
 
+    #Calculate shear reduction by looking through all cells that have plants present and looking downwind of those features
     for igrid in range(nx):
 
-        # only look at cells with a roughness element
-        if zp[igrid] > 0:
-            # local parameters
+        if zp[igrid] > 0:         # only look at cells with a roughness element
             mult = np.ones(x.shape)
-            h = zp[igrid]
+            h = zp[igrid] #vegetation height at the appropriate cell
 
             if udir >= 180 and udir <= 360:
                 xrel = -(x - x[igrid])
@@ -218,10 +205,13 @@ def vegshear_okin(s, p):
     ix = red_all > 1
     red_all[ix] = 1
 
-    # convert to a multiple
+    #update shear velocity according to Okin (note does not operate on shear stress)
     mult_all = 1 - red_all
+    ustarveg = s['ustar'][0,:] * mult_all
+    ix = ustarveg < 0.01
+    ustarveg[ix] = 0.01 #some small number so transport code doesnt crash
 
-    s['ustar'][0,:] = s['ustar'][0,:] * mult_all
+    s['ustar'][0,:] = ustarveg
     s['ustars'][0,:] = s['ustar'][0,:] * ets[0,:]
     s['ustarn'][0,:] = s['ustar'][0,:] * etn[0,:]
 
@@ -251,8 +241,12 @@ def vegshear_raupach(s, p):
     s['vegfac'] = ndimage.gaussian_filter(vegfac, sigma=p['veg_sigma'])
 
     # Apply reduction factor of vegetation to the total shear stress
+    tau = p['rhoa'] * s['ustar'] ** 2
+    tauveg = tau * s['vegfac']
 
-    s['ustar'] *= s['vegfac']
+    #Convert back to ustar
+    ustarveg = np.sqrt(tauveg / p['rhoa'])
+    s['ustar'] = ustarveg
     s['ustars'] = s['ustar'] * ets
     s['ustarn'] = s['ustar'] * etn
 
