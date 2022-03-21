@@ -255,6 +255,10 @@ def parse_value(val, parse_files=True, force_list=False):
 
     '''
 
+    # New initial steps to filter out commented lines (with %)
+    if '%' in val:
+        val = val.split('%')[0]
+        
     val = val.strip()
     
     if ' ' in val or force_list:
@@ -265,6 +269,8 @@ def parse_value(val, parse_files=True, force_list=False):
         return int(val)
     elif re.match('^-?[\d\.]+$', val):
         return float(val)
+    elif re.match('None', val):
+        return None
     elif os.path.isfile(val) and parse_files:
         for dtype in [np.float, np.complex]:
             try:
