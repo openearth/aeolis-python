@@ -77,8 +77,7 @@ MODEL_STATE = {
         'w_h',                        #NEWCH      # [-] Moisture content (volumetric) computed on the main wetting curve
         'd_h',                        #NEWCH      # [-] Moisture content (volumetric) computed on the main drying curve
         'w_hdelta',                   #NEWCH      # [-] Moisture content (volumetric) computed on the main wetting curve for hdelta
-        'd_hdelta'                    #NEWCH      # [-] Moisture content (volumetric) computed on the main drying curve for hdelta
-
+        'd_hdelta',                    #NEWCH      # [-] Moisture content (volumetric) computed on the main drying curve for hdelta
         'ustar',                            # [m/s] Shear velocity by wind
         'ustars',                           # [m/s] Component of shear velocity in x-direction by wind
         'ustarn',                           # [m/s] Component of shear velocity in y-direction by wind
@@ -95,6 +94,10 @@ MODEL_STATE = {
         'germinate',                        # vegetation germination
         'lateral',                          # vegetation lateral expansion
         'vegfac',                           # Vegetation factor to modify shear stress by according to Raupach 1993
+        'R',                                # [m] wave runup
+        'eta',                              # [m] wave setup
+        'sigma_s',                          # [m] swash
+        'TWL',                              # [m] total water level
     ),
     ('ny','nx','nfractions') : (
         'Cu',                               # [kg/m^2] Equilibrium sediment concentration integrated over saltation height
@@ -296,6 +299,7 @@ DEFAULT_CONFIG = {
     'okin_initialred_fence'         : 0.32,               #initial shear reduction factor in Okin model for use with sand fence module
 }
 
+REQUIRED_CONFIG = ['nx', 'ny']
 
 #: Merge initial and model state
 MODEL_STATE.update({
