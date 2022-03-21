@@ -186,11 +186,20 @@ class AeoLiS(IBmi):
         # read configuration file
         self.p = aeolis.inout.read_configfile(self.configfile)
         aeolis.inout.check_configuration(self.p)
-        
+
         # set nx, ny and nfractions
-        self.p['ny'], self.p['nx'] = self.p['xgrid_file'].shape
-        self.p['nx'] -= 1 # change nx from number of points to number of cells
-        self.p['ny'] -= 1 # change ny from number of points to number of cells
+        if self.p['xgrid_file'].ndim == 2:
+            self.p['ny'], self.p['nx'] = self.p['xgrid_file'].shape
+            
+            # change from number of points to number of cells
+            self.p['nx'] -= 1  
+            self.p['ny'] -= 1
+            
+        else:
+            self.p['nx'] = len(self.p['xgrid_file'])
+            self.p['nx'] -= 1 
+            self.p['ny'] = 0
+
         self.p['nfractions'] = len(self.p['grain_dist'])
 		
         # initialize time
@@ -658,7 +667,7 @@ class AeoLiS(IBmi):
         model.AeoLiS.solve
 
         '''
-        
+        print(self.p['solver'])
         if self.p['solver'].lower() == 'trunk':
             solve = self.solve(alpha=1., beta=1)
         elif self.p['solver'].lower() == 'pieter': 
