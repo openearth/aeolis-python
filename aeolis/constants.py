@@ -196,24 +196,24 @@ DEFAULT_CONFIG = {
     'cpair'                         : 1.013e-3,           # [MJ/kg/oC] Specific heat capacity of moist air
     'Mcr_stat'                      : 34.,                # [-] Critical static slope for avalanching
     'Mcr_dyn'                       : 33.,                # [-] Critical dynamic slope for avalanching
-    'fc'                            : 0.12,               # [-] Moisture content at field capacity (volumetric) (Schmutz, 2014)
-    'resw_moist'                    : 0.001,              # [-] Residual soil moisture content (volumetric) (Schmutz, 2014)
-    'satw_moist'                    : 0.45,               # [-] Satiated soil moisture content (volumetric) (Schmutz, 2014)
-    'resd_moist'                    : 0.001,              # [-] Residual soil moisture content (volumetric) (Schmutz, 2014)
-    'satd_moist'                    : 0.45,               # [-] Satiated soil moisture content (volumetric) (Schmutz, 2014)
-    'nw_moist'                      : 4.8,                # [-] Pore-size distribution index in the soil water retention function (Schmutz, 2014)
-    'nd_moist'                      : 4.8,                # [-] Pore-size distribution index in the soil water retention function (Schmutz, 2014)
-    'mw_moist'                      : 0.8,                # [-] 1-1/n
-    'md_moist'                      : 0.8,                # [-] 1-1/n
-    'alfaw_moist'                   : 0.025,              # [cm^-1] Inverse of the air-entry value for a wetting branch of the soil water retention function (Schmutz, 2014)
-    'alfad_moist'                   : 0.019,              # [cm^-1] Inverse of the air-entry value for a drying branch of the soil water retention function (Schmutz, 2014)
+    'fc'                            : 0.11,               # [-] Moisture content at field capacity (volumetric) (Schmutz, 2014)
+    'resw_moist'                    : 0.01,              # [-] Residual soil moisture content (volumetric) (Schmutz, 2014)
+    'satw_moist'                    : 0.35,               # [-] Satiated soil moisture content (volumetric) (Schmutz, 2014)
+    'resd_moist'                    : 0.01,              # [-] Residual soil moisture content (volumetric) (Schmutz, 2014)
+    'satd_moist'                    : 0.5,               # [-] Satiated soil moisture content (volumetric) (Schmutz, 2014)
+    'nw_moist'                      : 2.3,                # [-] Pore-size distribution index in the soil water retention function (Schmutz, 2014)
+    'nd_moist'                      : 4.5,                # [-] Pore-size distribution index in the soil water retention function (Schmutz, 2014)
+    'mw_moist'                      : 0.57,                # [-] 1-1/n
+    'md_moist'                      : 0.42,                # [-] 1-1/n
+    'alfaw_moist'                   : -0.070,              # [cm^-1] Inverse of the air-entry value for a wetting branch of the soil water retention function (Schmutz, 2014)
+    'alfad_moist'                   : -0.035,              # [cm^-1] Inverse of the air-entry value for a drying branch of the soil water retention function (Schmutz, 2014)
     'thick_moist'                   : 0.002,              # [m] Thickness of surface moisture soil layer
-    'K_gw'                          : 0.000085,           # [m/s] Hydraulic conductivity (Schmutz, 2014)
+    'K_gw'                          : 0.00078,           # [m/s] Hydraulic conductivity (Schmutz, 2014)
     'ne_gw'                         : 0.3,                # [-] Effective porosity
-    'D_gw'                          : 5,                  # [m] Aquifer depth
+    'D_gw'                          : 12,                  # [m] Aquifer depth
     'tfac_gw'                       : 10,                 # [-] Reduction factor for time step in ground water calculations
-    'Cl_gw'                         : 0.216,              # [-] Runup infiltration coefficient
-    'in_gw'                         : 0,                  # [m] Initial groundwater level
+    'Cl_gw'                         : 270,              # [-] Runup infiltration coefficient
+    'in_gw'                         : 1,                  # [m] Initial groundwater level
     'GW_stat'                       : 1,                  # [m] Landward static groundwater boundary (if static boundary is defined)                 
     'scheme'                        : 'euler_backward',   # Name of numerical scheme (euler_forward, euler_backward or crank_nicolson)
     'boundary_lateral'              : 'circular',         # Name of lateral boundary conditions (circular, noflux)
