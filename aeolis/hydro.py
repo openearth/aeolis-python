@@ -250,8 +250,9 @@ def update(s, p, dt, t):
             if p['process_groundwater'] is None :
                 logger.log_and_raise('process_groundwater is not activated, the groundwater level is not computed within the program but set constant at 0 m', exc=ValueError)
                 
-            #Cells that were flooded in previous time step (by rain or runup) drains to field capacity 
-            s['moist'] = np.minimum(s['moist'],p['fc'])
+            #Infiltration
+            F1 = -np.log(.5) / p['Tdry']
+            s['moist'] += np.minimum(0,(s['moist']-p['fc'])*(np.exp(-F1*dt)-1))
             
             #If the cell is flooded (runup) in this timestep, assume satiation
             ix = s['zs'] > s['zb']
