@@ -36,14 +36,14 @@ INITIAL_STATE = {
         'taun',                             # [N/m^2] Component of wind shear stress in y-direction
         'dtaus',                            # [-] Component of the wind shear perturbation in x-direction
         'dtaun',                            # [-] Component of the wind shear perturbation in y-direction
-        'taus_u',                      #NEW # [N/m^2] Saved direction of wind shear stress in x-direction
-        'taun_u',                      #NEW # [N/m^2] Saved direction of wind shear stress in y-direction
+        'taus_u',                           # [N/m^2] Saved direction of wind shear stress in x-direction
+        'taun_u',                           # [N/m^2] Saved direction of wind shear stress in y-direction
         'udir',                             # [rad] Wind direction
         'zs',                               # [m] Water level above reference
         'swl',                         #NEWCH     # [m] Still water level above reference
         'Hs',                               # [m] Wave height
-        'Tp',
-        'zne',                         #NEW # [m] Non-erodible layer
+        'Tp',                               # [s] Wave period for wave runup calculations
+        'zne',                              # [m] Non-erodible layer
     ),
 }
 
@@ -57,30 +57,13 @@ MODEL_STATE = {
         'dsdni',                            # [m^-2] Inverse of real-world grid cell surface area
 #        'alfa',                             # [rad] Real-world grid cell orientation #Sierd_comm in later releases this needs a revision 
         'zb',                               # [m] Bed level above reference
-        'zb0',                        # NEW # [m] Initial bed level above reference
-        'zdry',                       # NEW # [m]
-        'dzdry',                      # NEW # [m]
-        'dzb',                        # NEW # [m/dt] Bed level change per time step (computed after avalanching!)
-        'dzbyear',                    # NEW # [m/yer] Bed level change tranlated to m/y
-        'dzbavg',                     # NEW # [m/year] Bed level change averaged over collected time steps
+        'zb0',                              # [m] Initial bed level above reference
+        'zdry',                             # [m]
+        'dzdry',                            # [m]
+        'dzb',                              # [m/dt] Bed level change per time step (computed after avalanching!)
+        'dzbyear',                          # [m/yr] Bed level change translated to m/y
+        'dzbavg',                           # [m/year] Bed level change averaged over collected time steps
         'S',                                # [-] Level of saturation
-        'ustar',                      # NEW # [m/s] Shear velocity by wind
-        'ustars',                     # NEW # [m/s] Component of shear velocity in x-direction by wind
-        'ustarn',                     # NEW # [m/s] Component of shear velocity in y-direction by wind
-        'ustar0',                     # NEW # [m/s] Initial shear velocity (without perturbation)
-        'zsep',                       # NEW # [m] Z level of polynomial that defines the separation bubble
-        'hsep',                       # NEW # [m] Height of separation bubbel = difference between z-level of zsep and of the bed level zb
-        'theta_stat',                 # NEW # [degrees] Updated, spatially varying static angle of repose
-        'theta_dyn',                  # NEW # [degrees] Updated, spatially varying dynamic angle of repose
-        'rhoveg',                     # NEW # [-] Vegetation cover
-        'drhoveg',                    # NEW # Change in vegetation cover
-        'hveg',                       # NEW # [m] height of vegetation
-        'dhveg',                      # NEW # [m] Difference in vegetation height per time step
-        'dzbveg',                     # NEW # [m] Bed level change used for calculation of vegetation growth
-        'germinate',                  # NEW # 
-        'lateral',                    # NEW #
-        'dxrhoveg',                   # NEW #
-        'vegfac',                     # NEW # [] Vegetation factor 
         'moist',                      #NEWCH      # [-] Moisture content (volumetric)
         'moist_swr',                  #NEWCH      # [-] Moisture content soil water retention relationship (volumetric)
         'h_delta',                    #NEWCH      # [-] Suction at reversal between wetting/drying conditions
@@ -95,6 +78,23 @@ MODEL_STATE = {
         'd_h',                        #NEWCH      # [-] Moisture content (volumetric) computed on the main drying curve
         'w_hdelta',                   #NEWCH      # [-] Moisture content (volumetric) computed on the main wetting curve for hdelta
         'd_hdelta'                    #NEWCH      # [-] Moisture content (volumetric) computed on the main drying curve for hdelta
+
+        'ustar',                            # [m/s] Shear velocity by wind
+        'ustars',                           # [m/s] Component of shear velocity in x-direction by wind
+        'ustarn',                           # [m/s] Component of shear velocity in y-direction by wind
+        'ustar0',                           # [m/s] Initial shear velocity (without perturbation)
+        'zsep',                             # [m] Z level of polynomial that defines the separation bubble
+        'hsep',                             # [m] Height of separation bubbel = difference between z-level of zsep and of the bed level zb
+        'theta_stat',                       # [degrees] Updated, spatially varying static angle of repose
+        'theta_dyn',                        # [degrees] Updated, spatially varying dynamic angle of repose
+        'rhoveg',                           # [-] Vegetation cover
+        'drhoveg',                          # Change in vegetation cover
+        'hveg',                             # [m] height of vegetation
+        'dhveg',                            # [m] Difference in vegetation height per time step
+        'dzbveg',                           # [m] Bed level change used for calculation of vegetation growth
+        'germinate',                        # vegetation germination
+        'lateral',                          # vegetation lateral expansion
+        'vegfac',                           # Vegetation factor to modify shear stress by according to Raupach 1993
     ),
     ('ny','nx','nfractions') : (
         'Cu',                               # [kg/m^2] Equilibrium sediment concentration integrated over saltation height
@@ -143,23 +143,24 @@ DEFAULT_CONFIG = {
     'process_meteo'                 : False,              # Enable the process of meteo
     'process_salt'                  : False,              # Enable the process of salt
     'process_humidity'              : False,              # Enable the process of humidity
-    'process_avalanche'             : True,         # NEW # Enable the process of avalanching
-    'process_inertia'               : False,        # NEW 
-    'process_separation'            : True,         # NEW # Enable the including of separation bubble
-    'process_nelayer'               : False,        # NEW # Enable a non-erodible layer
-    'process_vegetation'            : False,        # NEW # Enable the process of vegetation 
-    'process_fences'                : False,        # NEW # Enable the process of sand fencing
-    'process_dune_erosion'          : False,        # NEW # Enable the process of wave-driven dune erosion
     'process_groundwater'           : False,        #NEWCH      # Enable the process of groundwater
     'process_scanning'              : True,         #NEWCH      # Enable the process of scanning curves
+    'process_avalanche'             : True,               # Enable the process of avalanching
+    'process_inertia'               : False,              # NEW
+    'process_separation'            : True,               # Enable the including of separation bubble
+    'process_nelayer'               : False,              # Enable a non-erodible layer
+    'process_vegetation'            : False,              # Enable the process of vegetation
+    'process_fences'                : False,              # Enable the process of sand fencing
+    'process_dune_erosion'          : False,              # Enable the process of wave-driven dune erosion
+
     'th_grainsize'                  : True,               # Enable wind velocity threshold based on grainsize
     'th_bedslope'                   : False,              # Enable wind velocity threshold based on bedslope
     'th_moisture'                   : True,               # Enable wind velocity threshold based on moisture
-    'th_drylayer'                   : False,        # NEW # Enable threshold based on drying of layer
+    'th_drylayer'                   : False,              # Enable threshold based on drying of layer
     'th_humidity'                   : False,              # Enable wind velocity threshold based on humidity
     'th_salt'                       : False,              # Enable wind velocity threshold based on salt
     'th_roughness'                  : True,               # Enable wind velocity threshold based on roughness
-    'th_nelayer'                    : False,        # NEW # Enable wind velocity threshold based on a non-erodible layer
+    'th_nelayer'                    : False,              # Enable wind velocity threshold based on a non-erodible layer
     'xgrid_file'                    : None,               # Filename of ASCII file with x-coordinates of grid cells
     'ygrid_file'                    : None,               # Filename of ASCII file with y-coordinates of grid cells
     'bed_file'                      : None,               # Filename of ASCII file with bed level heights of grid cells
@@ -170,8 +171,8 @@ DEFAULT_CONFIG = {
     'bedcomp_file'                  : None,               # Filename of ASCII file with initial bed composition
     'threshold_file'                : None,               # Filename of ASCII file with shear velocity threshold
     'fence_file'                    : None,               # Filename of ASCII file with sand fence location/height (above the bed)
-    'ne_file'                       : None,         # NEW # Filename of ASCII file with non-erodible layer
-    'veg_file'                      : None,         # NEW # Filename of ASCII file with initial vegetation density
+    'ne_file'                       : None,               # Filename of ASCII file with non-erodible layer
+    'veg_file'                      : None,               # Filename of ASCII file with initial vegetation density
     'wave_mask'                     : None,               # Filename of ASCII file with mask for wave height
     'tide_mask'                     : None,               # Filename of ASCII file with mask for tidal elevation
     'threshold_mask'                : None,               # Filename of ASCII file with mask for the shear velocity threshold
@@ -186,7 +187,7 @@ DEFAULT_CONFIG = {
     'tstart'                        : 0.,                 # [s] Start time of simulation
     'tstop'                         : 3600.,              # [s] End time of simulation
     'restart'                       : None,               # [s] Interval for which to write restart files
-    'dzb_interval'                  : 86400,        # NEW # [s] Interval used for calcuation of vegetation growth
+    'dzb_interval'                  : 86400,              # [s] Interval used for calcuation of vegetation growth
     'output_times'                  : 60.,                # [s] Output interval in seconds of simulation time
     'output_file'                   : None,               # Filename of netCDF4 output file
     'output_vars'                   : ['zb', 'zs',
@@ -210,16 +211,16 @@ DEFAULT_CONFIG = {
     'z'                             : 10.,                # [m] Measurement height of wind velocity
     'h'                             : None,               # [m] Representative height of saltation layer
     'k'                             : 0.001,              # [m] Bed roughness
-    'L'                             : 100.,          #NEW # [m] Typical length scale of dune feature (perturbation)
-    'l'                             : 10.,           #NEW # [m] Inner layer height (perturbation)
-    'c_b'                           : 0.2,          # NEW # [-] Slope at the leeside of the separation bubble # c = 0.2 according to Durán 2010 (Sauermann 2001: c = 0.25 for 14 degrees)
-    'mu_b'                          : 30,           # NEW # [deg] Minimum required slope for the start of flow separation
+    'L'                             : 100.,               # [m] Typical length scale of dune feature (perturbation)
+    'l'                             : 10.,                # [m] Inner layer height (perturbation)
+    'c_b'                           : 0.2,                # [-] Slope at the leeside of the separation bubble # c = 0.2 according to Durán 2010 (Sauermann 2001: c = 0.25 for 14 degrees)
+    'mu_b'                          : 30,                 # [deg] Minimum required slope for the start of flow separation
     'Cb'                            : 1.5,                # [-] Constant in bagnold formulation for equilibrium sediment concentration
     'Ck'                            : 2.78,               # [-] Constant in kawamura formulation for equilibrium sediment concentration
     'Cl'                            : 6.7,                # [-] Constant in lettau formulation for equilibrium sediment concentration
     'Cdk'                           : 5.,                 # [-] Constant in DK formulation for equilibrium sediment concentration
     'm'                             : 0.5,                # [-] Factor to account for difference between average and maximum shear stress
-#    'alpha'                         : 0.4,                # [-] Relation of vertical component of ejection velocity and horizontal velocity difference between impact and ejection 
+#    'alpha'                         : 0.4,               # [-] Relation of vertical component of ejection velocity and horizontal velocity difference between impact and ejection
     'kappa'                         : 0.41,               # [-] Von Kármán constant
     'sigma'                         : 4.2,                # [-] Ratio between basal area and frontal area of roughness elements
     'beta'                          : 130.,               # [-] Ratio between drag coefficient of roughness elements and bare surface
@@ -234,19 +235,7 @@ DEFAULT_CONFIG = {
     'facDOD'                        : .1,                 # [-] Ratio between depth of disturbance and local wave height
     'csalt'                         : 35e-3,              # [-] Maximum salt concentration in bed surface layer
     'cpair'                         : 1.0035e-3,          # [MJ/kg/oC] Specific heat capacity air
-    'theta_dyn'                     : 33.,          # NEW # [degrees] Initial Dynamic angle of repose, critical dynamic slope for avalanching 
-    'theta_stat'                    : 34.,          # NEW # [degrees] Initial Static angle of repose, critical static slope for avalanching
-    'avg_time'                      : 86400.,       # NEW # [s] Indication of the time period over which the bed level change is averaged for vegetation growth
-    'gamma_vegshear'                : 16.,          # NEW # [-] Roughness factor for the shear stress reduction by vegetation
-    'hveg_max'                      : 1.,           # NEW # [m] Max height of vegetation
-    'dzb_opt'                       : 0.,           # NEW # [m/year] Sediment burial for optimal growth
-    'V_ver'                         : 0.,           # NEW # [m/year] Vertical growth 
-    'V_lat'                         : 0.,           # NEW # [m/year] Lateral growth
-    'germinate'                     : 0.,           # NEW # [1/year] Possibility of germination per year
-    'lateral'                       : 0.,           # NEW # [1/year] Posibility of lateral expension per year
-    'veg_gamma'                     : 1.,           # NEW # [-] Constant on influence of sediment burial
-    'veg_sigma'                     : 0.8,          # NEW # [-] Sigma in gaussian distrubtion of vegetation cover filter  
-    'sedimentinput'                 : 0.,           # NEW # [-] Constant boundary sediment influx (only used in solve_pieter)
+
     'fc'                            : 0.11,         # NEWCH      # [-] Moisture content at field capacity (volumetric)
     'resw_moist'                    : 0.01,         # NEWCH      # [-] Residual soil moisture content (volumetric) 
     'satw_moist'                    : 0.35,         # NEWCH      # [-] Satiated soil moisture content (volumetric)
@@ -266,34 +255,47 @@ DEFAULT_CONFIG = {
     'Cl_gw'                         : 270,          # NEWCH      # [-] Runup infiltration coefficient
     'in_gw'                         : 1,            # NEWCH      # [m] Initial groundwater level
     'GW_stat'                       : 1,            # NEWCH      # [m] Landward static groundwater boundary (if static boundary is defined)
+    'theta_dyn'                     : 33.,                # [degrees] Initial Dynamic angle of repose, critical dynamic slope for avalanching
+    'theta_stat'                    : 34.,                # [degrees] Initial Static angle of repose, critical static slope for avalanching
+    'avg_time'                      : 86400.,             # [s] Indication of the time period over which the bed level change is averaged for vegetation growth
+    'gamma_vegshear'                : 16.,                # [-] Roughness factor for the shear stress reduction by vegetation
+    'hveg_max'                      : 1.,                 # [m] Max height of vegetation
+    'dzb_opt'                       : 0.,                 # [m/year] Sediment burial for optimal growth
+    'V_ver'                         : 0.,                 # [m/year] Vertical growth
+    'V_lat'                         : 0.,                 # [m/year] Lateral growth
+    'germinate'                     : 0.,                 # [1/year] Possibility of germination per year
+    'lateral'                       : 0.,                 # [1/year] Posibility of lateral expension per year
+    'veg_gamma'                     : 1.,                 # [-] Constant on influence of sediment burial
+    'veg_sigma'                     : 0.8,                # [-] Sigma in gaussian distrubtion of vegetation cover filter
+    'sedimentinput'                 : 0.,                 # [-] Constant boundary sediment influx (only used in solve_pieter)
     'scheme'                        : 'euler_backward',   # Name of numerical scheme (euler_forward, euler_backward or crank_nicolson)
     'boundary_lateral'              : 'circular',         # Name of lateral boundary conditions (circular, constant ==noflux)
     'boundary_offshore'             : 'constant',         # Name of offshore boundary conditions (flux, constant, uniform, gradient)
     'boundary_onshore'              : 'gradient',         # Name of onshore boundary conditions (flux, constant, uniform, gradient)
-    'offshore_flux'                 : 0.,           # NEW # [-] Factor to determine offshore boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
-    'constant_offshore_flux'        : 0.,           # NEW # [kg/m/s] Constant input flux at offshore boundary
-    'onshore_flux'                  : 0.,           # NEW # [-] Factor to determine onshore boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
-    'constant_onshore_flux'         : 0.,           # NEW # [kg/m/s] Constant input flux at offshore boundary
-    'lateral_flux'                  : 0.,           # NEW # [-] Factor to determine lateral boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
     'boundary_gw'                   : 'no_flow',          # Landward groundwater boundary, dGw/dx = 0 (or 'static')
     'method_moist_threshold'        : 'belly_johnson',    # Name of method to compute wind velocity threshold based on soil moisture content
     'method_moist_process'          : 'infiltration',     # Name of method to compute soil moisture content(infiltration or surface_moisture)
+    'offshore_flux'                 : 0.,                 # [-] Factor to determine offshore boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
+    'constant_offshore_flux'        : 0.,                 # [kg/m/s] Constant input flux at offshore boundary
+    'onshore_flux'                  : 0.,                 # [-] Factor to determine onshore boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
+    'constant_onshore_flux'         : 0.,                 # [kg/m/s] Constant input flux at offshore boundary
+    'lateral_flux'                  : 0.,                 # [-] Factor to determine lateral boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
     'method_transport'              : 'bagnold',          # Name of method to compute equilibrium sediment transport rate
     'max_error'                     : 1e-6,               # [-] Maximum error at which to quit iterative solution in implicit numerical schemes
     'max_iter'                      : 1000,               # [-] Maximum number of iterations at which to quit iterative solution in implicit numerical schemes
     'max_iter_ava'                  : 1000,               # [-] Maximum number of iterations at which to quit iterative solution in avalanching calculation
     'refdate'                       : '2020-01-01 00:00', # [-] Reference datetime in netCDF output
     'callback'                      : None,               # Reference to callback function (e.g. example/callback.py':callback)
-    'wind_convention'               : 'nautical',         # Convention used for the wind direction in the input files
-    'alfa'                          : 0,                   # [deg] Real-world grid cell orientation wrt the North (clockwise)
-    'dune_toe_elevation'            : 3,            # NEW # Choose dune toe elevation, only used in the PH12 dune erosion solver
-    'beach_slope'                   : 0.1,          # NEW # Define the beach slope, only used in the PH12 dune erosion solver
-    'veg_min_elevation'             : 3,            # NEW # Choose the minimum elevation where vegetation can grow
-    'vegshear_type'                 : 'raupach',    # NEW # Choose the Raupach grid based solver (1D or 2D) or the Okin approach (1D only)
-    'okin_c1_veg'                   : 0.48,         #x/h spatial reduction factor in Okin model for use with vegetation
-    'okin_c1_fence'                 : 0.48,         #x/h spatial reduction factor in Okin model for use with vegetation
-    'okin_initialred_veg'           : 0.32,         #initial shear reduction factor in Okin model for use with vegetation
-    'okin_initialred_fence'         : 0.32,         #initial shear reduction factor in Okin model for use with vegetation
+    'wind_convention'               : 'nautical',         # Convention used for the wind direction in the input files (cartesian or nautical)
+    'alfa'                          : 0,                  # [deg] Real-world grid cell orientation wrt the North (clockwise)
+    'dune_toe_elevation'            : 3,                  # Choose dune toe elevation, only used in the PH12 dune erosion solver
+    'beach_slope'                   : 0.1,                # Define the beach slope, only used in the PH12 dune erosion solver
+    'veg_min_elevation'             : 3,                  # Choose the minimum elevation where vegetation can grow
+    'vegshear_type'                 : 'raupach',          # Choose the Raupach grid based solver (1D or 2D) or the Okin approach (1D only)
+    'okin_c1_veg'                   : 0.48,               #x/h spatial reduction factor in Okin model for use with vegetation
+    'okin_c1_fence'                 : 0.48,               #x/h spatial reduction factor in Okin model for use with sand fence module
+    'okin_initialred_veg'           : 0.32,               #initial shear reduction factor in Okin model for use with vegetation
+    'okin_initialred_fence'         : 0.32,               #initial shear reduction factor in Okin model for use with sand fence module
 }
 
 #: Required model configuration parameters
