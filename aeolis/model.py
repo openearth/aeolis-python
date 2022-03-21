@@ -287,7 +287,7 @@ class AeoLiS(IBmi):
 
         # interpolate hydrodynamic time series
         self.s = aeolis.hydro.interpolate(self.s, self.p, self.t)
-        self.s = aeolis.hydro.update(self.s, self.p, self.dt)
+        self.s = aeolis.hydro.update(self.s, self.p, self.dt, self.t)
 
         # mix top layer
         self.s = aeolis.bed.mixtoplayer(self.s, self.p)

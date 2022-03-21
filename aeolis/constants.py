@@ -119,7 +119,6 @@ MODEL_STATE = {
     ),
     ('ny','nx','nlayers') : (
         'thlyr',                            # [m] Bed composition layer thickness
-        'moist',                            # [-] Moisure content
         'salt',                             # [-] Salt content
     ),
     ('ny','nx','nlayers','nfractions') : (

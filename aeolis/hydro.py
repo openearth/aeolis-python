@@ -124,7 +124,7 @@ def interpolate(s, p, t):
     return s
 
 
-def update(s, p, dt, t):
+def update(s, p, dt,t):
     '''Update soil moisture content
 
     Updates soil moisture content in all cells. The soil moisure

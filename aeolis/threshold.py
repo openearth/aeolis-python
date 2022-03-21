@@ -171,7 +171,7 @@ def compute_moisture(s, p):
     
     # convert from volumetric content (percentage of volume) to
     # geotechnical mass content (percentage of dry mass)
-    mg = (s['moist'][:,:,:1] * p['rhow'] / (p['rhog'] * (1. - p['porosity']))).repeat(nf, axis=2)
+    mg = (s['moist'][:,:] * p['rhow'] / (p['rhog'] * (1. - p['porosity'])))#.repeat(nf, axis=2)
     ix = mg > 0.005
     
     if p['method_moist_threshold'].lower() == 'belly_johnson':
