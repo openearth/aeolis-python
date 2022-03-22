@@ -30,9 +30,9 @@ bedcomp_file 			= None									% Filename of ASCII file with initial bed composi
 meteo_file              = None               					% Filename of ASCII file with time series of meteorlogical conditions
 
 %% -------------------- [Output] ----------------------------- %%	
-output_times 			= 604800.000							% [s] Timeinterval [s] between *.nc output file
+output_times 			= 36000.000								% [s] Timeinterval [s] between *.nc output file
 output_file 			= aeolis.nc 							% [-] Name of the *.nc output file
-output_vars 			= zb zs ustar0 ustar ustarn ustars uth u us un zsep Cu Ct vegfac rhoveg dzb dzbyear dzbavg hveg dhveg germinate
+output_vars 			= zb ustar ustarn ustars uth zsep Cu Ct	% [-] List of output variables for in *.nc output file
 
 %% -------------------- [Flags Processes] -------------------- %%
 process_wind           	= T               						% [T/F] Enable the process of wind 
