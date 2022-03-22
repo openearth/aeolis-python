@@ -100,12 +100,11 @@ def interpolate(s, p, t):
         wl = interp_circular(t, p['tide_file'][:, 0], p['tide_file'][:, 1])
         hs = interp_circular(t, p['wave_file'][:, 0], p['wave_file'][:, 1])
         tp = interp_circular(t, p['wave_file'][:, 0], p['wave_file'][:, 2])
-        for iy in range(
-                ny + 1):  # do this computation seperately on every y for now so alongshore variable wave runup can be added in the future
+        for iy in range(ny + 1):  # do this computation seperately on every y for now so alongshore variable wave runup can be added in the future
             eta, sigma_s, R = calc_runup_stockdon(hs, tp, p['beach_slope'])
             s['R'][iy][0] = R
-            s['eta'][iy][0] = R
-            s['sigma_s'][iy][0] = R
+            s['eta'][iy][0] = eta
+            s['sigma_s'][iy][0] = sigma_s
             s['TWL'][iy][0] = R + wl
         
     if p['process_moist'] and p['method_moist_process'].lower() == 'surf_moisture' and p['meteo_file'] is not None: 
