@@ -63,6 +63,11 @@ def angele_of_repose(s,p):
     
     s['theta_stat'] = theta_stat
     s['theta_dyn'] = theta_dyn
+
+    
+    #s['theta_stat'] += theta_stat
+    #s['theta_dyn'] += theta_dyn
+        
         
     return s
 

@@ -276,14 +276,50 @@ def update(s, p):
     s['mass'] = m.reshape((ny+1,nx+1,nl,nf))
 
     # update bathy
+    #if p['process_bedupdate']:
+     #   dz = dm[:,0].reshape((ny+1,nx+1)) / (p['rhog'] * (1. - p['porosity']))
+        
+     #   s['dzb'] = dz
+        
+        # redistribute sediment from inactive zone to marine interaction zone
+        
+    #    s['zb'] += dz
+    #    s['zs'] += dz
+
+    #    Tswash = 0.1 #p['Tswash'] / p['dt']
+    #    ix = s['zs'] > (s['zb'] + 0.01)
+    #    s['zb'][ix] += (s['zb0'][ix] - s['zb'][ix]) * Tswash
+
+    # update bathy
     if p['process_bedupdate']:
 
         dz = dm[:, 0].reshape((ny + 1, nx + 1)) / (p['rhog'] * (1. - p['porosity']))
+
+        #q = dm[:, 0].reshape((ny + 1, nx + 1))
+
         s['dzb'] = dm[:, 0].reshape((ny + 1, nx + 1))
 
+
+        #s['dzb'] = dz
+
         # redistribute sediment from inactive zone to marine interaction zone
+
         s['zb'] += dz
         s['zs'] += dz
+
+        #Tswash = 0.1  # p['Tswash'] / p['dt']
+        #ix = s['zs'] > (s['zb'] + 0.01)
+        #s['zb'][ix] += (s['zb0'][ix] - s['zb'][ix]) * Tswash
+
+
+
+    # plt.pcolormesh(s['x'], s['y'], s['zb'], cmap='copper_r')
+    # bar = plt.colorbar()
+    # bar.set_label('zb [m]')
+    # plt.xlabel('x [m]')
+    # plt.ylabel('y [m]')
+    # plt.title('Bed elevation')
+    # plt.show()
     
     return s
 

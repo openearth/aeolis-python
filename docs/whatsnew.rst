@@ -9,23 +9,6 @@
 What's New
 ==========
 
-v2.0.0 (April 2022)
--------------------
-
-Breaking changes
-^^^^^^^^^^^^^^^^
-* New vegetation growth/expansion capabilities (Bart Van Westen)
-* Addition of groundwater module and new moisture routines (Caroline Hallin)
-* Incorporation of Okin (2008) vegetation shear coupler (Nick Cohn)
-* Addition of Palmsten and Holman (2012) dune erosion module (Nick Cohn)
-* Approach to add sand fences into model (Nick Cohn)
-
-Improvements
-^^^^^^^^^^^^
-* Replacement of wave runup driver with Stockdon et al. (2006) (Nick Cohn)
-* Non-FFT 1D based topographic shear coupler added for computational speed up (Nick Cohn)
-
-
 v1.2.2 (18 April 2020)
 -------------------
 

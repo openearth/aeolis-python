@@ -287,7 +287,7 @@ class AeoLiS(IBmi):
 
         # interpolate hydrodynamic time series
         self.s = aeolis.hydro.interpolate(self.s, self.p, self.t)
-        self.s = aeolis.hydro.update(self.s, self.p, self.dt, self.t)
+        self.s = aeolis.hydro.update(self.s, self.p, self.dt)
 
         # mix top layer
         self.s = aeolis.bed.mixtoplayer(self.s, self.p)
@@ -1197,7 +1197,7 @@ class AeoLiS(IBmi):
             Ap2[:,-1] = 0.
             Amx[:,-1] = 0.
 
-            if (p['boundary_offshore'] == 'flux') | (p['boundary_offshore'] == 'noflux'):
+            if p['boundary_offshore'] == 'flux':
                 Ap2[:,0] = 0.
                 Ap1[:,0] = 0.
             elif p['boundary_offshore'] == 'constant':
@@ -1214,7 +1214,7 @@ class AeoLiS(IBmi):
             else:
                 logger.log_and_raise('Unknown offshore boundary condition [%s]' % self.p['boundary_offshore'], exc=ValueError)
 
-            if (p['boundary_onshore'] == 'flux') | (p['boundary_offshore'] == 'noflux'):                              
+            if p['boundary_onshore'] == 'flux':                              
                 Am2[:,-1] = 0.
                 Am1[:,-1] = 0.            
             elif p['boundary_onshore'] == 'constant':                              

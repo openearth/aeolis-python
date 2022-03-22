@@ -43,6 +43,19 @@ from aeolis.utils import *
 # initialize logger
 logger = logging.getLogger(__name__)
 
+
+def calc_runup(Ho, Tp, beta, nsigma, Kd):
+    """
+    Calculate runup according to Palmsten and Holman, 2011.
+    """
+    Lo = 9.81 * Tp * Tp /(2 * np.pi)
+    eta = 0.35 * beta * np.sqrt(Ho * Lo)
+    sigma_s = np.sqrt(Ho * Lo * (0.563 * (beta * beta) + 0.0004)) * nsigma / 2 / 2
+    R = 1.1 * (eta + sigma_s)
+
+    return eta, sigma_s, R
+
+
 def run_ph12(s, p, t):
 
     Ho = np.interp(t, p['wave_file'][:, 0], p['wave_file'][:, 1])
@@ -54,20 +67,19 @@ def run_ph12(s, p, t):
     dt = p['dt']
 
     # wave runup calcs
+    nsigma = 2  # Note: nsigma=1 for R16 and nsigma=2 for R2.
     Kd = 1.26  # Coefficient to account for higher runup on dune
-    ny = p['ny']
-    wl = interp_circular(t, p['tide_file'][:, 0], p['tide_file'][:, 1])
-    Tp = interp_circular(t, p['wave_file'][:, 0], p['wave_file'][:, 2])
+    eta, sigma_s, R = calc_runup(Ho, Tp, beta, nsigma, Kd)
+    twl = R * Kd + wl
 
-    for iy in range(ny + 1):
-        twl = s['R'][iy][0] * Kd + wl
 
-        if twl > zToe:
+    if twl > zToe:
+        ny = p['ny']
+
+        for iy in range(ny+1):
+
             x = s['x'][iy, :]
             zb = s['zb'][iy, :]
-            eta = s['eta'][iy][0]
-            R = s['R'][iy][0]
-            sigma_s = s['sigma_s'][iy][0]
 
             # parameter set up
             dx = np.abs(x[1] - x[0])

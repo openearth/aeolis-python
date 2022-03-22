@@ -40,7 +40,6 @@ INITIAL_STATE = {
         'taun_u',                           # [N/m^2] Saved direction of wind shear stress in y-direction
         'udir',                             # [rad] Wind direction
         'zs',                               # [m] Water level above reference
-        'swl',                         #NEWCH     # [m] Still water level above reference
         'Hs',                               # [m] Wave height
         'Tp',                               # [s] Wave period for wave runup calculations
         'zne',                              # [m] Non-erodible layer
@@ -64,20 +63,6 @@ MODEL_STATE = {
         'dzbyear',                          # [m/yr] Bed level change translated to m/y
         'dzbavg',                           # [m/year] Bed level change averaged over collected time steps
         'S',                                # [-] Level of saturation
-        'moist',                      #NEWCH      # [-] Moisture content (volumetric)
-        'moist_swr',                  #NEWCH      # [-] Moisture content soil water retention relationship (volumetric)
-        'h_delta',                    #NEWCH      # [-] Suction at reversal between wetting/drying conditions
-        'gw',                         #NEWCH      # [m] Groundwater level above reference
-        'gw_prev',                    #NEWCH      # [m] Groundwater level above reference in previous timestep
-        'wetting',                    #NEWCH      # [bool] Flag indicating wetting or drying of soil profile
-        'scan_w',                     #NEWCH      # [bool] Flag indicating that the moisture is calculated on the wetting scanning curve
-        'scan_d',                     #NEWCH      # [bool] Flag indicating that the moisture is calculated on the drying scanning curve
-        'scan_w_moist',               #NEWCH      # [-] Moisture content (volumetric) computed on the wetting scanning curve
-        'scan_d_moist',               #NEWCH      # [-] Moisture content (volumetric) computed on the drying scanning curve
-        'w_h',                        #NEWCH      # [-] Moisture content (volumetric) computed on the main wetting curve
-        'd_h',                        #NEWCH      # [-] Moisture content (volumetric) computed on the main drying curve
-        'w_hdelta',                   #NEWCH      # [-] Moisture content (volumetric) computed on the main wetting curve for hdelta
-        'd_hdelta',                    #NEWCH      # [-] Moisture content (volumetric) computed on the main drying curve for hdelta
         'ustar',                            # [m/s] Shear velocity by wind
         'ustars',                           # [m/s] Component of shear velocity in x-direction by wind
         'ustarn',                           # [m/s] Component of shear velocity in y-direction by wind
@@ -94,10 +79,6 @@ MODEL_STATE = {
         'germinate',                        # vegetation germination
         'lateral',                          # vegetation lateral expansion
         'vegfac',                           # Vegetation factor to modify shear stress by according to Raupach 1993
-        'R',                                # [m] wave runup
-        'eta',                              # [m] wave setup
-        'sigma_s',                          # [m] swash
-        'TWL',                              # [m] total water level
     ),
     ('ny','nx','nfractions') : (
         'Cu',                               # [kg/m^2] Equilibrium sediment concentration integrated over saltation height
@@ -122,6 +103,7 @@ MODEL_STATE = {
     ),
     ('ny','nx','nlayers') : (
         'thlyr',                            # [m] Bed composition layer thickness
+        'moist',                            # [-] Moisure content
         'salt',                             # [-] Salt content
     ),
     ('ny','nx','nlayers','nfractions') : (
@@ -145,8 +127,6 @@ DEFAULT_CONFIG = {
     'process_meteo'                 : False,              # Enable the process of meteo
     'process_salt'                  : False,              # Enable the process of salt
     'process_humidity'              : False,              # Enable the process of humidity
-    'process_groundwater'           : False,        #NEWCH      # Enable the process of groundwater
-    'process_scanning'              : True,         #NEWCH      # Enable the process of scanning curves
     'process_avalanche'             : True,               # Enable the process of avalanching
     'process_inertia'               : False,              # NEW
     'process_separation'            : True,               # Enable the including of separation bubble
@@ -154,7 +134,6 @@ DEFAULT_CONFIG = {
     'process_vegetation'            : False,              # Enable the process of vegetation
     'process_fences'                : False,              # Enable the process of sand fencing
     'process_dune_erosion'          : False,              # Enable the process of wave-driven dune erosion
-
     'th_grainsize'                  : True,               # Enable wind velocity threshold based on grainsize
     'th_bedslope'                   : False,              # Enable wind velocity threshold based on bedslope
     'th_moisture'                   : True,               # Enable wind velocity threshold based on moisture
@@ -178,9 +157,6 @@ DEFAULT_CONFIG = {
     'wave_mask'                     : None,               # Filename of ASCII file with mask for wave height
     'tide_mask'                     : None,               # Filename of ASCII file with mask for tidal elevation
     'threshold_mask'                : None,               # Filename of ASCII file with mask for the shear velocity threshold
-    'gw_mask'                       : None,         #NEWCH      # Filename of ASCII file with mask for the groundwater level
-    'nx'                            : 0,                  # [-] Number of grid cells in x-dimension
-    'ny'                            : 0,                  # [-] Number of grid cells in y-dimension
     'dt'                            : 60.,                # [s] Time step size
     'dx'                            : 1.,
     'dy'                            : 1.,
@@ -236,26 +212,6 @@ DEFAULT_CONFIG = {
     'facDOD'                        : .1,                 # [-] Ratio between depth of disturbance and local wave height
     'csalt'                         : 35e-3,              # [-] Maximum salt concentration in bed surface layer
     'cpair'                         : 1.0035e-3,          # [MJ/kg/oC] Specific heat capacity air
-
-    'fc'                            : 0.11,         # NEWCH      # [-] Moisture content at field capacity (volumetric)
-    'resw_moist'                    : 0.01,         # NEWCH      # [-] Residual soil moisture content (volumetric) 
-    'satw_moist'                    : 0.35,         # NEWCH      # [-] Satiated soil moisture content (volumetric)
-    'resd_moist'                    : 0.01,         # NEWCH      # [-] Residual soil moisture content (volumetric) 
-    'satd_moist'                    : 0.5,          # NEWCH      # [-] Satiated soil moisture content (volumetric) 
-    'nw_moist'                      : 2.3,          # NEWCH      # [-] Pore-size distribution index in the soil water retention function
-    'nd_moist'                      : 4.5,          # NEWCH      # [-] Pore-size distribution index in the soil water retention function 
-    'mw_moist'                      : 0.57,         # NEWCH      # [-] m, van Genucthen param (can be approximated as 1-1/n)
-    'md_moist'                      : 0.42,         # NEWCH      # [-] m, van Genucthen param (can be approximated as 1-1/n)
-    'alfaw_moist'                   : -0.070,       # NEWCH      # [cm^-1] Inverse of the air-entry value for a wetting branch of the soil water retention function (Schmutz, 2014)
-    'alfad_moist'                   : -0.035,       # NEWCH      # [cm^-1] Inverse of the air-entry value for a drying branch of the soil water retention function (Schmutz, 2014)
-    'thick_moist'                   : 0.002,        # NEWCH      # [m] Thickness of surface moisture soil layer
-    'K_gw'                          : 0.00078,      # NEWCH      # [m/s] Hydraulic conductivity (Schmutz, 2014)
-    'ne_gw'                         : 0.3,          # NEWCH      # [-] Effective porosity
-    'D_gw'                          : 12,           # NEWCH      # [m] Aquifer depth
-    'tfac_gw'                       : 10,           # NEWCH      # [-] Reduction factor for time step in ground water calculations
-    'Cl_gw'                         : 270,          # NEWCH      # [-] Runup infiltration coefficient
-    'in_gw'                         : 1,            # NEWCH      # [m] Initial groundwater level
-    'GW_stat'                       : 1,            # NEWCH      # [m] Landward static groundwater boundary (if static boundary is defined)
     'theta_dyn'                     : 33.,                # [degrees] Initial Dynamic angle of repose, critical dynamic slope for avalanching
     'theta_stat'                    : 34.,                # [degrees] Initial Static angle of repose, critical static slope for avalanching
     'avg_time'                      : 86400.,             # [s] Indication of the time period over which the bed level change is averaged for vegetation growth
@@ -273,14 +229,12 @@ DEFAULT_CONFIG = {
     'boundary_lateral'              : 'circular',         # Name of lateral boundary conditions (circular, constant ==noflux)
     'boundary_offshore'             : 'constant',         # Name of offshore boundary conditions (flux, constant, uniform, gradient)
     'boundary_onshore'              : 'gradient',         # Name of onshore boundary conditions (flux, constant, uniform, gradient)
-    'boundary_gw'                   : 'no_flow',          # Landward groundwater boundary, dGw/dx = 0 (or 'static')
-    'method_moist_threshold'        : 'belly_johnson',    # Name of method to compute wind velocity threshold based on soil moisture content
-    'method_moist_process'          : 'infiltration',     # Name of method to compute soil moisture content(infiltration or surface_moisture)
     'offshore_flux'                 : 0.,                 # [-] Factor to determine offshore boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
     'constant_offshore_flux'        : 0.,                 # [kg/m/s] Constant input flux at offshore boundary
     'onshore_flux'                  : 0.,                 # [-] Factor to determine onshore boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
     'constant_onshore_flux'         : 0.,                 # [kg/m/s] Constant input flux at offshore boundary
     'lateral_flux'                  : 0.,                 # [-] Factor to determine lateral boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
+    'method_moist'                  : 'belly_johnson',    # Name of method to compute wind velocity threshold based on soil moisture content
     'method_transport'              : 'bagnold',          # Name of method to compute equilibrium sediment transport rate
     'max_error'                     : 1e-6,               # [-] Maximum error at which to quit iterative solution in implicit numerical schemes
     'max_iter'                      : 1000,               # [-] Maximum number of iterations at which to quit iterative solution in implicit numerical schemes
@@ -299,7 +253,6 @@ DEFAULT_CONFIG = {
     'okin_initialred_fence'         : 0.32,               #initial shear reduction factor in Okin model for use with sand fence module
 }
 
-REQUIRED_CONFIG = ['nx', 'ny']
 
 #: Merge initial and model state
 MODEL_STATE.update({
