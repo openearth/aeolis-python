@@ -6,7 +6,7 @@
 %% -------------------- [Timing] ----------------------------- %%
 dt 						= 3600.000								% [s] Timeinterval between timesteps
 tstart 					= 0										% [s] Starting time of the simulation
-tstop 					= 302400000.000							% [s] End time of the simulation
+tstop 					= 62899200.000							% [s] End time of the simulation
 restart                 = None               					% [s] Interval for which to write restart files
 refdate               	= 2020-01-01 00:00 						% [-] Reference datetime in netCDF output
 
@@ -15,7 +15,7 @@ xgrid_file 				= x.grd									% Filename of ASCII file with x-coordinates of gr
 ygrid_file 				= y.grd									% Filename of ASCII file with y-coordinates of grid cells
 bed_file 				= z.grd									% Filename of ASCII file with bed level heights of grid cells
 ne_file 				= ne.grd								% Filename of ASCII file with non-erodible layer
-veg_file 				= veg.grd								% Filename of ASCII file with initial vegetation density
+veg_file 				= None									% Filename of ASCII file with initial vegetation density
 threshold_file          = None               					% Filename of ASCII file with shear velocity threshold
 fence_file              = None               					% Filename of ASCII file with sand fence location/height (above the bed)
 wave_mask               = None               					% Filename of ASCII file with mask for wave height
@@ -37,11 +37,11 @@ output_vars 			= zb zs ustar0 ustar ustarn ustars uth u us un zsep Cu Ct vegfac 
 %% -------------------- [Flags Processes] -------------------- %%
 process_wind           	= T               						% [T/F] Enable the process of wind 
 process_shear        	= T               						% [T/F] Enable the process of wind shear
-process_tide            = T               						% [T/F] Enable the process of tides
-process_wave            = T               						% [T/F] Enable the process of waves
-process_runup           = T               						% [T/F] Enable the process of wave runup
-process_moist           = T               						% [T/F] Enable the process of moist
-process_mixtoplayer     = T               						% [T/F] Enable the process of mixing
+process_tide            = F               						% [T/F] Enable the process of tides
+process_wave            = F               						% [T/F] Enable the process of waves
+process_runup           = F               						% [T/F] Enable the process of wave runup
+process_moist           = F               						% [T/F] Enable the process of moist
+process_mixtoplayer     = F               						% [T/F] Enable the process of mixing
 process_threshold       = T               						% [T/F] Enable the process of threshold
 process_transport       = T               						% [T/F] Enable the process of transport
 process_bedupdate       = T            							% [T/F] Enable the process of bed updating
@@ -114,12 +114,12 @@ max_iter                = 1000               					% [-] Maximum number of iterat
 %% -------------------- [Boundary conditions] ---------------- %%
 boundary_onshore 		= gradient								% [-] Name of onshore boundary conditions (flux, constant, uniform, gradient)
 boundary_lateral 		= circular	   							% [-] Name of lateral boundary conditions (circular, constant ==noflux)
-boundary_offshore 		= constant								% [-] Name of offshore boundary conditions (flux, constant, uniform, gradient)
+boundary_offshore 		= flux									% [-] Name of offshore boundary conditions (flux, constant, uniform, gradient)
 offshore_flux           = 0.                 					% [-] Factor to determine offshore boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
 constant_offshore_flux  = 0.                 					% [kg/m/s] Constant input flux at offshore boundary
 onshore_flux            = 0.                 					% [-] Factor to determine onshore boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
 constant_onshore_flux   = 0.                 					% [kg/m/s] Constant input flux at offshore boundary
-lateral_flux'           = 0.                 					% [-] Factor to determine lateral boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
+lateral_flux            = 0.                 					% [-] Factor to determine lateral boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
 sedimentinput           = 0.                 					% [-] Constant boundary sediment influx (only used in solve_pieter)
 
 %% -------------------- [Rotating shear-grid] ---------------- %%
