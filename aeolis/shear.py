@@ -145,7 +145,7 @@ class WindShear:
         self.set_computational_grid()
         
 
-    def __call__(self, u0, udir, process_separation, c, mu_b):
+    def __call__(self, u0, udir, process_separation, c, mu_b, taus0, taun0):
         '''Compute wind shear for given wind speed and direction
         
         Parameters
@@ -162,7 +162,7 @@ class WindShear:
         
         
         # Populate computational grid (rotate to wind direction + interpolate input topography)
-        self.populate_computational_grid(udir+90.)
+        self.populate_computational_grid(udir+90., taus0, taun0)
         
         # Compute separation bubble
         if process_separation:
@@ -193,34 +193,19 @@ class WindShear:
     
         # Interpolate wind shear results to real grid
         gi['taux'] = self.interpolate(gc['x'], gc['y'], gc['taux'],
-                                              gi['x'], gi['y'])
+                                              gi['x'], gi['y'], taus0)
         gi['tauy'] = self.interpolate(gc['x'], gc['y'], gc['tauy'],
-                                              gi['x'], gi['y'])
+                                              gi['x'], gi['y'], taun0)
                 
         if process_separation:
             gi['hsep'] = self.interpolate(gc['x'], gc['y'], gc['hsep'], 
-                                          gi['x'], gi['y'] )
+                                          gi['x'], gi['y'], 0. )
             
         # Rotate real grid and wind shear results back to orignal orientation
         gc['x'], gc['y'] = self.rotate(gc['x'], gc['y'], udir+90., origin=(self.x0, self.y0))
         gi['x'], gi['y'] = self.rotate(gi['x'], gi['y'], +(udir+90.), origin=(self.x0, self.y0))
                        
-        gi['taux'], gi['tauy'] = self.rotate(gi['taux'], gi['tauy'], +(udir+90))
-
-        
-        # PLOTTING! -------------------------------------------------------
-        # d = 10
-        # plt.figure(figsize=(8,4))
-        # plt.pcolormesh(gi['x'], gi['y'], gi['z'], cmap='copper_r')  
-        # bar = plt.colorbar()
-        # bar.set_label('z [m]')                        
-        #plt.quiver(gi['x'][::d, ::d], gi['y'][::d, ::d],
-        #           gi['taux'][::d, ::d], gi['tauy'][::d, ::d], color='white')
-        # plt.xlabel('x [m]')
-        # plt.ylabel('y [m]')
-        # plt.title('Shear stresses i.grid including separation bubble')
-        # plt.show()
-        # -------------------------------------------------        
+        gi['taux'], gi['tauy'] = self.rotate(gi['taux'], gi['tauy'], +(udir+90))      
         
         return self
  
@@ -353,7 +338,7 @@ class WindShear:
         return self
     
         
-    def populate_computational_grid(self, alpha):                               
+    def populate_computational_grid(self, alpha, taus0, taun0):                               
         '''Interpolate input topography to computational grid
                 
         Adds and fills buffer zone around the initial grid and  
@@ -411,11 +396,11 @@ class WindShear:
         xc, yc = self.rotate(gc['xi'], gc['yi'], alpha, origin=(self.x0, self.y0))
         
         # Interpolate input topography to computational grid
-        zc = self.interpolate(xi, yi, zi, xc, yc)
+        zc = self.interpolate(xi, yi, zi, xc, yc, 0)
         
         # Interpolate input wind - shear
-        tauxc = self.interpolate(gi['x'], gi['y'], gi['taux'], xc, yc)
-        tauyc = self.interpolate(gi['x'], gi['y'], gi['tauy'], xc, yc)
+        tauxc = self.interpolate(gi['x'], gi['y'], gi['taux'], xc, yc, taus0)
+        tauyc = self.interpolate(gi['x'], gi['y'], gi['tauy'], xc, yc, taun0)
         
         gc['x'] = xc
         gc['y'] = yc
@@ -795,7 +780,7 @@ class WindShear:
         return (np.asarray(xy[:,0].reshape(x.shape) + origin[0]),
                 np.asarray(xy[:,1].reshape(y.shape) + origin[1]))
         
-    def interpolate(self, x, y, z, xi, yi):
+    def interpolate(self, x, y, z, xi, yi, z0):
         '''Interpolate one grid to an other'''
         
         xy = np.concatenate((y.reshape((-1,1)),
@@ -811,7 +796,7 @@ class WindShear:
             # zi = scipy.interpolate.griddata(xy, z.reshape((-1,1)), xyi, method='cubic').reshape(xi.shape)
             
             # version Bart
-            inter = scipy.interpolate.RegularGridInterpolator((y[:,0], x[0,:]), z, bounds_error = False, fill_value = 0.)
+            inter = scipy.interpolate.RegularGridInterpolator((y[:,0], x[0,:]), z, bounds_error = False, fill_value = z0)
             zi = inter(xyi).reshape(xi.shape)
             
         return zi

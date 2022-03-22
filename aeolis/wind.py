@@ -138,9 +138,15 @@ def interpolate(s, p, t):
     s['ustarn'] = s['uwn'] * kappa / np.log(z/z0) 
     s['ustar']  = np.hypot(s['ustars'], s['ustarn'])
     
-    s['ustar0'] = s['ustar'].copy()
-    
     s = velocity_stress(s,p)
+        
+    s['ustar0'] = s['ustar'].copy()
+    s['ustars0'] = s['ustar'].copy()
+    s['ustarn0'] = s['ustar'].copy()
+        
+    s['tau0'] = s['tau'].copy()
+    s['taus0'] = s['taus'].copy()
+    s['taun0'] = s['taun'].copy()
     
     return s
 
@@ -157,7 +163,8 @@ def shear(s,p):
                    udir=s['udir'][0,0] + p['alfa'],
                    process_separation = p['process_separation'],
                    c = p['c_b'],
-                   mu_b = p['mu_b'])
+                   mu_b = p['mu_b'],
+                   taus0 = s['taus0'][0,0], taun0 = s['taun0'][0,0] )
 
         s['taus'], s['taun'] = s['shear'].get_shear()
         s['tau'] = np.hypot(s['taus'], s['taun'])                               # set minimum of tau to zero
