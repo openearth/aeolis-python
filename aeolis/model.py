@@ -1366,6 +1366,7 @@ class AeoLiS(IBmi):
                 ix = (deficit_i > p['max_error']) \
                      & (w_i * Cu_i > 0.)
 
+
                 # quit the iteration if there is no deficit, otherwise
                 # back-compute the maximum weight allowed to get zero
                 # deficit for the current fraction and progress to
