@@ -182,10 +182,10 @@ def update(s, p, dt,t):
             t_gw = t + i * dt_gw
             interpolate(s,p,t_gw)
         
-            #Compute setup and runup
-            setup=np.max(s['swl'] + 0.35 * p['xi'] * s['Hs']) #Stockdon et al (2006)
-            
-            runup=np.max(s['zs'])
+            # #Compute setup and runup
+            # setup=np.max(s['swl'] + 0.35 * p['xi'] * s['Hs']) #Stockdon et al (2006)
+            setup=s['swl'] + s['eta'] #Stockdon et al (2006)
+            # runup=np.max(s['zs'])
 
             #Initialize GW levels
             if t==0:
@@ -195,10 +195,11 @@ def update(s, p, dt,t):
 
                 
             #Define index of shoreline location
+            # shl_ix =np.argmax(s['zb'] > setup,axis=1) - 1
             shl_ix =np.argmax(s['zb'] > setup,axis=1) - 1
-            
+
             #Define index of runup limit
-            runup_ix =np.argmax(s['zb'] > runup,axis=1) - 1
+            runup_ix =np.argmax(s['zb'] > s['TWL'],axis=1) - 1
         
             #Runge-Kutta timestepping
             f1 = Boussinesq(s['gw'],s,p,setup, shl_ix)
@@ -238,7 +239,7 @@ def update(s, p, dt,t):
             
             # Set gw level to setup level in cells below setup level
             
-            s['gw'][ixg]=setup            
+            s['gw'][ixg]=setup[ixg]            
 
 
 
@@ -246,7 +247,7 @@ def update(s, p, dt,t):
     if p['process_moist']:
         if p['method_moist_process'].lower() == 'infiltration':
             F1 = -np.log(.5) / p['Tdry']
-            ix = s['zs'] - s['zb'] > p['eps']
+            ix = s['TWL'] - s['zb'] > p['eps']
             s['moist'][ ix] = p['porosity']
             s['moist'][~ix] *= np.exp(-F1 * dt)
             s['moist'][:,:] = np.maximum(0.,np.minimum(p['porosity'],\
@@ -262,7 +263,7 @@ def update(s, p, dt,t):
             s['moist'] += np.minimum(0,(s['moist']-p['fc'])*(np.exp(-F1*dt)-1))
             
             #If the cell is flooded (runup) in this timestep, assume satiation
-            ix = s['zs'] > s['zb']
+            ix = s['TWL'] > s['zb']
             s['moist'][ix] = p['satd_moist']
 
             
@@ -401,8 +402,8 @@ def Boussinesq (GW,s,p,setup,shl_ix):
     '''
 
     #Define seaward boundary gw=setup
-    GW[:,shl_ix] = setup
-    GW[:,shl_ix-1] = setup
+    GW[:,shl_ix] = setup[:,shl_ix]
+    GW[:,shl_ix-1] = setup[:,shl_ix-1]
     
     if p['boundary_gw'].lower() == 'no_flow':
         #Define landward boundary dgw/dx=0
@@ -431,10 +432,8 @@ def Boussinesq (GW,s,p,setup,shl_ix):
     b = np.zeros(s['gw'].shape)
     c = np.zeros(s['gw'].shape)
 
-    
 
     for i in range(len(a[:,0])):
-        #if shl_ix[i] > -1 & shl_ix[i] < len(a[0,:]) - 3:
         if shl_ix[i] < len(a[0,:]) - 3:   
             a[i,shl_ix[i]:-2]=(GW[i,shl_ix[i]+1:-1] - 2 * GW[i,shl_ix[i]:-2] + GW[i,shl_ix[i]-1:-3]) / s['ds'][i,shl_ix[i]:-2] ** 2
             b[i,shl_ix[i]:-2]=(GW[i,shl_ix[i]:-2] * (GW[i,shl_ix[i]+1:-1] + GW[i,shl_ix[i]-1:-3])) / s['ds'][i,shl_ix[i]:-2]                  
