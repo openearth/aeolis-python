@@ -84,6 +84,7 @@ def plot2d(ncfile, itimes=0, ifrac=0, param='zb', cmap=plt.cm.jet, clim='auto', 
             # Plotting
             fig, ax = plt.subplots()
             pc = ax.pcolormesh(x, y, val, cmap=cmap, vmin=vmin, vmax=vmax)
+            ax.set_aspect('equal')
             plt.colorbar(pc)
     
     return fig, ax
