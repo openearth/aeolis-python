@@ -52,7 +52,7 @@ def plot2d(ncfile, itimes=0, ifrac=0, param='zb', cmap=plt.cm.jet, clim='auto', 
 
     '''
     
-    if len(itimes) == 1:
+    if type(itimes) == int:
         itimes = [itimes]
         
     for it in itimes:
@@ -83,8 +83,8 @@ def plot2d(ncfile, itimes=0, ifrac=0, param='zb', cmap=plt.cm.jet, clim='auto', 
                 
             # Plotting
             fig, ax = plt.subplots()
-            ax.pcolormesh(x, y, val, cmap=cmap, vmin=vmin, vmax=vmax)
-            ax.colorbar()
+            pc = ax.pcolormesh(x, y, val, cmap=cmap, vmin=vmin, vmax=vmax)
+            plt.colorbar(pc)
     
     return fig, ax
 
