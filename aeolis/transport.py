@@ -267,12 +267,6 @@ def equilibrium(s, p):
         s['us'] = us
         s['un'] = un
         s['u']  = u
-            
-        # u via saltation velocity
-        
-        #us = s['us']
-        #un = s['un']   
-        #u  = s['u']
         
         ustar  = s['ustar'][:,:,np.newaxis].repeat(nf, axis=2)
         ustar0 = s['ustar0'][:,:,np.newaxis].repeat(nf, axis=2)

@@ -174,19 +174,4 @@ def initialize(s, p):
     s['alfav'][:-1,:] = np.arctan2(s['yc'][1:,:] - s['yc'][:-1,:], s['xc'][1:,:] - s['xc'][:-1,:])
     s['alfav'][-1,:] = s['alfav'][-2,:]
     
-#    print(np.rad2deg(s['alfaz']))
-#    print(np.rad2deg(s['alfau']))
-#    print(np.rad2deg(s['alfav']))
-    
-#    print(s['sz'][:,:])
-#    print(s['nz'][:,:])
-#    print(s['sv'][:,:])
-#    print(s['sc'][:,:])
-#    print(s['dsz'][:,:])
-#    print(s['dsu'][:,:])
-#    print(s['dsv'][:,:])
-#    print(s['dsc'][:,:])
-#    print(s['dsdnz'][:,:])
-#    print(s['dsdnu'][:,:])
-    
     return s

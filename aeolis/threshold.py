@@ -171,13 +171,13 @@ def compute_moisture(s, p):
     
     # convert from volumetric content (percentage of volume) to
     # geotechnical mass content (percentage of dry mass)
-    mg = (s['moist'][:,:,:1] * p['rhow'] / (p['rhog'] * (1. - p['porosity']))).repeat(nf, axis=2)
+    mg = (s['moist'][:,:] * p['rhow'] / (p['rhog'] * (1. - p['porosity'])))#.repeat(nf, axis=2)
     ix = mg > 0.005
     
-    if p['method_moist'].lower() == 'belly_johnson':
-        s['uth'][ix] *= np.maximum(1., 1.8+0.6*np.log10(mg[ix] * 100.))
-    elif p['method_moist'].lower() == 'hotta':
-        s['uth'][ix] += 7.5 * mg[ix]
+    if p['method_moist_threshold'].lower() == 'belly_johnson':
+        s['uth'][ix,0] *= np.maximum(1., 1.8+0.6*np.log10(mg[ix] * 100.))
+    elif p['method_moist_threshold'].lower() == 'hotta':
+        s['uth'][ix,0] += 7.5 * mg[ix]
     else:
         logger.log_and_raise('Unknown moisture formulation [%s]' % p['method_moist'], exc=ValueError)
 
@@ -205,35 +205,35 @@ def dry_layer(s, p):
     return s 
 
 
+#REMOVE?? CH
+# def compute_humidity(s, p):
+#     '''Modify wind velocity threshold based on air humidity following Arens (1996)
 
-def compute_humidity(s, p):
-    '''Modify wind velocity threshold based on air humidity following Arens (1996)
+#     Parameters
+#     ----------
+#     s : dict
+#         Spatial grids
+#     p : dict
+#         Model configuration parameters
 
-    Parameters
-    ----------
-    s : dict
-        Spatial grids
-    p : dict
-        Model configuration parameters
+#     Returns
+#     -------
+#     dict
+#         Spatial grids
 
-    Returns
-    -------
-    dict
-        Spatial grids
+#     '''
 
-    '''
+#     nx = p['nx']+1
+#     ny = p['ny']+1
+#     nf = p['nfractions']
 
-    nx = p['nx']+1
-    ny = p['ny']+1
-    nf = p['nfractions']
-
-    # compute effect of humidity on shear velocity threshold
-    H = 5.45 * (1. + .17 * (1. + np.cos(s['udir'])) - 2.11/100. + 2.11/(100. - s['meteo']['R']))
+#     # compute effect of humidity on shear velocity threshold
+#     H = 5.45 * (1. + .17 * (1. + np.cos(s['udir'])) - 2.11/100. + 2.11/(100. - s['meteo']['R']))
     
-    # modify shear velocity threshold
-    s['uth'] += H.reshape((ny,nx,1)).repeat(nf, axis=-1) # TODO: probably incorrect
+#     # modify shear velocity threshold
+#     s['uth'] += H.reshape((ny,nx,1)).repeat(nf, axis=-1) # TODO: probably incorrect
 
-    return s
+#     return s
 
 
 def compute_salt(s, p):
