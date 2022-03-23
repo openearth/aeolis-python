@@ -547,6 +547,29 @@ content [mg/g]. Currently, no model is implemented that predicts the
 instantaneous salt content. The spatial varying salt content needs to
 be specified by the user, for example through the BMI interface.
 
+
+Shear stress perturbation for non-perpendicular wind directions
+---------------------------------------------------------------
+
+The shear stress perturbation 𝛿𝜏 is estimated following the analytical description of the influence of alow and smooth hill in the wind profile by Weng et al. (1991). The perturbation is given by the Fouriertransformed components of the shear stress perturbation in the unperturbed wind direction which are the functions 𝛿𝜏𝑥(𝑘) and 𝛿𝜏𝑦(𝑘). The x-direction is defined by the direction of the wind velocity 𝑣0 on a flat bed, while the y direction is then the transverse.
+
+As a result, the perturbation theory can only estimate the shear stress induced by the morphology-wind interaction in parallel direction of wind. Therefore, model simulations were, up to now, limited to input wind directions parallel to the cross­shore axis of the grid.
+
+To overcome this limitation and to allow for modelling directional winds, an overlaying computational grid is introduced in AeoLiS, which rotates with the changing wind direction per time step. By doing this, the shear stresses are always estimated in the positive x-direction of the computational grid. The following steps are executed for each time step:
+
+1. Create a computational grid alligned with the wind direction (set_computational_grid)
+2. Add and fill buffer around the original grid
+3. Populate computation grid by rotating it to the current wind direction and interpolate the original
+topography on it. Additionally, edges around 
+4. Compute the morphology-wind induced shear stress by using the perturbation theory
+5. Add the only wind induced wind shear stresses to the computational grid
+6. Rotate both the grids and the total shear stress results in opposite direction
+7. Interpolate the total shear stress results from the computational grid to the original grid
+8. Rotate the wind shear stress results and the original grid back to the original orientation
+Note: the extra rotations in the last two steps are necessary as a simplified, but faster in terms of
+computational time, interpolation method is used.
+
+
 Basic Model Interface (BMI)
 ---------------------------
 
