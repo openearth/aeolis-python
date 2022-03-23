@@ -75,7 +75,7 @@ def initialize(s, p):
             s['shear'] = aeolis.shear.WindShear(s['x'], s['y'], s['zb'],
                                                 dx=p['dx'], dy=p['dy'],
                                                 L=p['L'], l=p['l'], z0=z0,
-                                                buffer_width=10.)
+                                                buffer_width=5.)
         else:
             s['shear'] = np.zeros(s['x'].shape)
 
@@ -167,7 +167,11 @@ def shear(s,p):
                    taus0 = s['taus0'][0,0], taun0 = s['taun0'][0,0] )
 
         s['taus'], s['taun'] = s['shear'].get_shear()
-        s['tau'] = np.hypot(s['taus'], s['taun'])                               # set minimum of tau to zero
+        
+        # set minimum of taus to zero
+        s['taus'] = np.maximum(s['taus'], 0.)
+        
+        s['tau'] = np.hypot(s['taus'], s['taun'])                               
                
         s = stress_velocity(s,p)
                                

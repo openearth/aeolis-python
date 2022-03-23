@@ -27,6 +27,9 @@ The Netherlands                  The Netherlands
 
 import re
 import numpy as np
+import numba
+import numba_scipy
+import scipy
 
 
 def isiterable(x):
@@ -309,3 +312,7 @@ def apply_mask(arr, mask):
     arr += np.imag(mask)
 
     return arr
+
+# @numba.njit 
+def sc_kv(v, z):
+    return scipy.special.kv(v, z)
