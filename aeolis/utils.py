@@ -27,8 +27,8 @@ The Netherlands                  The Netherlands
 
 import re
 import numpy as np
-import numba
-import numba_scipy
+#import numba
+#import numba_scipy
 import scipy
 
 
