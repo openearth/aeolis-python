@@ -402,6 +402,56 @@ of the Penman-Monteith equation (:cite:`Shuttleworth1993`) that is
 governed by meteorological time series of solar radiation, temperature
 and humidity.
 
+Infiltration
+^^^^^^^^^^^^
+Exploratory model runs of the unsaturated soil with the HYDRUS1D
+(:cite:`Simunek1998`) hydrology model show that the increase of the
+volumetric water content to saturation is almost instantaneous with
+rising tide. The drying of the beach surface through infiltration
+shows an exponential decay. In order to capture this behavior the
+volumetric water content is implemented according to:
+
+.. math::
+  :label: apx-drying
+   
+  p_{\mathrm{V}}^{n+1} = \left\{
+    \begin{array}{ll}
+      p & \mathrm{if} ~ \eta > z_{\mathrm{b}} \\
+      p_{\mathrm{V}}^n \cdot e^{\frac{\log \left( 0.5 \right)}{T_{\mathrm{dry}}} \cdot \Delta t^n} - E_{\mathrm{v}} \cdot \frac{\Delta t^n}{\Delta z} & \mathrm{if} ~ \eta \leq z_{\mathrm{b}} \\
+    \end{array}
+  \right.
+
+where :math:`\eta` [m+MSL] is the instantaneous water level,
+:math:`z_{\mathrm{b}}` [m+MSL] is the local bed elevation,
+:math:`p_{\mathrm{V}}^n` [-] is the volumetric water content in time step
+:math:`n`, :math:`\Delta t^n` [s] is the model time step and :math:`\Delta z` is the bed
+composition layer thickness. :math:`T_{\mathrm{dry}}` [s] is the beach
+drying time scale, defined as the time in which the beach moisture
+content halves.
+
+Evaporation
+^^^^^^^^^^^
+
+:math:`E_{\mathrm{v}}` [m/s] is the evaporation rate that is
+implemented through an adapted version of the Penman equation
+(:cite:`Shuttleworth1993`):
+
+.. math::
+  :label: apx-penman
+   
+  E_{\mathrm{v}} = \frac{m_{\mathrm{v}} \cdot R_{\mathrm{n}} + 6.43 \cdot \gamma_{\mathrm{v}} \cdot (1 + 0.536 \cdot u_2) \cdot \delta e}
+  {\lambda_{\mathrm{v}} \cdot (m_{\mathrm{v}} + \gamma_{\mathrm{v}})} \cdot 9 \cdot 10^7
+
+where :math:`m_{\mathrm{v}}` [kPa/K] is the slope of the
+saturation vapor pressure curve, :math:`R_{\mathrm{n}}`
+[:math:`\mathrm{MJ/m^2/day}`] is the net radiance, :math:`\gamma_{\mathrm{v}}`
+[kPa/K] is the psychrometric constant, :math:`u_2` [m/s] is the wind speed
+at 2 m above the bed, :math:`\delta e` [kPa] is the vapor pressure deficit
+(related to the relative humidity) and :math:`\lambda_{\mathrm{v}}` [MJ/kg]
+is the latent heat vaporization. To obtain an evaporation rate in
+[m/s], the original formulation is multiplied by :math:`9 \cdot 10^7`.
+
+
 Shear velocity threshold
 ------------------------
 
@@ -461,47 +511,6 @@ threshold (:cite:`Pye1990`). Values larger than 0.064 (or 10\%
 volumetric content) cease transport (:cite:`DelgadoFernandez2010`),
 which is implemented as an infinite shear velocity threshold.
 
-Exploratory model runs of the unsaturated soil with the HYDRUS1D
-(:cite:`Simunek1998`) hydrology model show that the increase of the
-volumetric water content to saturation is almost instantaneous with
-rising tide. The drying of the beach surface through infiltration
-shows an exponential decay. In order to capture this behavior the
-volumetric water content is implemented according to:
-
-.. math::
-  :label: apx-drying
-   
-  p_{\mathrm{V}}^{n+1} = \left\{
-    \begin{array}{ll}
-      p & \mathrm{if} ~ \eta > z_{\mathrm{b}} \\
-      p_{\mathrm{V}}^n \cdot e^{\frac{\log \left( 0.5 \right)}{T_{\mathrm{dry}}} \cdot \Delta t^n} - E_{\mathrm{v}} \cdot \frac{\Delta t^n}{\Delta z} & \mathrm{if} ~ \eta \leq z_{\mathrm{b}} \\
-    \end{array}
-  \right.
-
-where :math:`\eta` [m+MSL] is the instantaneous water level,
-:math:`z_{\mathrm{b}}` [m+MSL] is the local bed elevation,
-:math:`p_{\mathrm{V}}^n` [-] is the volumetric water content in time step
-:math:`n`, :math:`\Delta t^n` [s] is the model time step and :math:`\Delta z` is the bed
-composition layer thickness. :math:`T_{\mathrm{dry}}` [s] is the beach
-drying time scale, defined as the time in which the beach moisture
-content halves. :math:`E_{\mathrm{v}}` [m/s] is the evaporation rate that is
-implemented through an adapted version of the Penman equation
-(:cite:`Shuttleworth1993`):
-
-.. math::
-  :label: apx-penman
-   
-  E_{\mathrm{v}} = \frac{m_{\mathrm{v}} \cdot R_{\mathrm{n}} + 6.43 \cdot \gamma_{\mathrm{v}} \cdot (1 + 0.536 \cdot u_2) \cdot \delta e}
-  {\lambda_{\mathrm{v}} \cdot (m_{\mathrm{v}} + \gamma_{\mathrm{v}})} \cdot 9 \cdot 10^7
-
-where :math:`m_{\mathrm{v}}` [kPa/K] is the slope of the
-saturation vapor pressure curve, :math:`R_{\mathrm{n}}`
-[:math:`\mathrm{MJ/m^2/day}`] is the net radiance, :math:`\gamma_{\mathrm{v}}`
-[kPa/K] is the psychrometric constant, :math:`u_2` [m/s] is the wind speed
-at 2 m above the bed, :math:`\delta e` [kPa] is the vapor pressure deficit
-(related to the relative humidity) and :math:`\lambda_{\mathrm{v}}` [MJ/kg]
-is the latent heat vaporization. To obtain an evaporation rate in
-[m/s], the original formulation is multiplied by :math:`9 \cdot 10^7`.
 
 Roughness elements
 ^^^^^^^^^^^^^^^^^^
