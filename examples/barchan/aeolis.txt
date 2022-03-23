@@ -96,6 +96,7 @@ m                       = 0.5                					% [-] Factor to account for di
 %% -------------------- [Transport] -------------------------- %%
 bi 						= 0.50000								% [-] Bed interaction factor
 method_transport 		= bagnold								% [-] Name of method to compute equilibrium sediment transport rate
+method_grainspeed       = windspeed                             % [-] Name of method to assume/compute grainspeed
 Aa                      = 0.085               					% [-] Constant in formulation for wind velocity threshold based on grain size
 Cb                     	= 1.5                					% [-] Constant in bagnold formulation for equilibrium sediment concentration
 Ck                      = 2.78              					% [-] Constant in kawamura formulation for equilibrium sediment concentration

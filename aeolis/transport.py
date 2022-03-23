@@ -261,12 +261,23 @@ def equilibrium(s, p):
         
         # u via grainvelocity:
         
-        u0, us, un, u = grainspeed(s,p)
-        
-        s['u0'] = u0
-        s['us'] = us
-        s['un'] = un
-        s['u']  = u
+        if p['method_grainspeed']=='duran':
+            #the syntax inside grainspeed needs to be cleaned up
+            u0, us, un, u = grainspeed(s,p)
+            s['u0'] = u0
+            s['us'] = us
+            s['un'] = un
+            s['u']  = u
+        elif p['method_grainspeed']=='windspeed':
+            s['u0'] = s['uw'][:,:,np.newaxis].repeat(nf, axis=2)
+            s['us'] = s['uws'][:,:,np.newaxis].repeat(nf, axis=2)
+            s['un'] = s['uwn'][:,:,np.newaxis].repeat(nf, axis=2)
+            s['u']  = s['uw'][:,:,np.newaxis].repeat(nf, axis=2) 
+            u = s['u']
+        elif p['method_grainspeed']=='constant':
+            #this should still be implemented, we need to choose a constant wind speed. 
+            print('constant grainspeed not implemented yet')
+     
         
         ustar  = s['ustar'][:,:,np.newaxis].repeat(nf, axis=2)
         ustar0 = s['ustar0'][:,:,np.newaxis].repeat(nf, axis=2)
