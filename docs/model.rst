@@ -354,8 +354,8 @@ total number of sediment fractions. It is assumed that the sediment
 fractions are ordered by increasing size. Whether a fraction is
 erodible depends on the sediment transport capacity.
 
-Simulation of the Hydraulic Mixing, Infiltration and Evaporation
-----------------------------------------------------------------
+Simulation of the Hydraulic Mixing
+----------------------------------
 
 As sediment sorting due to aeolian processes can lead to armoring of a
 beach surface, mixing of the beach surface or erosion of course
@@ -370,10 +370,7 @@ is the water line. For aeolian sediment transport the water line is a
 zero-transport boundary. In the presence of tides, the intertidal
 beach is flooded periodically. Hydraulic processes like wave breaking
 mix the bed surface layer of the intertidal beach, break the beach
-armoring and thereby influence the availability of sediment. Moreover,
-the hydraulic processes periodically wet the intertidal beach
-temporally increasing the shear velocity threshold. Infiltration and
-evaporation subsequently dry the beach.
+armoring and thereby influence the availability of sediment. 
 
 In the model the mixing of sediment is simulated by averaging the
 sediment distribution over the depth of disturbance
@@ -391,6 +388,12 @@ local wave height maximized by a maximum wave height over depth ratio
 through an input time series of water levels. Typical values for
 :math:`f_{\Delta z_{\mathrm{d}}}` are 0.05 to 0.4 and 0.5 for :math:`\gamma`.
 
+Simulation of surface moisture
+------------------------------
+
+Wave runup, capillary rise from the beach groundwater, and precipitation periodically wet the intertidal beach
+temporally increasing the shear velocity threshold. Infiltration and
+evaporation subsequently dry the beach.
 The drying of the beach is simulated by simplified functions for
 infiltration and evaporation. Infiltration is represented by an
 exponential decay function that is governed by a drying time scale
@@ -398,6 +401,152 @@ exponential decay function that is governed by a drying time scale
 of the Penman-Monteith equation (:cite:`Shuttleworth1993`) that is
 governed by meteorological time series of solar radiation, temperature
 and humidity.
+
+Infiltration
+^^^^^^^^^^^^
+Exploratory model runs of the unsaturated soil with the HYDRUS1D
+(:cite:`Simunek1998`) hydrology model show that the increase of the
+volumetric water content to saturation is almost instantaneous with
+rising tide. The drying of the beach surface through infiltration
+shows an exponential decay. In order to capture this behavior the
+volumetric water content is implemented according to:
+
+.. math::
+  :label: apx-drying
+   
+  p_{\mathrm{V}}^{n+1} = \left\{
+    \begin{array}{ll}
+      p & \mathrm{if} ~ \eta > z_{\mathrm{b}} \\
+      p_{\mathrm{V}}^n \cdot e^{\frac{\log \left( 0.5 \right)}{T_{\mathrm{dry}}} \cdot \Delta t^n} - E_{\mathrm{v}} \cdot \frac{\Delta t^n}{\Delta z} & \mathrm{if} ~ \eta \leq z_{\mathrm{b}} \\
+    \end{array}
+  \right.
+
+where :math:`\eta` [m+MSL] is the instantaneous water level,
+:math:`z_{\mathrm{b}}` [m+MSL] is the local bed elevation,
+:math:`p_{\mathrm{V}}^n` [-] is the volumetric water content in time step
+:math:`n`, :math:`\Delta t^n` [s] is the model time step and :math:`\Delta z` is the bed
+composition layer thickness. :math:`T_{\mathrm{dry}}` [s] is the beach
+drying time scale, defined as the time in which the beach moisture
+content halves.
+
+Evaporation
+^^^^^^^^^^^
+
+:math:`E_{\mathrm{v}}` [m/s] is the evaporation rate that is
+implemented through an adapted version of the Penman equation
+(:cite:`Shuttleworth1993`):
+
+.. math::
+  :label: apx-penman
+   
+  E_{\mathrm{v}} = \frac{m_{\mathrm{v}} \cdot R_{\mathrm{n}} + 6.43 \cdot \gamma_{\mathrm{v}} \cdot (1 + 0.536 \cdot u_2) \cdot \delta e}
+  {\lambda_{\mathrm{v}} \cdot (m_{\mathrm{v}} + \gamma_{\mathrm{v}})} \cdot 9 \cdot 10^7
+
+where :math:`m_{\mathrm{v}}` [kPa/K] is the slope of the
+saturation vapor pressure curve, :math:`R_{\mathrm{n}}`
+[:math:`\mathrm{MJ/m^2/day}`] is the net radiance, :math:`\gamma_{\mathrm{v}}`
+[kPa/K] is the psychrometric constant, :math:`u_2` [m/s] is the wind speed
+at 2 m above the bed, :math:`\delta e` [kPa] is the vapor pressure deficit
+(related to the relative humidity) and :math:`\lambda_{\mathrm{v}}` [MJ/kg]
+is the latent heat vaporization. To obtain an evaporation rate in
+[m/s], the original formulation is multiplied by :math:`9 \cdot 10^7`.
+
+
+Shear velocity threshold
+------------------------
+
+The shear velocity threshold represents the influence of bed surface
+properties in the saturated sediment transport equation. The shear
+velocity threshold is computed for each grid cell and sediment
+fraction separately based on local bed surface properties, like
+moisture, roughness elements and salt content. For each bed surface
+property supported by the model a factor is computed to increase the
+initial shear velocity threshold:
+
+.. math::
+  :label: apx-shearvelocity
+  
+  u_{\mathrm{* th}} = 
+  f_{u_{\mathrm{* th}}, \mathrm{M}} \cdot 
+  f_{u_{\mathrm{* th}}, \mathrm{R}} \cdot 
+  f_{u_{\mathrm{* th}}, \mathrm{S}} \cdot 
+  u_{\mathrm{* th, 0}}
+
+The initial shear velocity threshold :math:`u_{\mathrm{* th, 0}}` [m/s] is
+computed based on the grain size following :cite:`Bagnold1937b`:
+
+.. math::
+  u_{\mathrm{* th, 0}} = A \sqrt{ \frac{\rho_{\mathrm{p}} - \rho_{\mathrm{a}}}{\rho_{\mathrm{a}}} \cdot g \cdot d_{\mathrm{n}}}
+
+where :math:`A` [-] is an empirical constant, :math:`\rho_{\mathrm{p}}`
+[:math:`\mathrm{kg/m^3}`] is the grain density, :math:`\rho_{\mathrm{a}}`
+[:math:`\mathrm{kg/m^3}`] is the air density, :math:`g` [:math:`\mathrm{m/s^2}`] is the
+gravitational constant and :math:`d_{\mathrm{n}}` [m] is the nominal grain
+size of the sediment fraction.
+
+Moisture content
+^^^^^^^^^^^^^^^^
+
+The shear velocity threshold is updated based on moisture content
+following :cite:`Belly1964`:
+
+.. math::
+  :label: apx-moist
+   
+  f_{u_{\mathrm{* th}}, \mathrm{M}} = \max(1 \quad ; \quad 1.8 + 0.6 \cdot \log(p_{\mathrm{g}}))
+
+where :math:`f_{u_{\mathrm{* th},M}}` [-] is a factor in Equation :eq:`apx-shearvelocity`, :math:`p_{\mathrm{g}}` [-] is the geotechnical
+mass content of water, which is the percentage of water compared to
+the dry mass. The geotechnical mass content relates to the volumetric
+water content :math:`p_{\mathrm{V}}` [-] according to:
+
+.. math::
+  p_{\mathrm{g}} = \frac{p_{\mathrm{V}} \cdot \rho_{\mathrm{w}}}{\rho_{\mathrm{p}} \cdot (1 - p)}
+
+where :math:`\rho_{\mathrm{w}}` [:math:`\mathrm{kg/m^3}`] and
+:math:`\rho_{\mathrm{p}}` [:math:`\mathrm{kg/m^3}`] are the water and particle
+density respectively and :math:`p` [-] is the porosity. Values for
+:math:`p_{\mathrm{g}}` smaller than 0.005 do not affect the shear velocity
+threshold (:cite:`Pye1990`). Values larger than 0.064 (or 10\%
+volumetric content) cease transport (:cite:`DelgadoFernandez2010`),
+which is implemented as an infinite shear velocity threshold.
+
+
+Roughness elements
+^^^^^^^^^^^^^^^^^^
+
+The shear velocity threshold is updated based on the presence of
+roughness elements following :cite:`Raupach1993`:
+
+.. math::
+  f_{u_{\mathrm{* th},R}} = \sqrt{(1 - m \cdot \sum_{k=k_0}^{n_k}{\hat{w}_k^{\mathrm{bed}}})
+    (1 + \frac{m \beta}{\sigma} \cdot \sum_{k=k_0}^{n_k}{\hat{w}_k^{\mathrm{bed}}})}
+
+by assuming:
+
+.. math::
+  \lambda = \frac{\sum_{k=k_0}^{n_k}{\hat{w}_k^{\mathrm{bed}}}}{\sigma}
+
+where :math:`f_{u_{\mathrm{* th},R}}` [-] is a factor in Equation
+:eq:`apx-shearvelocity`, :math:`k_0` is the sediment fraction index of
+the smallest non-erodible fraction in current conditions and :math:`n_k` is
+the number of sediment fractions defined. The implementation is
+discussed in detail in section \ref{sec:roughness}.
+
+Salt content
+^^^^^^^^^^^^
+
+The shear velocity threshold is updated based on salt content
+following :cite:`Nickling1981`:
+
+.. math::
+  f_{u_{\mathrm{* th}},S} = 1.03 \cdot \exp(0.1027 \cdot p_{\mathrm{s}})
+
+where :math:`f_{u_{\mathrm{* th},S}}` [-] is a factor in Equation
+:eq:`apx-shearvelocity` and :math:`p_{\mathrm{s}}` [-] is the salt
+content [mg/g]. Currently, no model is implemented that predicts the
+instantaneous salt content. The spatial varying salt content needs to
+be specified by the user, for example through the BMI interface.
 
 
 .. rubric:: Bibliography
