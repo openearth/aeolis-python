@@ -1,8 +1,6 @@
 Numerical implementation
 ========================
 
-Bart
-
 The numerical implementation of the equations presented in
 :ref:`model` is explained here.  The implementation is available as
 Python package through the OpenEarth GitHub repository at:
