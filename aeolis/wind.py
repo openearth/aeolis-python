@@ -29,9 +29,9 @@ from __future__ import absolute_import, division
 import numpy as np
 import logging
 import operator
-#import matplotlib.pyplot as plt
-#import scipy.interpolate as spint
-#import scipy.spatial.qhull as qhull
+#import scipy.special
+#import scipy.interpolate
+from scipy import ndimage, misc
 
 # package modules
 import aeolis.shear
@@ -75,7 +75,7 @@ def initialize(s, p):
             s['shear'] = aeolis.shear.WindShear(s['x'], s['y'], s['zb'],
                                                 dx=p['dx'], dy=p['dy'],
                                                 L=p['L'], l=p['l'], z0=z0,
-                                                buffer_width=5.)
+                                                buffer_width=10.)
         else:
             s['shear'] = np.zeros(s['x'].shape)
 
@@ -167,11 +167,7 @@ def shear(s,p):
                    taus0 = s['taus0'][0,0], taun0 = s['taun0'][0,0] )
 
         s['taus'], s['taun'] = s['shear'].get_shear()
-        
-        # set minimum of taus to zero
-        s['taus'] = np.maximum(s['taus'], 0.)
-        
-        s['tau'] = np.hypot(s['taus'], s['taun'])                               
+        s['tau'] = np.hypot(s['taus'], s['taun'])                               # set minimum of tau to zero
                
         s = stress_velocity(s,p)
                                
@@ -182,11 +178,19 @@ def shear(s,p):
 
     elif 'shear' in s.keys() and p['process_shear'] and p['ny'] == 0: #NTC - Added in 1D only capabilities
         s = compute_shear1d(s, p)
-        s = stress_velocity(s,p)
 
-        #NOTE: seperation bubble is not yet implemented in 1D
+        if p['process_separation']:
+            zsep = separation1d(s, p)
+            s['zsep'] = zsep
+            s['hsep'] = s['zsep'] - s['zb']
+            tau_sep = 0.5
+            slope = 0.2  # according to Durán 2010 (Sauermann 2001: c = 0.25 for 14 degrees)
+            delta = 1. / (slope * tau_sep)
+            zsepdelta = np.minimum(np.maximum(1. - delta * s['hsep'], 0.), 1.)
+            s['taus'] *= zsepdelta
+            s['taun'] *= zsepdelta
+            s = stress_velocity(s, p)
 
-    
     if p['process_nelayer']:
 
         ustar = s['ustar'].copy()
@@ -288,3 +292,160 @@ def compute_shear1d(s, p):
     s['taun'] = s['tau'] * etn
 
     return s
+
+
+def separation1d(s, p):
+    # Initialize grid and bed dimensions
+
+    #load relevant input
+    x = s['x'][0,:]
+    #x = s['x']
+    z = s['zb'][0,:]
+    dx = p['dx']
+    dy = dx
+    c = p['c_b']
+    mu_b = p['mu_b']
+    nx = np.size(z)
+    udir = s['udir'][0][0]
+
+    #make the grids 2d to utilize same code as in the shear module
+    ny = 3
+    #z = np.matlib.repmat(z, ny, 1)
+    z = np.tile(z, [ny, 1])
+
+    if udir < 360:
+        udir = udir + 360
+
+    if udir > 360:
+        udir = udir - 360
+
+
+    if udir > 180 and udir < 360:
+        udir = np.abs(udir-270)
+        dx = dx / np.cos(udir * np.pi / 180)
+        dy = dx
+        direction = 1
+    elif udir == 180:
+        dx = 0.0001
+        direction = 1
+    elif udir == 360:
+        dx = 0.0001
+        direction = 1
+    else:
+        udir = np.abs(udir-90)
+        dx = dx / np.cos(udir * np.pi / 180)
+        dy = dx
+        direction = 2
+
+    x = np.tile(x, [ny, 1])
+
+    if direction == 2:
+        z = np.flip(z, 1)
+
+    #y = np.matrix.transpose(np.tile(y, [ny, 1]))
+
+    # Initialize arrays
+    dzx = np.zeros(z.shape)
+    dzdx0 = np.zeros(z.shape)
+    dzdx1 = np.zeros(z.shape)
+
+    stall = np.zeros(z.shape)
+    bubble = np.zeros(z.shape)
+
+    k = np.array(range(0, nx))
+
+    zsep = z.copy()  # total separation bubble
+
+    zsep0 = np.zeros(z.shape)  # zero-order separation bubble surface
+    zsep1 = np.zeros(z.shape)  # first-oder separation bubble surface
+
+    zfft = np.zeros((ny, nx), dtype=np.complex)
+
+    # Compute bed slope angle in x-dir
+    dzx[:, :-1] = np.rad2deg(np.arctan((z[:, 1:] - z[:, :-1]) / dx))
+    dzx[:, 0] = dzx[:, 1]
+    dzx[:, -1] = dzx[:, -2]
+
+    # Determine location of separation bubbles
+    '''Separation bubble exist if bed slope angle (lee side) 
+    is larger than max angle that wind stream lines can 
+    follow behind an obstacle (mu_b = ..)'''
+
+    stall += np.logical_and(abs(dzx) > mu_b, dzx < 0.)
+
+    stall[:, 1:-1] += np.logical_and(stall[:, 1:-1] == 0, stall[:, :-2] > 0., stall[:, 2:] > 0.)
+
+    # Define separation bubble
+    bubble[:, :-1] = np.logical_and(stall[:, :-1] == 0., stall[:, 1:] > 0.)
+
+    # Shift bubble back to x0: start of separation bubble
+    p = 2
+    bubble[:, :-p] = bubble[:, p:]
+    bubble[:, :p] = 0
+
+    bubble = bubble.astype(int)
+
+    # Count separation bubbles
+    n = np.sum(bubble)
+    bubble_n = np.asarray(np.where(bubble == True)).T
+
+    # Walk through all separation bubbles and determine polynoms
+    for k in range(0, n):
+
+        i = bubble_n[k, 1]
+        j = bubble_n[k, 0]
+
+        ix_neg = (dzx[j, i + 5:] >= 0)  # i + 5??
+
+        if np.sum(ix_neg) == 0:
+            zbrink = z[j, i]  # z level of brink at z(x0)
+        else:
+            zbrink = z[j, i] - z[j, i + 5 + np.where(ix_neg)[0][0]]
+
+        # Zero order polynom
+        dzdx0 = (z[j, i - 1] - z[j, i - 2]) / dx
+
+        # if dzdx0 > 0.1:
+        #    dzdx0 = 0.1
+
+        a = dzdx0 / c
+
+        ls = np.minimum(np.maximum((3. * zbrink / (2. * c) * (1. + a / 4. + a ** 2 / 8.)), 0.1), 200.)
+        a2 = -3 * zbrink / ls ** 2 - 2 * dzdx0 / ls
+        a3 = 2 * zbrink / ls ** 3 + dzdx0 / ls ** 2
+        i_max = min(i + int(ls / dx), int(nx - 1))
+        xs = x[j, i:i_max] - x[j, i]
+        zsep0[j, i:i_max] = (a3 * xs ** 3 + a2 * xs ** 2 + dzdx0 * xs + z[j, i])
+
+        # Zero order filter
+        Cut = 1.5
+        dk = 2.0 * np.pi / (np.max(x))
+        zfft[j, :] = np.fft.fft(zsep0[j, :])
+        zfft[j, :] *= np.exp(-(dk * k * dx) ** 2 / (2. * Cut ** 2))
+        zsep0[j, :] = np.real(np.fft.ifft(zfft[j, :]))
+
+        # First order polynom
+        dzdx1 = (zsep0[j, i - 1] - zsep0[j, i - 2]) / dx
+        a = dzdx1 / c
+        ls = np.minimum(np.maximum((3. * z[j, i] / (2. * c) * (1. + a / 4. + a ** 2 / 8.)), 0.1), 200.)
+        a2 = -3 * z[j, i] / ls ** 2 - 2 * dzdx1 / ls
+        a3 = 2 * z[j, i] / ls ** 3 + dzdx1 / ls ** 2
+        i_max1 = min(i + int(ls / dx), int(nx - 1))
+        xs1 = x[j, i:i_max1] - x[j, i]
+
+        # Combine Seperation Bubble
+        zsep1[j, i:i_max1] = (a3 * xs1 ** 3 + a2 * xs1 ** 2 + dzdx1 * xs1 + z[j, i])
+        zsep[j, i:i_max] = np.maximum(zsep1[j, i:i_max], z[j, i:i_max])
+
+    # Smooth surface of separation bubbles over y direction
+    zsep = ndimage.gaussian_filter1d(zsep, sigma=0.2, axis=0)
+    ilow = zsep < z
+    zsep[ilow] = z[ilow]
+
+    #remove the 2d aspect of results
+    zsepout = zsep[1,:]
+
+    if direction == 2:
+        zsepout = np.flip(zsepout)
+
+    return zsepout

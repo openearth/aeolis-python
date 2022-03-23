@@ -266,12 +266,7 @@ class AeoLiS(IBmi):
         self.s = aeolis.wind.interpolate(self.s, self.p, self.t)
         
         if np.sum(self.s['uw']) != 0:
-        
-            # calculate wind shear (bed + separation bubble)
-            if self.p['ny'] > 0:
-                self.s = aeolis.wind.shear(self.s, self.p)
-            elif self.p['process_shear'] == 'T':
-                self.s = aeolis.wind.compute_shear1d(self.s, self.p)
+            self.s = aeolis.wind.shear(self.s, self.p)
 
         #compute sand fence shear
         if self.p['process_fences']:
