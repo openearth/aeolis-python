@@ -402,8 +402,14 @@ of the Penman-Monteith equation (:cite:`Shuttleworth1993`) that is
 governed by meteorological time series of solar radiation, temperature
 and humidity.
 
-Runup
-^^^^^
+Runup and wave setup
+^^^^^^^^^^^^^^^^^^^^
+Runup and wave setup are computed using the Stockdon equations(:cite:`Stockdon2006`):
+
+
+
+Capillary rise
+^^^^^^^^^^^^^^
 
 Infiltration
 ^^^^^^^^^^^^
