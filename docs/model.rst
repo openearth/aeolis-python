@@ -354,8 +354,8 @@ total number of sediment fractions. It is assumed that the sediment
 fractions are ordered by increasing size. Whether a fraction is
 erodible depends on the sediment transport capacity.
 
-Simulation of the Hydraulic Mixing, Infiltration and Evaporation
-----------------------------------------------------------------
+Simulation of the Hydraulic Mixing
+----------------------------------
 
 As sediment sorting due to aeolian processes can lead to armoring of a
 beach surface, mixing of the beach surface or erosion of course
@@ -370,10 +370,7 @@ is the water line. For aeolian sediment transport the water line is a
 zero-transport boundary. In the presence of tides, the intertidal
 beach is flooded periodically. Hydraulic processes like wave breaking
 mix the bed surface layer of the intertidal beach, break the beach
-armoring and thereby influence the availability of sediment. Moreover,
-the hydraulic processes periodically wet the intertidal beach
-temporally increasing the shear velocity threshold. Infiltration and
-evaporation subsequently dry the beach.
+armoring and thereby influence the availability of sediment. 
 
 In the model the mixing of sediment is simulated by averaging the
 sediment distribution over the depth of disturbance
@@ -391,6 +388,12 @@ local wave height maximized by a maximum wave height over depth ratio
 through an input time series of water levels. Typical values for
 :math:`f_{\Delta z_{\mathrm{d}}}` are 0.05 to 0.4 and 0.5 for :math:`\gamma`.
 
+Simulation of surface moisture
+------------------------------
+
+Wave runup, capillary rise from the beach groundwater, and precipitation periodically wet the intertidal beach
+temporally increasing the shear velocity threshold. Infiltration and
+evaporation subsequently dry the beach.
 The drying of the beach is simulated by simplified functions for
 infiltration and evaporation. Infiltration is represented by an
 exponential decay function that is governed by a drying time scale
