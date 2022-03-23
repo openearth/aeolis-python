@@ -57,6 +57,7 @@ MODEL_STATE = {
         'dsdni',                            # [m^-2] Inverse of real-world grid cell surface area
 #        'alfa',                             # [rad] Real-world grid cell orientation #Sierd_comm in later releases this needs a revision 
         'zb',                               # [m] Bed level above reference
+        'zne',                              # [m] Height above reference of the non-erodible layer
         'zb0',                              # [m] Initial bed level above reference
         'zdry',                             # [m]
         'dzdry',                            # [m]
