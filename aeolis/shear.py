@@ -550,12 +550,19 @@ class WindShear:
             #plt.legend()
             #plt.show()     
             
-            zsep[j,i:i_max] = np.maximum(zsep0[j,i:i_max], z[j,i:i_max])
-                          
+            #zsep[j,i:i_max] = np.maximum(zsep0[j,i:i_max], z[j,i:i_max])
+
+            #Pick the maximum seperation bubble hieght at all locations
+            zsep[j,i:i_max] = np.maximum(zsep1[j,i:i_max], zsep[j,i:i_max])
+
         
         # Smooth surface of separation bubbles over y direction
         zsep = ndimage.gaussian_filter1d(zsep, sigma=0.2, axis=0)
-        
+
+        #Correct for any seperation bubbles that are below the bed surface following smoothing
+        ilow = zsep < z
+        zsep[ilow] = z[ilow]
+
         #plt.pcolormesh(x, y, np.maximum(zsep,z))#, vmin=0, vmax=0.00001)
         #bar = plt.colorbar()
         #bar.set_label('z [m]')
