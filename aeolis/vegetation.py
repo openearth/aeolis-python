@@ -64,6 +64,7 @@ def vegshear(s, p):
         s = vegshear_raupach(s, p)
 
     s = velocity_stress(s,p)
+
     return s
 
 
@@ -161,6 +162,7 @@ def vegshear_okin(s, p):
     ets[ix] = ustars[ix] / ustar[ix]
     etn[ix] = ustarn[ix] / ustar[ix]
     udir = s['udir'][0,0]
+
     x = s['x'][0,:]
     zp = s['hveg'][0,:]
     red = np.zeros(x.shape)
@@ -168,6 +170,12 @@ def vegshear_okin(s, p):
     nx = x.size
     c1 = p['okin_c1_veg']
     intercept = p['okin_initialred_veg']
+
+    if udir < 360:
+        udir = udir + 360
+
+    if udir > 360:
+        udir = udir - 360
 
     #Calculate shear reduction by looking through all cells that have plants present and looking downwind of those features
     for igrid in range(nx):
