@@ -45,16 +45,18 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Topic :: Scientific/Engineering :: Physics',
     ],
     keywords=['aeolian sediment transport coastal model deltares tudelft'],
-    packages=find_packages(exclude=['docs', 'examples', 'tests']),
+    packages=find_packages(exclude=['docs', 'examples', 'tests', 'notebooks']),
     install_requires=[
         'docopt==0.6.1',
         'bmi-python',
 	    'netCDF4',
         'scipy',
         'numpy',
+        'matplotlib'
     ],
     python_requires='>=2.7, <4',
     tests_require=[

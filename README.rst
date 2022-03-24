@@ -7,11 +7,15 @@ like in coastal environments. Supply-limitations currently supported
 are soil moisture contents, sediment sorting and armouring, bed slope
 effects, air humidity and roughness elements.
 
-AeoLiS is initially developed by `Bas Hoonhout
-<bas.hoonhout@deltares.nl>`_ at `Delft University of Technology
-<http://www.tudelft.nl>`_ with support from the ERC-Advanced Grant
-291206 Nearshore Monitoring and Modeling (`NEMO
-<http://nemo.citg.tudelft.nl>`_) and `Deltares
-<http://www.deltares.nl>`_. AeoLiS is currently maintained by `Bas
-Hoonhout <bas.hoonhout@deltares.nl>`_ at Deltares and `Sierd de Vries
-<Sierd.deVries@tudelft.nl>`_ at Delft University of Technology.
+The maintenance and development is done by the AEOLIS developer team:
+Current members are:
+`Bart van Westen <Bart.vanWesten@deltares.nl>`_ at Deltares, 
+`Nick Cohn <nick.cohn@usace.army.mil>`_ at U.S. Army Engineer Research and Development Center (ERDC), 
+`Sierd de Vries <Sierd.deVries@tudelft.nl>`_ (founder) at Delft University of Technology,
+`Christa van IJzendoorn <C.O.vanIJzendoorn@tudelft.nl>`_ at Delft University of Technology,
+`Caroline Hallin <E.C.Hallin@tudelft.nl>`_ at Delft University of Technology,
+`Glenn Strypsteen <glenn.strypsteen@kuleuven.be>`_ at Katholieke Universiteit Leuven and
+`Janelle Skaden <Janelle.E.Skaden@usace.army.mil>`_ at U.S. Army Engineer Research and Development Center (ERDC).
+
+Previous members are:
+`Bas Hoonhout <bas@hoonhout.com>`_ (founder) and Lisa Meijer

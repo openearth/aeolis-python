@@ -14,22 +14,24 @@
 AeoLiS is a process-based model for simulating aeolian sediment
 transport in situations where supply-limiting factors are important,
 like in coastal environments. Supply-limitations currently supported
-are soil moisture contents, sediment sorting and armouring and
-roughness elements.
+are soil moisture contents, sediment sorting and armouring, bed slope
+effects, air humidity and roughness elements.
 
 Documentation can be found at
 http://aeolis.readthedocs.io/.
 
-AeoLiS is initially developed at Delft University of Technology with support from the ERC-Advanced
-Grant 291206 Nearshore Monitoring and Modeling
-([NEMO](http://nemo.citg.tudelft.nl>)) and
-[Deltares](http://www.deltares.nl>). 
-
-Significant contributions to the development have been made by
-[Bas Hoonhout](mailto:bas@hoonhout.com), 
+The maintenance and development is done by the AEOLIS developer team:
+Current members are:
 [Bart van Westen](mailto:Bart.vanWesten@deltares.nl) at Deltares, 
-[Nick Cohn](mailto:nick.cohn@usace.army.mil) at U.S. Army Engineer Research and Development Center (ERDC) and 
-[Sierd de Vries](mailto:Sierd.deVries@tudelft.nl) at Delft University of Technology.
+[Nick Cohn](mailto:nick.cohn@usace.army.mil) at U.S. Army Engineer Research and Development Center (ERDC), 
+[Sierd de Vries](mailto:Sierd.deVries@tudelft.nl) (founder) at Delft University of Technology,
+[Christa van IJzendoorn](mailto:C.O.vanIJzendoorn@tudelft.nl) at Delft University of Technology,
+[Caroline Hallin](mailto:E.C.Hallin@tudelft.nl) at Delft University of Technology,
+[Glenn Strypsteen](mailto:glenn.strypsteen@kuleuven.be) at Katholieke Universiteit Leuven and
+[Janelle Skaden](mailto:Janelle.E.Skaden@usace.army.mil) at U.S. Army Engineer Research and Development Center (ERDC).
+
+Previous members are:
+[Bas Hoonhout](mailto:bas@hoonhout.com) (founder) and Lisa Meijer
 
 ## Examples
 
