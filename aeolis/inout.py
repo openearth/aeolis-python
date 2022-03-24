@@ -95,7 +95,8 @@ def read_configfile(configfile, parse_files=True, load_defaults=True):
        
     # normalize grain size distribution
     if 'grain_dist' in p:
-        p['grain_dist'] = normalize(p['grain_dist'])
+        #p['grain_dist'] = normalize(p['grain_dist']) # commented to allow distribution for multiple layers.
+        p['grain_dist'] = makeiterable(p['grain_dist'])
         p['grain_size'] = makeiterable(p['grain_size'])
 
     # set default output file, if not given

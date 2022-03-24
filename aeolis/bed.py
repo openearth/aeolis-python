@@ -61,6 +61,7 @@ def initialize(s, p):
     
     # get model dimensions
     ny = p['ny']
+    nx = p['nx']
     nl = p['nlayers']
     nf = p['nfractions']
 
@@ -102,10 +103,22 @@ def initialize(s, p):
     s['thlyr'][:,:,:] = p['layer_thickness']
 
     # initialize bed composition
-    if p['bedcomp_file'] is None:
-        gs = makeiterable(p['grain_dist'])
-        gs = gs / np.sum(gs)
+    if isinstance(p['grain_dist'], str):
+            logger.log_and_raise('Grain size file not recognized as array, check file path and whether all values have been filled in.', exc=ValueError) 
+
+    if p['bedcomp_file'] is None and p['grain_dist'].ndim == 1 and p['grain_dist'].dtype == 'float64':
         for i in range(nl):
+            gs = makeiterable(p['grain_dist'])
+            gs = gs / np.sum(gs)
+            for j in range(nf):
+                s['mass'][:,:,i,j] = p['rhog'] * (1. - p['porosity']) \
+                                     * s['thlyr'][:,:,i] * gs[j]
+    elif p['bedcomp_file'] is None and p['grain_dist'].ndim > 1: #allows simple cases with layering, txt file containing distribution per fraction per column and layers in the rows.
+        if nl != p['grain_dist'].shape[0]:
+            logger.log_and_raise('Grain size distribution not assigned for each layer, not enough rows for the number of layers', exc=ValueError)
+        for i in range(nl):
+            gs = makeiterable(p['grain_dist'][i,:])
+            gs = gs / np.sum(gs)
             for j in range(nf):
                 s['mass'][:,:,i,j] = p['rhog'] * (1. - p['porosity']) \
                                      * s['thlyr'][:,:,i] * gs[j]
@@ -259,9 +272,13 @@ def update(s, p):
         m[ix_dep,i-1,:] -= dm[ix_dep,:] * d[ix_dep,i-1,:]
         m[ix_dep,i,  :] += dm[ix_dep,:] * d[ix_dep,i-1,:]
     m[ix_dep,-1,:] -= dm[ix_dep,:] * d[ix_dep,-1,:]
-    m[ix_ero,-1,:] -= dm[ix_ero,:] * normalize(p['grain_dist'])[np.newaxis,:].repeat(np.sum(ix_ero), axis=0)
-
-
+    if p['grain_dist'].ndim == 2: 
+        m[ix_ero,-1,:] -= dm[ix_ero,:] * normalize(p['grain_dist'][-1,:])[np.newaxis,:].repeat(np.sum(ix_ero), axis=0)
+    elif type(p['bedcomp_file']) == np.ndarray:
+        gs = p['bedcomp_file'].reshape((-1,nl,nf))
+        m[ix_ero,-1,:] -= dm[ix_ero,:] * normalize(gs[ix_ero,-1, :], axis=1)
+    else:
+        m[ix_ero,-1,:] -= dm[ix_ero,:] * normalize(p['grain_dist'])[np.newaxis,:].repeat(np.sum(ix_ero), axis=0)
     # remove tiny negatives
     m = prevent_tiny_negatives(m, p['max_error'])
 

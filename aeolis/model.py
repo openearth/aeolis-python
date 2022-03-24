@@ -200,7 +200,8 @@ class AeoLiS(IBmi):
             self.p['nx'] -= 1 
             self.p['ny'] = 0
 
-        self.p['nfractions'] = len(self.p['grain_dist'])
+        #self.p['nfractions'] = len(self.p['grain_dist'])
+        self.p['nfractions'] = len(self.p['grain_size'])
 		
         # initialize time
         self.t = self.p['tstart']
@@ -714,9 +715,12 @@ class AeoLiS(IBmi):
 
         if self.t == 0.:
             # use initial guess for first time step
-            w = p['grain_dist'].reshape((1,1,-1))
-            w = w.repeat(p['ny']+1, axis=0)
-            w = w.repeat(p['nx']+1, axis=1)
+            if p['grain_dist'] != None:
+                w = p['grain_dist'].reshape((1,1,-1))
+                w = w.repeat(p['ny']+1, axis=0)
+                w = w.repeat(p['nx']+1, axis=1)
+            else:
+                w = w_init.copy()
         else:
             w = w_init.copy()
 
@@ -1082,10 +1086,13 @@ class AeoLiS(IBmi):
         w_init, w_air, w_bed = aeolis.transport.compute_weights(s, p)
 
         if self.t == 0.:
-            # use initial guess for first time step
-            w = p['grain_dist'].reshape((1,1,-1))
-            w = w.repeat(p['ny']+1, axis=0)
-            w = w.repeat(p['nx']+1, axis=1)
+            if type(p['bedcomp_file']) == np.ndarray:
+                w = w_init.copy()
+            else:
+                # use initial guess for first time step
+                w = p['grain_dist'].reshape((1,1,-1))
+                w = w.repeat(p['ny']+1, axis=0)
+                w = w.repeat(p['nx']+1, axis=1)
         else:
             w = w_init.copy()
 
