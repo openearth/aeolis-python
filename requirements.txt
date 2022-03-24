@@ -4,4 +4,3 @@ codecov
 nose
 scipy
 bmi-python
-sphinx==3.0.1
