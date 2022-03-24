@@ -614,7 +614,7 @@ class WindShear:
                 zsep0[j,:] = np.real(np.fft.ifft(zfft[j,:]))
                 
                 # First order polynom
-                dzdx1 = (zsep0[j,i-1] - zsep0[j,i-2])/dx
+                dzdx1 = (zsep0[j,i-1] - zsep0[j,i])/dx
                     
                 a = dzdx1 / c
             
