@@ -92,6 +92,7 @@ def initialize(s, p):
     # initialize bathymetry
     s['zb'][:,:] = p['bed_file']
     s['zb0'][:,:] = p['bed_file']
+    s['zne'][:,:] = p['ne_file']
 
     #initialize thickness of erodable or dry top layer
     s['zdry'][:,:] = 0.05
