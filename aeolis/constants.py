@@ -217,6 +217,7 @@ DEFAULT_CONFIG = {
     'l'                             : 10.,                # [m] Inner layer height (perturbation)
     'c_b'                           : 0.2,                # [-] Slope at the leeside of the separation bubble # c = 0.2 according to Durán 2010 (Sauermann 2001: c = 0.25 for 14 degrees)
     'mu_b'                          : 30,                 # [deg] Minimum required slope for the start of flow separation
+    'zero_order_filter'             : False,              # [-] Boolean for turning on/off the zeroth order filtering of the separation bubble
     'Cb'                            : 1.5,                # [-] Constant in bagnold formulation for equilibrium sediment concentration
     'Ck'                            : 2.78,               # [-] Constant in kawamura formulation for equilibrium sediment concentration
     'Cl'                            : 6.7,                # [-] Constant in lettau formulation for equilibrium sediment concentration

@@ -165,7 +165,8 @@ def shear(s,p):
                    process_separation = p['process_separation'],
                    c = p['c_b'],
                    mu_b = p['mu_b'],
-                   taus0 = s['taus0'][0,0], taun0 = s['taun0'][0,0] )
+                   taus0 = s['taus0'][0,0], taun0 = s['taun0'][0,0],
+                   zero_order_filter=p['zero_order_filter'])
 
         s['taus'], s['taun'] = s['shear'].get_shear()
         s['tau'] = np.hypot(s['taus'], s['taun'])                               # set minimum of tau to zero

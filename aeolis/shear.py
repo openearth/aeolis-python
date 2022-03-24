@@ -142,7 +142,7 @@ class WindShear:
         self.z0 = z0
        
 
-    def __call__(self, u0, udir, process_separation, c, mu_b, taus0, taun0):
+    def __call__(self, u0, udir, process_separation, c, mu_b, taus0, taun0, zero_order_filter):
         '''Compute wind shear for given wind speed and direction
         
         Parameters
@@ -190,7 +190,7 @@ class WindShear:
 
         # Compute separation bubble
         if process_separation:
-            zsep = self.separation(c, mu_b)
+            zsep = self.separation(c, mu_b, zero_order_filter)
             z_origin = gc['z'].copy()
             gc['z'] = np.maximum(gc['z'], zsep)
             
@@ -475,10 +475,9 @@ class WindShear:
         
    
     
-    def separation(self, c, mu_b):
+    def separation(self, c, mu_b, zero_order_filter):
         
         # Initialize grid and bed dimensions
-        
         gc = self.cgrid
          
         x = gc['x']
@@ -526,9 +525,7 @@ class WindShear:
 
 
         # Define separation bubble
-        
         bubble[:,:-1] = (stall[:,:-1] == 0.) * (stall[:,1:] > 0.) 
-        
         
         # Shift bubble back to x0: start of separation bubble 
         p = 2
@@ -539,7 +536,6 @@ class WindShear:
         
         # Count separation bubbles
         n = np.sum(bubble)
-        #print ('number of sep bubbles', n)
         bubble_n = np.asarray(np.where(bubble == True)).T
 
         
@@ -579,33 +575,37 @@ class WindShear:
 
 
             # Zero order filter
-            Cut = 1.5
-            dk = 2.0 * np.pi / (np.max(x))
-            zfft[j,:] = np.fft.fft(zsep0[j,:])
-            zfft[j,:] *= np.exp(-(dk*k*dx)**2/(2.*Cut**2))
-            zsep0[j,:] = np.real(np.fft.ifft(zfft[j,:]))
-            
-            # First order polynom
-            dzdx1 = (zsep0[j,i-1] - zsep0[j,i-2])/dx
+            if zero_order_filter:
                 
-            a = dzdx1 / c
-        
-            ls = np.minimum(np.maximum((3.*z[j,i]/(2.*c) * (1. + a/4. + a**2/8.)), 0.1), 200.)
-            # print ('ls:', ls)
+                Cut = 1.5
+                dk = 2.0 * np.pi / (np.max(x))
+                zfft[j,:] = np.fft.fft(zsep0[j,:])
+                zfft[j,:] *= np.exp(-(dk*k*dx)**2/(2.*Cut**2))
+                zsep0[j,:] = np.real(np.fft.ifft(zfft[j,:]))
+                
+                # First order polynom
+                dzdx1 = (zsep0[j,i-1] - zsep0[j,i-2])/dx
+                    
+                a = dzdx1 / c
             
-            a2 = -3 * z[j,i]/ls**2 - 2 * dzdx1 / ls
-            a3 =  2 * z[j,i]/ls**3 +     dzdx1 / ls**2
-          
-            i_max1 = min(i+int(ls/dx),int(nx-1))
-
-            xs1 = x[j,i:i_max1] - x[j,i]
+                ls = np.minimum(np.maximum((3.*z[j,i]/(2.*c) * (1. + a/4. + a**2/8.)), 0.1), 200.)
+                # print ('ls:', ls)
+                
+                a2 = -3 * z[j,i]/ls**2 - 2 * dzdx1 / ls
+                a3 =  2 * z[j,i]/ls**3 +     dzdx1 / ls**2
+              
+                i_max1 = min(i+int(ls/dx),int(nx-1))
+    
+                xs1 = x[j,i:i_max1] - x[j,i]
+                
+                zsep1[j,i:i_max1] = (a3*xs1**3 + a2*xs1**2 + dzdx1*xs1 + z[j,i])
             
-            zsep1[j,i:i_max1] = (a3*xs1**3 + a2*xs1**2 + dzdx1*xs1 + z[j,i])
-            
 
-
-            #Pick the maximum seperation bubble hieght at all locations
-            zsep[j,i:i_max] = np.maximum(zsep1[j,i:i_max], zsep[j,i:i_max])
+            # Pick the maximum seperation bubble hieght at all locations
+            if zero_order_filter:
+                zsep[j,i:i_max] = np.maximum(zsep1[j,i:i_max], zsep[j,i:i_max])
+            else:
+                zsep[j,i:i_max] = np.maximum(zsep0[j,i:i_max], zsep[j,i:i_max])
 
         
         # Smooth surface of separation bubbles over y direction

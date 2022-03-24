@@ -51,7 +51,7 @@ process_humidity        = F             						% [T/F] Enable the process of humi
 process_avalanche       = T               						% [T/F] Enable the process of avalanching
 process_inertia         = F             						% [T/F] NEW (???)
 process_separation      = T               						% [T/F] Enable the including of separation bubble
-process_nelayer         = F              						% [T/F] Enable a non-erodible layer
+process_nelayer         = T              						% [T/F] Enable a non-erodible layer
 process_vegetation      = F              						% [T/F] Enable the process of vegetation
 process_fences          = F              						% [T/F] Enable the process of sand fencing
 process_dune_erosion    = F              						% [T/F] Enable the process of wave-driven dune erosion
@@ -90,7 +90,7 @@ z                       = 10.                					% [m] Measurement height of wi
 kappa                   = 0.41               					% [-] Von Kármán constant
 h                       = None               					% [m] Representative height of saltation layer
 L                       = 100.               					% [m] Typical length scale of dune feature (perturbation)
-l                       = 10.                					% [m] Inner layer height (perturbation)
+l                       = 1.                					% [m] Inner layer height (perturbation)
 m                       = 0.5                					% [-] Factor to account for difference between average and maximum shear stress
 	
 %% -------------------- [Transport] -------------------------- %%
@@ -152,6 +152,7 @@ okin_initialred_fence   = 0.32               					% [-] initial shear reduction 
 %% -------------------- [Seperation] ------------------------- %%	
 c_b 					= 0.2									% [-] Slope at the leeside of the separation bubble # c = 0.2 according to Durán 2010 (Sauermann 2001: c = 0.25 for 14 degrees)
 mu_b 					= 20									% [deg] Minimum required slope for the start of flow separation
+zero_order_filter 		= F										% [T/F] Boolean for turning on/off the zeroth order filtering of the separation bubble
 
 %% -------------------- [Soil moisture] ---------------------- %%		   
 Tdry 					= 7200.000								% [s] Adaptation time scale for soil drying
