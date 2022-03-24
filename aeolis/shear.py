@@ -142,7 +142,7 @@ class WindShear:
         self.z0 = z0
        
 
-    def __call__(self, u0, udir, process_separation, c, mu_b, taus0, taun0, zero_order_filter, plot=True):
+    def __call__(self, u0, udir, process_separation, c, mu_b, taus0, taun0, zero_order_filter, plot=False):
         '''Compute wind shear for given wind speed and direction
         
         Parameters
