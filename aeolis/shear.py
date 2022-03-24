@@ -565,8 +565,8 @@ class WindShear:
         
         # Shift bubble back to x0: start of separation bubble 
         p = 1
-        bubble[:,:-p] = bubble[:,p:]
-        bubble[:,:p] = 0
+        bubble[:,p:] = bubble[:,:-p]
+        bubble[:,-p:] = 0
         
         bubble = bubble.astype(int)
         
@@ -589,7 +589,8 @@ class WindShear:
                 zbrink = z[j,i] - z[j,i+5+np.where(ix_neg)[0][0]]
 
             # Zero order polynom
-            dzdx0 = (z[j,i+1] - z[j,i]) / dx
+            dzdx0 = (z[j,i] - z[j,i-1]) / dx
+            # dzdx0 = 1.
             
             a = dzdx0 / c
         
@@ -614,8 +615,8 @@ class WindShear:
                 zsep0[j,:] = np.real(np.fft.ifft(zfft[j,:]))
                 
                 # First order polynom
-                dzdx1 = (zsep0[j,i-1] - zsep0[j,i])/dx
-                    
+                dzdx1 = (zsep0[j,i] - zsep0[j,i-1])/dx
+                   
                 a = dzdx1 / c
             
                 ls = np.minimum(np.maximum((3.*z[j,i]/(2.*c) * (1. + a/4. + a**2/8.)), 0.1), 200.)
@@ -645,6 +646,7 @@ class WindShear:
         ilow = zsep < z
         zsep[ilow] = z[ilow]
 
+            
         return zsep
                 
     
@@ -704,14 +706,14 @@ class WindShear:
         dtaux_t = hs * kx**2 / k * 2 / ul**2 * \
                   (-1. + (2. * np.log(l/z0) + k**2/kx**2) * sigma * \
                     sc_kv(1., 2. * sigma) / sc_kv(0., 2. * sigma))
- 
+
+        
         dtauy_t = hs * kx * ky / k * 2 / ul**2 * \
                     2. * np.sqrt(2.) * sigma * sc_kv(1., 2. * np.sqrt(2.) * sigma)
 
-
+        
         gc['dtaux'] = np.real(np.fft.ifft2(dtaux_t))
         gc['dtauy'] = np.real(np.fft.ifft2(dtauy_t))
-
         
         
     def separation_shear(self, hsep):
