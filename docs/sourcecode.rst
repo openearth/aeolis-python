@@ -106,3 +106,5 @@ Miscellaneous
 .. automodule:: utils
                 :members:
                    
+Sierd's favorite function is:
+:py:mod:`aeolis.bed.prevent_tiny_negatives`
