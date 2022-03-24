@@ -32,6 +32,7 @@ import operator
 #import scipy.special
 #import scipy.interpolate
 from scipy import ndimage, misc
+import matplotlib.pyplot as plt
 
 # package modules
 import aeolis.shear
@@ -175,6 +176,24 @@ def shear(s,p):
         if p['process_separation']:
             s['hsep'] = s['shear'].get_separation()
             s['zsep'] = s['hsep'] + s['zb']
+
+        # fig, ax = plt.subplots()
+        # ax.pcolormesh(s['x'], s['y'], s['Ct'][:,:,0])
+        # plt.show()
+        
+        # fig, ax = plt.subplots()
+        # ax.pcolormesh(s['x'], s['y'], s['ustar'])
+        # plt.show()
+        
+        # fig, ax = plt.subplots()
+        # ax.pcolormesh(s['x'], s['y'], s['zb'])
+        # plt.show()
+        
+        # fig, ax = plt.subplots()
+        # ax.plot(s['x'][75,:], s['zb'][75,:])
+        # ax.plot(s['x'][75,:], s['zsep'][75,:])
+        # plt.show()
+        
 
     elif 'shear' in s.keys() and p['process_shear'] and p['ny'] == 0: #NTC - Added in 1D only capabilities
         s = compute_shear1d(s, p)

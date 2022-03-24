@@ -59,11 +59,11 @@ process_dune_erosion    = F              						% [T/F] Enable the process of wav
 %% -------------------- [Flags Threshold] -------------------- %%
 th_grainsize            = T               						% [T/F] Enable wind velocity threshold based on grainsize
 th_bedslope             = F              						% [T/F] Enable wind velocity threshold based on bedslope
-th_moisture             = T               						% [T/F] Enable wind velocity threshold based on moisture
+th_moisture             = F               						% [T/F] Enable wind velocity threshold based on moisture
 th_drylayer             = F              						% [T/F] Enable wind velocity threshold based on drying of layer
 th_humidity             = F              						% [T/F] Enable wind velocity threshold based on humidity
 th_salt                 = F              						% [T/F] Enable wind velocity threshold based on salt
-th_roughness            = T               						% [T/F] Enable wind velocity threshold based on roughness
+th_roughness            = F               						% [T/F] Enable wind velocity threshold based on roughness
 th_nelayer              = F              						% [T/F] Enable wind velocity threshold based on a non-erodible layer
 
 %% -------------------- [General physics] -------------------- %%

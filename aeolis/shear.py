@@ -175,77 +175,79 @@ class WindShear:
         
         # Interpolate bed levels and shear to the computational grid
         gc['z'] = self.interpolate(xi_buff, yi_buff, zi_buff, gc['x'], gc['y'], 0)
-        gc['taux'] = self.interpolate(gi['x'], gi['y'], gi['taux'], gc['x'], gc['y'], taus0)
-        gc['tauy'] = self.interpolate(gi['x'], gi['y'], gi['tauy'], gc['x'], gc['y'], taun0)
-
+        
+        # CHECK THIS!
+        # gc['taux'] = self.interpolate(gi['x'], gi['y'], gi['taux'], gc['x'], gc['y'], taus0)
+        # gc['tauy'] = self.interpolate(gi['x'], gi['y'], gi['tauy'], gc['x'], gc['y'], taun0)
+        
+        gc['taux'] = np.full(np.shape(gc['x']), taus0)
+        gc['tauy'] = np.full(np.shape(gc['x']), taun0)
+        
 
         '''
         Computing separation bubble and add it to the bedlevel for later shear perturbation computation
         '''
 
-        
-        
-        # fig, ax = plt.subplots()
-        # ax.pcolormesh(gc['x'], gc['y'], 1, cmap=plt.cm.jet, label='Initial grid')
-        # ax.pcolormesh(gc['x'], gc['y'], 1, cmap=plt.cm.jet, label='Computational grid')
-        # plt.title('Zsep gaussian filter in y')
-        # plt.show()
-        
-        
-        # Populate computational (grid (rotate to wind direction and interpolate input topography)
-        # self.populate_computational_grid(udir+90., taus0, taun0)
-        
-
-        
         # Compute separation bubble
         if process_separation:
             zsep = self.separation(c, mu_b)
             z_origin = gc['z'].copy()
             gc['z'] = np.maximum(gc['z'], zsep)
+            
 
+        '''
+        Computing the change in shear stress (dtaux and dtauy), rotate to 
+        horizontal computational grid and add to tau0
+        '''
                     
         # Compute wind shear stresses on computational grid 
         self.compute_shear(u0)
 
-                
+        # Rotate to the horizontal rotational grid        
         gc['dtaux'], gc['dtauy'] = self.rotate(gc['dtaux'], gc['dtauy'], udir+90)
         
         # Add shear and apply reduction factor for shear in sep. bubble
         self.add_shear()
-
         
+
+        '''
+        Add the influence of the separation bubble to the shear stress
+        '''        
+
         if process_separation:
             gc['hsep'] = gc['z'] - z_origin
             self.separation_shear(gc['hsep'])
         
+        '''
+        Rotate all variables
+        '''  
+        
         # Rotate both (i&c) grids + results in opposite dir.
         gi['x'], gi['y'] = self.rotate(gi['x'], gi['y'], -(udir+90.), origin=(self.x0, self.y0))
-        
         gc['x'], gc['y'] = self.rotate(gc['x'], gc['y'], -(udir+90.), origin=(self.x0, self.y0))
-        
         gc['taux'], gc['tauy'] = self.rotate(gc['taux'], gc['tauy'], -(udir+90))
         
+        
+        '''
+        Interpolate
+        '''  
     
         # Interpolate wind shear results to real grid
-        gi['taux'] = self.interpolate(gc['x'], gc['y'], gc['taux'],
-                                              gi['x'], gi['y'], taus0)
-        gi['tauy'] = self.interpolate(gc['x'], gc['y'], gc['tauy'],
-                                              gi['x'], gi['y'], taun0)
-
-                
+        gi['taux'] = self.interpolate(gc['x'], gc['y'], gc['taux'], gi['x'], gi['y'], taus0)
+        gi['tauy'] = self.interpolate(gc['x'], gc['y'], gc['tauy'], gi['x'], gi['y'], taun0)
+  
         if process_separation:
-            gi['hsep'] = self.interpolate(gc['x'], gc['y'], gc['hsep'], 
-                                          gi['x'], gi['y'], 0. )
+            gi['hsep'] = self.interpolate(gc['x'], gc['y'], gc['hsep'], gi['x'], gi['y'], 0. )
 
+        '''
+        Interpolate all variables back
+        '''  
             
         # Rotate real grid and wind shear results back to orignal orientation
         gc['x'], gc['y'] = self.rotate(gc['x'], gc['y'], udir+90., origin=(self.x0, self.y0))
-        gi['x'], gi['y'] = self.rotate(gi['x'], gi['y'], +(udir+90.), origin=(self.x0, self.y0))
-
-                       
+        gi['x'], gi['y'] = self.rotate(gi['x'], gi['y'], +(udir+90.), origin=(self.x0, self.y0))         
         gi['taux'], gi['tauy'] = self.rotate(gi['taux'], gi['tauy'], +(udir+90)) 
         
-
         
         return self
  
@@ -405,8 +407,8 @@ class WindShear:
         self.L = abs(db_L) / np.sqrt((m_L**2.) + 1) + self.buffer_width * 2.
         
         # Create the grid
-        xc, yc = self.get_exact_grid(x0 - self.W/2., x0 + self.W/2.,
-                                     y0 - self.L/2., y0 + self.L/2.,
+        xc, yc = self.get_exact_grid(x0 - self.L/2., x0 + self.L/2.,
+                                     y0 - self.W/2., y0 + self.W/2.,
                                      gc['dx'], gc['dy'])
         
         # Storing grid parameters
@@ -431,7 +433,7 @@ class WindShear:
         
         # Determine if 1D or 2D
         try:
-            ny = shp[2]
+            ny = shp[1]
         except:
             ny = 0
 
