@@ -4,3 +4,5 @@
 *.log
 *.png
 _build
+*.whl
+*.gz
