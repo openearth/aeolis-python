@@ -142,7 +142,7 @@ class WindShear:
         self.z0 = z0
        
 
-    def __call__(self, u0, udir, process_separation, c, mu_b, taus0, taun0, zero_order_filter, plot=False):
+    def __call__(self, u0, udir, process_separation, c, mu_b, taus0, taun0, zero_order_filter, plot=True):
         '''Compute wind shear for given wind speed and direction
         
         Parameters
@@ -156,19 +156,13 @@ class WindShear:
         '''
         
         # Convert to cartesian to perform all the rotations
-        angle = 270. - udir
+        u_angle = 270. - udir # wind angle
         
         if plot:
             fig, axs = plt.subplots(2, 3)
             self.plot(ax=axs[0,0], cmap='Reds', stride=10, computational_grid=False)
             axs[0,0].set_title('Original input grid')
 
-        # =====================================================================
-        # Create buffer zone around original grid and fill with bed level 
-        # =====================================================================
-        
-        xi_buff, yi_buff, zi_buff = self.buffer_original_grid()
-        
         # =====================================================================
         # Creating, rotating and filling computational grid
         # =====================================================================
@@ -181,24 +175,28 @@ class WindShear:
         gc = self.cgrid # computational grid
            
         # Rotate computational (c) grid to the current wind direction
-        gc['x'], gc['y'] = self.rotate(gc['xi'], gc['yi'], -angle, origin=(self.x0, self.y0))
+        gc['x'], gc['y'] = self.rotate(gc['xi'], gc['yi'], -u_angle, 
+                                       origin=(self.x0, self.y0))
+        
+        # =====================================================================
+        # Filling the computational grid with bedlevel and shear stress
+        # =====================================================================
+        
+        # For now turned off because caused problems.
+        # Just normal extrapolation applied
+        # xi_buff, yi_buff, zi_buff = self.buffer_original_grid()
+        # gc['z'] = self.interpolate(xi_buff, yi_buff, zi_buff, gc['x'], gc['y'], 0)
         
         # Interpolate bed levels and shear to the computational grid
-        gc['z'] = self.interpolate(xi_buff, yi_buff, zi_buff, gc['x'], gc['y'], 0)
-        
-        # CHECK THIS!
-        # gc['taux'] = self.interpolate(gi['x'], gi['y'], gi['taux'], gc['x'], gc['y'], taus0)
-        # gc['tauy'] = self.interpolate(gi['x'], gi['y'], gi['tauy'], gc['x'], gc['y'], taun0)
+        gc['z'] = self.interpolate(gi['x'], gi['y'], gi['z'], gc['x'], gc['y'], None)
         
         # Project the taus0 and taun0 on the computational grid
         gc['taux'] = np.full(np.shape(gc['x']), taus0)
         gc['tauy'] = np.full(np.shape(gc['x']), taun0)
-        
 
         if plot:
             self.plot(ax=axs[0,1], cmap='Reds', stride=10, computational_grid=True)
             axs[0,1].set_title('Interpolated values on computational grid')
-        
 
         # =====================================================================
         # Computing  bubble and add it the bedlevel for  shear perturbation.
@@ -216,11 +214,12 @@ class WindShear:
         self.compute_shear(u0)
 
         # Rotate to the horizontal rotational grid        
-        gc['dtaux'], gc['dtauy'] = self.rotate(gc['dtaux'], gc['dtauy'], -angle)
+        gc['dtaux'], gc['dtauy'] = self.rotate(gc['dtaux'], gc['dtauy'], -u_angle)
         
         # Add shear and apply reduction factor for shear in sep. bubble
         self.add_shear()
 
+        # Compute the influence of the separation on the shear stress
         if process_separation:
             gc['hsep'] = gc['z'] - z_origin
             self.separation_shear(gc['hsep'])
@@ -228,22 +227,8 @@ class WindShear:
         if plot:
             self.plot(ax=axs[0,2], cmap='Reds', stride=10, computational_grid=True)
             axs[0,2].set_title('Computed shear stress and bubble effect')
-            
-        # =====================================================================
-        # Rotate computational grid (c, x+y+taux+tauy) and 
-        # original grid (i, x+y), such that the computational grid is 
-        # horizontal (required for faster interpolation function)
-        # =====================================================================
-        
-        # Rotating the original grid 
-        gi['x'], gi['y'] = self.rotate(gi['x'], gi['y'], angle, origin=(self.x0, self.y0))
-        
-        # Rotating the computational grid
-        gc['x'], gc['y'] = self.rotate(gc['x'], gc['y'], angle, origin=(self.x0, self.y0))
-        gc['taux'], gc['tauy'] = self.rotate(gc['taux'], gc['tauy'], angle)
-        
+
         if plot:
-            # self.plot(ax=axs[1,0], cmap='Reds', stride=10, computational_grid=True)
             pc = axs[1,0].pcolormesh(gc['x'], gc['y'], gc['taux'])
             plt.colorbar(pc, ax=axs[1,0])
             axs[1,0].set_title('Rotate grids, such that computational is horizontal')
@@ -259,131 +244,22 @@ class WindShear:
         if process_separation:
             gi['hsep'] = self.interpolate(gc['x'], gc['y'], gc['hsep'], gi['x'], gi['y'], 0. )
             
+        # Final plots and lay-out    
         if plot:
-            # self.plot(ax=axs[1,1], cmap='Reds', stride=10, computational_grid=False)
             pc = axs[1,1].pcolormesh(gi['x'], gi['y'], gi['taux'])
             plt.colorbar(pc, ax=axs[1,1])
             axs[1,1].set_title('Interpolate back onto original grid')
 
-
-        # =====================================================================
-        # Rotating back the original grid
-        # =====================================================================
-            
-        # Rotate real grid and wind shear results back to orignal orientation
-        # gc['x'], gc['y'] = self.rotate(gc['x'], gc['y'], -angle, origin=(self.x0, self.y0))
-        
-        gi['x'], gi['y'] = self.rotate(gi['x'], gi['y'], -angle, origin=(self.x0, self.y0))         
-        gi['taux'], gi['tauy'] = self.rotate(gi['taux'], gi['tauy'], -angle) 
-        
-        if plot:
             self.plot(ax=axs[1,2], cmap='Reds', stride=10, computational_grid=False)
             axs[1,2].set_title('Rotate original grid back')
-        
-        if plot:
+
             for axr in axs:
                 for ax in axr:
-                    ax.set_xlim([-200, 500])
-                    ax.set_ylim([-200, 350])
+                    ax.set_xlim([-400, 400])
+                    ax.set_ylim([-400, 400])
                     ax.set_aspect('equal')
         
-  
         return self
- 
-    
-    # Input functions for wind.py
-    def set_topo(self, z):
-        '''Update topography
-
-        Parameters
-        ----------
-        z : numpy.ndarray
-            2D array with topography of input grid
-
-        '''
-
-        self.igrid['z'] = z
-
-        return self
-    
-    def set_shear(self, taus, taun):
-        '''Update shear
-
-        Parameters
-        ----------
-        tau : numpy.ndarray
-            array with wind shear stresses of input grid
-
-        '''
-        self.igrid['taux'] = taus
-        self.igrid['tauy'] = taun
-        
-        return self
-    
-    def get_shear(self):
-        '''Returns wind shear perturbation field
-        
-        Returns
-        -------
-        taux : numpy.ndarray
-            Wind shear perturbation in x-direction
-        tauy : numpy.ndarray
-            Wind shear perturbation in y-direction
-        
-        '''
-
-        taux = self.igrid['taux']
-        tauy = self.igrid['tauy']
-            
-        return taux, tauy
-        
-        
-    def add_shear(self):
-        '''Add wind shear perturbations to a given wind shear field
-        
-        Parameters
-        ----------
-        taux : numpy.ndarray
-            Wind shear in x-direction
-        tauy : numpy.ndarray
-            Wind shear in y-direction
-
-        Returns
-        -------
-        taux : numpy.ndarray
-            Wind shear including perturbations in x-direction
-        tauy : numpy.ndarray
-            Wind shear including perturbations in y-direction
-        
-        '''
-        taux = self.cgrid['taux']
-        tauy = self.cgrid['tauy']
-        
-        tau = np.sqrt(taux**2 + tauy**2)
-        ix = tau != 0.
-
-        dtaux = self.cgrid['dtaux']
-        dtauy = self.cgrid['dtauy']
-        
-        self.cgrid['taux'][ix] = tau[ix] * (taux[ix] / tau[ix] + dtaux[ix])
-        self.cgrid['tauy'][ix] = tau[ix] * (tauy[ix] / tau[ix] + dtauy[ix])
-        
-        return self
-
-    
-    def get_separation(self):
-        '''Returns difference in height between z-coordinate of 
-        the separation polynomial and of the bed level 
-        
-        Returns
-        -------
-        hsep : numpy.ndarray
-            Height of seperation bubble
-            
-        '''  
-        hsep = self.igrid['hsep']
-        
-        return hsep
     
     
     # Input functions for __call()
@@ -458,61 +334,7 @@ class WindShear:
         
         return self
     
-    
-    
-    def buffer_original_grid(self):
-        '''
-        Adds and fills a buffer zone around the initial grid.
-        '''
         
-        gi = self.igrid
-        gc = self.cgrid
-        x = gi['x']
-        shp = x.shape
-        
-        # Determine if 1D or 2D
-        try:
-            ny = shp[1]
-        except:
-            ny = 0
-
-        # Add buffer zone around grid
-        if ny <= 0:
-            dxi = gi['x'][0,0]
-            dyi = gi['y'][0,0]
-        else:
-            dxi = gi['x'][1,1] - gi['x'][0,0]
-            dyi = gi['y'][1,1] - gi['y'][0,0]
-
-        # Amount of cells
-        buf = 200 
-
-        # Create new meshgrid with bufferzone
-        xi, yi = np.meshgrid(np.linspace(gi['x'][0,0]-buf*dxi, gi['x'][-1,-1]+buf*dxi, gi['x'].shape[1]+2*buf),
-                            np.linspace(gi['y'][0,0]-buf*dyi, gi['y'][-1,-1]+buf*dyi, gi['y'].shape[0]+2*buf))
-        
-        # Create new z-array with same shape
-        zi = np.zeros((xi.shape))
-        
-        # Fill the main area with the actual bedlevel
-        zi[buf:-buf, buf:-buf] = gi['z']
-        
-        # Filling buffer zone with the values at the edges of the original grid
-        zi[buf:-buf,:buf] = np.repeat(zi[buf:-buf,buf+1][:,np.newaxis], buf, axis = 1)
-        zi[buf:-buf,-buf:] = np.repeat(zi[buf:-buf,-buf-1][:,np.newaxis], buf, axis = 1)
-
-        zi[:buf,buf:-buf] = np.repeat(zi[buf+1,buf:-buf][np.newaxis], buf, axis = 0)
-        zi[-buf:,buf:-buf] = np.repeat(zi[-buf-1,buf:-buf][np.newaxis], buf, axis = 0)
-        
-        # Filling buffer zone corners
-        zi[:buf,:buf] = zi[buf+1,buf+1]
-        zi[-buf:,:buf] = zi[-buf-1,buf+1]
-        zi[:buf,-buf:] = zi[buf+1,-buf-1]
-        zi[-buf:,-buf:] = zi[-buf-1,-buf-1]
-        
-        return xi, yi, zi
-        
-   
     
     def separation(self, c, mu_b, zero_order_filter):
         
@@ -798,6 +620,100 @@ class WindShear:
 
         return hs 
 
+    # Input functions for wind.py
+    def set_topo(self, z):
+        '''Update topography
+
+        Parameters
+        ----------
+        z : numpy.ndarray
+            2D array with topography of input grid
+
+        '''
+
+        self.igrid['z'] = z
+
+        return self
+    
+    def set_shear(self, taus, taun):
+        '''Update shear
+
+        Parameters
+        ----------
+        tau : numpy.ndarray
+            array with wind shear stresses of input grid
+
+        '''
+        self.igrid['taux'] = taus
+        self.igrid['tauy'] = taun
+        
+        return self
+    
+    def get_shear(self):
+        '''Returns wind shear perturbation field
+        
+        Returns
+        -------
+        taux : numpy.ndarray
+            Wind shear perturbation in x-direction
+        tauy : numpy.ndarray
+            Wind shear perturbation in y-direction
+        
+        '''
+
+        taux = self.igrid['taux']
+        tauy = self.igrid['tauy']
+            
+        return taux, tauy
+        
+        
+    def add_shear(self):
+        '''Add wind shear perturbations to a given wind shear field
+        
+        Parameters
+        ----------
+        taux : numpy.ndarray
+            Wind shear in x-direction
+        tauy : numpy.ndarray
+            Wind shear in y-direction
+
+        Returns
+        -------
+        taux : numpy.ndarray
+            Wind shear including perturbations in x-direction
+        tauy : numpy.ndarray
+            Wind shear including perturbations in y-direction
+        
+        '''
+        taux = self.cgrid['taux']
+        tauy = self.cgrid['tauy']
+        
+        tau = np.sqrt(taux**2 + tauy**2)
+        ix = tau != 0.
+
+        dtaux = self.cgrid['dtaux']
+        dtauy = self.cgrid['dtauy']
+        
+        self.cgrid['taux'][ix] = tau[ix] * (taux[ix] / tau[ix] + dtaux[ix])
+        self.cgrid['tauy'][ix] = tau[ix] * (tauy[ix] / tau[ix] + dtauy[ix])
+        
+        return self
+
+    
+    def get_separation(self):
+        '''Returns difference in height between z-coordinate of 
+        the separation polynomial and of the bed level 
+        
+        Returns
+        -------
+        hsep : numpy.ndarray
+            Height of seperation bubble
+            
+        '''  
+        hsep = self.igrid['hsep']
+        
+        return hsep
+    
     
     def plot(self, ax=None, cmap='Reds', stride=10, computational_grid=False, **kwargs):
         '''Plot wind shear perturbation
@@ -889,7 +805,34 @@ class WindShear:
     
     def interpolate(self, x, y, z, xi, yi, z0):
         '''Interpolate one grid to an other'''
+
         
+        # First compute angle with horizontal
+        dx = x[0,1] - x[0,0]
+        dy = y[0,1] - y[0,0]
+        
+        if dx != 0:
+            dydx = dy/dx
+        elif dy >= 0:
+            dydx = np.inf
+        elif dy < 0:
+            dydx = -np.inf
+
+        angle = np.rad2deg(np.arctan(dy/dx))
+        
+        if dx <= 0 and dy<=0:
+            angle += 180.
+            
+        # Rotate grids to allign with horizontal
+        x, y = self.rotate(x, y, angle, origin=(self.x0, self.y0))
+        xi, yi = self.rotate(xi, yi, angle, origin=(self.x0, self.y0))
+        
+        # Rotate 180 deg if necessary
+        if not np.all(sorted(y[:,0]) == y[:,0]) and not np.all(sorted(x[0,:]) == x[0,:]):
+            x, y = self.rotate(x, y, 180, origin=(self.x0, self.y0))
+            xi, yi = self.rotate(xi, yi, 180, origin=(self.x0, self.y0))
+
+        # Concatenate
         xy = np.concatenate((y.reshape((-1,1)),
                              x.reshape((-1,1))), axis=1)
 
@@ -903,6 +846,7 @@ class WindShear:
             zi = inter(xyi).reshape(xi.shape)
             
         return zi
+    
 
         
         
