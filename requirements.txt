@@ -4,4 +4,4 @@ codecov
 nose
 scipy
 bmi-python
-sphinxcontrib-bibtex==3.0.1
+sphinx==3.0.1
