@@ -58,7 +58,7 @@ import aeolis.erosion
 import aeolis.vegetation
 import aeolis.fences
 
-#import aeolis.gridparams
+import aeolis.gridparams
 
 from aeolis.utils import *
 

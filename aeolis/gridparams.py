@@ -54,10 +54,36 @@ def initialize(s, p):
     '''
     
     
-    
-
     # initialize x-dimensions
     s['x'][:,:] = p['xgrid_file']
+    
+    # Initializing all other arrays
+    s['xz'] = np.zeros(np.shape(s['x']))
+    s['xu'] = np.zeros(np.shape(s['x']))
+    s['xv'] = np.zeros(np.shape(s['x']))
+    s['xc'] = np.zeros(np.shape(s['x']))
+    
+    s['yz'] = np.zeros(np.shape(s['x']))
+    s['yu'] = np.zeros(np.shape(s['x']))
+    s['yv'] = np.zeros(np.shape(s['x']))
+    s['yc'] = np.zeros(np.shape(s['x']))
+    
+    s['dsz'] = np.zeros(np.shape(s['x']))
+    s['dsu'] = np.zeros(np.shape(s['x']))
+    s['dsv'] = np.zeros(np.shape(s['x']))
+    s['dsc'] = np.zeros(np.shape(s['x']))
+    
+    s['dnz'] = np.zeros(np.shape(s['x']))
+    s['dnu'] = np.zeros(np.shape(s['x']))
+    s['dnv'] = np.zeros(np.shape(s['x']))
+    s['dnc'] = np.zeros(np.shape(s['x']))
+
+    s['dsdnz'] = np.zeros(np.shape(s['x']))
+    s['dsdnzi'] = np.zeros(np.shape(s['x']))
+    
+    s['alfaz'] = np.zeros(np.shape(s['x']))
+    s['alfau'] = np.zeros(np.shape(s['x']))
+    s['alfav'] = np.zeros(np.shape(s['x']))
     
     # World coordinates of z-points
     s['xz'][:,:] = s['x'][:,:]
@@ -132,34 +158,21 @@ def initialize(s, p):
     s['dsv'][:,0] = s['dsv'][:,1]
     s['dsc'][:,0] = s['dsc'][:,1]
     
-#    # Distances diagonal in sn-direction (a)
-#    s['dsnca'][1:,1:] = ((s['xz'][:-1,:-1]-s['xz'][1:,1:])**2.+(s['yz'][:-1,:-1]-s['yz'][1:,1:])**2.)**0.5
-#    s['dsnca'][0,:] = s['dsnza'][1,:]
-#    s['dsnca'][:,0] = s['dsnza'][:,1]
-#    s['dsnca'][0,0] = s['dsnza'][1,1]
-#    
-#    # Distances diagonal in sn-direction (a)
-#    s['dsncb'][1:,1:] = ((s['xz'][:-1,:-1]-s['xz'][1:,1:])**2.+(s['yz'][:-1,:-1]-s['yz'][1:,1:])**2.)**0.5
-#    s['dsncb'][0,:] = s['dsnzb'][1,:]
-#    s['dsncb'][:,0] = s['dsnzb'][:,1]
-#    s['dsncb'][0,0] = s['dsnzb'][1,1]
+    ## Moved from bed.py by Bart after comment Sierd (and to prevent errors during non-horizontal grids)
+    s['ds'][:,:] = s['dsz'][:,:]
+    s['dn'][:,:] = s['dnz'][:,:]
+
+    s['dn'][1:,:] = np.diff(s['y'], axis=0)
+    s['dn'][0,:] = s['dn'][1,:]
+
+    # compute cell areas
+    s['dsdn'][:,:] = s['ds'] * s['dn']
+    s['dsdni'][:,:] = 1. / s['dsdn']
 
     # Cell areas
-#    s['dsdnu'][:-1,:-1] = (0.5*(s['dsc'][:-1,:-1]+s['dsc'][1:,:-1])) * (0.5*(s['dnz'][:-1,:-1]+s['dnz'][:-1,1:]))
-#    s['dsdnv'][:-1,:-1] = (0.5*(s['dsz'][:-1,:-1]+s['dsz'][1:,:-1])) * (0.5*(s['dnc'][:-1,:-1]+s['dnc'][:-1,1:]))
     s['dsdnz'][:-1,:-1] = (0.5*(s['dsv'][:-1,:-1]+s['dsv'][1:,:-1])) * (0.5*(s['dnu'][:-1,:-1]+s['dnu'][:-1,1:]))
-    
-#    s['dsdnu'][:-1,-1] = s['dsdnu'][:-1,-2]
-#    s['dsdnv'][:-1,-1] = s['dsdnv'][:-1,-2]
     s['dsdnz'][:-1,-1] = s['dsdnz'][:-1,-2]
-    
-#    s['dsdnu'][-1,:] = s['dsdnu'][-2,:]
-#    s['dsdnv'][-1,:] = s['dsdnv'][-2,:]
     s['dsdnz'][-1,:] = s['dsdnz'][-2,:]
-    
-    # Inverse cell areas
-#    s['dsdnui'][:,:] = 1. / s['dsdnu']
-#    s['dsdnvi'][:,:] = 1. / s['dsdnv']
     s['dsdnzi'][:,:] = 1. / s['dsdnz']
     
     # Alfaz, grid orientation in z-points

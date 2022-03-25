@@ -29,6 +29,7 @@ from __future__ import absolute_import, division
 
 import logging
 import numpy as np
+import aeolis.gridparams
 
 # package modules
 from aeolis.utils import *
@@ -65,7 +66,28 @@ def initialize(s, p):
     nl = p['nlayers']
     nf = p['nfractions']
 
-## Sierd_com; This could be moved to gridparams file in future release where ds is equal to dsz??
+
+    # Not working yet
+    # s = aeolis.gridparams.initialize(s, p)
+    
+    # Quick implementation for equisdistant grids
+    # ============================================
+    
+    # initialize x-dimension
+    s['x'][:,:] = p['xgrid_file']
+    s['ds'][:,:] = ((s['x'][1,1]-s['x'][0,0])**2.+(s['y'][1,1]-s['y'][0,0])**2.)**0.5
+
+    # initialize y-dimension
+    if ny == 0:
+        s['y'][:,:] = 0.
+        s['dn'][:,:] = 1.
+    else:
+        s['y'][:,:] = p['ygrid_file']
+        s['dn'][:,:] = ((s['y'][1,1]-s['y'][0,0])**2.+(s['x'][1,1]-s['x'][0,0])**2.)**0.5
+
+
+    '''
+    ## Sierd_com; This could be moved to gridparams file in future release where ds is equal to dsz??
     # initialize x-dimension
     s['x'][:,:] = p['xgrid_file']
     s['ds'][:,1:] = np.diff(s['x'], axis=1)
@@ -75,7 +97,7 @@ def initialize(s, p):
     if ny == 0:
         s['y'][:,:] = 0.
         s['dn'][:,:] = 1.
-       # s['alfa'][:,:] = 0.
+        # s['alfa'][:,:] = 0.
     else:
         s['y'][:,:] = p['ygrid_file']
         s['dn'][1:,:] = np.diff(s['y'], axis=0)
@@ -85,6 +107,8 @@ def initialize(s, p):
         #                               s['y'][2:,:] - s['y'][:-2,:])
         #s['alfa'][0,:] = s['alfa'][1,:]
         #s['alfa'][-1,:] = s['alfa'][-2,:]
+        '''
+
 
     # compute cell areas
     s['dsdn'][:,:] = s['ds'] * s['dn']
