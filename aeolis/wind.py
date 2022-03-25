@@ -179,8 +179,9 @@ def shear(s,p):
             s['zsep'] = s['hsep'] + s['zb']
         
 
-    elif 'shear' in s.keys() and p['process_shear'] and p['ny'] == 0: #NTC - Added in 1D only capabilities
+    elif p['process_shear'] and p['ny'] == 0: #NTC - Added in 1D only capabilities
         s = compute_shear1d(s, p)
+        s = stress_velocity(s, p)
 
         if p['process_separation']:
             zsep = separation1d(s, p)
