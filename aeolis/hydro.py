@@ -537,19 +537,24 @@ def calc_runup_stockdon(Ho, Tp, beta):
     """
     Calculate runup according to /Stockdon et al 2006.
     """
-    Lo = 9.81 * Tp * Tp / (2 * np.pi) #wavelength
-    iribarren = beta / (Ho / Lo) ** (0.5) #irribarren number
+    if Ho > 0 and Tp > 0 and beta > 0:
+        Lo = 9.81 * Tp * Tp / (2 * np.pi) #wavelength
+        iribarren = beta / (Ho / Lo) ** (0.5) #irribarren number
 
-    if iribarren < 0.3:
-        R = 0.043 * np.sqrt(Ho * Lo) #formula for dissipative conditions
-        sigma_s = 0.046 * np.sqrt(Ho * Lo) /2
-        eta = R - sigma_s
+        if iribarren < 0.3:
+            R = 0.043 * np.sqrt(Ho * Lo) #formula for dissipative conditions
+            sigma_s = 0.046 * np.sqrt(Ho * Lo) /2
+            eta = R - sigma_s
+        else:
+            nsigma = 2  # nsigma=1 for R16% and nsigma=2 for R2%
+            Lo = 9.81 * Tp * Tp /(2 * np.pi)
+            eta = 0.35 * beta * np.sqrt(Ho * Lo)
+            sigma_s = np.sqrt(Ho * Lo * (0.563 * (beta * beta) + 0.0004)) * nsigma / 2 / 2
+            R = 1.1 * (eta + sigma_s) #result for non-dissipative conditions
     else:
-        nsigma = 2  # nsigma=1 for R16% and nsigma=2 for R2%
-        Lo = 9.81 * Tp * Tp /(2 * np.pi)
-        eta = 0.35 * beta * np.sqrt(Ho * Lo)
-        sigma_s = np.sqrt(Ho * Lo * (0.563 * (beta * beta) + 0.0004)) * nsigma / 2 / 2
-        R = 1.1 * (eta + sigma_s) #result for non-dissipative conditions
+        R = 0
+        sigma_s = 0
+        eta = 0
 
     return eta, sigma_s, R
 
