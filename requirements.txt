@@ -4,3 +4,5 @@ codecov
 nose
 scipy
 bmi-python
+ipykernel
+matplotlib
