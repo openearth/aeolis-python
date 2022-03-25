@@ -2767,6 +2767,9 @@ class AeoLiSRunner(AeoLiS):
             if 'var' in exts:
                 self.o[k]['var'] = self.o[k]['var'] + v**2
 
+        #also update the q variable here
+        self.s['q'] = np.hypot(self.s['qs'], self.s['qn'])
+
         self.n += 1
 
 
