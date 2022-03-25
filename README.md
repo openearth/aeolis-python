@@ -22,17 +22,17 @@ http://aeolis.readthedocs.io/.
 
 The maintenance and development is done by the AEOLIS developer team:
 Current members are:
--[Bart van Westen](mailto:Bart.vanWesten@deltares.nl) at Deltares, 
--[Nick Cohn](mailto:nick.cohn@usace.army.mil) at U.S. Army Engineer Research and Development Center (ERDC), 
--[Sierd de Vries](mailto:Sierd.deVries@tudelft.nl) (founder) at Delft University of Technology,
--[Christa van IJzendoorn](mailto:C.O.vanIJzendoorn@tudelft.nl) at Delft University of Technology,
--[Caroline Hallin](mailto:E.C.Hallin@tudelft.nl) at Delft University of Technology,
--[Glenn Strypsteen](mailto:glenn.strypsteen@kuleuven.be) at Katholieke Universiteit Leuven and
--[Janelle Skaden](mailto:Janelle.E.Skaden@usace.army.mil) at U.S. Army Engineer Research and Development Center (ERDC).
+- [Bart van Westen](mailto:Bart.vanWesten@deltares.nl) at Deltares
+- [Nick Cohn](mailto:nick.cohn@usace.army.mil) at U.S. Army Engineer Research and Development Center (ERDC) 
+- [Sierd de Vries](mailto:Sierd.deVries@tudelft.nl) (founder) at Delft University of Technology
+- [Christa van IJzendoorn](mailto:C.O.vanIJzendoorn@tudelft.nl) at Delft University of Technology
+- [Caroline Hallin](mailto:E.C.Hallin@tudelft.nl) at Delft University of Technology
+- [Glenn Strypsteen](mailto:glenn.strypsteen@kuleuven.be) at Katholieke Universiteit Leuven
+- [Janelle Skaden](mailto:Janelle.E.Skaden@usace.army.mil) at U.S. Army Engineer Research and Development Center (ERDC)
 
-Previous members are:
-- [Bas Hoonhout](mailto:bas@hoonhout.com) (founder) , 
-- Tom Pak, 
+Previous members and contributors are:
+- [Bas Hoonhout](mailto:bas@hoonhout.com) (founder) 
+- Tom Pak 
 - Pieter Rauwoens
 - Lisa Meijer
 
