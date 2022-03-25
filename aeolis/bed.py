@@ -75,15 +75,17 @@ def initialize(s, p):
     
     # initialize x-dimension
     s['x'][:,:] = p['xgrid_file']
-    s['ds'][:,:] = ((s['x'][1,1]-s['x'][0,0])**2.+(s['y'][1,1]-s['y'][0,0])**2.)**0.5
 
     # initialize y-dimension
     if ny == 0:
         s['y'][:,:] = 0.
         s['dn'][:,:] = 1.
+        s['ds'][:, 1:] = np.diff(s['x'], axis=1)
+        s['ds'][:, 0] = s['ds'][:, 1]
     else:
         s['y'][:,:] = p['ygrid_file']
         s['dn'][:,:] = ((s['y'][1,1]-s['y'][0,0])**2.+(s['x'][1,1]-s['x'][0,0])**2.)**0.5
+        s['ds'][:,:] = ((s['x'][1,1]-s['x'][0,0])**2.+(s['y'][1,1]-s['y'][0,0])**2.)**0.5
 
 
     '''
