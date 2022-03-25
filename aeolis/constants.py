@@ -134,36 +134,35 @@ MODEL_STATE = {
 #: AeoLiS model default configuration
 DEFAULT_CONFIG = {
     'process_wind'                  : True,               # Enable the process of wind
-    'process_shear'                 : True,               # Enable the process of wind shear
-    'process_tide'                  : True,               # Enable the process of tides
-    'process_wave'                  : True,               # Enable the process of waves
-    'process_runup'                 : True,               # Enable the process of wave runup
-    'process_moist'                 : True,               # Enable the process of moist
-    'process_mixtoplayer'           : True,               # Enable the process of mixing
-    'process_threshold'             : True,               # Enable the process of threshold
     'process_transport'             : True,               # Enable the process of transport
     'process_bedupdate'             : True,               # Enable the process of bed updating
+    'process_threshold'             : True,               # Enable the process of threshold
+    'th_grainsize'                  : True,               # Enable wind velocity threshold based on grainsize
+    'th_bedslope'                   : False,              # Enable wind velocity threshold based on bedslope
+    'th_moisture'                   : False,               # Enable wind velocity threshold based on moisture
+    'th_drylayer'                   : False,              # Enable threshold based on drying of layer
+    'th_humidity'                   : False,              # Enable wind velocity threshold based on humidity
+    'th_salt'                       : False,              # Enable wind velocity threshold based on salt
+    'th_roughness'                  : False,               # Enable wind velocity threshold based on roughness
+    'th_nelayer'                    : False,              # Enable wind velocity threshold based on a non-erodible layer
+    'process_avalanche'             : False,               # Enable the process of avalanching
+    'process_shear'                 : False,               # Enable the process of wind shear
+    'process_tide'                  : False,               # Enable the process of tides
+    'process_wave'                  : False,               # Enable the process of waves
+    'process_runup'                 : False,               # Enable the process of wave runup
+    'process_moist'                 : False,               # Enable the process of moist
+    'process_mixtoplayer'           : False,               # Enable the process of mixing    
     'process_meteo'                 : False,              # Enable the process of meteo
     'process_salt'                  : False,              # Enable the process of salt
     'process_humidity'              : False,              # Enable the process of humidity
     'process_groundwater'           : False,        #NEWCH      # Enable the process of groundwater
-    'process_scanning'              : True,         #NEWCH      # Enable the process of scanning curves
-    'process_avalanche'             : True,               # Enable the process of avalanching
+    'process_scanning'              : False,         #NEWCH      # Enable the process of scanning curves
     'process_inertia'               : False,              # NEW
-    'process_separation'            : True,               # Enable the including of separation bubble
+    'process_separation'            : False,               # Enable the including of separation bubble
     'process_nelayer'               : False,              # Enable a non-erodible layer
     'process_vegetation'            : False,              # Enable the process of vegetation
     'process_fences'                : False,              # Enable the process of sand fencing
     'process_dune_erosion'          : False,              # Enable the process of wave-driven dune erosion
-
-    'th_grainsize'                  : True,               # Enable wind velocity threshold based on grainsize
-    'th_bedslope'                   : False,              # Enable wind velocity threshold based on bedslope
-    'th_moisture'                   : True,               # Enable wind velocity threshold based on moisture
-    'th_drylayer'                   : False,              # Enable threshold based on drying of layer
-    'th_humidity'                   : False,              # Enable wind velocity threshold based on humidity
-    'th_salt'                       : False,              # Enable wind velocity threshold based on salt
-    'th_roughness'                  : True,               # Enable wind velocity threshold based on roughness
-    'th_nelayer'                    : False,              # Enable wind velocity threshold based on a non-erodible layer
     'xgrid_file'                    : None,               # Filename of ASCII file with x-coordinates of grid cells
     'ygrid_file'                    : None,               # Filename of ASCII file with y-coordinates of grid cells
     'bed_file'                      : None,               # Filename of ASCII file with bed level heights of grid cells
