@@ -1027,6 +1027,7 @@ class AeoLiS(IBmi):
         
         qs = Ct * s['us'] 
         qn = Ct * s['un'] 
+        q = np.hypot(qs, qn)
 
 
         return dict(Ct=Ct,
@@ -1036,7 +1037,8 @@ class AeoLiS(IBmi):
                     w=w,
                     w_init=w_init,
                     w_air=w_air,
-                    w_bed=w_bed)
+                    w_bed=w_bed,
+                    q=q)
         
         
     def solve(self, alpha=.5, beta=1.):
