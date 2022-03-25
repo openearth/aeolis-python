@@ -31,6 +31,7 @@ import scipy.interpolate
 from scipy import ndimage, misc
 #import matplotlib
 import matplotlib.pyplot as plt
+import os
 #import scipy.interpolate as spint
 #import scipy.spatial.qhull as qhull
 import time
@@ -159,7 +160,7 @@ class WindShear:
         u_angle = 270. - udir # wind angle
         
         if plot:
-            fig, axs = plt.subplots(2, 3)
+            fig, axs = plt.subplots(2, 3, figsize=(16, 9))
             self.plot(ax=axs[0,0], cmap='Reds', stride=10, computational_grid=False)
             axs[0,0].set_title('Original input grid')
 
@@ -258,6 +259,16 @@ class WindShear:
                     ax.set_xlim([-400, 400])
                     ax.set_ylim([-400, 400])
                     ax.set_aspect('equal')
+
+            # Create plotting folder
+            os.getcwd()     
+            fig_path = os.path.join(os.getcwd(), 'plots')
+            if not os.path.exists(fig_path):
+                os.makedirs(fig_path)
+                
+            fig_name = 'udir_' + str(int(udir)) + '.png'
+            plt.savefig(os.path.join(fig_path, fig_name), dpi=200)
+            plt.close('all')
         
         return self
     
