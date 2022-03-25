@@ -21,7 +21,8 @@ Documentation can be found at
 http://aeolis.readthedocs.io/.
 
 The maintenance and development is done by the AEOLIS developer team:
-Current members are:
+
+Current members of the AEOLIS developer team are:
 - [Bart van Westen](mailto:Bart.vanWesten@deltares.nl) at Deltares
 - [Nick Cohn](mailto:nick.cohn@usace.army.mil) at U.S. Army Engineer Research and Development Center (ERDC) 
 - [Sierd de Vries](mailto:Sierd.deVries@tudelft.nl) (founder) at Delft University of Technology
