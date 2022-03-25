@@ -313,6 +313,24 @@ def apply_mask(arr, mask):
 
     return arr
 
+
+def rotate(x, y, alpha, origin=(0,0)):
+    '''Rotate a matrix over given angle around given origin'''
+    
+    xr = x - origin[0]
+    yr = y - origin[1]
+    
+    a = alpha / 180. * np.pi
+    
+    R = np.asmatrix([[np.cos(a), -np.sin(a)],
+                     [np.sin(a),  np.cos(a)]])
+    
+    xy = np.concatenate((xr.reshape((-1,1)), 
+                         yr.reshape((-1,1))), axis=1) * R
+                     
+    return (np.asarray(xy[:,0].reshape(x.shape) + origin[0]),
+            np.asarray(xy[:,1].reshape(y.shape) + origin[1]))
+
 # @numba.njit 
 def sc_kv(v, z):
     return scipy.special.kv(v, z)

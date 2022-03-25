@@ -109,9 +109,7 @@ def avalanche(s, p):
 
         max_iter_ava = p['max_iter_ava']
         
-        max_grad_h, grad_h, grad_h_down = calc_gradients(s['zb'], nx, ny, s['ds'], s['dn'], s[ 'zne'])
-        
-
+        max_grad_h, grad_h, grad_h_down = calc_gradients(s['zb'], nx, ny, s['ds'], s['dn'], s['zne'])
         
         s['gradh'] = grad_h.copy()
 

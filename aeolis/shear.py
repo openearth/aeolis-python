@@ -189,7 +189,7 @@ class WindShear:
         # gc['z'] = self.interpolate(xi_buff, yi_buff, zi_buff, gc['x'], gc['y'], 0)
         
         # Interpolate bed levels and shear to the computational grid
-        gc['z'] = self.interpolate(gi['x'], gi['y'], gi['z'], gc['x'], gc['y'], None)
+        gc['z'] = self.interpolate(gi['x'], gi['y'], gi['z'], gc['x'], gc['y'], 0)
         
         # Project the taus0 and taun0 on the computational grid
         gc['taux'] = np.full(np.shape(gc['x']), taus0)
@@ -230,7 +230,8 @@ class WindShear:
             axs[0,2].set_title('Computed shear stress and bubble effect')
 
         if plot:
-            pc = axs[1,0].pcolormesh(gc['x'], gc['y'], gc['taux'])
+            tau_plot = np.hypot(gc['taux'], gc['tauy'])
+            pc = axs[1,0].pcolormesh(gc['x'], gc['y'], tau_plot)
             plt.colorbar(pc, ax=axs[1,0])
             axs[1,0].set_title('Rotate grids, such that computational is horizontal')
         
@@ -245,9 +246,12 @@ class WindShear:
         if process_separation:
             gi['hsep'] = self.interpolate(gc['x'], gc['y'], gc['hsep'], gi['x'], gi['y'], 0. )
             
+        
+            
         # Final plots and lay-out    
         if plot:
-            pc = axs[1,1].pcolormesh(gi['x'], gi['y'], gi['taux'])
+            tau_plot = np.hypot(gi['taux'], gi['tauy'])
+            pc = axs[1,1].pcolormesh(gi['x'], gi['y'], tau_plot)
             plt.colorbar(pc, ax=axs[1,1])
             axs[1,1].set_title('Interpolate back onto original grid')
 
@@ -821,13 +825,6 @@ class WindShear:
         # First compute angle with horizontal
         dx = x[0,1] - x[0,0]
         dy = y[0,1] - y[0,0]
-        
-        if dx != 0:
-            dydx = dy/dx
-        elif dy >= 0:
-            dydx = np.inf
-        elif dy < 0:
-            dydx = -np.inf
 
         angle = np.rad2deg(np.arctan(dy/dx))
         
