@@ -25,6 +25,7 @@ Contents
    model
    implementation
    sourcecode
+   inputfiles
    defaults
    output
    installation

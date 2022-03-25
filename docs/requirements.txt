@@ -1,3 +1,4 @@
 sphinxcontrib-bibtex<2.0.0
 sphinxcontrib-napoleon
 numpy
+matplotlib
