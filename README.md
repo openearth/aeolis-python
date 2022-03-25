@@ -31,7 +31,7 @@ Current members are:
 [Janelle Skaden](mailto:Janelle.E.Skaden@usace.army.mil) at U.S. Army Engineer Research and Development Center (ERDC).
 
 Previous members are:
-[Bas Hoonhout](mailto:bas@hoonhout.com) (founder) and Lisa Meijer
+[Bas Hoonhout](mailto:bas@hoonhout.com) (founder) , Tom Pak, Pieter Rauwoens and Lisa Meijer
 
 ## Examples
 
