@@ -316,6 +316,9 @@ class AeoLiS(IBmi):
             # avalanching
             self.s = aeolis.avalanching.angele_of_repose(self.s, self.p)
             self.s = aeolis.avalanching.avalanche(self.s, self.p)
+            
+            # reset original bed in marine zone (wet)
+            self.s = aeolis.bed.wet_bed_reset(self.s, self.p)
 
             # calculate average bed level change over time
             self.s = aeolis.bed.average_change(self.l, self.s, self.p)
@@ -330,6 +333,7 @@ class AeoLiS(IBmi):
         if self.p['process_vegetation']:
             self.s = aeolis.vegetation.germinate(self.s, self.p)
             self.s = aeolis.vegetation.grow(self.s, self.p)
+
 
         # increment time
         self.t += self.dt * self.p['accfac']

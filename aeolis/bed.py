@@ -186,6 +186,38 @@ def mixtoplayer(s, p):
             
     return s
 
+
+def wet_bed_reset(s, p):
+    ''' Text
+
+
+
+    Parameters
+    ----------
+    s : dict
+        Spatial grids
+    p : dict
+        Model configuration parameters
+
+    Returns
+    -------
+    dict
+        Spatial grids
+
+    '''
+
+    if p['process_wet_bed_reset']:
+        
+        Tbedreset = p['dt'] / p['Tbedreset']
+        
+        ix = s['zs'] > (s['zb'] + 0.01)
+        s['zb'][ix] += (s['zb0'][ix] - s['zb'][ix]) * Tbedreset
+            
+    return s
+
+
+
+
 def update(s, p):
     '''Update bathymetry and bed composition
 

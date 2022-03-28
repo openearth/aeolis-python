@@ -163,7 +163,8 @@ DEFAULT_CONFIG = {
     'process_wave'                  : False,               # Enable the process of waves
     'process_runup'                 : False,               # Enable the process of wave runup
     'process_moist'                 : False,               # Enable the process of moist
-    'process_mixtoplayer'           : False,               # Enable the process of mixing    
+    'process_mixtoplayer'           : False,               # Enable the process of mixing 
+    'process_wet_bed_reset'         : False,               # Enable the process of bed-reset in the intertidal zone
     'process_meteo'                 : False,              # Enable the process of meteo
     'process_salt'                  : False,              # Enable the process of salt
     'process_humidity'              : False,              # Enable the process of humidity
@@ -171,7 +172,6 @@ DEFAULT_CONFIG = {
     'process_scanning'              : False,         #NEWCH      # Enable the process of scanning curves
     'process_inertia'               : False,              # NEW
     'process_separation'            : False,               # Enable the including of separation bubble
-    'process_nelayer'               : False,              # Enable a non-erodible layer
     'process_vegetation'            : False,              # Enable the process of vegetation
     'process_fences'                : False,              # Enable the process of sand fencing
     'process_dune_erosion'          : False,              # Enable the process of wave-driven dune erosion
@@ -243,7 +243,7 @@ DEFAULT_CONFIG = {
     'T'                             : 1.,                 # [s] Adaptation time scale in advection equation
     'Tdry'                          : 3600.*1.5,          # [s] Adaptation time scale for soil drying
     'Tsalt'                         : 3600.*24.*30.,      # [s] Adaptation time scale for salinitation
-    'Tswash'                        : 30.,                # [s] 
+    'Tbedreset'                     : 86400.,             # [s] 
     'eps'                           : 1e-3,               # [m] Minimum water depth to consider a cell "flooded"
     'gamma'                         : .5,                 # [-] Maximum wave height over depth ratio
     'xi'                            : .3,                 # [-] Surf similarity parameter
