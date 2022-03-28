@@ -193,20 +193,21 @@ def shear(s,p):
             s['taun'] *= zsepdelta
             s = stress_velocity(s, p)
 
-    if p['process_nelayer']:
+    # if p['process_nelayer']:
+    # if p['th_nelayer']:
 
-        ustar = s['ustar'].copy()
-        ustars = s['ustars'].copy()
-        ustarn = s['ustarn'].copy()
+    #     ustar = s['ustar'].copy()
+    #     ustars = s['ustars'].copy()
+    #     ustarn = s['ustarn'].copy()
             
-        s['zne'][:,:] = p['ne_file']
+    #     s['zne'][:,:] = p['ne_file']
             
-        ix = s['zb'] <= s['zne']
-        s['ustar'][ix] = np.maximum(0., s['ustar'][ix] - (s['zne'][ix]-s['zb'][ix])* (1/p['layer_thickness']) * s['ustar'][ix])
+    #     ix = s['zb'] <= s['zne']
+    #     s['ustar'][ix] = np.maximum(0., s['ustar'][ix] - (s['zne'][ix]-s['zb'][ix])* (1/p['layer_thickness']) * s['ustar'][ix])
         
-        ix = ustar != 0.
-        s['ustars'][ix] = s['ustar'][ix] * (ustars[ix] / ustar[ix])
-        s['ustarn'][ix] = s['ustar'][ix] * (ustarn[ix] / ustar[ix])
+    #     ix = ustar != 0.
+    #     s['ustars'][ix] = s['ustar'][ix] * (ustars[ix] / ustar[ix])
+    #     s['ustarn'][ix] = s['ustar'][ix] * (ustarn[ix] / ustar[ix])
 
 
     return s
