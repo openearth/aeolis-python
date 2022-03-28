@@ -4,9 +4,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% -------------------- [Timing] ----------------------------- %%
-dt 						= 3600.000								% [s] Timeinterval between timesteps
+dt 						= 1800.000								% [s] Timeinterval between timesteps
 tstart 					= 0										% [s] Starting time of the simulation
-tstop 					= 62899200.000							% [s] End time of the simulation
+tstop 					= 125798400.000							% [s] End time of the simulation
 restart                 = None               					% [s] Interval for which to write restart files
 refdate               	= 2020-01-01 00:00 						% [-] Reference datetime in netCDF output
 
@@ -15,7 +15,7 @@ xgrid_file 				= x.grd									% Filename of ASCII file with x-coordinates of gr
 ygrid_file 				= y.grd									% Filename of ASCII file with y-coordinates of grid cells
 bed_file 				= z.grd									% Filename of ASCII file with bed level heights of grid cells
 ne_file 				= ne.grd								% Filename of ASCII file with non-erodible layer
-veg_file 				= None									% Filename of ASCII file with initial vegetation density
+veg_file 				= veg.grd								% Filename of ASCII file with initial vegetation density
 threshold_file          = None               					% Filename of ASCII file with shear velocity threshold
 fence_file              = None               					% Filename of ASCII file with sand fence location/height (above the bed)
 wave_mask               = None               					% Filename of ASCII file with mask for wave height
@@ -32,7 +32,7 @@ meteo_file              = None               					% Filename of ASCII file with 
 %% -------------------- [Output] ----------------------------- %%	
 output_times 			= 86400.000								% [s] Timeinterval [s] between *.nc output file
 output_file 			= aeolis.nc 							% [-] Name of the *.nc output file
-output_vars 			= zb ustar ustarn ustars uth zsep Cu Ct	% [-] List of output variables for in *.nc output file
+output_vars 			= zb ustar ustarn ustars uth zsep Cu Ct vegfac	% [-] List of output variables for in *.nc output file
 
 %% -------------------- [Flags Processes] -------------------- %%
 process_wind           	= T               						% [T/F] Enable the process of wind 
@@ -52,7 +52,7 @@ process_avalanche       = T               						% [T/F] Enable the process of av
 process_inertia         = F             						% [T/F] NEW (???)
 process_separation      = T               						% [T/F] Enable the including of separation bubble
 process_nelayer         = T              						% [T/F] Enable a non-erodible layer
-process_vegetation      = F              						% [T/F] Enable the process of vegetation
+process_vegetation      = T              						% [T/F] Enable the process of vegetation
 process_fences          = F              						% [T/F] Enable the process of sand fencing
 process_dune_erosion    = F              						% [T/F] Enable the process of wave-driven dune erosion
 
@@ -126,6 +126,7 @@ sedimentinput           = 0.                 					% [-] Constant boundary sedime
 %% -------------------- [Rotating shear-grid] ---------------- %%
 dx 						= 1.000									% [m] Size of dimension of the computational grid that is generated for a rotating shear computation in x-direction
 dy 						= 1.000        							% [m] Size of dimension of the computational grid that is generated for a rotating shear computation in x-direction
+buffer_width			= 20.0									% [m] Width of the bufferzone around the rotational grid for wind perturbation	
 
 %% -------------------- [Vegetation] ------------------------- %%	
 sigma                   = 4.2                					% [-] Ratio between basal area and frontal area of roughness elements
@@ -135,9 +136,9 @@ avg_time              	= 86400.             					% [s] Indication of the time pe
 dzb_interval            = 86400.              					% [s] Interval used for calcuation of vegetation growth
 hveg_max                = 1.                 					% [m] Max height of vegetation
 dzb_opt                 = 0.                					% [m/year] Sediment burial for optimal growth
-V_ver                   = 0.                 					% [m/year] Vertical growth
+V_ver                   = 5.                 					% [m/year] Vertical growth
 V_lat                   = 0.                 					% [m/year] Lateral growth
-germinate               = 0.                 					% [1/year] Possibility of germination per year
+germinate               = 1.                 					% [1/year] Possibility of germination per year
 lateral                 = 0.                 					% [1/year] Posibility of lateral expension per year
 veg_gamma               = 1.                					% [-] Constant on influence of sediment burial
 veg_sigma               = 0.8                					% [-] Sigma in gaussian distrubtion of vegetation cover filter
