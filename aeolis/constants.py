@@ -31,13 +31,25 @@ INITIAL_STATE = {
         'uw',                               # [m/s] Wind velocity
         'uws',                              # [m/s] Component of wind velocity in x-direction
         'uwn',                              # [m/s] Component of wind velocity in y-direction
+        
         'tau',                              # [N/m^2] Wind shear stress
         'taus',                             # [N/m^2] Component of wind shear stress in x-direction
         'taun',                             # [N/m^2] Component of wind shear stress in y-direction
-        'dtaus',                            # [-] Component of the wind shear perturbation in x-direction
-        'dtaun',                            # [-] Component of the wind shear perturbation in y-direction
+        'tau0',                             # [N/m^2] Wind shear stress over a flat bed
+        'taus0',                            # [N/m^2] Component of wind shear stress in x-direction over a flat bed
+        'taun0',                            # [N/m^2] Component of wind shear stress in y-direction over a flat bed
         'taus_u',                           # [N/m^2] Saved direction of wind shear stress in x-direction
         'taun_u',                           # [N/m^2] Saved direction of wind shear stress in y-direction
+        'dtaus',                            # [-] Component of the wind shear perturbation in x-direction
+        'dtaun',                            # [-] Component of the wind shear perturbation in y-direction
+
+        'ustar',                            # [m/s] Wind shear velocity
+        'ustars',                           # [m/s] Component of wind shear velocity in x-direction
+        'ustarn',                           # [m/s] Component of wind shear velocity in y-direction
+        'ustar0',                           # [m/s] Wind shear velocity over a flat bed
+        'ustars0',                          # [m/s] Component of wind shear velocity in x-direction over a flat bed
+        'ustarn0',                          # [m/s] Component of wind shear velocity in y-direction over a flat bed
+
         'udir',                             # [rad] Wind direction
         'zs',                               # [m] Water level above reference
         'swl',                         #NEWCH     # [m] Still water level above reference
@@ -216,6 +228,7 @@ DEFAULT_CONFIG = {
     'l'                             : 10.,                # [m] Inner layer height (perturbation)
     'c_b'                           : 0.2,                # [-] Slope at the leeside of the separation bubble # c = 0.2 according to Durán 2010 (Sauermann 2001: c = 0.25 for 14 degrees)
     'mu_b'                          : 30,                 # [deg] Minimum required slope for the start of flow separation
+    'buffer_width'                  : 10,                 # [m] Width of the bufferzone around the rotational grid for wind perturbation
     'zero_order_filter'             : False,              # [-] Boolean for turning on/off the zeroth order filtering of the separation bubble
     'Cb'                            : 1.5,                # [-] Constant in bagnold formulation for equilibrium sediment concentration
     'Ck'                            : 2.78,               # [-] Constant in kawamura formulation for equilibrium sediment concentration

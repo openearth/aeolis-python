@@ -76,7 +76,7 @@ def initialize(s, p):
             s['shear'] = aeolis.shear.WindShear(s['x'], s['y'], s['zb'],
                                                 dx=p['dx'], dy=p['dy'],
                                                 L=p['L'], l=p['l'], z0=z0,
-                                                buffer_width=100.)
+                                                buffer_width=p['buffer_width'])
         else:
             s['shear'] = np.zeros(s['x'].shape)
 
@@ -157,11 +157,9 @@ def shear(s,p):
 
     if 'shear' in s.keys() and p['process_shear'] and p['ny'] > 0:
         
-        s['shear'].set_topo(s['zb'].copy())
-        s['shear'].set_shear(s['taus'], s['taun'])
-        
-        s['shear'](u0=s['uw'][0,0],
-                   udir=s['udir'][0,0] + p['alfa'],
+        s['shear'](x=s['x'], y=s['y'], z=s['zb'],
+                   taux=s['taus'], tauy=s['taun'],
+                   u0=s['uw'][0,0], udir=s['udir'][0,0],
                    process_separation = p['process_separation'],
                    c = p['c_b'],
                    mu_b = p['mu_b'],
@@ -169,7 +167,7 @@ def shear(s,p):
                    zero_order_filter=p['zero_order_filter'])
 
         s['taus'], s['taun'] = s['shear'].get_shear()
-        s['tau'] = np.hypot(s['taus'], s['taun'])                               # set minimum of tau to zero
+        s['tau'] = np.hypot(s['taus'], s['taun'])
                
         s = stress_velocity(s,p)
                                

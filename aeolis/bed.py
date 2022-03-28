@@ -66,70 +66,6 @@ def initialize(s, p):
     nl = p['nlayers']
     nf = p['nfractions']
 
-
-    # Not working yet
-    # s = aeolis.gridparams.initialize(s, p)
-    
-    # Quick implementation for equisdistant grids
-    # ============================================
-    
-    # Read x and y
-    s['x'][:,:] = p['xgrid_file']
-    if ny == 0:
-        s['y'][:,:] = 0.
-    else:
-        s['y'][:,:] = p['ygrid_file']
-    
-    # Determine angle w.r.t. horizontal
-    dx = s['x'][0,1] - s['x'][0,0]
-    dy = s['y'][0,1] - s['y'][0,0]
-        
-    angle = np.rad2deg(np.arctan(dy/dx))
-    
-    if dx <= 0 and dy<=0:
-        angle += 180.
-        
-    # Rotate grids to allign with horizontal
-    xr, yr = rotate(s['x'], s['y'], angle, origin=(np.mean(s['x']), np.mean(s['y'])))
-    
-    s['ds'][:,:] = ((xr[1,0]-xr[0,0])**2.+(yr[1,0]-yr[0,0])**2.)**0.5
-    
-    # initialize y-dimension
-    if ny == 0:
-        s['dn'][:,:] = 1.
-    else:
-        s['dn'][:,:] = ((yr[0,1]-yr[0,0])**2.+(xr[0,1]-xr[0,0])**2.)**0.5
-        
-
-
-    '''
-    ## Sierd_com; This could be moved to gridparams file in future release where ds is equal to dsz??
-    # initialize x-dimension
-    s['x'][:,:] = p['xgrid_file']
-    s['ds'][:,1:] = np.diff(s['x'], axis=1)
-    s['ds'][:,0] = s['ds'][:,1]
-
-    # initialize y-dimension
-    if ny == 0:
-        s['y'][:,:] = 0.
-        s['dn'][:,:] = 1.
-        # s['alfa'][:,:] = 0.
-    else:
-        s['y'][:,:] = p['ygrid_file']
-        s['dn'][1:,:] = np.diff(s['y'], axis=0)
-        s['dn'][0,:] = s['dn'][1,:]
-
-        #s['alfa'][1:-1,:] = np.arctan2(s['x'][2:,:] - s['x'][:-2,:],
-        #                               s['y'][2:,:] - s['y'][:-2,:])
-        #s['alfa'][0,:] = s['alfa'][1,:]
-        #s['alfa'][-1,:] = s['alfa'][-2,:]
-        '''
-
-
-    # compute cell areas
-    s['dsdn'][:,:] = s['ds'] * s['dn']
-    s['dsdni'][:,:] = 1. / s['dsdn']
-
     # initialize bathymetry
     s['zb'][:,:] = p['bed_file']
     s['zb0'][:,:] = p['bed_file']
@@ -138,7 +74,6 @@ def initialize(s, p):
     #initialize thickness of erodable or dry top layer
     s['zdry'][:,:] = 0.05
     
-
     # initialize bed layers
     s['thlyr'][:,:,:] = p['layer_thickness']
 

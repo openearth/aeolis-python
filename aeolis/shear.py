@@ -90,7 +90,7 @@ class WindShear:
     
     
     def __init__(self, x, y, z, dx, dy, L, l, z0,
-                 buffer_width=100., buffer_relaxation=None):
+                 buffer_width, buffer_relaxation=None):
         '''Class initialization
             
         Parameters
@@ -130,7 +130,6 @@ class WindShear:
             self.istransect = True
         
         # Assigning values to original (i) and computational (c) grid
-        self.igrid = dict(x = x, y = y, z = z)
         self.cgrid = dict(dx = dx, dy = dy)
         
         # Setting buffer settings                  
@@ -143,7 +142,10 @@ class WindShear:
         self.z0 = z0
        
 
-    def __call__(self, u0, udir, process_separation, c, mu_b, taus0, taun0, zero_order_filter, plot=False):
+    def __call__(self, x, y, z, taux, tauy, u0, udir, 
+                 process_separation, c, mu_b, 
+                 taus0, taun0, zero_order_filter, plot=False):
+        
         '''Compute wind shear for given wind speed and direction
         
         Parameters
@@ -155,6 +157,9 @@ class WindShear:
         process_separattion : 
         
         '''
+        
+        # Reload x and y because of horizontalized input-grid
+        self.igrid = dict(x=x, y=y, z=z, taux=taux, tauy=tauy)
         
         # Convert to cartesian to perform all the rotations
         u_angle = 270. - udir # wind angle
@@ -311,7 +316,7 @@ class WindShear:
         ycorner[3] = gi['y'][-1, -1]
         
         # Preventing vertical lines
-        udir_verticals = np.arange(-360, 360, 90)  
+        udir_verticals = np.arange(-1080, 1080, 90)  
         udir_vertical_bool = False
         for udir_vertical in udir_verticals:
             if (abs(udir - udir_vertical) <= 0.001):
@@ -395,6 +400,7 @@ class WindShear:
         follow behind an obstacle (mu_b = ..)'''
 
         stall += np.logical_and(abs(dzx) > mu_b, dzx < 0.) 
+        
         stall[:,1:-1] += np.logical_and(stall[:,1:-1]==0, stall[:,:-2]>0., stall[:,2:]>0.)
 
         # Define separation bubble
@@ -416,19 +422,25 @@ class WindShear:
         for k in range(0, n):
             
             i = bubble_n[k,1]
-            j = bubble_n[k,0]       
-
-            ix_neg = (dzx[j, i+5:] >= 0)                                         # i + 5??
-                                    
-            if np.sum(ix_neg) == 0:
-                zbrink = z[j,i]                                                 # z level of brink at z(x0) 
+            j = bubble_n[k,0]  
+            
+            #Bart: check for negative wind direction
+            if np.sum(gc['taux']) >= 0:
+                idir = 1
             else:
-                zbrink = z[j,i] - z[j,i+5+np.where(ix_neg)[0][0]]
+                idir = -1
+            
+            # ix_neg = (dzx[j, i+idir*5:] >= 0)                                         # i + 5??
+            zbrink = z[j,i]        
+            
+            # if np.sum(ix_neg) == 0:
+            #     zbrink = z[j,i]                                                 # z level of brink at z(x0) 
+            # else:
+            #     zbrink = z[j,i] - z[j,i+idir*5+idir*np.where(ix_neg)[0][0]]
 
             # Zero order polynom
-            dzdx0 = (z[j,i] - z[j,i-1]) / dx
-            # dzdx0 = 1.
             
+            dzdx0 = (z[j,i] - z[j,i-1]) / dx            
             a = dzdx0 / c
         
             ls = np.minimum(np.maximum((3.*zbrink/(2.*c) * (1. + a/4. + a**2/8.)), 0.1), 200.)
@@ -438,8 +450,11 @@ class WindShear:
           
             i_max = min(i+int(ls/dx),int(nx-1))
 
-            xs = x[j,i:i_max] - x[j,i]
-            
+            if idir == 1:
+                xs = x[j,i:i_max] - x[j,i]
+            else:
+                xs = -(x[j,i:i_max] - x[j,i])
+                
             zsep0[j,i:i_max] = (a3*xs**3 + a2*xs**2 + dzdx0*xs + z[j,i])
 
             # Zero order filter
@@ -452,7 +467,7 @@ class WindShear:
                 zsep0[j,:] = np.real(np.fft.ifft(zfft[j,:]))
                 
                 # First order polynom
-                dzdx1 = (zsep0[j,i] - zsep0[j,i-1])/dx
+                dzdx1 = (zsep0[j,i] - zsep0[j,i*1])/dx
                    
                 a = dzdx1 / c
             
@@ -462,20 +477,21 @@ class WindShear:
                 a2 = -3 * z[j,i]/ls**2 - 2 * dzdx1 / ls
                 a3 =  2 * z[j,i]/ls**3 +     dzdx1 / ls**2
               
-                i_max1 = min(i+int(ls/dx),int(nx-1))
+                i_max1 = min(i+idir*int(ls/dx),int(nx-1))
     
-                xs1 = x[j,i:i_max1] - x[j,i]
-                
+                if idir == 1:
+                    xs1 = x[j,i:i_max1] - x[j,i]
+                else:
+                    xs1 = -(x[j,i:i_max1] - x[j,i])
+            
                 zsep1[j,i:i_max1] = (a3*xs1**3 + a2*xs1**2 + dzdx1*xs1 + z[j,i])
             
-
             # Pick the maximum seperation bubble hieght at all locations
             if zero_order_filter:
-                zsep[j,i:i_max] = np.maximum(zsep1[j,i:i_max], zsep[j,i:i_max])
+                zsep[j,:] = np.maximum(zsep1[j,:], zsep[j,:])
             else:
-                zsep[j,i:i_max] = np.maximum(zsep0[j,i:i_max], zsep[j,i:i_max])
-
-            
+                zsep[j,:] = np.maximum(zsep0[j,:], zsep[j,:])
+        
         # Smooth surface of separation bubbles over y direction
         zsep = ndimage.gaussian_filter1d(zsep, sigma=0.2, axis=0)
 
@@ -636,33 +652,33 @@ class WindShear:
         return hs 
 
     # Input functions for wind.py
-    def set_topo(self, z):
-        '''Update topography
+    # def set_topo(self, z):
+    #     '''Update topography
 
-        Parameters
-        ----------
-        z : numpy.ndarray
-            2D array with topography of input grid
+    #     Parameters
+    #     ----------
+    #     z : numpy.ndarray
+    #         2D array with topography of input grid
 
-        '''
+    #     '''
 
-        self.igrid['z'] = z
+    #     self.igrid['z'] = z
 
-        return self
+    #     return self
     
-    def set_shear(self, taus, taun):
-        '''Update shear
+    # def set_shear(self, taus, taun):
+    #     '''Update shear
 
-        Parameters
-        ----------
-        tau : numpy.ndarray
-            array with wind shear stresses of input grid
+    #     Parameters
+    #     ----------
+    #     tau : numpy.ndarray
+    #         array with wind shear stresses of input grid
 
-        '''
-        self.igrid['taux'] = taus
-        self.igrid['tauy'] = taun
+    #     '''
+    #     self.igrid['taux'] = taus
+    #     self.igrid['tauy'] = taun
         
-        return self
+    #     return self
     
     def get_shear(self):
         '''Returns wind shear perturbation field

@@ -57,7 +57,6 @@ import aeolis.constants
 import aeolis.erosion
 import aeolis.vegetation
 import aeolis.fences
-
 import aeolis.gridparams
 
 from aeolis.utils import *
@@ -216,6 +215,9 @@ class AeoLiS(IBmi):
         for var, dims in self.dimensions().items():
             self.s[var] = np.zeros(self._dims2shape(dims))
             self.l[var] = self.s[var].copy()
+            
+        # initialize grid parameters
+        self.s, self.p = aeolis.gridparams.initialize(self.s, self.p)
 
         # initialize bed composition
         self.s = aeolis.bed.initialize(self.s, self.p)
@@ -262,10 +264,13 @@ class AeoLiS(IBmi):
         self.l = self.s.copy()
         self.l['zb'] = self.s['zb'].copy()
         self.l['dzbavg'] = self.s['dzbavg'].copy()
-
-        # interpolate wind time series
-        self.s = aeolis.wind.interpolate(self.s, self.p, self.t)
         
+        # interpolate wind time series
+        self.s = aeolis.wind.interpolate(self.s, self.p, self.t)     
+    
+        # Rotate gridparams, such that the grids is alligned horizontally
+        self.s = self.grid_rotate(self.p['alpha'])
+      
         if np.sum(self.s['uw']) != 0:
             self.s = aeolis.wind.shear(self.s, self.p)
 
@@ -293,7 +298,6 @@ class AeoLiS(IBmi):
             self.s = aeolis.threshold.compute(self.s, self.p)
 
             # compute saltation velocity and equilibrium transport
-            #self.s = aeolis.transport.saltationvelocity(self.s, self.p)
             self.s = aeolis.transport.equilibrium(self.s, self.p)
 
             # compute instantaneous transport
@@ -330,6 +334,9 @@ class AeoLiS(IBmi):
         # increment time
         self.t += self.dt * self.p['accfac']
         self._count('time')
+        
+        # Rotate gridparams back to original grid orientation
+        self.s = self.grid_rotate(-self.p['alpha'])
 
 
     def finalize(self):
@@ -631,8 +638,32 @@ class AeoLiS(IBmi):
                     return False
 
         return True
-
-
+    
+    
+    
+    
+    def grid_rotate(self, angle):
+        
+        s = self.s
+        
+        s['x'], s['y'] = rotate(s['x'], s['y'], angle, origin=(np.mean(s['x']), np.mean(s['y'])))
+        
+        s['taus'], s['taun'] = rotate(s['taus'], s['taun'], angle, origin=(0, 0))
+        s['taus0'], s['taun0'] = rotate(s['taus0'], s['taun0'], angle, origin=(0, 0))
+        
+        s['ustars'], s['ustarn0'] = rotate(s['ustars'], s['ustarn'], angle, origin=(0, 0))
+        s['ustars0'], s['ustarn0'] = rotate(s['ustars0'], s['ustars0'], angle, origin=(0, 0))
+        
+        s['uws'], s['uwn'] = rotate(s['uws'], s['uwn'], angle, origin=(0, 0))
+        
+        s['qs'], s['qn'] = rotate(s['qs'], s['qn'], angle, origin=(0, 0))
+        
+        self.s['udir'] += self.p['alpha']
+        
+        return s
+    
+    
+    
     
     def euler_forward(self):
         '''Convenience function for explicit solver based on Euler forward scheme
@@ -1857,7 +1888,6 @@ class AeoLiS(IBmi):
 
         '''
 
-#        print("%g" % self.t)
         
         l = self.l
         s = self.s
@@ -1891,12 +1921,11 @@ class AeoLiS(IBmi):
         nf = p['nfractions']
 
         ufs = np.zeros((p['ny']+1,p['nx']+2))
-        ufn = np.zeros((p['ny']+2,p['nx']+1))    
+        ufn = np.zeros((p['ny']+2,p['nx']+1))               
         
         for i in range(nf): #loop over fractions
         
             #define velocity fluxes
-            
             ufs[:,1:-1] = 0.5*s['us'][:,:-1,i] + 0.5*s['us'][:,1:,i]
             ufn[1:-1,:] = 0.5*s['un'][:-1,:,i] + 0.5*s['un'][1:,:,i]
             
@@ -1909,7 +1938,7 @@ class AeoLiS(IBmi):
                 ufn[-1,:] = ufn[0,:]
             else:
                 ufn[0,:]  = s['un'][0,:,i]
-                ufn[-1,:] = s['un'][-1,:,i]
+                ufn[-1,:] = s['un'][-1,:,i]    
         
             beta = abs(beta)
             if beta >= 1.:
@@ -2237,6 +2266,10 @@ class AeoLiS(IBmi):
 
         qs = Ct * s['us'] 
         qn = Ct * s['un']
+        qs = Ct * s['us'] 
+        qn = Ct * s['un'] 
+        q = np.hypot(qs, qn)
+        
                     
         return dict(Ct=Ct,
                     qs=qs,
@@ -2245,7 +2278,8 @@ class AeoLiS(IBmi):
                     w=w,
                     w_init=w_init,
                     w_air=w_air,
-                    w_bed=w_bed)        
+                    w_bed=w_bed,
+                    q=q)        
 
 
     def get_count(self, name):
