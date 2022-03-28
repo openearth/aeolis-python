@@ -218,6 +218,9 @@ class WindShear:
                     
         # Compute wind shear stresses on computational grid 
         self.compute_shear(u0)
+        
+        # Prevent negative dtaux
+        gc['dtaux'] = np.maximum(gc['dtaux'], 0.)
 
         # Rotate to the horizontal rotational grid        
         gc['dtaux'], gc['dtauy'] = self.rotate(gc['dtaux'], gc['dtauy'], -u_angle)
