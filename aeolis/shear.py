@@ -144,7 +144,8 @@ class WindShear:
 
     def __call__(self, x, y, z, taux, tauy, u0, udir, 
                  process_separation, c, mu_b, 
-                 taus0, taun0, zero_order_filter, plot=False):
+                 taus0, taun0, zero_order_filter, zsep_y_filter,
+                 plot=False):
         
         '''Compute wind shear for given wind speed and direction
         
@@ -212,21 +213,24 @@ class WindShear:
 
         # Compute separation bubble
         if process_separation:
-            zsep = self.separation(c, mu_b, zero_order_filter)
+            zsep = self.separation(c, mu_b, zero_order_filter, zsep_y_filter)
             z_origin = gc['z'].copy()
             gc['z'] = np.maximum(gc['z'], zsep)
                     
         # Compute wind shear stresses on computational grid 
-        self.compute_shear(u0)
-        
-        # Prevent negative dtaux
-        gc['dtaux'] = np.maximum(gc['dtaux'], 0.)
+        self.compute_shear(u0, nfilter=(1., 2.))
 
         # Rotate to the horizontal rotational grid        
         gc['dtaux'], gc['dtauy'] = self.rotate(gc['dtaux'], gc['dtauy'], -u_angle)
         
         # Add shear and apply reduction factor for shear in sep. bubble
         self.add_shear()
+                
+        # Prevent negative taux
+        gc['taux'] = np.maximum(gc['taux'], 0.)
+        
+        # fig, ax = plt.subplots()
+        # ax.plot(gc['x'][97,:], gc['taux'][97,:])
 
         # Compute the influence of the separation on the shear stress
         if process_separation:
@@ -359,7 +363,7 @@ class WindShear:
     
         
     
-    def separation(self, c, mu_b, zero_order_filter):
+    def separation(self, c, mu_b, zero_order_filter, zsep_y_filter):
         
         # Initialize grid and bed dimensions
         gc = self.cgrid
@@ -433,17 +437,16 @@ class WindShear:
             else:
                 idir = -1
             
-            # ix_neg = (dzx[j, i+idir*5:] >= 0)                                         # i + 5??
-            zbrink = z[j,i]        
+            ix_neg = (dzx[j, i+idir*5:] >= 0)                                         # i + 5??     
             
-            # if np.sum(ix_neg) == 0:
-            #     zbrink = z[j,i]                                                 # z level of brink at z(x0) 
-            # else:
-            #     zbrink = z[j,i] - z[j,i+idir*5+idir*np.where(ix_neg)[0][0]]
+            if np.sum(ix_neg) == 0:
+                zbrink = z[j,i]                                                 # z level of brink at z(x0) 
+            else:
+                zbrink = z[j,i] - z[j,i+idir*5+idir*np.where(ix_neg)[0][0]]
 
             # Zero order polynom
             
-            dzdx0 = (z[j,i] - z[j,i-1]) / dx            
+            dzdx0 = (z[j,i] - z[j,i-1]) / (1.*dx)
             a = dzdx0 / c
         
             ls = np.minimum(np.maximum((3.*zbrink/(2.*c) * (1. + a/4. + a**2/8.)), 0.1), 200.)
@@ -470,7 +473,7 @@ class WindShear:
                 zsep0[j,:] = np.real(np.fft.ifft(zfft[j,:]))
                 
                 # First order polynom
-                dzdx1 = (zsep0[j,i] - zsep0[j,i*1])/dx
+                dzdx1 = (zsep0[j,i] - zsep0[j,i-1])/dx
                    
                 a = dzdx1 / c
             
@@ -496,7 +499,8 @@ class WindShear:
                 zsep[j,:] = np.maximum(zsep0[j,:], zsep[j,:])
         
         # Smooth surface of separation bubbles over y direction
-        zsep = ndimage.gaussian_filter1d(zsep, sigma=0.2, axis=0)
+        if zsep_y_filter:
+            zsep = ndimage.gaussian_filter1d(zsep, sigma=0.2, axis=0)
 
         #Correct for any seperation bubbles that are below the bed surface following smoothing
         ilow = zsep < z
@@ -506,7 +510,7 @@ class WindShear:
         return zsep
                 
     
-    def compute_shear(self, u0, nfilter=(1.5,6.)):                               
+    def compute_shear(self, u0, nfilter=(1.,2.)):                               
         '''Compute wind shear perturbation for given free-flow wind
         speed on computational grid
         
@@ -531,7 +535,7 @@ class WindShear:
                              2. * np.pi * np.fft.fftfreq(ny+1, gc['dy'])[1:])
         
         hs = np.fft.fft2(gc['z'])
-        hs = self.filter_highfrequenies(kx, ky, hs, nfilter, p=0.001)
+        hs = self.filter_highfrequenies(kx, ky, hs, nfilter)
         
         z0 = self.z0            # roughness length which takes into account saltation
         L  = self.L /4.         # typical length scale of the hill (=1/kx) ??
@@ -611,7 +615,7 @@ class WindShear:
         
         
     
-    def filter_highfrequenies(self, kx, ky, hs, nfilter=(1, 2), p=.01):
+    def filter_highfrequenies(self, kx, ky, hs, nfilter=(1, 2)):
         '''Filter high frequencies from a 2D spectrum
 
         A logistic sigmoid filter is used to taper higher frequencies

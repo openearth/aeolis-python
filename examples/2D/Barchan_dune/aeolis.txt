@@ -6,7 +6,7 @@
 %% -------------------- [Timing] ----------------------------- %%
 dt 						= 3600.000								% [s] Timeinterval between timesteps
 tstart 					= 0										% [s] Starting time of the simulation
-tstop 					= 62899200.000							% [s] End time of the simulation
+tstop 					= 157680000.000							% [s] End time of the simulation
 restart                 = None               					% [s] Interval for which to write restart files
 refdate               	= 2020-01-01 00:00 						% [-] Reference datetime in netCDF output
 
@@ -32,7 +32,7 @@ meteo_file              = None               					% Filename of ASCII file with 
 %% -------------------- [Output] ----------------------------- %%	
 output_times 			= 86400.000								% [s] Timeinterval [s] between *.nc output file
 output_file 			= aeolis.nc 							% [-] Name of the *.nc output file
-output_vars 			= zb ustar ustarn ustars uth zsep Cu Ct	% [-] List of output variables for in *.nc output file
+output_vars 			= zb ustar ustarn ustars uth zsep Cu Ct u us un u0	% [-] List of output variables for in *.nc output file
 
 %% -------------------- [Flags Processes] -------------------- %%
 process_wind           	= T               						% [T/F] Enable the process of wind 
@@ -51,7 +51,6 @@ process_humidity        = F             						% [T/F] Enable the process of humi
 process_avalanche       = T               						% [T/F] Enable the process of avalanching
 process_inertia         = F             						% [T/F] NEW (???)
 process_separation      = T               						% [T/F] Enable the including of separation bubble
-process_nelayer         = T              						% [T/F] Enable a non-erodible layer
 process_vegetation      = F              						% [T/F] Enable the process of vegetation
 process_fences          = F              						% [T/F] Enable the process of sand fencing
 process_dune_erosion    = F              						% [T/F] Enable the process of wave-driven dune erosion
@@ -64,7 +63,7 @@ th_drylayer             = F              						% [T/F] Enable wind velocity thre
 th_humidity             = F              						% [T/F] Enable wind velocity threshold based on humidity
 th_salt                 = F              						% [T/F] Enable wind velocity threshold based on salt
 th_roughness            = F               						% [T/F] Enable wind velocity threshold based on roughness
-th_nelayer              = F              						% [T/F] Enable wind velocity threshold based on a non-erodible layer
+th_nelayer              = T              						% [T/F] Enable wind velocity threshold based on a non-erodible layer
 
 %% -------------------- [General physics] -------------------- %%
 g                       = 9.81               					% [m/s^2] Gravitational constant
@@ -96,7 +95,7 @@ m                       = 0.5                					% [-] Factor to account for di
 %% -------------------- [Transport] -------------------------- %%
 bi 						= 0.50000								% [-] Bed interaction factor
 method_transport 		= bagnold								% [-] Name of method to compute equilibrium sediment transport rate
-method_grainspeed       = constant                             	% [-] Name of method to assume/compute grainspeed
+method_grainspeed       = duran                             	% [-] Name of method to assume/compute grainspeed
 Aa                      = 0.085               					% [-] Constant in formulation for wind velocity threshold based on grain size
 Cb                     	= 1.5                					% [-] Constant in bagnold formulation for equilibrium sediment concentration
 Ck                      = 2.78              					% [-] Constant in kawamura formulation for equilibrium sediment concentration
@@ -114,7 +113,7 @@ max_iter                = 1000               					% [-] Maximum number of iterat
 
 %% -------------------- [Boundary conditions] ---------------- %%
 boundary_onshore 		= constant								% [-] Name of onshore boundary conditions (flux, constant, uniform, gradient)
-boundary_lateral 		= circular	   							% [-] Name of lateral boundary conditions (circular, constant ==noflux)
+boundary_lateral 		= constant	   							% [-] Name of lateral boundary conditions (circular, constant ==noflux)
 boundary_offshore 		= constant								% [-] Name of offshore boundary conditions (flux, constant, uniform, gradient)
 offshore_flux           = 0.                 					% [-] Factor to determine offshore boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
 constant_offshore_flux  = 0.                 					% [kg/m/s] Constant input flux at offshore boundary
@@ -152,8 +151,9 @@ okin_initialred_fence   = 0.32               					% [-] initial shear reduction 
 	
 %% -------------------- [Seperation] ------------------------- %%	
 c_b 					= 0.2									% [-] Slope at the leeside of the separation bubble # c = 0.2 according to Durán 2010 (Sauermann 2001: c = 0.25 for 14 degrees)
-mu_b 					= 20									% [deg] Minimum required slope for the start of flow separation
+mu_b 					= 20.									% [deg] Minimum required slope for the start of flow separation
 zero_order_filter 		= F										% [T/F] Boolean for turning on/off the zeroth order filtering of the separation bubble
+zsep_y_filter			= F										% [T/F] Boolean for turning on/off the filtering of the separation bubble height in y-direction
 
 %% -------------------- [Soil moisture] ---------------------- %%		   
 Tdry 					= 7200.000								% [s] Adaptation time scale for soil drying
@@ -165,7 +165,7 @@ Tsalt                   = 2592000.000      						% [s] Adaptation time scale for
 csalt                   = 0.0035              					% [-] Maximum salt concentration in bed surface layer
 
 %% -------------------- [Waves] ------------------------------ %%
-Tswash                  = 30.                					% [s] Adaptation time for resetting morphology in the Swash-zone
+Tbedreset               = 86400.                				% [s] Adaptation time for resetting morphology in the Swash-zone
 xi                      = .3                 					% [-] Surf similarity parameter
 facDOD                  = .1                 					% [-] Ratio between depth of disturbance and local wave height    
 

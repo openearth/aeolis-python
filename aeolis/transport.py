@@ -29,7 +29,7 @@ from __future__ import absolute_import, division
 
 import logging
 import numpy as np
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 # package modules
 from aeolis.utils import *
@@ -64,16 +64,21 @@ def duran_grainspeed(s, p):
     y = s['y']
     ny = p['ny']
 
-    uth = s['uth']  
-    uth0 = s['uth0']    
+    uw = s['uw']
+    uws = s['uws'] 
+    uwn = s['uwn'] 
+    
+    uth = s['uth0']   #TEMP: s['uth'] causes problems around Bc
+    uth0 = s['uth0']  
+    
     ustar = s['ustar']
     ustars = s['ustars']
     ustarn = s['ustarn']
-
+    ustar0 = s['ustar0']
     
     rhog = p['rhog']
     rhoa = p['rhoa']
-    s = rhog/rhoa
+    srho = rhog/rhoa
     
     A = 0.95
     B = 5.12        
@@ -90,33 +95,35 @@ def duran_grainspeed(s, p):
     
     tv      = (v/g**2)**(1/3) # +- 5.38 ms                                      # Andreotti, 2004
     
-    lv      = (v**2/(p['Aa']**2*g*(s-1)))**(1/3)
+    lv      = (v**2/(p['Aa']**2*g*(srho-1)))**(1/3)
 
     zm      = c * uth * tv  # characteristic height of the saltation layer +- 20 mm
     z0      = d/20.  # grain based roughness layer +- 10 mu m - Duran 2007 p.32
     z1      = 35. * lv # reference height +- 35 mm
   
     alpha   = 0.17 * d / lv
-#    s['alpha'] = alpha
 
-    Sstar   = d/(4*v)*np.sqrt(g*d*(s-1.))
+    Sstar   = d/(4*v)*np.sqrt(g*d*(srho-1.))
     Cd      = (4/3)*(A+np.sqrt(2*alpha)*B/Sstar)**2
     
-    uf = np.sqrt(4/(3*Cd)*(s-1.)*g*d)                                            # Grain settling velocity - Jimnez and Madsen, 2003
+    uf = np.sqrt(4/(3*Cd)*(srho-1.)*g*d)                                            # Grain settling velocity - Jimnez and Madsen, 2003
    
     # Initiate arrays
     
     ets = np.zeros(uth.shape)
     etn = np.zeros(uth.shape)
-    
-    
 
     ueff = np.zeros(uth.shape)
     ueff0 = np.zeros(uth.shape)
     
+    ustar0 = np.repeat(ustar0[:,:,np.newaxis], nf, axis=2)
     ustar = np.repeat(ustar[:,:,np.newaxis], nf, axis=2)
     ustars = np.repeat(ustars[:,:,np.newaxis], nf, axis=2)
     ustarn = np.repeat(ustarn[:,:,np.newaxis], nf, axis=2)
+    
+    uw = np.repeat(uw[:,:,np.newaxis], nf, axis=2)
+    uws = np.repeat(uws[:,:,np.newaxis], nf, axis=2)
+    uwn = np.repeat(uwn[:,:,np.newaxis], nf, axis=2)
     
     # Efficient wind velocity (Duran, 2006 - Partelli, 2013)
     ueff = (uth0 / kappa) * (np.log(z1 / z0))
@@ -142,9 +149,11 @@ def duran_grainspeed(s, p):
     # Wind direction
         
     ix = (ustar > 0.) #* (ustar >= uth) 
-    
     ets[ix] = ustars[ix] / ustar[ix]
     etn[ix] = ustarn[ix] / ustar[ix]
+    ets[~ix] = uws[~ix] / uw[~ix]
+    etn[~ix] = uwn[~ix] / uw[~ix]
+    
     
     Axs = ets + 2*alpha*dhs
     Axn = etn + 2*alpha*dhn
@@ -163,6 +172,7 @@ def duran_grainspeed(s, p):
         ix = (ustar[:,:,i] >= uth[:,:,i])*(ustar[:,:,i] > 0.)
         
         ueff[ix,i] = (uth[ix,i] / kappa) * (np.log(z1[i] / z0[i]) + 2*(np.sqrt(1+z1[i]/zm[ix,i]*(ustar[ix,i]**2/uth[ix,i]**2-1))-1))
+        ueff0[:,:,i] = (uth0[:,:,i] / kappa) * (np.log(z1[i] / z0[i]) + 2*(np.sqrt(1+z1[i]/zm[:,:,i]*(ustar0[:,:,i]**2/uth0[:,:,i]**2-1))-1))
          
         # loop over fractions
         u0[:,:,i] = (ueff0[:,:,i] - uf[i] / (np.sqrt(2 * alpha[i])))
@@ -173,15 +183,18 @@ def duran_grainspeed(s, p):
         un[:,:,i] = (ueff[:,:,i] - uf[i] / (np.sqrt(2. * alpha[i]) * Ax[:,:,i])) * etn[:,:,i] \
                         - (np.sqrt(2*alpha[i]) * uf[i] / Ax[:,:,i]) * dhn[:,:,i] 
         
+        
         u[:,:,i] = np.hypot(us[:,:,i], un[:,:,i])                
         
-        # set the grain velocity to zero inside the separation bubble
-        ix = (ustar[:,:,i] == 0.)
         
-        u0[ix,i] = 0.
-        us[ix,i] = 0.
-        un[ix,i] = 0.
-        u[ix,i] = 0.
+        # set the grain velocity to zero inside the separation bubble
+        ix = (ustar[:,:,i] < 0.01) | (u[:,:,i] < u0[:,:,i])
+        us[ix,i] = u0[ix,i] * ets[ix, i]
+        un[ix,i] = u0[ix,i] * etn[ix, i]
+        u[:,:,i] = np.hypot(us[:,:,i], un[:,:,i]) 
+        
+        # fig, ax = plt.subplots()
+        # ax.pcolormesh(s['x'], s['y'], ets[:,:,0])
                         
         
     return u0, us, un, u
@@ -220,14 +233,16 @@ def constant_grainspeed(s, p):
     u  = np.zeros(ustar.shape)
 
     # u with direction of perturbation theory
+    uspeed = 1. # m/s
     ix = ustar != 0
-    us[ix] = 1. * ustars[ix] / ustar[ix]
-    un[ix] = 1. * ustarn[ix] / ustar[ix]
+    us[ix] = uspeed * ustars[ix] / ustar[ix]
+    un[ix] = uspeed * ustarn[ix] / ustar[ix]
 
     # u under the sep bubble
+    sepspeed = 0.2 #m/s
     ix = (ustar == 0.)*(uw != 0.)
-    us[ix] += .1 * uws[ix] / uw[ix]
-    un[ix] += .1 * uwn[ix] / uw[ix]
+    us[ix] = sepspeed * uws[ix] / uw[ix]
+    un[ix] = sepspeed * uwn[ix] / uw[ix]
 
     u = np.hypot(us, un)
                        

@@ -51,10 +51,10 @@ process_humidity        = F             						% [T/F] Enable the process of humi
 process_avalanche       = T               						% [T/F] Enable the process of avalanching
 process_inertia         = F             						% [T/F] NEW (???)
 process_separation      = T               						% [T/F] Enable the including of separation bubble
-process_nelayer         = T              						% [T/F] Enable a non-erodible layer
 process_vegetation      = T              						% [T/F] Enable the process of vegetation
 process_fences          = F              						% [T/F] Enable the process of sand fencing
 process_dune_erosion    = F              						% [T/F] Enable the process of wave-driven dune erosion
+process_wet_bed_reset   = F               						% [T/F] Enable the process of bed-reset in the intertidal zone
 
 %% -------------------- [Flags Threshold] -------------------- %%
 th_grainsize            = T               						% [T/F] Enable wind velocity threshold based on grainsize
@@ -64,7 +64,7 @@ th_drylayer             = F              						% [T/F] Enable wind velocity thre
 th_humidity             = F              						% [T/F] Enable wind velocity threshold based on humidity
 th_salt                 = F              						% [T/F] Enable wind velocity threshold based on salt
 th_roughness            = F               						% [T/F] Enable wind velocity threshold based on roughness
-th_nelayer              = F              						% [T/F] Enable wind velocity threshold based on a non-erodible layer
+th_nelayer              = T              						% [T/F] Enable wind velocity threshold based on a non-erodible layer
 
 %% -------------------- [General physics] -------------------- %%
 g                       = 9.81               					% [m/s^2] Gravitational constant
@@ -96,7 +96,7 @@ m                       = 0.5                					% [-] Factor to account for di
 %% -------------------- [Transport] -------------------------- %%
 bi 						= 0.50000								% [-] Bed interaction factor
 method_transport 		= bagnold								% [-] Name of method to compute equilibrium sediment transport rate
-method_grainspeed       = constant                             	% [-] Name of method to assume/compute grainspeed
+method_grainspeed       = duran                             	% [-] Name of method to assume/compute grainspeed
 Aa                      = 0.085               					% [-] Constant in formulation for wind velocity threshold based on grain size
 Cb                     	= 1.5                					% [-] Constant in bagnold formulation for equilibrium sediment concentration
 Ck                      = 2.78              					% [-] Constant in kawamura formulation for equilibrium sediment concentration
@@ -113,9 +113,9 @@ max_error               = 0.000001               				% [-] Maximum error at whic
 max_iter                = 1000               					% [-] Maximum number of iterations at which to quit iterative solution in implicit numerical schemes
 
 %% -------------------- [Boundary conditions] ---------------- %%
-boundary_onshore 		= gradient								% [-] Name of onshore boundary conditions (flux, constant, uniform, gradient)
+boundary_onshore 		= constant								% [-] Name of onshore boundary conditions (flux, constant, uniform, gradient)
 boundary_lateral 		= circular	   							% [-] Name of lateral boundary conditions (circular, constant ==noflux)
-boundary_offshore 		= flux									% [-] Name of offshore boundary conditions (flux, constant, uniform, gradient)
+boundary_offshore 		= constant								% [-] Name of offshore boundary conditions (flux, constant, uniform, gradient)
 offshore_flux           = 0.                 					% [-] Factor to determine offshore boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
 constant_offshore_flux  = 0.                 					% [kg/m/s] Constant input flux at offshore boundary
 onshore_flux            = 0.                 					% [-] Factor to determine onshore boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
@@ -165,7 +165,7 @@ Tsalt                   = 2592000.000      						% [s] Adaptation time scale for
 csalt                   = 0.0035              					% [-] Maximum salt concentration in bed surface layer
 
 %% -------------------- [Waves] ------------------------------ %%
-Tswash                  = 30.                					% [s] Adaptation time for resetting morphology in the Swash-zone
+Tbedreset               = 86400.                				% [s] Adaptation time for resetting morphology in the Swash-zone
 xi                      = .3                 					% [-] Surf similarity parameter
 facDOD                  = .1                 					% [-] Ratio between depth of disturbance and local wave height    
 

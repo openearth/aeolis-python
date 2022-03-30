@@ -230,11 +230,12 @@ DEFAULT_CONFIG = {
     'mu_b'                          : 30,                 # [deg] Minimum required slope for the start of flow separation
     'buffer_width'                  : 10,                 # [m] Width of the bufferzone around the rotational grid for wind perturbation
     'zero_order_filter'             : False,              # [-] Boolean for turning on/off the zeroth order filtering of the separation bubble
+    'zsep_y_filter'                 : False,              # [-] Boolean for turning on/off the filtering of the separation bubble in y-direction
     'Cb'                            : 1.5,                # [-] Constant in bagnold formulation for equilibrium sediment concentration
     'Ck'                            : 2.78,               # [-] Constant in kawamura formulation for equilibrium sediment concentration
     'Cl'                            : 6.7,                # [-] Constant in lettau formulation for equilibrium sediment concentration
     'Cdk'                           : 5.,                 # [-] Constant in DK formulation for equilibrium sediment concentration
-    'm'                             : 0.5,                # [-] Factor to account for difference between average and maximum shear stress
+    # 'm'                             : 0.5,                # [-] Factor to account for difference between average and maximum shear stress
 #    'alpha'                         : 0.4,               # [-] Relation of vertical component of ejection velocity and horizontal velocity difference between impact and ejection
     'kappa'                         : 0.41,               # [-] Von Kármán constant
     'sigma'                         : 4.2,                # [-] Ratio between basal area and frontal area of roughness elements
