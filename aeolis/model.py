@@ -47,16 +47,16 @@ from functools import reduce
 # package modules
 import aeolis.inout
 import aeolis.bed
-#import aeolis.avalanching
+import aeolis.avalanching
 import aeolis.wind
 import aeolis.threshold
 import aeolis.transport
 import aeolis.hydro
 import aeolis.netcdf
 import aeolis.constants
-#import aeolis.erosion
-#import aeolis.vegetation
-#import aeolis.fences
+import aeolis.erosion
+import aeolis.vegetation
+import aeolis.fences
 import aeolis.gridparams
 
 from aeolis.utils import *
