@@ -55,7 +55,7 @@ import aeolis.hydro
 import aeolis.netcdf
 import aeolis.constants
 #import aeolis.erosion
-import aeolis.vegetation
+#import aeolis.vegetation
 import aeolis.fences
 import aeolis.gridparams
 
