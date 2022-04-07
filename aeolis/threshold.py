@@ -29,6 +29,8 @@ from __future__ import absolute_import, division
 
 import logging
 import numpy as np
+import scipy
+import matplotlib.pyplot as plt
 
 # package modules
 from aeolis.utils import *
@@ -379,27 +381,21 @@ def non_erodible(s,p):
     '''
     
     nf = p['nfractions']
+    s['zne'][:,:] = p['ne_file'] 
     
-    s['zne'][:,:] = p['ne_file']
-    
-    #Hard method
-    
-#    ix = s['zb'] <= s['zne']
-    
-#    s['uth'][ix] = np.inf
-    
-    
-    #Smooth method
-
-    thuthlyr = -0.01
-    
-    ix = s['zb'] <= s['zne'] + thuthlyr
-
     ustar = s['ustar']
     uth = s['uth']
     
+    #Smooth method
+    thuthlyr = 0.01
+    ix = (s['zb'] <= s['zne'] + thuthlyr)
+    
+    dzne = np.maximum( ( s['zne'] + thuthlyr - s['zb']) / thuthlyr, 0. )
+    
     for i in range(nf):
-        s['uth'][ix,i] += np.maximum((1-(s['zb'][ix]-s['zne'][ix])/thuthlyr)*(ustar[ix]*2.0-uth[ix,i]), uth[ix,i])
+        duth = np.maximum( 2.* ustar - uth[:,:,i], 0)
+        s['uth'][ix,i] += duth[ix] * dzne[ix]
+        
     
     return s    
 
