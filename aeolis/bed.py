@@ -305,11 +305,13 @@ def update(s, p):
     if p['process_bedupdate']:
 
         dz = dm[:, 0].reshape((ny + 1, nx + 1)) / (p['rhog'] * (1. - p['porosity']))
-        s['dzb'] = dm[:, 0].reshape((ny + 1, nx + 1))
+        # s['dzb'] = dm[:, 0].reshape((ny + 1, nx + 1))
+        s['dzb'] = dz.copy()
 
         # redistribute sediment from inactive zone to marine interaction zone
         s['zb'] += dz
-        s['zs'] += dz
+        if p['process_tide']:
+            s['zs'] += dz #???
     
     return s
 
