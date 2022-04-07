@@ -2978,6 +2978,7 @@ class AeoLiSRunner(AeoLiS):
         pr = np.ceil(p/fraction)*fraction
         t = time.time()
         interval = t - self.tlog
+        
 
         if self.get_count('time') == 1:
             logger.info('        Time elapsed / Total time / Time remaining / Average Timestep')
