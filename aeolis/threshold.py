@@ -84,8 +84,10 @@ def compute(s, p):
             s = compute_moisture(s, p)
         else:
             # no aeolian transport when the bed level is lower than the water level
-            ix = s['zb'] - s['zs'] < - p['eps']
-            s['uth'][ix] = np.inf
+            if p['process_tide']:
+                ix = s['zb'] - s['zs'] < - p['eps']
+                s['uth'][ix] = np.inf
+                
         if p['th_drylayer']:
             s = dry_layer(s, p)
         if p['th_humidity']:
