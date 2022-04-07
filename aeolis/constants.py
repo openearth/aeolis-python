@@ -198,6 +198,7 @@ DEFAULT_CONFIG = {
     'dy'                            : 1.,
     'CFL'                           : 1.,                 # [-] CFL number to determine time step in explicit scheme
     'accfac'                        : 1.,                 # [-] Numerical acceleration factor
+    'max_bedlevel_change'           : 999.,               # [m] Maximum bedlevel change after one timestep. Next timestep dt will be modified (use 999. if not used)
     'tstart'                        : 0.,                 # [s] Start time of simulation
     'tstop'                         : 3600.,              # [s] End time of simulation
     'restart'                       : None,               # [s] Interval for which to write restart files

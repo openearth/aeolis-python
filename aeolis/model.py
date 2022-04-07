@@ -258,7 +258,7 @@ class AeoLiS(IBmi):
 
         '''
 
-        self.p['_time'] = self.t
+        self.p['_time'] = self.t        
 
         # store previous state
         self.l = self.s.copy()
@@ -283,6 +283,7 @@ class AeoLiS(IBmi):
             self.s = aeolis.vegetation.vegshear(self.s, self.p)
         
         # determine optimal time step
+        self.dt_prev = self.dt
         if not self.set_timestep(dt):
             return
 
@@ -333,7 +334,6 @@ class AeoLiS(IBmi):
         if self.p['process_vegetation']:
             self.s = aeolis.vegetation.germinate(self.s, self.p)
             self.s = aeolis.vegetation.grow(self.s, self.p)
-
 
         # increment time
         self.t += self.dt * self.p['accfac']
@@ -640,6 +640,12 @@ class AeoLiS(IBmi):
                 else:
                     self.dt = np.minimum(self.dt, 1.)
                     return False
+           
+        if self.p['max_bedlevel_change'] != 999. and np.max(self.s['dzb']) != 0. and self.dt_prev != 0.:
+            
+            dt_zb = self.dt_prev * self.p['max_bedlevel_change'] / np.max(self.s['dzb'])
+            self.dt = np.minimum(self.dt, dt_zb)
+
 
         return True
     
@@ -2974,15 +2980,21 @@ class AeoLiSRunner(AeoLiS):
         interval = t - self.tlog
 
         if self.get_count('time') == 1:
-            logger.info('        Time elapsed / Total time / Time remaining')
+            logger.info('        Time elapsed / Total time / Time remaining / Average Timestep')
+            self.dt_array = []
+        
+        self.dt_array.append(self.dt)
 
         if (np.mod(p, fraction) < .01 and self.plog != pr) or interval > max_interval:
             t1 = timedelta(0, round(t-self.t0))
             t2 = timedelta(0, round((t-self.t0)/p))
             t3 = timedelta(0, round((t-self.t0)*(1.-p)/p))
-            logger.info('%05.1f%%  %12s / %10s / %14s' % (p * 100., t1, t2, t3))
+            dt_avg = np.average(self.dt_array)
+            logger.info('%05.1f%%  %12s / %10s / %14s / %0.1f' % (p * 100., t1, t2, t3, dt_avg))
             self.tlog = time.time()
             self.plog = pr
+            self.dt_array = []
+            
 
 
     def print_params(self):
