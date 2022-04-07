@@ -6,7 +6,7 @@
 %% -------------------- [Timing] ----------------------------- %%
 dt 						= 3600.000								% [s] Timeinterval between timesteps
 tstart 					= 0										% [s] Starting time of the simulation
-tstop 					= 157680000.000							% [s] End time of the simulation
+tstop 					= 15768000.000							% [s] End time of the simulation
 restart                 = None               					% [s] Interval for which to write restart files
 refdate               	= 2020-01-01 00:00 						% [-] Reference datetime in netCDF output
 
@@ -32,7 +32,7 @@ meteo_file              = None               					% Filename of ASCII file with 
 %% -------------------- [Output] ----------------------------- %%	
 output_times 			= 86400.000								% [s] Timeinterval [s] between *.nc output file
 output_file 			= aeolis.nc 							% [-] Name of the *.nc output file
-output_vars 			= zb ustar ustarn ustars uth zsep Cu Ct u us un u0	% [-] List of output variables for in *.nc output file
+output_vars 			= zb zs ustar ustarn ustars uth zsep Cu Ct u us un u0 % [-] List of output variables for in *.nc output file
 
 %% -------------------- [Flags Processes] -------------------- %%
 process_wind           	= T               						% [T/F] Enable the process of wind 
@@ -90,7 +90,7 @@ kappa                   = 0.41               					% [-] Von Kármán constant
 h                       = None               					% [m] Representative height of saltation layer
 L                       = 100.               					% [m] Typical length scale of dune feature (perturbation)
 l                       = 1.                					% [m] Inner layer height (perturbation)
-m                       = 0.5                					% [-] Factor to account for difference between average and maximum shear stress
+m                       = 1.                					% [-] Factor to account for difference between average and maximum shear stress
 	
 %% -------------------- [Transport] -------------------------- %%
 bi 						= 0.50000								% [-] Bed interaction factor
@@ -110,12 +110,13 @@ accfac 					= 1.									% [-] Numerical acceleration factor
 scheme 					= euler_backward 						% [-] Name of numerical scheme (euler_forward, euler_backward or crank_nicolson)
 max_error               = 0.000001               				% [-] Maximum error at which to quit iterative solution in implicit numerical schemes
 max_iter                = 1000               					% [-] Maximum number of iterations at which to quit iterative solution in implicit numerical schemes
+max_bedlevel_change 	= 0.01									% [m] Maximum bedlevel change after one timestep. Next timestep dt will be modified (use 999. if not used)
 
 %% -------------------- [Boundary conditions] ---------------- %%
-boundary_onshore 		= constant								% [-] Name of onshore boundary conditions (flux, constant, uniform, gradient)
-boundary_lateral 		= constant	   							% [-] Name of lateral boundary conditions (circular, constant ==noflux)
-boundary_offshore 		= constant								% [-] Name of offshore boundary conditions (flux, constant, uniform, gradient)
-offshore_flux           = 0.                 					% [-] Factor to determine offshore boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
+boundary_onshore 		= gradient								% [-] Name of onshore boundary conditions (flux, constant, uniform, gradient)
+boundary_lateral 		= circular	   							% [-] Name of lateral boundary conditions (circular, constant ==noflux)
+boundary_offshore 		= flux									% [-] Name of offshore boundary conditions (flux, constant, uniform, gradient)
+offshore_flux           = 0.18                 					% [-] Factor to determine offshore boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
 constant_offshore_flux  = 0.                 					% [kg/m/s] Constant input flux at offshore boundary
 onshore_flux            = 0.                 					% [-] Factor to determine onshore boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
 constant_onshore_flux   = 0.                 					% [kg/m/s] Constant input flux at offshore boundary
@@ -123,8 +124,8 @@ lateral_flux            = 0.                 					% [-] Factor to determine late
 sedimentinput           = 0.                 					% [-] Constant boundary sediment influx (only used in solve_pieter)
 
 %% -------------------- [Rotating shear-grid] ---------------- %%
-dx 						= 1.000									% [m] Size of dimension of the computational grid that is generated for a rotating shear computation in x-direction
-dy 						= 1.000        							% [m] Size of dimension of the computational grid that is generated for a rotating shear computation in x-direction
+dx 						= 1.0									% [m] Size of dimension of the computational grid that is generated for a rotating shear computation in x-direction
+dy 						= 1.0       							% [m] Size of dimension of the computational grid that is generated for a rotating shear computation in x-direction
 buffer_width			= 20.0									% [m] Width of the bufferzone around the rotational grid for wind perturbation	
 
 %% -------------------- [Vegetation] ------------------------- %%	
@@ -152,7 +153,7 @@ okin_initialred_fence   = 0.32               					% [-] initial shear reduction 
 %% -------------------- [Seperation] ------------------------- %%	
 c_b 					= 0.2									% [-] Slope at the leeside of the separation bubble # c = 0.2 according to Durán 2010 (Sauermann 2001: c = 0.25 for 14 degrees)
 mu_b 					= 20.									% [deg] Minimum required slope for the start of flow separation
-zero_order_filter 		= F										% [T/F] Boolean for turning on/off the zeroth order filtering of the separation bubble
+sep_filter_iterations 	= 0										% [-] Number of filter iterations on the separation bubble (0 = no filtering)
 zsep_y_filter			= F										% [T/F] Boolean for turning on/off the filtering of the separation bubble height in y-direction
 
 %% -------------------- [Soil moisture] ---------------------- %%		   
