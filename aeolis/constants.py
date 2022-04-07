@@ -69,6 +69,7 @@ MODEL_STATE = {
         'dsdni',                            # [m^-2] Inverse of real-world grid cell surface area
 #        'alfa',                             # [rad] Real-world grid cell orientation #Sierd_comm in later releases this needs a revision 
         'zb',                               # [m] Bed level above reference
+        'zs',                               # [m] Water level above reference
         'zne',                              # [m] Height above reference of the non-erodible layer
         'zb0',                              # [m] Initial bed level above reference
         'zdry',                             # [m]
@@ -230,7 +231,7 @@ DEFAULT_CONFIG = {
     'c_b'                           : 0.2,                # [-] Slope at the leeside of the separation bubble # c = 0.2 according to Durán 2010 (Sauermann 2001: c = 0.25 for 14 degrees)
     'mu_b'                          : 30,                 # [deg] Minimum required slope for the start of flow separation
     'buffer_width'                  : 10,                 # [m] Width of the bufferzone around the rotational grid for wind perturbation
-    'zero_order_filter'             : False,              # [-] Boolean for turning on/off the zeroth order filtering of the separation bubble
+    'sep_filter_iterations'         : 0,                  # [-] Number of filtering iterations on the sep-bubble (0 = no filtering)
     'zsep_y_filter'                 : False,              # [-] Boolean for turning on/off the filtering of the separation bubble in y-direction
     'Cb'                            : 1.5,                # [-] Constant in bagnold formulation for equilibrium sediment concentration
     'Ck'                            : 2.78,               # [-] Constant in kawamura formulation for equilibrium sediment concentration

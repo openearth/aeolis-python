@@ -144,7 +144,7 @@ class WindShear:
 
     def __call__(self, x, y, z, taux, tauy, u0, udir, 
                  process_separation, c, mu_b, 
-                 taus0, taun0, zero_order_filter, zsep_y_filter,
+                 taus0, taun0, sep_filter_iterations, zsep_y_filter,
                  plot=False):
         
         '''Compute wind shear for given wind speed and direction
@@ -213,7 +213,7 @@ class WindShear:
 
         # Compute separation bubble
         if process_separation:
-            zsep = self.separation(c, mu_b, zero_order_filter, zsep_y_filter)
+            zsep = self.separation(c, mu_b, sep_filter_iterations, zsep_y_filter)
             z_origin = gc['z'].copy()
             gc['z'] = np.maximum(gc['z'], zsep)
                     
@@ -223,14 +223,11 @@ class WindShear:
         # Rotate to the horizontal rotational grid        
         gc['dtaux'], gc['dtauy'] = self.rotate(gc['dtaux'], gc['dtauy'], -u_angle)
         
-        # Add shear and apply reduction factor for shear in sep. bubble
+        # Add shear
         self.add_shear()
                 
         # Prevent negative taux
         gc['taux'] = np.maximum(gc['taux'], 0.)
-        
-        # fig, ax = plt.subplots()
-        # ax.plot(gc['x'][97,:], gc['taux'][97,:])
 
         # Compute the influence of the separation on the shear stress
         if process_separation:
@@ -253,8 +250,8 @@ class WindShear:
     
         # Interpolate wind shear results to real grid
         gi['taux'] = self.interpolate(gc['x'], gc['y'], gc['taux'], gi['x'], gi['y'], taus0)
-        gi['tauy'] = self.interpolate(gc['x'], gc['y'], gc['tauy'], gi['x'], gi['y'], taun0)
-  
+        gi['tauy'] = self.interpolate(gc['x'], gc['y'], gc['tauy'], gi['x'], gi['y'], taun0) 
+        
         if process_separation:
             gi['hsep'] = self.interpolate(gc['x'], gc['y'], gc['hsep'], gi['x'], gi['y'], 0. )
             
@@ -345,12 +342,12 @@ class WindShear:
         db_L = self.maxDiff(b_L)
         
         # Compute the distance between the outer boundaries to determine the width (W) and length (L) of the grid
-        self.W = abs(db_W) / np.sqrt((m_W**2.) + 1) + self.buffer_width * 2.
-        self.L = abs(db_L) / np.sqrt((m_L**2.) + 1) + self.buffer_width * 2.
+        self.Width = abs(db_W) / np.sqrt((m_W**2.) + 1) + self.buffer_width * 2.
+        self.Length = abs(db_L) / np.sqrt((m_L**2.) + 1) + self.buffer_width * 2.
         
         # Create the grid
-        xc, yc = self.get_exact_grid(x0 - self.L/2., x0 + self.L/2.,
-                                     y0 - self.W/2., y0 + self.W/2.,
+        xc, yc = self.get_exact_grid(x0 - self.Length/2., x0 + self.Length/2.,
+                                     y0 - self.Width/2., y0 + self.Width/2.,
                                      gc['dx'], gc['dy'])
         
         # Storing grid parameters
@@ -363,7 +360,7 @@ class WindShear:
     
         
     
-    def separation(self, c, mu_b, zero_order_filter, zsep_y_filter):
+    def separation(self, c, mu_b, sep_filter_iterations, zsep_y_filter):
         
         # Initialize grid and bed dimensions
         gc = self.cgrid
@@ -388,17 +385,15 @@ class WindShear:
         bubble = np.zeros(gc['z'].shape)
         
         k = np.array(range(0, nx))
-        
-        zsep =  z.copy()                                                        # total separation bubble      
-        
-        zsep0 = np.zeros(z.shape)                                               # zero-order separation bubble surface      
-        zsep1 = np.zeros(z.shape)                                               # first-oder separation bubble surface
+              
+        zsep =  np.zeros(z.shape)                                                  # total separation bubble      
+        zsep_new =  np.zeros(z.shape)                                               # first-oder separation bubble surface
                 
         zfft = np.zeros((ny,nx), dtype=np.complex)
 
         # Compute bed slope angle in x-dir
-        dzx[:,:-1] = np.rad2deg(np.arctan((z[:,1:]-z[:,:-1])/dx))
-        dzx[:,0] = dzx[:,1]
+        dzx[:,:-2] = np.rad2deg(np.arctan((z[:,2:]-z[:,:-2])/(2.*dx)))
+        dzx[:,-2] = dzx[:,-3]
         dzx[:,-1] = dzx[:,-2]
               
         # Determine location of separation bubbles
@@ -413,7 +408,7 @@ class WindShear:
         # Define separation bubble
         bubble[:,:-1] = (stall[:,:-1] == 0.) * (stall[:,1:] > 0.) 
         
-        # Shift bubble back to x0: start of separation bubble 
+        # Better solution for cleaner separation bubble, but no working Barchan dune (yet)
         p = 1
         bubble[:,p:] = bubble[:,:-p]
         bubble[:,-p:] = 0
@@ -426,6 +421,7 @@ class WindShear:
 
         
         # Walk through all separation bubbles and determine polynoms
+        j = 9999
         for k in range(0, n):
             
             i = bubble_n[k,1]
@@ -443,45 +439,53 @@ class WindShear:
                 zbrink = z[j,i]                                                 # z level of brink at z(x0) 
             else:
                 zbrink = z[j,i] - z[j,i+idir*5+idir*np.where(ix_neg)[0][0]]
-
-            # Zero order polynom
             
-            dzdx0 = (z[j,i] - z[j,i-1]) / (1.*dx)
+            # Better solution and cleaner separation bubble, but no working Barchan dune (yet)
+            dzdx0 = (z[j,i] - z[j,i-3]) / (3.*dx)
+            
             a = dzdx0 / c
-        
             ls = np.minimum(np.maximum((3.*zbrink/(2.*c) * (1. + a/4. + a**2/8.)), 0.1), 200.)
             
             a2 = -3 * zbrink/ls**2 - 2 * dzdx0 / ls
             a3 =  2 * zbrink/ls**3 +     dzdx0 / ls**2
           
-            i_max = min(i+int(ls/dx),int(nx-1))
+            i_max = min(i+int(ls/dx)+1,int(nx-1))
 
             if idir == 1:
                 xs = x[j,i:i_max] - x[j,i]
             else:
                 xs = -(x[j,i:i_max] - x[j,i])
                 
-            zsep0[j,i:i_max] = (a3*xs**3 + a2*xs**2 + dzdx0*xs + z[j,i])
-
-            # Zero order filter
-            if zero_order_filter:
+            zsep_new[j,i:i_max] = (a3*xs**3 + a2*xs**2 + dzdx0*xs + z[j,i])
+            
+            # Choose maximum of bedlevel, previous zseps and new zseps
+            zsep[j,:] = np.maximum.reduce([z[j,:], zsep[j,:], zsep_new[j,:]])
+            
+            for filter_iter in range(sep_filter_iterations):
+                
+                zsep_new = np.zeros(zsep.shape) 
                 
                 Cut = 1.5
                 dk = 2.0 * np.pi / (np.max(x))
-                zfft[j,:] = np.fft.fft(zsep0[j,:])
+                zfft[j,:] = np.fft.fft(zsep[j,:])
                 zfft[j,:] *= np.exp(-(dk*k*dx)**2/(2.*Cut**2))
-                zsep0[j,:] = np.real(np.fft.ifft(zfft[j,:]))
+                zsep_fft = np.real(np.fft.ifft(zfft[j,:]))
+                
+                if np.sum(ix_neg) == 0:
+                    zbrink = zsep_fft[i]                                                 
+                else:
+                    zbrink = zsep_fft[i] - zsep_fft[i+idir*5+idir*np.where(ix_neg)[0][0]]
                 
                 # First order polynom
-                dzdx1 = (zsep0[j,i] - zsep0[j,i-1])/dx
-                   
+                dzdx1 = (zsep_fft[i] - zsep_fft[i-3])/(3.*dx)
+                
                 a = dzdx1 / c
             
-                ls = np.minimum(np.maximum((3.*z[j,i]/(2.*c) * (1. + a/4. + a**2/8.)), 0.1), 200.)
-                # print ('ls:', ls)
+                ls = np.minimum(np.maximum((3.*zbrink/(2.*c) * (1. + a/4. + a**2/8.)), 0.1), 200.)
                 
-                a2 = -3 * z[j,i]/ls**2 - 2 * dzdx1 / ls
-                a3 =  2 * z[j,i]/ls**3 +     dzdx1 / ls**2
+                
+                a2 = -3 * zbrink/ls**2 - 2 * dzdx1 / ls
+                a3 =  2 * zbrink/ls**3 +     dzdx1 / ls**2
               
                 i_max1 = min(i+idir*int(ls/dx),int(nx-1))
     
@@ -490,13 +494,11 @@ class WindShear:
                 else:
                     xs1 = -(x[j,i:i_max1] - x[j,i])
             
-                zsep1[j,i:i_max1] = (a3*xs1**3 + a2*xs1**2 + dzdx1*xs1 + z[j,i])
+                zsep_new[j, i:i_max1] = (a3*xs1**3 + a2*xs1**2 + dzdx1*xs1 + zbrink)
             
-            # Pick the maximum seperation bubble hieght at all locations
-            if zero_order_filter:
-                zsep[j,:] = np.maximum(zsep1[j,:], zsep[j,:])
-            else:
-                zsep[j,:] = np.maximum(zsep0[j,:], zsep[j,:])
+                # Pick the maximum seperation bubble hieght at all locations
+                zsep[j,:] = np.maximum.reduce([z[j,:], zsep[j,:], zsep_new[j,:]])
+
         
         # Smooth surface of separation bubbles over y direction
         if zsep_y_filter:
@@ -510,7 +512,7 @@ class WindShear:
         return zsep
                 
     
-    def compute_shear(self, u0, nfilter=(1.,2.)):                               
+    def compute_shear(self, u0, nfilter=(1., 2.)):                               
         '''Compute wind shear perturbation for given free-flow wind
         speed on computational grid
         
@@ -539,9 +541,10 @@ class WindShear:
         
         z0 = self.z0            # roughness length which takes into account saltation
         L  = self.L /4.         # typical length scale of the hill (=1/kx) ??
+
         
         # Inner layer height
-        l  = self.l         
+        l  = self.l    
         
         for i in range(5):
             l = 2 * 0.41**2 * L /np.log(l/z0)
@@ -590,7 +593,7 @@ class WindShear:
         
         tau_sep = 0.5 
         slope = 0.2                                                             # according to Durán 2010 (Sauermann 2001: c = 0.25 for 14 degrees)
-        delta = 1./(slope*tau_sep)
+        delta = 1./(slope*tau_sep)  
         
         zsepdelta = np.minimum(np.maximum(1. - delta * hsep, 0.), 1.)
         
@@ -658,34 +661,6 @@ class WindShear:
 
         return hs 
 
-    # Input functions for wind.py
-    # def set_topo(self, z):
-    #     '''Update topography
-
-    #     Parameters
-    #     ----------
-    #     z : numpy.ndarray
-    #         2D array with topography of input grid
-
-    #     '''
-
-    #     self.igrid['z'] = z
-
-    #     return self
-    
-    # def set_shear(self, taus, taun):
-    #     '''Update shear
-
-    #     Parameters
-    #     ----------
-    #     tau : numpy.ndarray
-    #         array with wind shear stresses of input grid
-
-    #     '''
-    #     self.igrid['taux'] = taus
-    #     self.igrid['tauy'] = taun
-        
-    #     return self
     
     def get_shear(self):
         '''Returns wind shear perturbation field

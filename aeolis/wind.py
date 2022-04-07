@@ -69,8 +69,8 @@ def initialize(s, p):
 
     # initialize wind shear model (z0 according to Duran much smaller)
     # Otherwise no Barchan
-    z0 = (np.sum(p['grain_size'])/p['nfractions']) / 30.                        # z0 = p['k'] if not dependent on grainsize?
-    # z0 = p['k']
+    # z0 = (np.sum(p['grain_size'])/p['nfractions']) / 30.                        # z0 = p['k'] if not dependent on grainsize?
+    z0 = p['k']
     
     if p['process_shear']:
         if p['ny'] > 0:
@@ -133,7 +133,7 @@ def interpolate(s, p, t):
     # Compute wind shear velocity
     kappa = p['kappa']
     z     = p['z']
-#    z0    = (np.sum(p['grain_size'])/p['nfractions']) / 30.
+    # z0    = (np.sum(p['grain_size'])/p['nfractions']) / 30.
     z0    = p['k']                                                                                                              
     
     s['ustars'] = s['uws'] * kappa / np.log(z/z0)
@@ -165,12 +165,12 @@ def shear(s,p):
                    c = p['c_b'],
                    mu_b = p['mu_b'],
                    taus0 = s['taus0'][0,0], taun0 = s['taun0'][0,0],
-                   zero_order_filter=p['zero_order_filter'],
+                   sep_filter_iterations=p['sep_filter_iterations'],
                    zsep_y_filter=p['zsep_y_filter'])
 
         s['taus'], s['taun'] = s['shear'].get_shear()
         s['tau'] = np.hypot(s['taus'], s['taun'])
-               
+        
         s = stress_velocity(s,p)
                                
         # Returns separation surface     
@@ -244,6 +244,7 @@ def stress_velocity(s, p):
     s['ustarn'][ix] = 0.
 
     return s
+
 
 
 def compute_shear1d(s, p):
