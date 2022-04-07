@@ -127,7 +127,8 @@ def duran_grainspeed(s, p):
     
     # Efficient wind velocity (Duran, 2006 - Partelli, 2013)
     ueff = (uth0 / kappa) * (np.log(z1 / z0))
-    ueff0 = (uth0 / kappa) * (np.log(z1 / z0)) 
+    ueff0 = (uth0 / kappa) * (np.log(z1 / z0))
+    ueffmin = ueff
     
     # Surface gradient
     dzs = np.zeros(z.shape)
@@ -147,20 +148,18 @@ def duran_grainspeed(s, p):
     dhn = np.repeat(dzn[:,:,np.newaxis], nf, axis = 2)
     
     # Wind direction
-        
-    ix = (ustar > 0.) #* (ustar >= uth) 
+       
+    ets = uws / uw
+    etn = uwn / uw
+    ix = (ustar >= 0.05) #(ustar >= uth) 
     ets[ix] = ustars[ix] / ustar[ix]
     etn[ix] = ustarn[ix] / ustar[ix]
-    ets[~ix] = uws[~ix] / uw[~ix]
-    etn[~ix] = uwn[~ix] / uw[~ix]
-    
-    
+
     Axs = ets + 2*alpha*dhs
     Axn = etn + 2*alpha*dhn
     Ax = np.hypot(Axs, Axn)
     
     # Compute grain speed
-    
     u0 = np.zeros(uth.shape)
     us = np.zeros(uth.shape)
     un = np.zeros(uth.shape)
@@ -168,11 +167,14 @@ def duran_grainspeed(s, p):
 
     for i in range(nf):  
         # determine ueff for different grainsizes
+        ix = (ustar[:,:,i] >= uth[:,:,i])#*(ustar[:,:,i] > 0.)
         
-        ix = (ustar[:,:,i] >= uth[:,:,i])*(ustar[:,:,i] > 0.)
+        # ueff[ix,i] = (uth[ix,i] / kappa) * (np.log(z1[i] / z0[i]) + 2*(np.sqrt(1+z1[i]/zm[ix,i]*(ustar[ix,i]**2/uth[ix,i]**2-1))-1)) #???
+        # ueff0[:,:,i] = (uth0[:,:,i] / kappa) * (np.log(z1[i] / z0[i]) + 2*(np.sqrt(1+z1[i]/zm[:,:,i]*(ustar0[:,:,i]**2/uth0[:,:,i]**2-1))-1))
         
-        ueff[ix,i] = (uth[ix,i] / kappa) * (np.log(z1[i] / z0[i]) + 2*(np.sqrt(1+z1[i]/zm[ix,i]*(ustar[ix,i]**2/uth[ix,i]**2-1))-1))
-        ueff0[:,:,i] = (uth0[:,:,i] / kappa) * (np.log(z1[i] / z0[i]) + 2*(np.sqrt(1+z1[i]/zm[:,:,i]*(ustar0[:,:,i]**2/uth0[:,:,i]**2-1))-1))
+        ueff[ix,i] = (uth[ix,i] / kappa) * (np.log(z1[i] / z0[i]) + (z1[i]/zm[ix,i]) * (ustar[ix,i]/uth[ix,i]-1)) # Duran 2007 1.60 p.42
+        ueff0[:,:,i] = (uth0[:,:,i] / kappa) * (np.log(z1[i] / z0[i]) + (z1[i]/zm[:,:,i]) * (ustar0[:,:,i]/uth[:,:,i]-1)) # Duran 2007 1.60 p.42
+        ueff[~ix,i] = 0.
          
         # loop over fractions
         u0[:,:,i] = (ueff0[:,:,i] - uf[i] / (np.sqrt(2 * alpha[i])))
@@ -188,14 +190,12 @@ def duran_grainspeed(s, p):
         
         
         # set the grain velocity to zero inside the separation bubble
-        ix = (ustar[:,:,i] < 0.01) | (u[:,:,i] < u0[:,:,i])
-        us[ix,i] = u0[ix,i] * ets[ix, i]
-        un[ix,i] = u0[ix,i] * etn[ix, i]
-        u[:,:,i] = np.hypot(us[:,:,i], un[:,:,i]) 
+        ix = (s['zsep'] > s['zb'] + 0.05)
         
-        # fig, ax = plt.subplots()
-        # ax.pcolormesh(s['x'], s['y'], ets[:,:,0])
-                        
+        sepspeed = 0.5
+        us[ix,i] = sepspeed * ets[ix, i]
+        un[ix,i] = sepspeed * etn[ix, i]
+        u[:,:,i] = np.hypot(us[:,:,i], un[:,:,i]) 
         
     return u0, us, un, u
 
@@ -239,7 +239,7 @@ def constant_grainspeed(s, p):
     un[ix] = uspeed * ustarn[ix] / ustar[ix]
 
     # u under the sep bubble
-    sepspeed = 0.2 #m/s
+    sepspeed = 1.0 #m/s
     ix = (ustar == 0.)*(uw != 0.)
     us[ix] = sepspeed * uws[ix] / uw[ix]
     un[ix] = sepspeed * uwn[ix] / uw[ix]
@@ -334,10 +334,19 @@ def equilibrium(s, p):
             s['Cuf'][ix] = np.maximum(0., p['Cdk'] * rhoa / g * uthf[ix] * (ustar[ix]**2 - uthf[ix]**2) / u[ix])
             
             s['Cu0'][ix]  = np.maximum(0., p['Cdk'] * rhoa / g * uth0[ix] * (ustar0[ix]**2 - uth0[ix]**2) / u[ix])
-        
+         
+        elif p['method_transport'].lower() == 'sauermann':
+            alpha_sauermann = 0.35
+            s['Cu'][ix]  = np.maximum(0., 2.* alpha_sauermann * rhoa / g * (ustar[ix]**2 - uth[ix]**2))
+            s['Cuf'][ix] = np.maximum(0., 2.* alpha_sauermann * rhoa / g * (ustar[ix]**2 - uthf[ix]**2))
+             
+            s['Cu0'][ix]  = np.maximum(0., 2.* alpha_sauermann * rhoa / g * (ustar0[ix]**2 - uth0[ix]**2))
+         
+            
         else:
             logger.log_and_raise('Unknown transport formulation [%s]' % method, exc=ValueError)   
-                                       
+
+                     
     s['Cu']  *= p['accfac']
     s['Cuf'] *= p['accfac']
     s['Cu0'] *= p['accfac']
