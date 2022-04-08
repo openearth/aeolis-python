@@ -73,7 +73,7 @@ def germinate(s,p):
     s['germinate'][:, :] = (s['rhoveg'] > 0.)
     
     # time [year]
-    n = (365.25*24.*3600. / (p['dt'] * p['accfac']))
+    n = (365.25*24.*3600. / (p['dt_opt'] * p['accfac']))
     
     # Germination
     p_germinate_year = p['germinate']                                
@@ -120,7 +120,7 @@ def grow (s, p): #DURAN 2006
     s['dhveg'][ix] = p['V_ver'] * (1 - s['hveg'][ix] / p['hveg_max']) - np.abs(s['dzbveg'][ix]-p['dzb_opt']) * p['veg_gamma']  # m/year
 
     # Adding growth
-    s['hveg'] += s['dhveg']*(p['dt'] * p['accfac']) / (365.25*24.*3600.)
+    s['hveg'] += s['dhveg']*(p['dt_opt'] * p['accfac']) / (365.25*24.*3600.)
 
     # Compute the density
 

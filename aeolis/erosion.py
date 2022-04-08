@@ -51,7 +51,7 @@ def run_ph12(s, p, t):
 
     zToe = p['dune_toe_elevation']
     beta = p['beach_slope']
-    dt = p['dt']
+    dt = p['dt_opt']
 
     # wave runup calcs
     Kd = 1.26  # Coefficient to account for higher runup on dune

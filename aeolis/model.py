@@ -645,6 +645,8 @@ class AeoLiS(IBmi):
             
             dt_zb = self.dt_prev * self.p['max_bedlevel_change'] / np.max(self.s['dzb'])
             self.dt = np.minimum(self.dt, dt_zb)
+            
+        self.p['dt_opt'] = self.dt
 
 
         return True

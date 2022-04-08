@@ -208,7 +208,7 @@ def wet_bed_reset(s, p):
 
     if p['process_wet_bed_reset']:
         
-        Tbedreset = p['dt'] / p['Tbedreset']
+        Tbedreset = p['dt_opt'] / p['Tbedreset']
         
         ix = s['zs'] > (s['zb'] + 0.01)
         s['zb'][ix] += (s['zb0'][ix] - s['zb'][ix]) * Tbedreset
@@ -451,8 +451,8 @@ def average_change(l, s, p):
     s['dzb'] = s['zb'] - l['zb']
 
     # Collect time steps
-    s['dzbyear'] = s['dzb'] * (3600. * 24. * 365.25) / (p['dt'] * p['accfac'])
-    n = (p['dt'] * p['accfac']) / p['avg_time']
+    s['dzbyear'] = s['dzb'] * (3600. * 24. * 365.25) / (p['dt_opt'] * p['accfac'])
+    n = (p['dt_opt'] * p['accfac']) / p['avg_time']
     s['dzbavg'] = n*s['dzbyear']+(1-n)*l['dzbavg']
     # Calculate average bed level change as input for vegetation growth [m/year]
     s['dzbveg'] = s['dzbavg'].copy()
