@@ -6,7 +6,7 @@
 %% -------------------- [Timing] ----------------------------- %%
 dt 						= 3600.000								% [s] Timeinterval between timesteps
 tstart 					= 0										% [s] Starting time of the simulation
-tstop 					= 15768000.000							% [s] End time of the simulation
+tstop 					= 8640000.000							% [s] End time of the simulation
 restart                 = None               					% [s] Interval for which to write restart files
 refdate               	= 2020-01-01 00:00 						% [-] Reference datetime in netCDF output
 
@@ -30,7 +30,7 @@ bedcomp_file 			= None									% Filename of ASCII file with initial bed composi
 meteo_file              = None               					% Filename of ASCII file with time series of meteorlogical conditions
 
 %% -------------------- [Output] ----------------------------- %%	
-output_times 			= 86400.000								% [s] Timeinterval [s] between *.nc output file
+output_times 			= 21600.000								% [s] Timeinterval [s] between *.nc output file
 output_file 			= aeolis.nc 							% [-] Name of the *.nc output file
 output_vars 			= zb zs ustar ustarn ustars uth zsep Cu Ct u us un u0 % [-] List of output variables for in *.nc output file
 
@@ -113,10 +113,10 @@ max_iter                = 1000               					% [-] Maximum number of iterat
 max_bedlevel_change 	= 0.01									% [m] Maximum bedlevel change after one timestep. Next timestep dt will be modified (use 999. if not used)
 
 %% -------------------- [Boundary conditions] ---------------- %%
-boundary_onshore 		= gradient								% [-] Name of onshore boundary conditions (flux, constant, uniform, gradient)
-boundary_lateral 		= circular	   							% [-] Name of lateral boundary conditions (circular, constant ==noflux)
+boundary_onshore 		= constant								% [-] Name of onshore boundary conditions (flux, constant, uniform, gradient)
+boundary_lateral 		= constant	   							% [-] Name of lateral boundary conditions (circular, constant ==noflux)
 boundary_offshore 		= flux									% [-] Name of offshore boundary conditions (flux, constant, uniform, gradient)
-offshore_flux           = 0.18                 					% [-] Factor to determine offshore boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
+offshore_flux           = 0.13                 					% [-] Factor to determine offshore boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
 constant_offshore_flux  = 0.                 					% [kg/m/s] Constant input flux at offshore boundary
 onshore_flux            = 0.                 					% [-] Factor to determine onshore boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
 constant_onshore_flux   = 0.                 					% [kg/m/s] Constant input flux at offshore boundary

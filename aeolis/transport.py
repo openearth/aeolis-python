@@ -190,9 +190,9 @@ def duran_grainspeed(s, p):
         
         
         # set the grain velocity to zero inside the separation bubble
-        ix = (s['zsep'] > s['zb'] + 0.05)
+        ix = (s['zsep'] > s['zb'] + 0.01)
         
-        sepspeed = 0.5
+        sepspeed = 0.1
         us[ix,i] = sepspeed * ets[ix, i]
         un[ix,i] = sepspeed * etn[ix, i]
         u[:,:,i] = np.hypot(us[:,:,i], un[:,:,i]) 
