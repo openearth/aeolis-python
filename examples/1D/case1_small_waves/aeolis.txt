@@ -1,0 +1,184 @@
+%% --------------------------- [Timing] --------------------------- %%
+dt                             =  3600
+tstart                         =  0.000000
+tstop                          =  172800
+
+%% ------------------------- [Grid Files] ------------------------- %%
+xgrid_file                     =  x.grd
+ygrid_file                     =  y.grd
+bed_file                       =  z.grd
+veg_file                       =  veg.grd
+fence_file                     =  None
+
+%% -------------------------- [Grid Info] -------------------------- %%
+dx                             =  0.5
+dy                             =  0.0
+alfa                           =  0
+nx                             =  113
+ny                             =  0
+
+%% --------------------- [Environmental Files] --------------------- %%
+tide_file                      =  tide.txt
+wave_file                      =  wave.txt
+wind_file                      =  wind.txt
+
+%% --------------------------- [Outputs] --------------------------- %%
+output_times                   =  3600.000000
+output_vars                    =  zb zs qs mass w Hs
+
+%% ------------------------ [Process Flags] ------------------------ %%
+process_wind                   =  T
+process_shear                  =  F
+process_tide                   =  T
+process_wave                   =  T
+process_runup                  =  T
+process_moist                  =  F
+process_mixtoplayer            =  F
+process_threshold              =  T
+process_transport              =  T
+process_bedupdate              =  T
+process_meteo                  =  F
+process_avalanche              =  T
+process_dune_erosion           =  F
+process_fences                 =  F
+process_humidity               =  F
+process_inertia                =  F
+process_nelayer                =  F
+process_salt                   =  F
+process_separation             =  F
+process_vegetation             =  T
+
+%% ----------------------- [Threshold Flags] ----------------------- %%
+th_grainsize                   =  T
+th_bedslope                    =  F
+th_moisture                    =  F
+th_drylayer                    =  F
+th_humidity                    =  F
+th_salt                        =  F
+th_roughness                   =  T
+th_nelayer                     =  F
+
+%% ----------------------- [General Physics] ----------------------- %%
+g                              =  9.810000
+v                              =  0.000015
+rhoa                           =  1.225000
+rhog                           =  2650.000000
+rhow                           =  1025.000000
+porosity                       =  0.400000
+cpair                          =  0.001004
+
+%% -------------------------- [Sediment] -------------------------- %%
+nlayers                        =  3
+layer_thickness                =  0.050000
+nfractions                     =  1
+grain_dist                     =  1.0
+grain_size                     =  0.000300
+
+%% ----------------------- [Wind and Shear] ----------------------- %%
+wind_convention                =  cartesian
+k                              =  0.001000
+z                              =  10.000000
+kappa                          =  0.410000
+L                              =  100.000000
+l                              =  10.000000
+m                              =  0.500000
+
+%% -------------------------- [Transport] -------------------------- %%
+bi                             =  1.000000
+method_transport               =  bagnold
+method_grainspeed              =  duran
+Aa                             =  0.085000
+Cb                             =  1.500000
+Ck                             =  2.780000
+Cl                             =  6.700000
+Cdk                            =  5.000000
+
+%% --------------------------- [Solver] --------------------------- %%
+T                              =  1.000000
+solver                         =  trunk
+CFL                            =  1.000000
+scheme                         =  euler_backward
+max_error                      =  0.000001
+
+%% --------------------- [Boundary Conditions] --------------------- %%
+boundary_onshore               =  gradient
+boundary_lateral               =  circular
+boundary_offshore              =  constant
+offshore_flux                  =  0.000000
+constant_offshore_flux         =  0.000000
+onshore_flux                   =  0.000000
+constant_onshore_flux          =  0.000000
+lateral_flux                   =  0.000000
+sedimentinput                  =  0.000000
+
+%% ------------------------- [Vegetation] ------------------------- %%
+sigma                          =  4.200000
+beta                           =  130.000000
+gamma_vegshear                 =  16
+avg_time                       =  86400.000000
+dzb_interval                   =  86400.000000
+hveg_max                       =  0.500000
+dzb_opt                        =  0
+V_ver                          =  0
+V_lat                          =  0
+germinate                      =  0
+lateral                        =  0
+veg_gamma                      =  1.000000
+veg_sigma                      =  0.800000
+vegshear_type                  =  raupach
+okin_c1_veg                    =  0.480000
+okin_initialred_veg            =  0.320000
+veg_min_elevation              =  3
+
+%% ------------------------ [Dune Erosion] ------------------------ %%
+beach_slope                    =  0.100000
+dune_toe_elevation             =  3
+
+%% --------------------------- [Fences] --------------------------- %%
+okin_c1_fence                  =  0.480000
+okin_initialred_fence          =  0.320000
+
+%% ------------------------- [Separation] ------------------------- %%
+c_b                            =  0.200000
+mu_b                           =  30
+
+%% ------------------------ [Soil Moisture] ------------------------ %%
+Tdry                           =  5400.000000
+eps                            =  0.001000
+method_moist                   =  belly_johnson
+method_moist_process           =  None
+method_moist_threshold         =  None
+fc                             =  0.110000
+resw_moist                     =  0.010000
+satw_moist                     =  0.350000
+resd_moist                     =  0.010000
+nw_moist                       =  2.300000
+nd_moist                       =  4.500000
+mw_moist                       =  0.570000
+md_moist                       =  0.420000
+alfaw_moist                    =  -0.070000
+alfad_moist                    =  -0.035000
+thick_moist                    =  0.002000
+
+%% ---------------------------- [Salt] ---------------------------- %%
+Tsalt                          =  2592000.000000
+csalt                          =  0.035000
+
+%% ---------------------------- [Waves] ---------------------------- %%
+Tswash                         =  30.000000
+xi                             =  0.300000
+facDOD                         =  0.100000
+gamma                          =  0.500000
+
+%% ------------------------- [Avalanching] ------------------------- %%
+theta_dyn                      =  33.000000
+theta_stat                     =  34.000000
+
+%% ------------------------- [Groundwater] ------------------------- %%
+ne_gw                          =  0.300000
+D_gw                           =  12
+tfac_gw                        =  10
+Cl_gw                          =  270
+in_gw                          =  1
+GW_stat                        =  1
+
