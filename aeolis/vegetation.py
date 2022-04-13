@@ -70,17 +70,21 @@ def vegshear(s, p):
 
 def germinate(s,p):
     ny = p['ny']
-    s['germinate'][:, :] = (s['rhoveg'] > 0.)
     
     # time [year]
     n = (365.25*24.*3600. / (p['dt_opt'] * p['accfac']))
+    
+    # Determine which cells are already germinated before
+    s['germinate'][:, :] = (s['rhoveg'] > 0.)
     
     # Germination
     p_germinate_year = p['germinate']                                
     p_germinate_dt = 1-(1-p_germinate_year)**(1./n)
     germination = np.random.random((s['germinate'].shape))
     
-    s['germinate'] += (s['dzbveg'] >= 0.) * (germination <= p_germinate_dt)
+    # Germinate new cells
+    germinate_new = (s['dzbveg'] >= 0.) * (germination <= p_germinate_dt)
+    s['germinate'] += germinate_new.astype(float)
     s['germinate'] = np.minimum(s['germinate'], 1.)
 
     # Lateral expension
@@ -133,10 +137,11 @@ def grow (s, p): #DURAN 2006
     s['lateral'] *= (s['rhoveg']!=0.)
 
     # Dying of vegetation due to hydrodynamics (Dynamic Vegetation Limit)
-    s['rhoveg']     *= (s['zb'] +0.01 >= s['zs'])
-    s['hveg']       *= (s['zb'] +0.01 >= s['zs'])
-    s['germinate']  *= (s['zb'] +0.01 >= s['zs'])
-    s['lateral']    *= (s['zb'] +0.01 >= s['zs'])
+    if p['process_tide']:
+        s['rhoveg']     *= (s['zb'] +0.01 >= s['zs'])
+        s['hveg']       *= (s['zb'] +0.01 >= s['zs'])
+        s['germinate']  *= (s['zb'] +0.01 >= s['zs'])
+        s['lateral']    *= (s['zb'] +0.01 >= s['zs'])
 
     ix = s['zb'] < p['veg_min_elevation']
     s['rhoveg'][ix] = 0
