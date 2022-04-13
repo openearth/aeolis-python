@@ -106,6 +106,9 @@ def interpolate(s, p, t):
             s['eta'][iy][0] = eta
             s['sigma_s'][iy][0] = sigma_s
             s['TWL'][iy][0] = R + wl
+            s['zs'][iy,:] = R + wl
+        s['zs'] = np.maximum(s['zs'], s['zb'])
+
         
     if p['process_moist'] and p['method_moist_process'].lower() == 'surf_moisture' and p['meteo_file'] is not None: 
 
