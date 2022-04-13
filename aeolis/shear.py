@@ -219,15 +219,16 @@ class WindShear:
                     
         # Compute wind shear stresses on computational grid 
         self.compute_shear(u0, nfilter=(1., 2.))
+        
+        # Prevent negative taux
+        ix = ( gc['dtaux'] < - gc['taux'])
+        gc['dtaux'][ix] = 0.
 
         # Rotate to the horizontal rotational grid        
         gc['dtaux'], gc['dtauy'] = self.rotate(gc['dtaux'], gc['dtauy'], -u_angle)
         
         # Add shear
         self.add_shear()
-                
-        # Prevent negative taux
-        gc['taux'] = np.maximum(gc['taux'], 0.)
 
         # Compute the influence of the separation on the shear stress
         if process_separation:
