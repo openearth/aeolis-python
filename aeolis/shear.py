@@ -182,9 +182,8 @@ class WindShear:
         gc = self.cgrid # computational grid
            
         # Rotate computational (c) grid to the current wind direction
-        gc['x'], gc['y'] = self.rotate(gc['xi'], gc['yi'], -u_angle, 
-                                       origin=(self.x0, self.y0))
-        
+        gc['x'], gc['y'] = self.rotate(gc['xi'], gc['yi'], -u_angle, origin=(self.x0, self.y0))
+
         # =====================================================================
         # Filling the computational grid with bedlevel and shear stress
         # =====================================================================
@@ -204,6 +203,18 @@ class WindShear:
         if plot:
             self.plot(ax=axs[0,1], cmap='Reds', stride=10, computational_grid=True)
             axs[0,1].set_title('Interpolated values on computational grid')
+         
+        # =====================================================================
+        # Rotating x, y and taux, tauy to horizontal position
+        # =====================================================================
+        
+        gc['x'], gc['y'] = self.rotate(gc['x'], gc['y'], u_angle, origin=(self.x0, self.y0))
+        gi['x'], gi['y'] = self.rotate(gi['x'], gi['y'], u_angle, origin=(self.x0, self.y0))
+        gc['taux'], gc['tauy'] = self.rotate(gc['taux'], gc['tauy'], u_angle)
+        
+        if plot:
+            self.plot(ax=axs[0,2], cmap='Reds', stride=10, computational_grid=True)
+            axs[0,2].set_title('Interpolated values on computational grid')
 
         # =====================================================================
         # Computing  bubble and add it the bedlevel for  shear perturbation.
@@ -220,30 +231,30 @@ class WindShear:
         # Compute wind shear stresses on computational grid 
         self.compute_shear(u0, nfilter=(1., 2.))
         
-        # Prevent negative taux
-        ix = ( gc['dtaux'] < - gc['taux'])
-        gc['dtaux'][ix] = 0.
-
-        # Rotate to the horizontal rotational grid        
-        gc['dtaux'], gc['dtauy'] = self.rotate(gc['dtaux'], gc['dtauy'], -u_angle)
-        
         # Add shear
         self.add_shear()
+        
+        # Prevent negatives in x-direction (wind-direction)
+        gc['taux'] = np.maximum(gc['taux'], 0.)
 
         # Compute the influence of the separation on the shear stress
         if process_separation:
             gc['hsep'] = gc['z'] - z_origin
             self.separation_shear(gc['hsep'])
-            
-        if plot:
-            self.plot(ax=axs[0,2], cmap='Reds', stride=10, computational_grid=True)
-            axs[0,2].set_title('Computed shear stress and bubble effect')
 
         if plot:
             tau_plot = np.hypot(gc['taux'], gc['tauy'])
             pc = axs[1,0].pcolormesh(gc['x'], gc['y'], tau_plot)
             plt.colorbar(pc, ax=axs[1,0])
             axs[1,0].set_title('Rotate grids, such that computational is horizontal')
+            
+        # =====================================================================
+        # Rotating x, y and taux, tauy to original orientation
+        # =====================================================================
+        
+        gc['x'], gc['y'] = self.rotate(gc['x'], gc['y'], -u_angle, origin=(self.x0, self.y0))
+        gi['x'], gi['y'] = self.rotate(gi['x'], gi['y'], -u_angle, origin=(self.x0, self.y0))
+        gc['taux'], gc['tauy'] = self.rotate(gc['taux'], gc['tauy'], -u_angle)
         
         # =====================================================================
         # Interpolation from the computational grid back to the original
@@ -255,8 +266,6 @@ class WindShear:
         
         if process_separation:
             gi['hsep'] = self.interpolate(gc['x'], gc['y'], gc['hsep'], gi['x'], gi['y'], 0. )
-            
-        
             
         # Final plots and lay-out    
         if plot:
@@ -508,7 +517,6 @@ class WindShear:
         #Correct for any seperation bubbles that are below the bed surface following smoothing
         ilow = zsep < z
         zsep[ilow] = z[ilow]
-
             
         return zsep
                 
