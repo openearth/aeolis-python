@@ -657,6 +657,7 @@ class AeoLiS(IBmi):
     def grid_rotate(self, angle):
         
         s = self.s
+        p = self.p
         
         s['x'], s['y'] = rotate(s['x'], s['y'], angle, origin=(np.mean(s['x']), np.mean(s['y'])))
         
@@ -667,8 +668,13 @@ class AeoLiS(IBmi):
         s['ustars0'], s['ustarn0'] = rotate(s['ustars0'], s['ustars0'], angle, origin=(0, 0))
         
         s['uws'], s['uwn'] = rotate(s['uws'], s['uwn'], angle, origin=(0, 0))
-        
-        s['qs'], s['qn'] = rotate(s['qs'], s['qn'], angle, origin=(0, 0))
+
+        nf = p['nfractions']
+        if nf > 1:
+            for i in range(nf):
+                s['qs'][:,:,i], s['qn'][:,:,i] = rotate(s['qs'][:,:,i], s['qn'][:,:,i], angle, origin=(0, 0))
+        else:
+            s['qs'], s['qn'] = rotate(s['qs'], s['qn'], angle, origin=(0, 0))
         
         self.s['udir'] += self.p['alpha']
         
