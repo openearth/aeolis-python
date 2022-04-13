@@ -195,14 +195,15 @@ def initialize(s, p):
         
     # Rotate grids to allign with horizontal
     xr, yr = rotate(s['x'], s['y'], angle, origin=(np.mean(s['x']), np.mean(s['y'])))
-    
-    s['ds'][:,:] = ((xr[1,0]-xr[0,0])**2.+(yr[1,0]-yr[0,0])**2.)**0.5
-    
+
     # initialize y-dimension
     if ny == 0:
         s['dn'][:,:] = 1.
+        s['ds'][:, 1:] = np.diff(s['x'], axis=1)
+        s['ds'][:, 0] = s['ds'][:, 1]
     else:
         s['dn'][:,:] = ((yr[0,1]-yr[0,0])**2.+(xr[0,1]-xr[0,0])**2.)**0.5
+        s['ds'][:,:] = ((xr[1,0]-xr[0,0])**2.+(yr[1,0]-yr[0,0])**2.)**0.5
     
     # compute cell areas
     s['dsdn'][:,:] = s['ds'] * s['dn']
