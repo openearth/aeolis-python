@@ -287,6 +287,7 @@ DEFAULT_CONFIG = {
     'veg_sigma'                     : 0.8,                # [-] Sigma in gaussian distrubtion of vegetation cover filter
     'sedimentinput'                 : 0.,                 # [-] Constant boundary sediment influx (only used in solve_pieter)
     'scheme'                        : 'euler_backward',   # Name of numerical scheme (euler_forward, euler_backward or crank_nicolson)
+    'solver'                        : 'trunk',             # Name of the solver (trunk, pieter, steadystate,steadystatepieter)
     'boundary_lateral'              : 'circular',         # Name of lateral boundary conditions (circular, constant ==noflux)
     'boundary_offshore'             : 'constant',         # Name of offshore boundary conditions (flux, constant, uniform, gradient)
     'boundary_onshore'              : 'gradient',         # Name of onshore boundary conditions (flux, constant, uniform, gradient)
