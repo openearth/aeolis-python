@@ -254,12 +254,8 @@ def vegshear_raupach(s, p):
     s['vegfac'] = ndimage.gaussian_filter(vegfac, sigma=p['veg_sigma'])
 
     # Apply reduction factor of vegetation to the total shear stress
-    tau = p['rhoa'] * s['ustar'] ** 2
-    tauveg = tau * s['vegfac']
 
-    #Convert back to ustar
-    ustarveg = np.sqrt(tauveg / p['rhoa'])
-    s['ustar'] = ustarveg
+    s['ustar'] *= s['vegfac']
     s['ustars'] = s['ustar'] * ets
     s['ustarn'] = s['ustar'] * etn
 
