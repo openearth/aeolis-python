@@ -21,16 +21,19 @@ files can be found in the table below.  Each file is further defined below.
      - File containing alongshore grid (can be all zeros for 1D cases)
    * - z.grd
      - File containing topography and bathymetry data
+   * - veg.grd
+     - File containing initial vegetation density   
+   * - mass.txt
+     - File containing sediment mass data when using space varying grain size distribution  
+   * - wind.txt
+     - File containing wind speed and direction data
    * - tide.txt
      - File containing water elevation data
    * - wave.txt
      - File containing wave height and period data
-   * - wind.txt
-     - File containing wind speed and direction data
-   * - veg.grd
-     - File containing initial vegetation data (specify what data)
-   * - mass.txt
-     - File containing sediment mass data when using space varying grain size distribution
+   * - meteo.txt
+     - File containing meteorological time series data
+
 
 
 aeolis.txt
@@ -78,63 +81,6 @@ rows of equal size to x.grd and y.grd.  Elevation values in the file should be d
 positive is up and negative is down.  The file can be renamed and is referenced from the 
 parameters file with the keyword: bed_file.
 
-tide.txt
---------
-
-The tide.txt file contains the water elevation data for the duration of the 
-simulation.  It is formatted such that the first column is time in seconds and 
-the second column is the water elevation data at each time step.  An example of 
-the file format can be seen below where each red dot represents a data value for 
-time or water elevation.
-
-.. _fig-tide-inputs:
-
-.. figure:: /images/tide_text_file.jpeg
-   :alt: tide input format
-   :width: 300px
-   :align: center
-   
-   File format for the water elevation conditions file for AeoLis input.
-   
-wave.txt
---------
-
-The wave.txt file provides the model with wave data used in AeoLiS for runup calculations.  
-The file is formatted similar to tide.txt but has three columns instead of two.  
-Here, the first column is time in seconds, the second column is wave height, 
-and the third column is the wave period.  The format of this file can be seen 
-below where each red dot represents 
-a data value. 
-
-.. _fig-wave-inputs:
-
-.. figure:: /images/wave_text_file_graphic.jpeg
-   :alt: wave input format
-   :width: 300px
-   :align: center
-   
-   File format for the wave conditions file for AeoLis input.
-
-wind.txt
---------
-
-The wind.txt file provides the model with wind boundary conditions and is formatted similar to 
-the tide.txt and wave.txt files.  The first column is time in seconds from 
-start, the second column is wind speed, and the third column is wind direction.  The wind directions
-can be specified in either nautical or cartesian convention (specified in aeolis.txt with keyword: wind_convention).  
-The format of this file can be seen below were each of the red dots represents a data value of time, wind speed, 
-or wind direction.  As AeoLiS is an aeolian sediment transport model, the wind boundary conditions are of particular
-importance.      
-
-.. _fig-wind-inputs:
-
-.. figure:: /images/wind_text_file_graphic.jpeg
-   :alt: wind input format
-   :width: 300px
-   :align: center
-   
-   File format for wind boundary conditions file for AeoLis input.
-   
 veg.grd
 -------
 
@@ -146,13 +92,13 @@ where each red dots represent vegetation cover at each cross-shore position.
 
 .. _fig-veg-inputs:
 
-.. figure:: /images/vegetation_text_file.jpeg
+.. figure:: /images/vegetation_text_file.png
    :alt: vegetation input format
    :width: 200px
    :align: center
    
    File format for a 1D AeoLis vegetation grid.  Each red dot is the vegetation density at a specific location in the computational grid.
-   
+
 mass.txt
 --------
 
@@ -173,7 +119,7 @@ where each red dot represents a sediment fraction mass at a specific location in
 
 .. _fig-mass-inputs-1D:
 
-.. figure:: /images/mass_text_file_graphic.jpeg
+.. figure:: /images/mass_text_file_graphic.png
    :alt: mass file format 1D
    :width: 550px
    :align: center
@@ -190,7 +136,7 @@ file for AeoLis can be seen below.
 
 .. _fig-mass-inputs-2D:
 
-.. figure:: /images/mass_text_file_2D.jpeg
+.. figure:: /images/mass_text_file_2D.png
    :alt: mass file format 2D
    :width: 550px
    :align: center
@@ -198,6 +144,80 @@ file for AeoLis can be seen below.
    File format for a 2D AeoLis mass file for spatially variable grain size distributions.  Each red dot is the mass for each sediment fraction
    at each location in the computational grid (x, y, bed layer).
    
+wind.txt
+--------
 
+The wind.txt file provides the model with wind boundary conditions and is formatted similar to 
+the tide.txt and wave.txt files.  The first column is time in seconds from 
+start, the second column is wind speed, and the third column is wind direction.  The wind directions
+can be specified in either nautical or cartesian convention (specified in aeolis.txt with keyword: wind_convention).  
+The format of this file can be seen below were each of the red dots represents a data value of time, wind speed, 
+or wind direction.  As AeoLiS is an aeolian sediment transport model, the wind boundary conditions are of particular
+importance.      
 
+.. _fig-wind-inputs:
 
+.. figure:: /images/wind_text_file_graphic.png
+   :alt: wind input format
+   :width: 300px
+   :align: center
+   
+   File format for wind boundary conditions file for AeoLis input.
+         
+tide.txt
+--------
+
+The tide.txt file contains the water elevation data for the duration of the 
+simulation.  It is formatted such that the first column is time in seconds and 
+the second column is the water elevation data at each time step.  An example of 
+the file format can be seen below where each red dot represents a data value for 
+time or water elevation.
+
+.. _fig-tide-inputs:
+
+.. figure:: /images/tide_text_file.png
+   :alt: tide input format
+   :width: 300px
+   :align: center
+   
+   File format for the water elevation conditions file for AeoLis input.
+   
+wave.txt
+--------
+
+The wave.txt file provides the model with wave data used in AeoLiS for runup calculations.  
+The file is formatted similar to tide.txt but has three columns instead of two.  
+Here, the first column is time in seconds, the second column is wave height, 
+and the third column is the wave period.  The format of this file can be seen 
+below where each red dot represents 
+a data value. 
+
+.. _fig-wave-inputs:
+
+.. figure:: /images/wave_text_file_graphic.png
+   :alt: wave input format
+   :width: 300px
+   :align: center
+   
+   File format for the wave conditions file for AeoLis input.
+
+meteo.txt
+---------
+
+The meteo.txt file contains meteorological data used to simulate surface moisture in the model domain (see Simulation of surface moisture 
+in Model description on for surface moisture implementation in AeoLiS).  This file is formatted similar to the other environmental boundary
+condition files (wind, wave, and tide) such that it contains a time series of environmental data read into AeoLiS through keyword specification. 
+The keywords required to process surface moisture with evaporation and infiltration are process_moist = True, method_moist_process = surf_moisture, 
+th_moisture = True, and meteo_file = meteo.txt (or name of file containing meteorological data).  An example of the meteo.txt file can be seen in the 
+figure below where each red dot represents a time series data value.  The first column contains time (s), the second column is temperature (degrees C),
+the thrid column is precipitation (mm/hr), the fourth column is relative humidity (%), the fifth column is global radiation (MJ/$m^2$/day), and the sixth
+column is air pressure (kPa).  
+
+.. _fig-meteo-inputs:
+
+.. figure:: /images/meteo_file_format.jpg
+   :alt: meteo file format
+   :width: 550px
+   :align: center
+   
+   File format for meteorological data used to simulate surface moisture in AeoLiS where each red dot represents a time series value. 
