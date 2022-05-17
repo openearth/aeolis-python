@@ -213,7 +213,7 @@ column is air pressure (kPa).
 
 .. _fig-meteo-inputs:
 
-.. figure:: /images/meteo_file_format.jpeg
+.. figure:: /images/meteo_file_format.JPG
    :alt: meteo file format
    :width: 550px
    :align: center
