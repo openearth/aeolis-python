@@ -92,7 +92,7 @@ where each red dots represent vegetation cover at each cross-shore position.
 
 .. _fig-veg-inputs:
 
-.. figure:: /images/vegetation_text_file.png
+.. figure:: /images/vegetation_text_file.jpg
    :alt: vegetation input format
    :width: 200px
    :align: center
@@ -119,7 +119,7 @@ where each red dot represents a sediment fraction mass at a specific location in
 
 .. _fig-mass-inputs-1D:
 
-.. figure:: /images/mass_text_file_graphic.png
+.. figure:: /images/mass_text_file_graphic.jpg
    :alt: mass file format 1D
    :width: 550px
    :align: center
@@ -136,7 +136,7 @@ file for AeoLis can be seen below.
 
 .. _fig-mass-inputs-2D:
 
-.. figure:: /images/mass_text_file_2D.png
+.. figure:: /images/mass_text_file_2D.jpg
    :alt: mass file format 2D
    :width: 550px
    :align: center
@@ -157,7 +157,7 @@ importance.
 
 .. _fig-wind-inputs:
 
-.. figure:: /images/wind_text_file_graphic.png
+.. figure:: /images/wind_text_file_graphic.jpg
    :alt: wind input format
    :width: 300px
    :align: center
@@ -175,7 +175,7 @@ time or water elevation.
 
 .. _fig-tide-inputs:
 
-.. figure:: /images/tide_text_file.png
+.. figure:: /images/tide_text_file.jpg
    :alt: tide input format
    :width: 300px
    :align: center
@@ -194,7 +194,7 @@ a data value.
 
 .. _fig-wave-inputs:
 
-.. figure:: /images/wave_text_file_graphic.png
+.. figure:: /images/wave_text_file_graphic.jpg
    :alt: wave input format
    :width: 300px
    :align: center
