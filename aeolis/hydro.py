@@ -106,8 +106,7 @@ def interpolate(s, p, t):
             s['eta'][iy][0] = eta
             s['sigma_s'][iy][0] = sigma_s
             s['TWL'][iy][0] = R + wl
-            s['zs'][iy,:] = R + wl
-        s['zs'] = np.maximum(s['zs'], s['zb'])
+            s['zs'][iy,:] = eta + wl
 
         
     if p['process_moist'] and p['method_moist_process'].lower() == 'surf_moisture' and p['meteo_file'] is not None: 
@@ -122,11 +121,10 @@ def interpolate(s, p, t):
         # RH : Precipitation, mm/h
         # P : Atmospheric pressure, kPa
         # U: Relative humidity, %
-        s['meteo'] = dict(zip(('T','RH','U','Q','P') , m))
+        s['meteo'] = dict(zip(('T','Q','RH','P','U') , m))
 
     # ensure compatibility with XBeach: zs >= zb
-    if p['process_tide']:
-        s['zs'] = np.maximum(s['zs'], s['zb'])
+
     #else:
     #    s['zs'] = s['zb']
 
@@ -187,7 +185,7 @@ def update(s, p, dt,t):
         
             # #Compute setup and runup
             # setup=np.max(s['swl'] + 0.35 * p['xi'] * s['Hs']) #Stockdon et al (2006)
-            setup=s['swl'] + s['eta'] #Stockdon et al (2006)
+#            setup=s['swl'] + s['eta'] #Stockdon et al (2006)
             # runup=np.max(s['zs'])
 
             #Initialize GW levels
@@ -199,16 +197,17 @@ def update(s, p, dt,t):
                 
             #Define index of shoreline location
             # shl_ix =np.argmax(s['zb'] > setup,axis=1) - 1
-            shl_ix =np.argmax(s['zb'] > setup,axis=1) - 1
+            shl_ix =np.argmax(s['zb'] > s['zs'],axis=1) - 1
+            
 
             #Define index of runup limit
             runup_ix =np.argmax(s['zb'] > s['TWL'],axis=1) - 1
         
             #Runge-Kutta timestepping
-            f1 = Boussinesq(s['gw'],s,p,setup, shl_ix)
-            f2 = Boussinesq(s['gw'] + dt_gw / 2 * f1,s,p,setup, shl_ix)
-            f3 = Boussinesq(s['gw'] + dt_gw / 2 * f2,s,p,setup, shl_ix)
-            f4 = Boussinesq(s['gw'] + dt_gw * f3,s,p,setup, shl_ix)
+            f1 = Boussinesq(s['gw'],s,p,shl_ix)
+            f2 = Boussinesq(s['gw'] + dt_gw / 2 * f1,s,p, shl_ix)
+            f3 = Boussinesq(s['gw'] + dt_gw / 2 * f2,s,p, shl_ix)
+            f4 = Boussinesq(s['gw'] + dt_gw * f3,s,p, shl_ix)
             
             #Update groundwater level
             s['gw'] = s['gw'] + dt_gw / 6 * (f1 + 2 * f2 + 2 * f3 + f4)
@@ -238,11 +237,11 @@ def update(s, p, dt,t):
             s['gw']=np.minimum(s['gw'], s['zb'])
 
             # Define cells below setup level
-            ixg=s['zb'] < setup
+            ixg=s['zb'] < s['zs']
             
             # Set gw level to setup level in cells below setup level
             
-            s['gw'][ixg]=setup[ixg]            
+            s['gw'][ixg]=s['zs'][ixg]            
 
 
 
@@ -398,15 +397,15 @@ def update(s, p, dt,t):
 
 
 
-def Boussinesq (GW,s,p,setup,shl_ix):
+def Boussinesq (GW,s,p,shl_ix):
     '''
     Add description
     
     '''
 
     #Define seaward boundary gw=setup
-    GW[:,shl_ix] = setup[:,shl_ix]
-    GW[:,shl_ix-1] = setup[:,shl_ix-1]
+    GW[:,shl_ix] = s['zs'][:,shl_ix]
+    GW[:,shl_ix-1] = s['zs'][:,shl_ix-1]
     
     if p['boundary_gw'].lower() == 'no_flow':
         #Define landward boundary dgw/dx=0
@@ -434,6 +433,7 @@ def Boussinesq (GW,s,p,setup,shl_ix):
     a = np.zeros(s['gw'].shape)
     b = np.zeros(s['gw'].shape)
     c = np.zeros(s['gw'].shape)
+
 
 
     for i in range(len(a[:,0])):

@@ -271,7 +271,7 @@ DEFAULT_CONFIG = {
     'D_gw'                          : 12,           # NEWCH      # [m] Aquifer depth
     'tfac_gw'                       : 10,           # NEWCH      # [-] Reduction factor for time step in ground water calculations
     'Cl_gw'                         : 270,          # NEWCH      # [-] Runup infiltration coefficient
-    'in_gw'                         : 1,            # NEWCH      # [m] Initial groundwater level
+    'in_gw'                         : 0,            # NEWCH      # [m] Initial groundwater level
     'GW_stat'                       : 1,            # NEWCH      # [m] Landward static groundwater boundary (if static boundary is defined)
     'theta_dyn'                     : 33.,                # [degrees] Initial Dynamic angle of repose, critical dynamic slope for avalanching
     'theta_stat'                    : 34.,                # [degrees] Initial Static angle of repose, critical static slope for avalanching
