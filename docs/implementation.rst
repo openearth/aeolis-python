@@ -435,7 +435,38 @@ computational time, interpolation method is used.
 
 Boussinesq groundwater equation
 -------------------------------
+The Boussinesq equation is solved numerically with a central finite difference 
+method in space and a fourth-order Runge-Kutta integration technique in time:
 
+.. math::
+       f(\eta ) = \frac{K}{{{n_e}}}\left[ {D\underbrace {\frac{{{\partial ^2}\eta }}{{\partial {x^2}}}}_a + \underbrace {\frac{\partial }{{\partial x}}\underbrace {\left\{ {\eta \frac{{\partial \eta }}{{\partial x}}} \right\}}_b}_c} \right]
+
+The Runge-Kutta time-stepping, where :math:`\Delta t` is the length of the timestep, is defined as,
+
+.. math::
+      \begin{gathered}
+  \eta _i^{t + 1} = \eta _i^t + \frac{{\Delta t}}{6}\left( {{f_1} + 2{f_2} + 2{f_3} + {f_4}} \right) \hfill \\
+  {f_1} = f(\eta _i^t) \hfill \\
+  {f_2} = f\left( {\eta _i^t + \frac{{\Delta t}}{2}{f_1}} \right) \hfill \\
+  {f_3} = f\left( {\eta _i^t + \frac{{\Delta t}}{2}{f_2}} \right) \hfill \\
+  {f_4} = f\left( {\eta _i^t + \Delta t{f_3}} \right) \hfill \\ 
+\end{gathered}
+
+where, :math:`i` is the grid cell in x-direction and :math:`t` is the timestep. The central difference solution to :math:f(\eta ) is obtained through discretisation of the Boussinesq equation,
+
+.. math::
+   {a_i} = \frac{{\eta _{i + 1}^{} - 2\eta _i^{} + \eta _{i - 1}^{}}}{{{{(\Delta x)}^2}}}
+
+.. math::
+      {b_i} = \frac{{\eta _i^{}\left( {\eta _{i + 1}^{} - \eta _{i - 1}^{}} \right)}}{{\Delta x}}
+
+.. math::
+      {c_i} = \frac{{\left( {b_{i + 1}^{} - b_{i - 1}^{}} \right)}}{{\Delta x}}
+
+The seaward boundary condition is defined as the still water level plus the wave setup . 
+If the groundwater elevation is larger than the bed elevation, there is a seepage face, 
+and the groundwater elevation is set equal to the bed elevation. On the landward boundary, 
+a no-flow condition, :math:`\frac{{\partial \eta }}{{\partial t}} = 0` (Neumann condition), or constant head, :math:´\eta = constant` (Dirichlet condition), is prescribed.
 
 
 Basic Model Interface (BMI)
