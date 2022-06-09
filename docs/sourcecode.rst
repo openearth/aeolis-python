@@ -84,6 +84,12 @@ Avalanching
 .. automodule:: avalanching
                 :members:
 
+Vegetation
+^^^^^^^^^^^
+
+.. automodule:: vegetation
+                :members:
+
 Marine Erosion
 ^^^^^^^^^^^^^^
 

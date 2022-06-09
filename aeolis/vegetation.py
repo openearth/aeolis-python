@@ -40,6 +40,21 @@ import aeolis.wind
 logger = logging.getLogger(__name__)
 
 def initialize (s,p):
+    '''Initialise vegetation based on vegetation file.
+              
+    Parameters
+    ----------
+    s : dict
+        Spatial grids
+    p : dict
+        Model configuration parameters
+        
+    Returns
+    -------
+    dict
+        Spatial grids
+        
+    '''
     
     if p['veg_file'] is not None:
         s['rhoveg'][:, :] = p['veg_file']
