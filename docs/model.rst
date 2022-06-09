@@ -392,20 +392,100 @@ Simulation of surface moisture
 ------------------------------
 
 Wave runup, capillary rise from the beach groundwater, and precipitation periodically wet the intertidal beach
-temporally increasing the shear velocity threshold. Infiltration and
+temporally increasing the shear velocity threshold (Figure
+:numref:`fig-moisture-processes`). Infiltration and
 evaporation subsequently dry the beach.
-The drying of the beach is simulated by simplified functions for
-infiltration and evaporation. Infiltration is represented by an
-exponential decay function that is governed by a drying time scale
-:math:`T_{\mathrm{dry}}`. Evaporation is simulated using an adapted version
-of the Penman-Monteith equation (:cite:`Shuttleworth1993`) that is
-governed by meteorological time series of solar radiation, temperature
-and humidity.
+
+.. _fig-moisture-processes:
+
+.. figure:: images/moisture_processes.jpg
+   :width: 600px
+   :align: center
+
+   Illustration of processes influencing the volumetric moisture content :math:`\theta` at the beach surface.
+
+The structure of the surface moisture module and included processes are schematized in Figure :numref:`fig-moisture-scheme`. 
+The resulting surface moisture is obtained by selecting the largest of the moisture contents computed 
+with the water balance approach (right column) and due to capillary rise from the groundwater table (left column). 
+The method is based on the assumption that the flow of soil water is small compared to the flow of groundwater 
+and that the beach groundwater dynamics primarily is controlled by the water level and wave action at 
+the seaward boundary (:cite: `Raubenheimer1999`, :cite: `Schmutz2014`). Thus, there is no feedback between the processes 
+in the right column of Figure 2 and the groundwater dynamics described in the left column.
+
+.. _fig-moisture-scheme:
+
+.. figure:: images/moisture_scheme.jpg
+   :width: 600px
+   :align: center
+
+   Implementation of surface moisture processes in the AeoLiS.
+
 
 Runup and wave setup
 ^^^^^^^^^^^^^^^^^^^^
-Runup and wave setup are computed using the Stockdon equations(:cite:`Stockdon2006`):
+The runup height and wave setup are computed using the Stockdon formulas (:cite:`Stockdon2006`). 
+Their parameterization differs depending on the dynamic beach steepness expressed through the Irribaren number:
 
+.. math::
+   \xi  = \tan \beta /\sqrt {{H_0}/{L_0}} \
+
+where :math: ´{H_0}´ is the significant offshore wave height, :math: ´{L_0}´ is the deepwater wavelength, and :math: ´{\tan \beta}´ is the foreshore slope.
+
+For dissipative conditions, :math: ´{\xi}´ < 0.3, the runup, :math: ´{R_2}´, is parameterized as,
+
+.. math::
+   {R_2} = 1.1\left( {0.35\beta \sqrt {{H_0}{L_0}}  + \frac{{\sqrt {{H_0}{L_0}\left( {0.563{\beta ^2} + 0.004} \right)} }}{2}} \right)\
+
+The wave setup is,
+
+.. math::
+   < \eta  >  = 0.35\xi \
+
+
+Tide- and wave-induced groundwater variations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Groundwater under sandy beaches can be considered as shallow aquifers, with only horizontal groundwater
+ flow so that the pressure distribution is hydrostatic (:cite: `Baird1998´, :cite: ´Brakenhoff2019´, :cite: ´Nielsen1990´, :cite: `Raubenheimer1999´).
+ The cross-shore flow dominates temporal variations of groundwater levels. Alongshore, groundwater table variations are typically small (:cite: ´Schmutz2014´).
+ Although the surface moisture model can be extended over a two-dimensional grid, the groundwater simulations are performed for 1D transects cross-shore
+ to avoid numerical instabilities at the seaward boundary and reduce computational time.
+
+The beach aquifers is schematised as a sandy body, with saturated hydraulic conductivity, :math: ´K´, and effective porosity, :math: ´{n_e}´.
+ The aquifer is assumed to rest on an impermeable surface, where :math: ´D´ is the aquifer depth. 
+The groundwater elevation relative to the mean sea level (MSL) is denoted :math: ´\eta´, and the shore-perpendicular x-axis is positive landwards,
+ with an arbitrary starting point. The sand is assumed to be homogenous and isotropic. In this context, isotropy implies that hydraulic conductivity
+ is independent of flow direction.
+
+The horizontal groundwater discharge per unit area, :math: ´u´, is then governed by Darcy’s law,
+
+.. math::
+   u =  - K\frac{{\partial \eta }}{{\partial x}}\
+
+and the continuity equation (see e.g., :cite: ´Nielsen2009´), 
+
+.. math::
+   \frac{{\partial \eta }}{{\partial t}} =  - \frac{1}{{{n_e}}}\frac{\partial }{{\partial x}}((D + \eta )u)\
+
+where :math: ´t´ is time. 
+
+The groundwater overheight due to runup, :math: ´{U_l}´, is computed by (:cite: ´Kang1994´, :cite: ´Nielsen1988´),
+
+.. math::
+   {U_l} = \left\{ \begin{gathered}{C_l}Kf(x)\,\,\,\,{\text{if }}{x_S} \leqslant x \leqslant {x_R} \hfill \\0,\,\,\,\,\,\,\,\,\,\,\,\,\,\,\,\,\,\,{\text{if }}x > {x_R} \hfill \\\end{gathered}  \right.\
+
+where :math: ´{C_l}´ is an infiltration coefficient (-), and :math: ´f(x)´ is a function of :math: ´x´ ranging from 0 to 1. :math: ´{x_S}´ is 
+the horizontal location of the sum of the still water level and wave setup, and :math: ´{x_R}´ is the horizontal location of the runup limit:
+
+.. math::
+   f(x) = \left\{ \begin{gathered}
+   \frac{{x - {x_s}}}{{\frac{2}{3}\left( {{x_{ru}} - {x_s}} \right)}}\,\,\,\,\,\,\,\,\,\,\,\,\,if\,{x_s} < x \leqslant {x_s} + \frac{2}{3}\left( {{x_{ru}} - {x_s}} \right)\, \hfill \\
+   3 - \frac{{x - {x_s}}}{{\frac{1}{3}\left( {{x_{ru}} - {x_s}} \right)}}\,\,\,\,\,if\,{x_s} + \frac{2}{3}\left( {{x_{ru}} - {x_s}} \right)\, < x < {x_{ru}} \hfill \\ 
+   \end{gathered}  \right.\
+
+Substitution of :math: ´u´ in the continuity equation with the addition of :math: ´{U_l}/{n_e} gives the nonlinear Boussinesq equation:
+
+.. math::
+   \frac{{\partial \eta }}{{\partial t}} = \frac{K}{{{n_e}}}\frac{\partial }{{\partial x}}\left( {(D + \eta )\frac{{\partial \eta }}{{\partial x}}} \right) + \frac{{{U_l}}}{{{n_e}}}\
 
 
 Capillary rise
@@ -413,7 +493,9 @@ Capillary rise
 
 Infiltration
 ^^^^^^^^^^^^
-Exploratory model runs of the unsaturated soil with the HYDRUS1D
+Infiltration is represented by an
+exponential decay function that is governed by a drying time scale
+:math:`T_{\mathrm{dry}}`.Exploratory model runs of the unsaturated soil with the HYDRUS1D
 (:cite:`Simunek1998`) hydrology model show that the increase of the
 volumetric water content to saturation is almost instantaneous with
 rising tide. The drying of the beach surface through infiltration
@@ -440,6 +522,10 @@ content halves.
 
 Evaporation
 ^^^^^^^^^^^
+Evaporation is simulated using an adapted version
+of the Penman-Monteith equation (:cite:`Shuttleworth1993`) that is
+governed by meteorological time series of solar radiation, temperature
+and humidity.
 
 :math:`E_{\mathrm{v}}` [m/s] is the evaporation rate that is
 implemented through an adapted version of the Penman equation
