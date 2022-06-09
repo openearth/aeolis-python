@@ -45,7 +45,20 @@ logger = logging.getLogger(__name__)
 
 def run_ph12(s, p, t):
 	''' Calculates bed level change due to dune erosion accoording to Palmsten and Holman (2012)
-	
+	    
+	Parameters
+    ----------
+    s : dict
+        Spatial grids
+    p : dict
+        Model configuration parameters
+	t : float
+		Model time
+
+    Returns
+    -------
+    dict
+        Spatial grids
 	'''
 
     Ho = np.interp(t, p['wave_file'][:, 0], p['wave_file'][:, 1])
