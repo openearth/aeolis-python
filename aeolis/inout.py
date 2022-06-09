@@ -33,10 +33,12 @@ import time
 import shutil
 import logging
 import numpy as np
+from matplotlib import pyplot as plt
 
 # package modules
 from aeolis.utils import *
 from aeolis.constants import *
+from regex import S
 
 # initialize logger
 logger = logging.getLogger(__name__)
@@ -311,3 +313,93 @@ def get_backupfilename(fname):
     
     return backupfile
             
+
+        
+def interpretation_visualization(s, p):
+    '''Create figures and tables for the user to check whether the input is correctly interpreted'''
+    
+    # Grid definition + boundaries + wind direction at t=0 + index / sizes + alpha
+    x = s['x']
+    y = s['y']
+    zb = s['zb']
+
+    uws = s['uws']
+    print(uws[0])
+
+    alpha = p['alpha']
+    if alpha < 0.:
+        alpha += 360.
+
+    xlen = np.max(x)-np.min(x)
+    ylen = np.max(y)-np.min(y)
+
+    arc_angles = np.linspace(270., 270. + alpha, int(alpha))
+    radius = np.minimum(xlen, ylen) * 0.05
+    arc_x = x[0,0] + radius * np.cos(np.deg2rad(arc_angles))
+    arc_y = y[0,0] + radius * np.sin(np.deg2rad(arc_angles))
+    
+    x_offshore = np.mean([x[0,0], x[-1,0]])
+    y_offshore = np.mean([y[0,0], y[-1,0]])
+    x_onshore = np.mean([x[0,-1], x[-1,-1]])
+    y_onshore = np.mean([y[0,-1], y[-1,-1]])
+    x_lateralA = np.mean([x[0,0], x[0,-1]])
+    y_lateralA = np.mean([y[0,0], y[0,-1]])
+    x_lateralB = np.mean([x[-1,0], x[-1,-1]])
+    y_lateralB = np.mean([y[-1,0], y[-1,-1]])
+
+    fig, ax = plt.subplots()
+    pc = ax.pcolormesh(x,y,zb)
+
+    plottxts = []
+    plottxts.append(ax.text(x_offshore, y_offshore, 'Offshore: ' + p['boundary_offshore'], rotation=alpha + 90, ha = 'center', va='center'))
+    plottxts.append(ax.text(x_onshore, y_onshore, 'Onshore: ' + p['boundary_onshore'], rotation=alpha + 270, ha = 'center', va='center'))
+    plottxts.append(ax.text(x_lateralA, y_lateralA, 'Lateral: ' + p['boundary_lateral'], rotation=alpha + 0, ha = 'center', va='center'))
+    plottxts.append(ax.text(x_lateralB, y_lateralB, 'Lateral: ' + p['boundary_lateral'], rotation=alpha + 180, ha = 'center', va='center'))
+
+    plottxts.append(ax.text(x[0,0], y[0,0], '(0,0)', ha = 'right', va='top'))
+    plottxts.append(ax.text(x[0,-1], y[0,-1], '(0,' + str(len(x[0,:])-1) + ')', ha = 'right', va='top'))
+    plottxts.append(ax.text(x[-1,0], y[-1,0], '(' + str(len(x[:,0])-1) + ',0)', ha = 'right', va='top'))
+    plottxts.append(ax.text(x[-1,-1], y[-1,-1], '(' + str(len(x[:,0])-1) + ',' + str(len(x[0,:])-1) + ')', ha = 'right', va='top'))
+
+    plottxts.append(ax.text(x[0,0], y[0,0]-0.1*ylen, r'$\alpha$ :' + str(int(alpha)) + r'$^\circ$', ha='center', va='center'))
+
+    for txt in plottxts:
+        txt.set_bbox(dict(facecolor='white', alpha=0.7, edgecolor='black'))
+
+    ax.plot(x[0,0], y[0,0], 'ro')
+    ax.plot(x[0,-1], y[0,-1], 'ro')
+    ax.plot(x[-1,0], y[-1,0], 'ro')
+    ax.plot(x[-1,-1], y[-1,-1], 'ro')
+    
+    ax.plot(arc_x, arc_y, color = 'red')
+    ax.plot([x[0,0], x[0,0]], [y[0,0],y[0,0]-0.08*ylen], '--', color = 'red', linewidth=3)
+    ax.plot([x[0,0], arc_x[-1]], [y[0,0], arc_y[-1]], color = 'red', linewidth=3)
+    
+    fig.colorbar(pc, ax=ax)
+    ax.axis('equal')
+    ax.set_xlim([np.min(x) - 0.15*xlen, np.max(x) + 0.15*xlen])
+    ax.set_ylim([np.min(y) - 0.15*ylen, np.max(y) + 0.15*ylen])
+
+    # Draw arc for angle
+
+
+    plt.show()
+    print('test')
+
+
+    # Spatial values and masks
+    # Bed level
+    # Ne level
+    # Vegetation
+    # Threshold mask
+    # Tide mask
+    # Wave mask
+
+    # Timeseries
+    # Wind
+    # Tide
+    # Waves
+
+    # Grainsizes
+
+    return 

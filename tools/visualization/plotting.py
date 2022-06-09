@@ -76,7 +76,7 @@ def plot1d(ncfile, itransects=0, itimes=0, ifrac=0, params='zb'):
  
                     ax.plot(x, val)
         
-        return fig, ax
+    return fig, ax
 
 
 

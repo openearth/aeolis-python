@@ -664,7 +664,7 @@ class AeoLiS(IBmi):
         s['taus'], s['taun'] = rotate(s['taus'], s['taun'], angle, origin=(0, 0))
         s['taus0'], s['taun0'] = rotate(s['taus0'], s['taun0'], angle, origin=(0, 0))
         
-        s['ustars'], s['ustarn0'] = rotate(s['ustars'], s['ustarn'], angle, origin=(0, 0))
+        s['ustars'], s['ustarn'] = rotate(s['ustars'], s['ustarn'], angle, origin=(0, 0))
         s['ustars0'], s['ustarn0'] = rotate(s['ustars0'], s['ustars0'], angle, origin=(0, 0))
         
         s['uws'], s['uwn'] = rotate(s['uws'], s['uwn'], angle, origin=(0, 0))

@@ -376,7 +376,7 @@ def non_erodible(s,p):
         Model configuration parameters
 
     Returns
-    -------
+    ------- 
     dict
         Spatial grids
 
@@ -384,20 +384,21 @@ def non_erodible(s,p):
     
     nf = p['nfractions']
     s['zne'][:,:] = p['ne_file'] 
-    
-    ustar = s['ustar']
-    uth = s['uth']
-    
-    #Smooth method
+
+    # Determine where ne-layer is "exposed"
     thuthlyr = 0.01
     ix = (s['zb'] <= s['zne'] + thuthlyr)
     
-    dzne = np.maximum( ( s['zne'] + thuthlyr - s['zb']) / thuthlyr, 0. )
+    # Smooth method
+    # dzne = np.maximum( ( s['zne'] + thuthlyr - s['zb']) / thuthlyr, 0. )
+    # for i in range(nf):
+    #     duth = np.maximum( 2.* s['ustar'] - s['uth'][:,:,i], 0)
+    #     s['uth'][ix,i] += duth[ix] * dzne[ix]
     
+    # Hard method
     for i in range(nf):
-        duth = np.maximum( 2.* ustar - uth[:,:,i], 0)
-        s['uth'][ix,i] += duth[ix] * dzne[ix]
-        
+        s['uth'][ix,i] = np.inf     
+   
     
     return s    
 
