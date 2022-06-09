@@ -490,9 +490,46 @@ Substitution of :math: `u` in the continuity equation with the addition of :math
 
 Capillary rise
 ^^^^^^^^^^^^^^
+Soil water retention (SWR) functions describe the surface moisture due to capillary transport 
+of water from the groundwater table (:cite:`VanGenuchten1980`):
+
+.. math::
+   \theta (h) = {\theta _r} + \frac{{{\theta _s} - {\theta _r}}}{{{{\left[ {1 + {{\left| {\alpha h} \right|}^n}} \right]}^m}}}
+
+
+where :math:`h` is the groundwater table depth, :math:`\alpha` and :math:`n` are fitting parameters 
+related to the air entry suction and the pore size distribution. The parameter :math:`m` is commonly 
+parameterised as :math:`m = 1 - 1/n`.  The resulting surface moisture is computed for both drying and 
+wetting conditions, i.e., including the 
+effect of hysteresis.
+
+The moisture contents computed with drying and wetting SWR functions are denoted :math:`{\theta ^d}(h)}` and {\theta ^w}(h)}, respectively. 
+When moving between wetting and drying conditions, the soil moisture content follows an intermediate 
+retention curve called a scanning curve. The drying scanning curves are scaled from the main 
+drying curve and wetting scanning curves from the main wetting curve. The drying scanning curve is then obtained from (:cite:`Mualem1974`):
+
+.. math::
+   {\theta ^d}({h_\Delta },h) = {\theta ^w}(h) + \frac{{\left[ {{\theta ^w}({h_\Delta }) - {\theta ^w}(h)} \right]}}{{\left[ {{\theta _s} - {\theta ^w}(h)} \right]}}\left[ {{\theta ^d}(h) - {\theta ^w}(h)} \right]
+
+where :math:`{h_\Delta}` is the groundwater table depth at the reversal on the wetting curve. 
+
+The wetting scanning curve is obtained from (:cite:`Mualem1974`):
+
+.. math::
+   
+   {\theta ^w}({h_\Delta },h) = {\theta ^w}(h) + \frac{{\left[ {{\theta _s} - {\theta ^w}(h)} \right]}}{{\left[ {{\theta _s} - {\theta ^w}({h_\Delta })} \right]}}\left[ {{\theta ^d}({h_\Delta }) - {\theta ^w}({h_\Delta })} \right]
+
+where :math:`{h_\Delta}` is the groundwater table depth at the reversal on the drying curve.
 
 Infiltration
 ^^^^^^^^^^^^
+Infiltration is accounted for by assuming that excess water infiltrates until the moisture content reaches 
+field capacity, :math:`{\theta_fc}. The moisture content at field capacity is the maximum amount of water 
+that the unsaturated zone of soil can hold against the pull of gravity. For sandy soils, 
+the matric potential at this soil moisture condition is around - 1/10 bar. In equilibrium, 
+this potential would be exerted on the soil capillaries at the soil surface when the water 
+table is about 100 cm below the soil surface, :math:`{\theta _{fc}} = {\theta ^d}(100)`.
+
 Infiltration is represented by an
 exponential decay function that is governed by a drying time scale
 :math:`T_{\mathrm{dry}}`.Exploratory model runs of the unsaturated soil with the HYDRUS1D
@@ -501,6 +538,11 @@ volumetric water content to saturation is almost instantaneous with
 rising tide. The drying of the beach surface through infiltration
 shows an exponential decay. In order to capture this behavior the
 volumetric water content is implemented according to:
+
+.. math::
+   \frac{{d\theta }}{{dt}} = \left( {\theta  - {\theta _{fc}}} \right)\left( {{e^{ - \ln (2)\frac{{dt}}{{{T_{dry}}}}}}} \right)
+
+An alternative formulation is used for simulations that does not account for ground water and SWR processes,
 
 .. math::
   :label: apx-drying
@@ -520,8 +562,15 @@ composition layer thickness. :math:`T_{\mathrm{dry}}` [s] is the beach
 drying time scale, defined as the time in which the beach moisture
 content halves.
 
-Evaporation
-^^^^^^^^^^^
+Precipitation and evaporation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+A water balance approach accounts for the effect of precipitation and evaporation,
+
+.. math::
+   \theta _t^{} = {\theta _{t - 1}} + \frac{{\left( {{P_t} - {E_t}} \right)\,}}{{\Delta z}}\,\Delta t\,\,\,\,\,\,{\theta _r} \leqslant \,\theta _{t - 1}^{} \leqslant {\theta _{fc}};\,{\theta _r} \leqslant \,\theta _t^{} \leqslant {\theta _s}
+
+where subscript :math:`t` denotes the timestep, :math:`P` is the precipitation, :math:`E` is the evaporation, :math:`\Delta z}` is the thickness of the surface layer, and :math:`\Delta t}` is the length of the time step.
+
 Evaporation is simulated using an adapted version
 of the Penman-Monteith equation (:cite:`Shuttleworth1993`) that is
 governed by meteorological time series of solar radiation, temperature
