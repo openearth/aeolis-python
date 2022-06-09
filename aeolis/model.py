@@ -231,6 +231,10 @@ class AeoLiS(IBmi):
         #initialize fence model
         self.s = aeolis.fences.initialize(self.s, self.p)
 
+        # Create interpretation information
+        if self.p['visualization']:
+            aeolis.inout.interpretation_visualization(self.s, self.p)
+
 
     def update(self, dt=-1):
         '''Time stepping function

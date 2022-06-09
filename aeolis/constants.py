@@ -176,6 +176,7 @@ DEFAULT_CONFIG = {
     'process_vegetation'            : False,              # Enable the process of vegetation
     'process_fences'                : False,              # Enable the process of sand fencing
     'process_dune_erosion'          : False,              # Enable the process of wave-driven dune erosion
+    'visualization'                 : False,               # Boolean for visualization of model interpretation before and just after initialization
     'xgrid_file'                    : None,               # Filename of ASCII file with x-coordinates of grid cells
     'ygrid_file'                    : None,               # Filename of ASCII file with y-coordinates of grid cells
     'bed_file'                      : None,               # Filename of ASCII file with bed level heights of grid cells
