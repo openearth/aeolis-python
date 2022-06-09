@@ -427,7 +427,7 @@ The runup height and wave setup are computed using the Stockdon formulas (:cite:
 Their parameterization differs depending on the dynamic beach steepness expressed through the Irribaren number:
 
 .. math::
-   \xi  = \tan \beta /\sqrt {{H_0}/{L_0}} \
+   \xi  = \tan \beta /\sqrt {{H_0}/{L_0}}
 
 where :math:`{H_0}` is the significant offshore wave height, :math:`{L_0}` is the deepwater wavelength, and :math:`{\tan \beta}` is the foreshore slope.
 
@@ -445,16 +445,16 @@ The wave setup is,
 Tide- and wave-induced groundwater variations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Groundwater under sandy beaches can be considered as shallow aquifers, with only horizontal groundwater
- flow so that the pressure distribution is hydrostatic (:cite:`Baird1998`, :cite:`Brakenhoff2019`, :cite:`Nielsen1990`, :cite:`Raubenheimer1999`).
- The cross-shore flow dominates temporal variations of groundwater levels. Alongshore, groundwater table variations are typically small (:cite:`Schmutz2014`).
- Although the surface moisture model can be extended over a two-dimensional grid, the groundwater simulations are performed for 1D transects cross-shore
- to avoid numerical instabilities at the seaward boundary and reduce computational time.
+flow so that the pressure distribution is hydrostatic (:cite:`Baird1998`, :cite:`Brakenhoff2019`, :cite:`Nielsen1990`, :cite:`Raubenheimer1999`).
+The cross-shore flow dominates temporal variations of groundwater levels. Alongshore, groundwater table variations are typically small (:cite:`Schmutz2014`).
+Although the surface moisture model can be extended over a two-dimensional grid, the groundwater simulations are performed for 1D transects cross-shore
+to avoid numerical instabilities at the seaward boundary and reduce computational time.
 
 The beach aquifers is schematised as a sandy body, with saturated hydraulic conductivity, :math:`K`, and effective porosity, :math:`{n_e}`.
- The aquifer is assumed to rest on an impermeable surface, where :math:`D` is the aquifer depth. 
+The aquifer is assumed to rest on an impermeable surface, where :math:`D` is the aquifer depth. 
 The groundwater elevation relative to the mean sea level (MSL) is denoted :math:`\eta`, and the shore-perpendicular x-axis is positive landwards,
- with an arbitrary starting point. The sand is assumed to be homogenous and isotropic. In this context, isotropy implies that hydraulic conductivity
- is independent of flow direction.
+with an arbitrary starting point. The sand is assumed to be homogenous and isotropic. In this context, isotropy implies that hydraulic conductivity
+is independent of flow direction.
 
 The horizontal groundwater discharge per unit area, :math:`u`, is then governed by Darcy’s law,
 
