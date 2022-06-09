@@ -85,6 +85,8 @@ divided by the wind velocity :math:`u_z` to obtain a mass per unit
 area (per unit width):
 
 .. math::
+   :label: equilibrium-conc
+   
    c_{\mathrm{sat}} = \max \left ( 0 \quad ; \quad \alpha C \frac{\rho_{\mathrm{a}}}{g} \sqrt{\frac{d_{n}}{D_{n}}} \frac{\left ( u_z - u_{\mathrm{th}} \right )^3}{u_z} \right )
 
 in which :math:`C` [--] is an empirical constant to account for
@@ -149,6 +151,8 @@ The weighting of erosion and deposition of individual fractions is
 computed according to:
 
 .. math::
+   :label: weigh
+   
    \begin{align}
      \hat{w}_k &= \frac{w_k}{ \sum_{k=1}^{n_{\mathrm{k}}}{w_k} } \\
      \mathrm{where} \quad w_k &= (1 - \zeta) \cdot w^{\mathrm{air}}_k + (1 - \hat{S}_k) \cdot w^{\mathrm{bed}}_k
@@ -179,6 +183,8 @@ degree of saturation is therefore also influenced by the bed
 interaction parameter and defined as:
 
 .. math::
+   :label: saturation
+   
    \hat{S}_k = \min \left ( 1 \quad ; \quad (1 - \zeta) \cdot \sum_{k=1}^{n_{\mathrm{k}}} w_k^{\mathrm{air}} \right )
 
 When the effective saturation is greater than or equal to unity the
@@ -346,6 +352,8 @@ fraction in the bed surface layer :math:`w_k^{\mathrm{bed}}` according
 to:
 
 .. math::
+   :label: rough
+   
    \lambda = \frac{\sum_{k=k_0}^{n_{\mathrm{k}}}{w_k^{\mathrm{bed}}}}{\sigma}
 
 in which :math:`k_0` is the index of the smallest non-erodible
@@ -380,6 +388,8 @@ related to the breaker height (e.g. :cite:`King1951`, :cite:`Williams1971`, :cit
 directly to the local breaker height according to:
 
 .. math::
+   :label: disturbance_depth
+   
    \Delta z_{\mathrm{d}} = f_{\Delta z_{\mathrm{d}}} \cdot \min \left ( H \quad ; \quad \gamma \cdot d \right )
 
 in which the offshore wave height :math:`H` [m] is taken as the
@@ -427,6 +437,8 @@ The runup height and wave setup are computed using the Stockdon formulas (:cite:
 Their parameterization differs depending on the dynamic beach steepness expressed through the Irribaren number:
 
 .. math::
+   :label: irribaren
+   
    \xi  = \tan \beta /\sqrt {{H_0}/{L_0}}
 
 where :math:`{H_0}` is the significant offshore wave height, :math:`{L_0}` is the deepwater wavelength, and :math:`{\tan \beta}` is the foreshore slope.
@@ -434,16 +446,22 @@ where :math:`{H_0}` is the significant offshore wave height, :math:`{L_0}` is th
 For dissipative conditions, :math:`{\xi}` < 0.3, the runup, :math:`{R_2}`, is parameterized as,
 
 .. math::
+   :label: runup_dissipative
+   
    {R_2} = 0.043\sqrt {{H_0}{L_0}}
    
 and for :math:`{\xi}` > 0.3, runup is paramterized as,
 
 .. math::
+   :label: runup
+   
    {R_2} = 1.1\left( {0.35\beta \sqrt {{H_0}{L_0}}  + \frac{{\sqrt {{H_0}{L_0}\left( {0.563{\beta ^2} + 0.004} \right)} }}{2}} \right)
 
 The wave setup is,
 
 .. math::
+   :label: setup
+   
    < \eta  >  = 0.35\xi
 
 
@@ -464,11 +482,15 @@ is independent of flow direction.
 The horizontal groundwater discharge per unit area, :math:`u`, is then governed by Darcy’s law,
 
 .. math::
+   :label: gw-discharge
+   
    u =  - K\frac{{\partial \eta }}{{\partial x}}
 
 and the continuity equation (see e.g., :cite:`Nielsen2009`), 
 
 .. math::
+   :label: gw-continuity
+
    \frac{{\partial \eta }}{{\partial t}} =  - \frac{1}{{{n_e}}}\frac{\partial }{{\partial x}}((D + \eta )u)
 
 where :math:`t` is time. 
@@ -476,12 +498,16 @@ where :math:`t` is time.
 The groundwater overheight due to runup, :math:`{U_l}`, is computed by (:cite:`Kang1994`, :cite:`Nielsen1988`),
 
 .. math::
+   :label: gw-runup
+
    {U_l} = \left\{ \begin{gathered}{C_l}Kf(x)\,\,\,\,{\text{if }}{x_S} \leqslant x \leqslant {x_R} \hfill \\0,\,\,\,\,\,\,\,\,\,\,\,\,\,\,\,\,\,\,{\text{if }}x > {x_R} \hfill \\\end{gathered}  \right.
 
 where :math:`{C_l}` is an infiltration coefficient (-), and :math:`f(x)` is a function of :math:`x` ranging from 0 to 1. :math:`{x_S}` is 
 the horizontal location of the sum of the still water level and wave setup, and :math:`{x_R}` is the horizontal location of the runup limit:
 
 .. math::
+   :label: gw-runup-distribution
+
    f(x) = \left\{ \begin{gathered}
    \frac{{x - {x_s}}}{{\frac{2}{3}\left( {{x_{ru}} - {x_s}} \right)}}\,\,\,\,\,\,\,\,\,\,\,\,\,if\,{x_s} < x \leqslant {x_s} + \frac{2}{3}\left( {{x_{ru}} - {x_s}} \right)\, \hfill \\
    3 - \frac{{x - {x_s}}}{{\frac{1}{3}\left( {{x_{ru}} - {x_s}} \right)}}\,\,\,\,\,if\,{x_s} + \frac{2}{3}\left( {{x_{ru}} - {x_s}} \right)\, < x < {x_{ru}} \hfill \\ 
@@ -499,6 +525,8 @@ Soil water retention (SWR) functions describe the surface moisture due to capill
 of water from the groundwater table (:cite:`VanGenuchten1980`):
 
 .. math::
+   :label: vangenuchten
+
    \theta (h) = {\theta _r} + \frac{{{\theta _s} - {\theta _r}}}{{{{\left[ {1 + {{\left| {\alpha h} \right|}^n}} \right]}^m}}}
 
 
@@ -514,6 +542,8 @@ retention curve called a scanning curve. The drying scanning curves are scaled f
 drying curve and wetting scanning curves from the main wetting curve. The drying scanning curve is then obtained from (:cite:`Mualem1974`):
 
 .. math::
+   :label: mualem-drying
+
    {\theta ^d}({h_\Delta },h) = {\theta ^w}(h) + \frac{{\left[ {{\theta ^w}({h_\Delta }) - {\theta ^w}(h)} \right]}}{{\left[ {{\theta _s} - {\theta ^w}(h)} \right]}}\left[ {{\theta ^d}(h) - {\theta ^w}(h)} \right]
 
 where :math:`{h_\Delta}` is the groundwater table depth at the reversal on the wetting curve. 
@@ -521,6 +551,7 @@ where :math:`{h_\Delta}` is the groundwater table depth at the reversal on the w
 The wetting scanning curve is obtained from (:cite:`Mualem1974`):
 
 .. math::
+   :label: mualem-wetting
    
    {\theta ^w}({h_\Delta },h) = {\theta ^w}(h) + \frac{{\left[ {{\theta _s} - {\theta ^w}(h)} \right]}}{{\left[ {{\theta _s} - {\theta ^w}({h_\Delta })} \right]}}\left[ {{\theta ^d}({h_\Delta }) - {\theta ^w}({h_\Delta })} \right]
 
@@ -545,6 +576,8 @@ shows an exponential decay. In order to capture this behavior the
 volumetric water content is implemented according to:
 
 .. math::
+   :label: infiltration
+
    \frac{{d\theta }}{{dt}} = \left( {\theta  - {\theta _{fc}}} \right)\left( {{e^{ - \ln (2)\frac{{dt}}{{{T_{dry}}}}}}} \right)
 
 An alternative formulation is used for simulations that does not account for ground water and SWR processes,
@@ -572,6 +605,8 @@ Precipitation and evaporation
 A water balance approach accounts for the effect of precipitation and evaporation,
 
 .. math::
+   :label: precipitation
+
    \theta _t^{} = {\theta _{t - 1}} + \frac{{\left( {{P_t} - {E_t}} \right)\,}}{{\Delta z}}\,\Delta t\,\,\,\,\,\,\,{\theta _r} \leqslant \,\theta _t^{} \leqslant {\theta _s}
 
 where subscript :math:`t` denotes the timestep, :math:`P` is the precipitation, :math:`E` is the evaporation, :math:`\Delta z` is the thickness of the surface layer, and :math:`\Delta t` is the length of the time step.
@@ -625,7 +660,9 @@ The initial shear velocity threshold :math:`u_{\mathrm{* th, 0}}` [m/s] is
 computed based on the grain size following :cite:`Bagnold1937b`:
 
 .. math::
-  u_{\mathrm{* th, 0}} = A \sqrt{ \frac{\rho_{\mathrm{p}} - \rho_{\mathrm{a}}}{\rho_{\mathrm{a}}} \cdot g \cdot d_{\mathrm{n}}}
+   :label: shear
+
+   u_{\mathrm{* th, 0}} = A \sqrt{ \frac{\rho_{\mathrm{p}} - \rho_{\mathrm{a}}}{\rho_{\mathrm{a}}} \cdot g \cdot d_{\mathrm{n}}}
 
 where :math:`A` [-] is an empirical constant, :math:`\rho_{\mathrm{p}}`
 [:math:`\mathrm{kg/m^3}`] is the grain density, :math:`\rho_{\mathrm{a}}`
@@ -650,6 +687,8 @@ the dry mass. The geotechnical mass content relates to the volumetric
 water content :math:`p_{\mathrm{V}}` [-] according to:
 
 .. math::
+   :label: vol-water
+
   p_{\mathrm{g}} = \frac{p_{\mathrm{V}} \cdot \rho_{\mathrm{w}}}{\rho_{\mathrm{p}} \cdot (1 - p)}
 
 where :math:`\rho_{\mathrm{w}}` [:math:`\mathrm{kg/m^3}`] and
@@ -668,12 +707,16 @@ The shear velocity threshold is updated based on the presence of
 roughness elements following :cite:`Raupach1993`:
 
 .. math::
+   :label: shear-rough
+
   f_{u_{\mathrm{* th},R}} = \sqrt{(1 - m \cdot \sum_{k=k_0}^{n_k}{\hat{w}_k^{\mathrm{bed}}})
     (1 + \frac{m \beta}{\sigma} \cdot \sum_{k=k_0}^{n_k}{\hat{w}_k^{\mathrm{bed}}})}
 
 by assuming:
 
 .. math::
+   :label: lambda-rough
+   
   \lambda = \frac{\sum_{k=k_0}^{n_k}{\hat{w}_k^{\mathrm{bed}}}}{\sigma}
 
 where :math:`f_{u_{\mathrm{* th},R}}` [-] is a factor in Equation
@@ -689,7 +732,9 @@ The shear velocity threshold is updated based on salt content
 following :cite:`Nickling1981`:
 
 .. math::
-  f_{u_{\mathrm{* th}},S} = 1.03 \cdot \exp(0.1027 \cdot p_{\mathrm{s}})
+   :label: salt-rough
+   
+   f_{u_{\mathrm{* th}},S} = 1.03 \cdot \exp(0.1027 \cdot p_{\mathrm{s}})
 
 where :math:`f_{u_{\mathrm{* th},S}}` [-] is a factor in Equation
 :eq:`apx-shearvelocity` and :math:`p_{\mathrm{s}}` [-] is the salt
