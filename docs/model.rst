@@ -529,7 +529,7 @@ where :math:`{h_\Delta}` is the groundwater table depth at the reversal on the d
 Infiltration
 ^^^^^^^^^^^^
 Infiltration is accounted for by assuming that excess water infiltrates until the moisture content reaches 
-field capacity, :math:`{\theta_fc}. The moisture content at field capacity is the maximum amount of water 
+field capacity, :math:`{\theta_fc}`. The moisture content at field capacity is the maximum amount of water 
 that the unsaturated zone of soil can hold against the pull of gravity. For sandy soils, 
 the matric potential at this soil moisture condition is around - 1/10 bar. In equilibrium, 
 this potential would be exerted on the soil capillaries at the soil surface when the water 
