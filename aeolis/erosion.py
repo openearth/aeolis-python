@@ -44,6 +44,9 @@ from aeolis.utils import *
 logger = logging.getLogger(__name__)
 
 def run_ph12(s, p, t):
+	''' Calculates bed level change due to dune erosion accoording to Palmsten and Holman (2012)
+	
+	'''
 
     Ho = np.interp(t, p['wave_file'][:, 0], p['wave_file'][:, 1])
     Tp = np.interp(t, p['wave_file'][:, 0], p['wave_file'][:, 2])
