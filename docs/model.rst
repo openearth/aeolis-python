@@ -504,11 +504,11 @@ of water from the groundwater table (:cite:`VanGenuchten1980`):
 
 where :math:`h` is the groundwater table depth, :math:`\alpha` and :math:`n` are fitting parameters 
 related to the air entry suction and the pore size distribution. The parameter :math:`m` is commonly 
-parameterised as :math:`m = 1 - 1/n`.  The resulting surface moisture is computed for both drying and 
-wetting conditions, i.e., including the 
-effect of hysteresis.
+parameterised as :math:`m = 1 - 1/n`.  
 
-The moisture contents computed with drying and wetting SWR functions are denoted :math:`{\theta ^d}(h)}` and {\theta ^w}(h)}, respectively. 
+The resulting surface moisture is computed for both drying and 
+wetting conditions, i.e., including the 
+effect of hysteresis. The moisture contents computed with drying and wetting SWR functions are denoted :math:`{\theta ^d}(h)` and :math:`{\theta ^w}(h)`, respectively. 
 When moving between wetting and drying conditions, the soil moisture content follows an intermediate 
 retention curve called a scanning curve. The drying scanning curves are scaled from the main 
 drying curve and wetting scanning curves from the main wetting curve. The drying scanning curve is then obtained from (:cite:`Mualem1974`):
