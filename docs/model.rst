@@ -537,7 +537,7 @@ table is about 100 cm below the soil surface, :math:`{\theta _{fc}} = {\theta ^d
 
 Infiltration is represented by an
 exponential decay function that is governed by a drying time scale
-:math:`T_{\mathrm{dry}}`.Exploratory model runs of the unsaturated soil with the HYDRUS1D
+:math:`T_{\mathrm{dry}}`. Exploratory model runs of the unsaturated soil with the HYDRUS1D
 (:cite:`Simunek1998`) hydrology model show that the increase of the
 volumetric water content to saturation is almost instantaneous with
 rising tide. The drying of the beach surface through infiltration
@@ -572,9 +572,9 @@ Precipitation and evaporation
 A water balance approach accounts for the effect of precipitation and evaporation,
 
 .. math::
-   \theta _t^{} = {\theta _{t - 1}} + \frac{{\left( {{P_t} - {E_t}} \right)\,}}{{\Delta z}}\,\Delta t\,\,\,\,\,\,{\theta _r} \leqslant \,\theta _{t - 1}^{} \leqslant {\theta _{fc}};\,{\theta _r} \leqslant \,\theta _t^{} \leqslant {\theta _s}
+   \theta _t^{} = {\theta _{t - 1}} + \frac{{\left( {{P_t} - {E_t}} \right)\,}}{{\Delta z}}\,\Delta t\,\,\,\,\,\,\,{\theta _r} \leqslant \,\theta _t^{} \leqslant {\theta _s}
 
-where subscript :math:`t` denotes the timestep, :math:`P` is the precipitation, :math:`E` is the evaporation, :math:`\Delta z}` is the thickness of the surface layer, and :math:`\Delta t}` is the length of the time step.
+where subscript :math:`t` denotes the timestep, :math:`P` is the precipitation, :math:`E` is the evaporation, :math:`\Delta z` is the thickness of the surface layer, and :math:`\Delta t` is the length of the time step.
 
 Evaporation is simulated using an adapted version
 of the Penman-Monteith equation (:cite:`Shuttleworth1993`) that is
