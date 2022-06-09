@@ -348,6 +348,7 @@ for :math:`l \neq 0`. The vectors :math:`\vec{c}_{j,k}` and :math:`\vec{y}_{j,k}
 read:
 
 .. math::
+  :label: c-array
 
   \begin{array}{rclrcl}
     \vec{c}_{j,k} &=& \left[ 
@@ -388,12 +389,16 @@ distribution in the bed and the air. The sediment availability
 constraint is checked after each solve:
 
 .. math::
+  :label: solve
+
      m_{\mathrm{a}} \geq \frac{\hat{w}^{n+1}_{i,j,k} c^{n+1}_{\mathrm{sat},i,j,k} - c^{n+1}_{i,j,k}}{T} \Delta t^n
 
 If the constraint if violated, a new estimate for the weights
 is back-calculated following:
 
 .. math::
+  :label: solve-weights
+
   \hat{w}^{n+1}_{i,j,k} = \frac{ c^{n+1}_{i,j,k} + m_{\mathrm{a}} \frac{T}{\Delta t^n} }{c^{n+1}_{\mathrm{sat},i,j,k}}
 
 The system is solved again using the new weights. This
@@ -439,11 +444,14 @@ The Boussinesq equation is solved numerically with a central finite difference
 method in space and a fourth-order Runge-Kutta integration technique in time:
 
 .. math::
-       f(\eta ) = \frac{K}{{{n_e}}}\left[ {D\underbrace {\frac{{{\partial ^2}\eta }}{{\partial {x^2}}}}_a + \underbrace {\frac{\partial }{{\partial x}}\underbrace {\left\{ {\eta \frac{{\partial \eta }}{{\partial x}}} \right\}}_b}_c} \right]
+  :label: solve-boussinesq
+
+       f(\eta ) = \frac{K}{{{n_e}}}\left[ {D\underbrace {\frac{{{\partial ^2}\eta }}{{\partial {x^2}}}}_a + \underbrace {\frac{\partial }{{\partial x}}\underbrace {\left\{ {\eta \frac{{\partial \eta }}{{\partial x}}} \right\}}_b}_c} \right
 
 The Runge-Kutta time-stepping, where :math:`\Delta t` is the length of the timestep, is defined as,
 
 .. math::
+  :label: runge-kutta
       \begin{gathered}
   \eta _i^{t + 1} = \eta _i^t + \frac{{\Delta t}}{6}\left( {{f_1} + 2{f_2} + 2{f_3} + {f_4}} \right) \hfill \\
   {f_1} = f(\eta _i^t) \hfill \\
@@ -452,9 +460,10 @@ The Runge-Kutta time-stepping, where :math:`\Delta t` is the length of the times
   {f_4} = f\left( {\eta _i^t + \Delta t{f_3}} \right) \hfill \\ 
 \end{gathered}
 
-where, :math:`i` is the grid cell in x-direction and :math:`t` is the timestep. The central difference solution to :math:f(\eta ) is obtained through discretisation of the Boussinesq equation,
+where, :math:`i` is the grid cell in x-direction and :math:`t` is the timestep. The central difference solution to :math:`f(\eta)` is obtained through discretisation of the Boussinesq equation,
 
 .. math::
+  :label: a-solve
    {a_i} = \frac{{\eta _{i + 1}^{} - 2\eta _i^{} + \eta _{i - 1}^{}}}{{{{(\Delta x)}^2}}}
 
 .. math::
