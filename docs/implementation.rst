@@ -452,6 +452,7 @@ The Runge-Kutta time-stepping, where :math:`\Delta t` is the length of the times
 
 .. math::
   :label: runge-kutta
+  
       \begin{gathered}
   \eta _i^{t + 1} = \eta _i^t + \frac{{\Delta t}}{6}\left( {{f_1} + 2{f_2} + 2{f_3} + {f_4}} \right) \hfill \\
   {f_1} = f(\eta _i^t) \hfill \\
@@ -464,6 +465,7 @@ where, :math:`i` is the grid cell in x-direction and :math:`t` is the timestep. 
 
 .. math::
   :label: a-solve
+  
    {a_i} = \frac{{\eta _{i + 1}^{} - 2\eta _i^{} + \eta _{i - 1}^{}}}{{{{(\Delta x)}^2}}}
 
 .. math::
