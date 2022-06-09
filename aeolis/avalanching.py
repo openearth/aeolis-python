@@ -53,7 +53,9 @@ def angele_of_repose(s,p):
     Returns
     -------
     dict
-        Spatial grids'''
+        Spatial grids
+        
+    '''
         
     # comment Lisa: dependence on moisture content is not yet implemented 
     # Can we do something with theta dependent on vegetation cover (larger rhoveg = larger theta?)    
@@ -86,6 +88,7 @@ def avalanche(s, p):
     -------
     dict
         Spatial grids
+
     '''
 
     if p['process_avalanche']:

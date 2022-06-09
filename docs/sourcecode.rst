@@ -78,9 +78,14 @@ Sediment transport
 .. automodule:: transport
                 :members:
 
+Avalanching
+^^^^^^^^^^^
+
+.. automodule:: avalanching
+                :members:
 
 Marine Erosion
-^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^
 
 .. automodule:: erosion
                 :members:
