@@ -487,7 +487,7 @@ the horizontal location of the sum of the still water level and wave setup, and 
    3 - \frac{{x - {x_s}}}{{\frac{1}{3}\left( {{x_{ru}} - {x_s}} \right)}}\,\,\,\,\,if\,{x_s} + \frac{2}{3}\left( {{x_{ru}} - {x_s}} \right)\, < x < {x_{ru}} \hfill \\ 
    \end{gathered}  \right.
 
-Substitution of :math: `u` in the continuity equation with the addition of :math:`{U_l}/{n_e}` gives the nonlinear Boussinesq equation:
+Substitution of :math:`u` in the continuity equation with the addition of :math:`{U_l}/{n_e}` gives the nonlinear Boussinesq equation:
 
 .. math::
    \frac{{\partial \eta }}{{\partial t}} = \frac{K}{{{n_e}}}\frac{\partial }{{\partial x}}\left( {(D + \eta )\frac{{\partial \eta }}{{\partial x}}} \right) + \frac{{{U_l}}}{{{n_e}}}
