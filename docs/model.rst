@@ -392,7 +392,7 @@ Simulation of surface moisture
 ------------------------------
 
 Wave runup, capillary rise from the beach groundwater, and precipitation periodically wet the intertidal beach
-temporally increasing the shear velocity threshold (Figure
+temporally increasing the shear velocity threshold (
 :numref:`fig-moisture-processes`). Infiltration and
 evaporation subsequently dry the beach.
 
@@ -404,13 +404,13 @@ evaporation subsequently dry the beach.
 
    Illustration of processes influencing the volumetric moisture content :math:`\theta` at the beach surface.
 
-The structure of the surface moisture module and included processes are schematized in Figure :numref:`fig-moisture-scheme`. 
+The structure of the surface moisture module and included processes are schematized in :numref:`fig-moisture-scheme`. 
 The resulting surface moisture is obtained by selecting the largest of the moisture contents computed 
 with the water balance approach (right column) and due to capillary rise from the groundwater table (left column). 
 The method is based on the assumption that the flow of soil water is small compared to the flow of groundwater 
 and that the beach groundwater dynamics primarily is controlled by the water level and wave action at 
 the seaward boundary (:cite:`Raubenheimer1999`, :cite:`Schmutz2014`). Thus, there is no feedback between the processes 
-in the right column of Figure 2 and the groundwater dynamics described in the left column.
+in the right column of :numref:`fig-moisture-scheme` and the groundwater dynamics described in the left column.
 
 .. _fig-moisture-scheme:
 
@@ -432,6 +432,11 @@ Their parameterization differs depending on the dynamic beach steepness expresse
 where :math:`{H_0}` is the significant offshore wave height, :math:`{L_0}` is the deepwater wavelength, and :math:`{\tan \beta}` is the foreshore slope.
 
 For dissipative conditions, :math:`{\xi}` < 0.3, the runup, :math:`{R_2}`, is parameterized as,
+
+.. math::
+   {R_2} = 0.043\sqrt {{H_0}{L_0}}
+   
+and for :math:`{\xi}` > 0.3, runup is paramterized as,
 
 .. math::
    {R_2} = 1.1\left( {0.35\beta \sqrt {{H_0}{L_0}}  + \frac{{\sqrt {{H_0}{L_0}\left( {0.563{\beta ^2} + 0.004} \right)} }}{2}} \right)
