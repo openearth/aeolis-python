@@ -233,7 +233,8 @@ class AeoLiS(IBmi):
 
         # Create interpretation information
         if self.p['visualization']:
-            aeolis.inout.interpretation_visualization(self.s, self.p)
+            aeolis.inout.visualize_grid(self.s, self.p)
+            aeolis.inout.visualize_timeseries(self.p, self.t)
 
 
     def update(self, dt=-1):
@@ -345,6 +346,10 @@ class AeoLiS(IBmi):
         
         # Rotate gridparams back to original grid orientation
         self.s = self.grid_rotate(-self.p['alpha'])
+
+        # Visualization of the model results after the first time step as a check for interpretation
+        if self.c['time'] == 1 and self.p['visualization']:
+            aeolis.inout.visualize_spatial(self.s, self.p)
 
 
     def finalize(self):

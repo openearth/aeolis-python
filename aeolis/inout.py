@@ -32,6 +32,7 @@ import re
 import time
 import shutil
 import logging
+from webbrowser import UnixBrowser
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -315,29 +316,30 @@ def get_backupfilename(fname):
             
 
         
-def interpretation_visualization(s, p):
-    '''Create figures and tables for the user to check whether the input is correctly interpreted'''
+def visualize_grid(s, p):
+    '''Create figures and tables for the user to check whether the grid-input is correctly interpreted'''
     
-    # Grid definition + boundaries + wind direction at t=0 + index / sizes + alpha
+    # Read the x,y,z dimensions
     x = s['x']
     y = s['y']
     zb = s['zb']
 
-    uws = s['uws']
-    print(uws[0])
-
+    # Read the angle of the rotated grid and avoid negative values
     alpha = p['alpha']
     if alpha < 0.:
         alpha += 360.
 
+    # Determine the maximum dimensions in x- and y-direction
     xlen = np.max(x)-np.min(x)
     ylen = np.max(y)-np.min(y)
 
+    # Compute the coordinates for the arc of the angle alpha
     arc_angles = np.linspace(270., 270. + alpha, int(alpha))
     radius = np.minimum(xlen, ylen) * 0.05
     arc_x = x[0,0] + radius * np.cos(np.deg2rad(arc_angles))
     arc_y = y[0,0] + radius * np.sin(np.deg2rad(arc_angles))
     
+    # Compute coordinates of labels to indicate boundary types
     x_offshore = np.mean([x[0,0], x[-1,0]])
     y_offshore = np.mean([y[0,0], y[-1,0]])
     x_onshore = np.mean([x[0,-1], x[-1,-1]])
@@ -347,59 +349,188 @@ def interpretation_visualization(s, p):
     x_lateralB = np.mean([x[-1,0], x[-1,-1]])
     y_lateralB = np.mean([y[-1,0], y[-1,-1]])
 
+    # Create plots
     fig, ax = plt.subplots()
     pc = ax.pcolormesh(x,y,zb)
 
+    # Plot all the texts
     plottxts = []
     plottxts.append(ax.text(x_offshore, y_offshore, 'Offshore: ' + p['boundary_offshore'], rotation=alpha + 90, ha = 'center', va='center'))
     plottxts.append(ax.text(x_onshore, y_onshore, 'Onshore: ' + p['boundary_onshore'], rotation=alpha + 270, ha = 'center', va='center'))
     plottxts.append(ax.text(x_lateralA, y_lateralA, 'Lateral: ' + p['boundary_lateral'], rotation=alpha + 0, ha = 'center', va='center'))
     plottxts.append(ax.text(x_lateralB, y_lateralB, 'Lateral: ' + p['boundary_lateral'], rotation=alpha + 180, ha = 'center', va='center'))
-
     plottxts.append(ax.text(x[0,0], y[0,0], '(0,0)', ha = 'right', va='top'))
     plottxts.append(ax.text(x[0,-1], y[0,-1], '(0,' + str(len(x[0,:])-1) + ')', ha = 'right', va='top'))
     plottxts.append(ax.text(x[-1,0], y[-1,0], '(' + str(len(x[:,0])-1) + ',0)', ha = 'right', va='top'))
     plottxts.append(ax.text(x[-1,-1], y[-1,-1], '(' + str(len(x[:,0])-1) + ',' + str(len(x[0,:])-1) + ')', ha = 'right', va='top'))
-
     plottxts.append(ax.text(x[0,0], y[0,0]-0.1*ylen, r'$\alpha$ :' + str(int(alpha)) + r'$^\circ$', ha='center', va='center'))
 
+    # Set boxes around the texts
     for txt in plottxts:
         txt.set_bbox(dict(facecolor='white', alpha=0.7, edgecolor='black'))
 
+    # Plot dots to indicate the corner-points
     ax.plot(x[0,0], y[0,0], 'ro')
     ax.plot(x[0,-1], y[0,-1], 'ro')
     ax.plot(x[-1,0], y[-1,0], 'ro')
     ax.plot(x[-1,-1], y[-1,-1], 'ro')
     
+    # Plot the arc to indicate angle
     ax.plot(arc_x, arc_y, color = 'red')
     ax.plot([x[0,0], x[0,0]], [y[0,0],y[0,0]-0.08*ylen], '--', color = 'red', linewidth=3)
     ax.plot([x[0,0], arc_x[-1]], [y[0,0], arc_y[-1]], color = 'red', linewidth=3)
     
+    # Figure lay-out settings
     fig.colorbar(pc, ax=ax)
     ax.axis('equal')
     ax.set_xlim([np.min(x) - 0.15*xlen, np.max(x) + 0.15*xlen])
     ax.set_ylim([np.min(y) - 0.15*ylen, np.max(y) + 0.15*ylen])
+    height = 8.26772 # A4 width
+    width = 11.6929 # A4 height
+    fig.set_size_inches(width, height)
+    plt.tight_layout()
 
-    # Draw arc for angle
-
-
-    plt.show()
-    print('test')
+    # Saving and plotting figure
+    fig.savefig('figure_grid_initialization.png', dpi=200)
+    plt.close()
 
 
     # Spatial values and masks
     # Bed level
     # Ne level
     # Vegetation
+    # uws uwn (vectors)
+    # ustars ustarn (vectors)
+    # taus taun (vectors)
     # Threshold mask
     # Tide mask
-    # Wave mask
+    # Wave mas
 
-    # Timeseries
-    # Wind
-    # Tide
-    # Waves
+    return 
 
-    # Grainsizes
+def visualize_timeseries(p, t):
+    '''Create figures and tables for the user to check whether the timeseries-input is correctly interpreted'''
+
+    # Start and stop times
+    tstart = p['tstart']
+    tstop = p['tstop']
+
+    # Read the user input (wind)
+    uw_t = p['wind_file'][:,0]
+    uw_s = p['wind_file'][:,1]
+    uw_d = p['wind_file'][:,2]
+
+    # Read the user input (waves)
+    w_t = p['wave_file'][:,0]
+    w_Hs = p['wave_file'][:,1]
+    w_Tp = p['wave_file'][:,2]
+
+    # Read the user input (tide)
+    T_t = p['tide_file'][:,0]
+    T_zs = p['tide_file'][:,1]
+
+    # Create plots
+    fig, axs = plt.subplots(5, 1)
+
+    # Plotting
+    axs[0].plot(uw_t, uw_s, 'k')
+    axs[1].plot(uw_t, uw_d, 'k')
+    axs[2].plot(w_t, w_Hs, 'k')
+    axs[3].plot(w_t, w_Tp, 'k')
+    axs[4].plot(T_t, T_zs, 'k')
+
+    # Assiging titles
+    axs[0].set_title('Wind velocity at height z, uw (m/s)')
+    axs[1].set_title('Wind direction, udir (deg)')
+    axs[2].set_title('Wave height, Hs (m)')
+    axs[3].set_title('Wave period, Tp (m)')
+    axs[4].set_title('Water level, zs (m)')
+
+    for ax in axs:
+        ax.set_xlim([tstart, tstop])
+        ax.set_xlabel('Time since refdate (s) from tstart (=' + str(tstart) + ') to tstop (=' + str(tstop) + ')')
+
+    width = 8.26772 # A4 width
+    height = 11.6929 # A4 height
+    fig.set_size_inches(width, height)
+    plt.tight_layout()
+
+    # Saving and plotting figure
+    fig.savefig('figure_timeseries_initialization.png', dpi=200)
+    plt.close()
+
+
+def visualize_spatial(s, p):
+    '''Create figures and tables for the user to check whether the input is correctly interpreted'''
+    
+    # Read the x,y dimensions
+    x = s['x']
+    y = s['y']
+    
+    # Reading masks and if constant, fill 2D-array
+    uth_mask = np.zeros(np.shape(x)) * s['threshold_mask']
+    tide_mask = np.zeros(np.shape(x)) * s['tide_mask']
+    wave_mask = np.zeros(np.shape(x)) * s['wave_mask']
+
+    # Determine the maximum dimensions in x- and y-direction
+    xlen = np.max(x)-np.min(x)
+    ylen = np.max(y)-np.min(y)
+
+    # Creating values
+    fig, axs = plt.subplots(4, 3)
+    pcs = [[None for _ in range(3)] for _ in range(4)]
+
+    # Plotting colormeshes
+    pcs[0][0] = axs[0,0].pcolormesh(x, y, s['zb'], cmap='viridis')
+    pcs[0][1] = axs[0,1].pcolormesh(x, y, s['zne'], cmap='viridis')
+    pcs[0][2] = axs[0,2].pcolormesh(x, y, s['rhoveg'], cmap='Greens', clim= [0, 1])
+    pcs[1][0] = axs[1,0].pcolormesh(x, y, s['uw'], cmap='plasma')
+    pcs[1][1] = axs[1,1].pcolormesh(x, y, s['ustar'], cmap='plasma')
+    pcs[1][2] = axs[1,2].pcolormesh(x, y, s['tau'], cmap='plasma')
+    pcs[2][0] = axs[2,0].pcolormesh(x, y, s['moist'], cmap='Blues', clim= [0, 0.4])
+    pcs[2][1] = axs[2,1].pcolormesh(x, y, s['gw'], cmap='viridis')
+    pcs[2][2] = axs[2,2].pcolormesh(x, y, s['uth'][:,:,0], cmap='plasma')
+    pcs[3][0] = axs[3,0].pcolormesh(x, y, uth_mask, cmap='binary', clim= [0, 1])
+    pcs[3][1] = axs[3,1].pcolormesh(x, y, tide_mask, cmap='binary', clim= [0, 1])
+    pcs[3][2] = axs[3,2].pcolormesh(x, y, wave_mask, cmap='binary', clim= [0, 1])
+
+    # Quiver for vectors
+    skip = 10
+    axs[1,0].quiver(x[::skip, ::skip], y[::skip, ::skip], s['uws'][::skip, ::skip], s['uwn'][::skip, ::skip])
+    axs[1,1].quiver(x[::skip, ::skip], y[::skip, ::skip], s['ustars'][::skip, ::skip], s['ustarn'][::skip, ::skip])
+    axs[1,2].quiver(x[::skip, ::skip], y[::skip, ::skip], s['taus'][::skip, ::skip], s['taun'][::skip, ::skip])
+
+    # Adding titles to the plots
+    axs[0,0].set_title('Bed level, zb (m)')
+    axs[0,1].set_title('Non-erodible layer, zne (m)')
+    axs[0,2].set_title('Vegetation density, rhoveg (-)')
+    axs[1,0].set_title('Wind velocity, uw (m/s)')
+    axs[1,1].set_title('Shear velocity, ustar (m/s)')
+    axs[1,2].set_title('Shear stress, tau (N/m2)')
+    axs[2,0].set_title('Soil moisture content, (-)')
+    axs[2,1].set_title('Ground water level, gw (m)')
+    axs[2,2].set_title('Velocity threshold (0th fraction), uth (m/s)')
+    axs[3,0].set_title('Threshold mask (-)')
+    axs[3,1].set_title('Tide mask (-)')
+    axs[3,2].set_title('Wave mask (-)')
+
+    # Formatting the plot
+    for irow, ax_rows in enumerate(axs):
+        for icol, ax in enumerate(ax_rows):
+        # Figure lay-out settings
+            fig.colorbar(pcs[irow][icol], ax=ax)
+            ax.axis('equal')
+            ax.set_xlim([np.min(x) - 0.15*xlen, np.max(x) + 0.15*xlen])
+            ax.set_ylim([np.min(y) - 0.15*ylen, np.max(y) + 0.15*ylen])
+            ax.axes.xaxis.set_visible(False)
+            ax.axes.yaxis.set_visible(False)
+            width = 8.26772*2 # A4 width
+            height = 11.6929*2 # A4 height
+            fig.set_size_inches(width, height)
+            plt.tight_layout()
+    
+    # Saving and plotting figure
+    fig.savefig('figure_params_initialization.png', dpi=300)
+    plt.close()
 
     return 
