@@ -332,6 +332,7 @@ def visualize_grid(s, p):
     # Determine the maximum dimensions in x- and y-direction
     xlen = np.max(x)-np.min(x)
     ylen = np.max(y)-np.min(y)
+    xylen = np.maximum(xlen, ylen)
 
     # Compute the coordinates for the arc of the angle alpha
     arc_angles = np.linspace(270., 270. + alpha, 1+int(alpha))
@@ -351,7 +352,11 @@ def visualize_grid(s, p):
 
     # Create plots
     fig, ax = plt.subplots()
-    pc = ax.pcolormesh(x,y,zb)
+
+    if p['ny'] > 0:
+        pc = ax.pcolormesh(x,y,zb)
+    else:
+        pc = ax.scatter(x,y,c=zb)
 
     # Plot all the texts
     plottxts = []
@@ -383,8 +388,8 @@ def visualize_grid(s, p):
     # Figure lay-out settings
     fig.colorbar(pc, ax=ax)
     ax.axis('equal')
-    ax.set_xlim([np.min(x) - 0.15*xlen, np.max(x) + 0.15*xlen])
-    ax.set_ylim([np.min(y) - 0.15*ylen, np.max(y) + 0.15*ylen])
+    ax.set_xlim([np.min(x) - 0.15*xylen, np.max(x) + 0.15*xylen])
+    ax.set_ylim([np.min(y) - 0.15*xylen, np.max(y) + 0.15*xylen])
     height = 8.26772 # A4 width
     width = 11.6929 # A4 height
     fig.set_size_inches(width, height)
@@ -393,18 +398,6 @@ def visualize_grid(s, p):
     # Saving and plotting figure
     fig.savefig('figure_grid_initialization.png', dpi=200)
     plt.close()
-
-
-    # Spatial values and masks
-    # Bed level
-    # Ne level
-    # Vegetation
-    # uws uwn (vectors)
-    # ustars ustarn (vectors)
-    # taus taun (vectors)
-    # Threshold mask
-    # Tide mask
-    # Wave mas
 
     return 
 
@@ -481,18 +474,32 @@ def visualize_spatial(s, p):
     pcs = [[None for _ in range(3)] for _ in range(4)]
 
     # Plotting colormeshes
-    pcs[0][0] = axs[0,0].pcolormesh(x, y, s['zb'], cmap='viridis')
-    pcs[0][1] = axs[0,1].pcolormesh(x, y, s['zne'], cmap='viridis')
-    pcs[0][2] = axs[0,2].pcolormesh(x, y, s['rhoveg'], cmap='Greens', clim= [0, 1])
-    pcs[1][0] = axs[1,0].pcolormesh(x, y, s['uw'], cmap='plasma')
-    pcs[1][1] = axs[1,1].pcolormesh(x, y, s['ustar'], cmap='plasma')
-    pcs[1][2] = axs[1,2].pcolormesh(x, y, s['tau'], cmap='plasma')
-    pcs[2][0] = axs[2,0].pcolormesh(x, y, s['moist'], cmap='Blues', clim= [0, 0.4])
-    pcs[2][1] = axs[2,1].pcolormesh(x, y, s['gw'], cmap='viridis')
-    pcs[2][2] = axs[2,2].pcolormesh(x, y, s['uth'][:,:,0], cmap='plasma')
-    pcs[3][0] = axs[3,0].pcolormesh(x, y, uth_mask, cmap='binary', clim= [0, 1])
-    pcs[3][1] = axs[3,1].pcolormesh(x, y, tide_mask, cmap='binary', clim= [0, 1])
-    pcs[3][2] = axs[3,2].pcolormesh(x, y, wave_mask, cmap='binary', clim= [0, 1])
+    if p['ny'] > 0:
+        pcs[0][0] = axs[0,0].pcolormesh(x, y, s['zb'], cmap='viridis')
+        pcs[0][1] = axs[0,1].pcolormesh(x, y, s['zne'], cmap='viridis')
+        pcs[0][2] = axs[0,2].pcolormesh(x, y, s['rhoveg'], cmap='Greens', clim= [0, 1])
+        pcs[1][0] = axs[1,0].pcolormesh(x, y, s['uw'], cmap='plasma')
+        pcs[1][1] = axs[1,1].pcolormesh(x, y, s['ustar'], cmap='plasma')
+        pcs[1][2] = axs[1,2].pcolormesh(x, y, s['tau'], cmap='plasma')
+        pcs[2][0] = axs[2,0].pcolormesh(x, y, s['moist'], cmap='Blues', clim= [0, 0.4])
+        pcs[2][1] = axs[2,1].pcolormesh(x, y, s['gw'], cmap='viridis')
+        pcs[2][2] = axs[2,2].pcolormesh(x, y, s['uth'][:,:,0], cmap='plasma')
+        pcs[3][0] = axs[3,0].pcolormesh(x, y, uth_mask, cmap='binary', clim= [0, 1])
+        pcs[3][1] = axs[3,1].pcolormesh(x, y, tide_mask, cmap='binary', clim= [0, 1])
+        pcs[3][2] = axs[3,2].pcolormesh(x, y, wave_mask, cmap='binary', clim= [0, 1])
+    else:
+        pcs[0][0] = axs[0,0].scatter(x, y, c=s['zb'], cmap='viridis')
+        pcs[0][1] = axs[0,1].scatter(x, y, c=s['zne'], cmap='viridis')
+        pcs[0][2] = axs[0,2].scatter(x, y, c=s['rhoveg'], cmap='Greens', clim= [0, 1])
+        pcs[1][0] = axs[1,0].scatter(x, y, c=s['uw'], cmap='plasma')
+        pcs[1][1] = axs[1,1].scatter(x, y, c=s['ustar'], cmap='plasma')
+        pcs[1][2] = axs[1,2].scatter(x, y, c=s['tau'], cmap='plasma')
+        pcs[2][0] = axs[2,0].scatter(x, y, c=s['moist'], cmap='Blues', clim= [0, 0.4])
+        pcs[2][1] = axs[2,1].scatter(x, y, c=s['gw'], cmap='viridis')
+        pcs[2][2] = axs[2,2].scatter(x, y, c=s['uth'][:,:,0], cmap='plasma')
+        pcs[3][0] = axs[3,0].scatter(x, y, c=uth_mask, cmap='binary', clim= [0, 1])
+        pcs[3][1] = axs[3,1].scatter(x, y, c=tide_mask, cmap='binary', clim= [0, 1])
+        pcs[3][2] = axs[3,2].scatter(x, y, c=wave_mask, cmap='binary', clim= [0, 1])
 
     # Quiver for vectors
     skip = 10
@@ -520,8 +527,9 @@ def visualize_spatial(s, p):
         # Figure lay-out settings
             fig.colorbar(pcs[irow][icol], ax=ax)
             ax.axis('equal')
-            ax.set_xlim([np.min(x) - 0.15*xlen, np.max(x) + 0.15*xlen])
-            ax.set_ylim([np.min(y) - 0.15*ylen, np.max(y) + 0.15*ylen])
+            xylen = np.maximum(xlen, ylen)
+            ax.set_xlim([np.min(x) - 0.15*xylen, np.max(x) + 0.15*xylen])
+            ax.set_ylim([np.min(y) - 0.15*xylen, np.max(y) + 0.15*xylen])
             ax.axes.xaxis.set_visible(False)
             ax.axes.yaxis.set_visible(False)
             width = 8.26772*2 # A4 width
