@@ -39,7 +39,7 @@ from matplotlib import pyplot as plt
 # package modules
 from aeolis.utils import *
 from aeolis.constants import *
-from regex import S
+# from regex import S
 
 # initialize logger
 logger = logging.getLogger(__name__)
