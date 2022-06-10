@@ -81,8 +81,8 @@ def initialize(s, p):
     if isinstance(p['grain_dist'], str):
             logger.log_and_raise('Grain size file not recognized as array, check file path and whether all values have been filled in.', exc=ValueError) 
 
-    if p['bedcomp_file'] is None and p['grain_dist'].ndim == 1 and p['grain_dist'].dtype == 'float64': 
-        # Unclear why float is necessary. Causes eror when grain_dist is filled in as 1 instead of 1.0. Could possibly be removed.
+    if p['bedcomp_file'] is None and p['grain_dist'].ndim == 1 and p['grain_dist'].dtype == 'float64' or p['grain_dist'].dtype == 'int': 
+        # Both float and int are included as options for the grain dist to make sure there is no error when grain_dist is filled in as 1 instead of 1.0. 
         for i in range(nl):
             gs = makeiterable(p['grain_dist'])
             gs = gs / np.sum(gs)
