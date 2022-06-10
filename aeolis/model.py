@@ -662,7 +662,6 @@ class AeoLiS(IBmi):
     
     
     
-    
     def grid_rotate(self, angle):
         
         s = self.s
@@ -674,18 +673,14 @@ class AeoLiS(IBmi):
         s['taus0'], s['taun0'] = rotate(s['taus0'], s['taun0'], angle, origin=(0, 0))
         
         s['ustars'], s['ustarn'] = rotate(s['ustars'], s['ustarn'], angle, origin=(0, 0))
-        s['ustars0'], s['ustarn0'] = rotate(s['ustars0'], s['ustars0'], angle, origin=(0, 0))
+        s['ustars0'], s['ustarn0'] = rotate(s['ustars0'], s['ustarn0'], angle, origin=(0, 0))
         
         s['uws'], s['uwn'] = rotate(s['uws'], s['uwn'], angle, origin=(0, 0))
 
-        nf = p['nfractions']
-        if nf > 1:
-            for i in range(nf):
-                s['qs'][:,:,i], s['qn'][:,:,i] = rotate(s['qs'][:,:,i], s['qn'][:,:,i], angle, origin=(0, 0))
-        else:
-            s['qs'], s['qn'] = rotate(s['qs'], s['qn'], angle, origin=(0, 0))
+        for i in range(p['nfractions']):
+            s['qs'][:,:,i], s['qn'][:,:,i] = rotate(s['qs'][:,:,i], s['qn'][:,:,i], angle, origin=(0, 0))
         
-        self.s['udir'] += self.p['alpha']
+        self.s['udir'] += angle
         
         return s
     
