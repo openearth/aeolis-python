@@ -450,14 +450,21 @@ For dissipative conditions, :math:`{\xi}` < 0.3, the runup, :math:`{R_2}`, is pa
    
    {R_2} = 0.043\sqrt {{H_0}{L_0}}
    
-and for :math:`{\xi}` > 0.3, runup is paramterized as,
+and wave setup:
+
+.. math::
+   :label: setup_dissipative
+   
+   < \eta  >  = 0.02\sqrt {{H_0}{L_0}}
+
+For :math:`{\xi}` > 0.3, runup is paramterized as,
 
 .. math::
    :label: runup
    
    {R_2} = 1.1\left( {0.35\beta \sqrt {{H_0}{L_0}}  + \frac{{\sqrt {{H_0}{L_0}\left( {0.563{\beta ^2} + 0.004} \right)} }}{2}} \right)
 
-The wave setup is,
+and wave setup:
 
 .. math::
    :label: setup
@@ -609,9 +616,9 @@ A water balance approach accounts for the effect of precipitation and evaporatio
 .. math::
    :label: precipitation
 
-   \theta _t^{} = {\theta _{t - 1}} + \frac{{\left( {{P_t} - {E_t}} \right)\,}}{{\Delta z}}\,\Delta t\,\,\,\,\,\,\,{\theta _r} \leqslant \,\theta _t^{} \leqslant {\theta _s}
+   \frac{{d\theta }}{{dt}} = \frac{{\left( {P - E} \right)\,}}{{\Delta z}}\,
 
-where subscript :math:`t` denotes the timestep, :math:`P` is the precipitation, :math:`E` is the evaporation, :math:`\Delta z` is the thickness of the surface layer, and :math:`\Delta t` is the length of the time step.
+where :math:`P` is the precipitation, :math:`E` is the evaporation, and :math:`\Delta z` is the thickness of the surface layer.
 
 Evaporation is simulated using an adapted version
 of the Penman-Monteith equation (:cite:`Shuttleworth1993`) that is
