@@ -334,7 +334,7 @@ def visualize_grid(s, p):
     ylen = np.max(y)-np.min(y)
 
     # Compute the coordinates for the arc of the angle alpha
-    arc_angles = np.linspace(270., 270. + alpha, int(alpha))
+    arc_angles = np.linspace(270., 270. + alpha, 1+int(alpha))
     radius = np.minimum(xlen, ylen) * 0.05
     arc_x = x[0,0] + radius * np.cos(np.deg2rad(arc_angles))
     arc_y = y[0,0] + radius * np.sin(np.deg2rad(arc_angles))
