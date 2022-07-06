@@ -71,6 +71,7 @@ def initialize(s, p):
     # Otherwise no Barchan
     # z0 = (np.sum(p['grain_size'])/p['nfractions']) / 30.                        # z0 = p['k'] if not dependent on grainsize?
     z0 = p['k']
+    #z0    = calculate_z0(p, s)
     
     if p['process_shear']:
         if p['ny'] > 0:
@@ -81,9 +82,7 @@ def initialize(s, p):
         else:
             s['shear'] = np.zeros(s['x'].shape)
 
-
     return s
-   
     
 def interpolate(s, p, t):
     '''Interpolate wind velocity and direction to current time step
@@ -133,8 +132,8 @@ def interpolate(s, p, t):
     # Compute wind shear velocity
     kappa = p['kappa']
     z     = p['z']
-    # z0    = (np.sum(p['grain_size'])/p['nfractions']) / 30.
-    z0    = p['k']                                                                                                              
+    z0 = p['k']
+    #z0    = calculate_z0(p, s)                                                                                                             
     
     s['ustars'] = s['uws'] * kappa / np.log(z/z0)
     s['ustarn'] = s['uwn'] * kappa / np.log(z/z0) 
@@ -151,6 +150,58 @@ def interpolate(s, p, t):
     s['taun0'] = s['taun'].copy()
     
     return s
+    
+def calculate_z0(p, s):
+    '''Calculate z0 according to chosen roughness method
+
+    The z0 is required for the calculation of the shear velocity. Here, z0
+    is calculated based on a user-defined method. The constant method gives
+    z0 the value of. The mean_grainsize_initial method uses the intial
+    mean grain size ascribed to the bed (grain_dist and grain_size in the 
+    input file). The median_grainsize_adaptive bases the z0 on the median 
+    grain size (D50) in the surface layer in every time step. The resulting 
+    z0 is variable accross the domain (x,y). The strypsteen_vanrijn method is
+    based on the roughness calculation in their paper. 
+
+    Parameters
+    ----------
+    s : dict
+        Spatial grids
+    p : dict
+        Model configuration parameters
+
+    Returns
+    -------
+    array
+        z0
+
+    '''
+    if p['method_roughness'] == 'constant':
+        z0    = p['k'] / 30   # In previous versions there was no division by 30 here! Thus, this change lowers transport.
+    if p['method_roughness'] == 'mean_grainsize_initial': #(based on Nikuradse and Bagnold, 1941), can only be applied in case with uniform grain size and is most applicable to a flat bed
+        z0    = np.sum(p['grain_size']*p['grain_dist']) / 30.
+    if p['method_roughness'] == 'mean_grainsize_adaptive': # makes Nikuradse roughness method variable through time and space depending on grain size variations
+        z0    = calc_mean_grain_size(p, s) / 30.
+    if p['method_roughness'] == 'median_grainsize_adaptive': # based on Sherman and Greenwood, 1982 - only appropriate fornaturally occurring grain size distribution
+        d50 = calc_grain_size(p, s, 50)
+        z0 = 2*d50 / 30.
+    if p['method_roughness'] == 'vanrijn_strypsteen': # based on van Rijn and Strypsteen, 2019; Strypsteen et al., 2021
+        d50 = calc_grain_size(p, s, 50) #calculate d50 and d90 per cell.
+        d90 = calc_grain_size(p, s, 90)
+        
+        ustar_grain_stat = p['kappa'] * (s['uw'] / np.log(30*p['z']/d90))
+        
+        ustar_th_B = 0.1 * np.sqrt((p['rhog'] - p['rhoa']) / p['rhoa'] * p['g'] * d50) # Note that Aa could be filled in in the spot of 0.1
+        
+        T = (np.square(ustar_grain_stat) - np.square(ustar_th_B))/np.square(ustar_th_B) # T represents different phases of the transport related to the saltation layer and ripple formation
+        T[T < 0] = 0
+        
+        alpha1 = 15
+        alpha2 = 1
+        gamma_r = 1 + 1/T
+        z0    = (d90 + alpha1* gamma_r * d50 * np.power(T, alpha2)) / 30
+    return z0
+
 
 def shear(s,p):
     

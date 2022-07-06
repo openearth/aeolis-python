@@ -659,9 +659,7 @@ class AeoLiS(IBmi):
 
 
         return True
-    
-    
-    
+
     def grid_rotate(self, angle):
         
         s = self.s
@@ -676,16 +674,13 @@ class AeoLiS(IBmi):
         s['ustars0'], s['ustarn0'] = rotate(s['ustars0'], s['ustarn0'], angle, origin=(0, 0))
         
         s['uws'], s['uwn'] = rotate(s['uws'], s['uwn'], angle, origin=(0, 0))
-
+    
         for i in range(p['nfractions']):
             s['qs'][:,:,i], s['qn'][:,:,i] = rotate(s['qs'][:,:,i], s['qn'][:,:,i], angle, origin=(0, 0))
         
         self.s['udir'] += angle
         
         return s
-    
-    
-    
     
     def euler_forward(self):
         '''Convenience function for explicit solver based on Euler forward scheme
@@ -1338,7 +1333,9 @@ class AeoLiS(IBmi):
             # renormalize weights for all fractions equal or larger
             # than the current one such that the sum of all weights is
             # unity
-            w = aeolis.transport.renormalize_weights(w, i)
+            # Christa: seems to have no significant effect on weights, 
+            # numerical check to prevent any deviation from unity
+            w = aeolis.transport.renormalize_weights(w, i)            
 
             # iteratively find a solution of the linear system that
             # does not violate the availability of sediment in the bed
