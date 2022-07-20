@@ -179,22 +179,17 @@ def initialize(s, p):
     # First compute angle with horizontal
     dx = s['x'][0,1] - s['x'][0,0]
     dy = s['y'][0,1] - s['y'][0,0]
-    p['alpha'] = np.rad2deg(np.arctan(dy/dx))
-    
-    if dx <= 0 and dy<=0:
+
+    if dx == 0.:
+        p['alpha'] = 90.
+    else:
+        p['alpha'] = np.rad2deg(np.arctan(dy/dx))
+
+    if dx <= 0 and dy <= 0:
         p['alpha'] += 180.
         
-    # Determine angle w.r.t. horizontal
-    dx = s['x'][0,1] - s['x'][0,0]
-    dy = s['y'][0,1] - s['y'][0,0]
-        
-    angle = np.rad2deg(np.arctan(dy/dx))
-    
-    if dx <= 0 and dy<=0:
-        angle += 180.
-        
     # Rotate grids to allign with horizontal
-    xr, yr = rotate(s['x'], s['y'], angle, origin=(np.mean(s['x']), np.mean(s['y'])))
+    xr, yr = rotate(s['x'], s['y'], p['alpha'], origin=(np.mean(s['x']), np.mean(s['y'])))
 
     # initialize y-dimension
     if ny == 0:
@@ -204,10 +199,16 @@ def initialize(s, p):
     else:
         s['dn'][:,:] = ((yr[0,1]-yr[0,0])**2.+(xr[0,1]-xr[0,0])**2.)**0.5
         s['ds'][:,:] = ((xr[1,0]-xr[0,0])**2.+(yr[1,0]-yr[0,0])**2.)**0.5
-    
+         
     # compute cell areas
     s['dsdn'][:,:] = s['ds'] * s['dn']
     s['dsdni'][:,:] = 1. / s['dsdn']
-    
+
+
+    dx_test = s['x'][0,1] - s['x'][0,0]
+    dy_test = s['y'][1,0] - s['y'][0,0]
+
+    if (dx_test <= 0.) or (dy_test <= 0.):
+        logger.warn(format_log('WARNING: After rotation to the horizontal orientation, both x and y should be ascending. Otherwise he solver might produce false results. It is recommended to use the following function: create_grd (see https://github.com/openearth/aeolis-python/blob/AEOLIS_V2/tools/setup/setup_tools.py)'))
     
     return s, p
