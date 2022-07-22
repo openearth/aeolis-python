@@ -91,7 +91,7 @@ def run_ph12(s, p, t):
             # parameter set up
             dx = np.abs(x[1] - x[0])
             Bt = beta * 0.54  # dune toe slope trajectory
-            Cs = 2.5e-3
+            Cs = p['Cs']
             dVResidual_prev = 0  # add this parameter in to be consistent with other codes
 
             # find dune base location
