@@ -344,7 +344,7 @@ def equilibrium(s, p):
          
             
         else:
-            logger.log_and_raise('Unknown transport formulation [%s]' % method, exc=ValueError)   
+            logger.log_and_raise('Unknown transport formulation [%s]' % p['method_transport'], exc=ValueError)   
 
                      
     s['Cu']  *= p['accfac']

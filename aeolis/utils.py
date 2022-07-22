@@ -334,3 +334,74 @@ def rotate(x, y, alpha, origin=(0,0)):
 # @numba.njit 
 def sc_kv(v, z):
     return scipy.special.kv(v, z)
+
+def calc_grain_size(p, s, percent):
+    '''Calculate grain size characteristics based on mass in each fraction
+
+    Calculate grain size distribution for each cell based on weight 
+    distribution over the fractions. Interpolates to the requested percentage 
+    in the grain size distribution. For example, percent=50 will result 
+    in calculation of the D50. Calculation is only executed for the top layer
+
+
+    Parameters
+    ----------
+    s : dict
+        Spatial grids
+    p : dict
+        Model configuration parameters
+    percent : float
+        Requested percentage in grain size dsitribution
+
+    Returns
+    -------
+    array
+        grain size per grid cell
+
+    '''
+    from scipy.interpolate import interp1d
+    mass = s['mass'][:,:,0,:] # only select upper, surface layer because that is the relevant layer for transport
+    D = np.zeros((mass.shape[0], mass.shape[1]))
+    for yi in range(mass.shape[0]):
+        for xi in range(mass.shape[1]):
+                diameters = np.insert(p['grain_size'], 0, 0)
+                cummulative_weights = np.cumsum(np.insert(mass[yi, xi,:], 0, 0))
+                percentages = 100*cummulative_weights/np.max(cummulative_weights)
+                f_linear = interp1d(list(percentages), diameters, fill_value='extrapolate') # get interpolation function
+                
+                # Retrieve grain size characteristics based on interpolation
+                D[yi, xi] = f_linear(percent)
+    return D
+
+def calc_mean_grain_size(p, s):
+    '''Calculate mean grain size based on mass in each fraction
+
+    Calculate mean grain size for each cell based on weight distribution 
+    over the fractions. Calculation is only executed for the top layer.
+
+
+    Parameters
+    ----------
+    s : dict
+        Spatial grids
+    p : dict
+        Model configuration parameters
+    percent : float
+        Requested percentage in grain size dsitribution
+
+    Returns
+    -------
+    array
+        mean grain size per grid cell
+
+    '''
+    mass = s['mass'][:,:,0,:] # only select upper, surface layer because that is the relevant layer for transport
+    D_mean = np.zeros((mass.shape[0], mass.shape[1]))
+    for yi in range(mass.shape[0]):
+        for xi in range(mass.shape[1]):
+                diameters = p['grain_size']
+                weights = mass[yi, xi,:]/ np.sum(mass[yi, xi,:])
+                
+                # Retrieve mean grain size based on weight of mass
+                D_mean[yi, xi] = np.sum(diameters*weights)
+    return D_mean
