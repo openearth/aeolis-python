@@ -204,11 +204,11 @@ def initialize(s, p):
     s['dsdn'][:,:] = s['ds'] * s['dn']
     s['dsdni'][:,:] = 1. / s['dsdn']
 
+    if ny > 0:
+        dx_test = s['x'][0,1] - s['x'][0,0]
+        dy_test = s['y'][1,0] - s['y'][0,0]
 
-    dx_test = s['x'][0,1] - s['x'][0,0]
-    dy_test = s['y'][1,0] - s['y'][0,0]
+        if (dx_test <= 0.) or (dy_test <= 0.):
+            logger.warn(format_log('WARNING: After rotation to the horizontal orientation, both x and y should be ascending. Otherwise he solver might produce false results. It is recommended to use the following function: create_grd (see https://github.com/openearth/aeolis-python/blob/AEOLIS_V2/tools/setup/setup_tools.py)'))
 
-    if (dx_test <= 0.) or (dy_test <= 0.):
-        logger.warn(format_log('WARNING: After rotation to the horizontal orientation, both x and y should be ascending. Otherwise he solver might produce false results. It is recommended to use the following function: create_grd (see https://github.com/openearth/aeolis-python/blob/AEOLIS_V2/tools/setup/setup_tools.py)'))
-    
     return s, p
