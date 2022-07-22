@@ -181,7 +181,7 @@ def vegshear_okin(s, p):
     ix = ustar != 0
     ets[ix] = ustars[ix] / ustar[ix]
     etn[ix] = ustarn[ix] / ustar[ix]
-    udir = s['udir'][0,0]
+    udir = s['udir'][0,0]+180
 
     x = s['x'][0,:]
     zp = s['hveg'][0,:]
