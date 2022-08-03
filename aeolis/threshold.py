@@ -69,7 +69,7 @@ def compute(s, p):
     compute_bedslope
     compute_moisture
     compute_humidity
-    compute_roughness
+    compute_shelter
     non_erodible
 
     '''
@@ -94,8 +94,8 @@ def compute(s, p):
             s = compute_humidity(s, p)
         if p['th_salt']:
             s = compute_salt(s, p)
-        if p['th_roughness']:
-            s = compute_roughness(s, p)
+        if p['th_shelter']:
+            s = compute_shelter(s, p)
                     
         # apply complex mask
         s['uth'] = apply_mask(s['uth'], s['threshold_mask'])
@@ -317,7 +317,7 @@ def compute_salt(s, p):
     return s
 
 
-def compute_roughness(s, p):
+def compute_shelter(s, p):
     '''Modify wind velocity threshold based on the presence of roughness elements following Raupach (1993)
 
     Raupach (1993) presents the following amplification factor for the
