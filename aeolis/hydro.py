@@ -135,24 +135,13 @@ def update(s, p, dt,t):
     '''Update soil moisture content
 
     Updates soil moisture content in all cells. The soil moisure
-    content in flooded cells is set to the porosity. The soil moisture
-    content in non-flooded cells is decreased by simulating
-    infiltration using an exponential decay function with a rate ``F``
-    following:
-
-    .. math::
-
-       M = M \\cdot e^{-F \\cdot \\Delta t}
-
-    Cells are considered flooded if the water depth is larger than
-    ``eps``. Aditionally, is meteorological conditions are provided
-    the soil moisture content is decreased by simulating evaporation
-    following the Penman equation:
-
-    .. math::
-
-        M = M - \\frac{m \\cdot R + \\gamma \cdot 6.43 \cdot (1 + 0.536 \cdot u]) \cdot \\delta}{\\lambda \cdot (m + \\gamma)}
-
+    content is computed either with the infiltration-method or 
+    surface_moist method. The infiltration method accounts for surface moisture
+    as a function of runup and the subsequent infiltration and evaporation.
+    The surface_moist method takes into account the effect of wave runup, 
+    precipitation, evaporation, infiltration, and capillary rise from the 
+    groundwater table. 
+    
     Parameters
     ----------
     s : dict
