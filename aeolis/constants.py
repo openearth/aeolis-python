@@ -259,6 +259,7 @@ DEFAULT_CONFIG = {
     'cpair'                         : 1.0035e-3,          # [MJ/kg/oC] Specific heat capacity air
 
     'fc'                            : 0.11,         # NEWCH      # [-] Moisture content at field capacity (volumetric)
+    'w1_5'                          : 0.02,         # NEWCH      # [-] Moisture content at wilting point (gravimetric)
     'resw_moist'                    : 0.01,         # NEWCH      # [-] Residual soil moisture content (volumetric) 
     'satw_moist'                    : 0.35,         # NEWCH      # [-] Satiated soil moisture content (volumetric)
     'resd_moist'                    : 0.01,         # NEWCH      # [-] Residual soil moisture content (volumetric) 

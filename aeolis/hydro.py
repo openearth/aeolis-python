@@ -113,8 +113,9 @@ def interpolate(s, p, t):
             s['R'][iy][:] = R
             s['eta'][iy][:] = eta
             s['sigma_s'][iy][:] = sigma_s
-
-            s['R'][iy][:] = apply_mask(s['R'][iy][:], s['runup_mask'][iy][:])
+            
+            if s['runup_mask'] is not None:
+                s['R'][iy][:] = apply_mask(s['R'][iy][:], s['runup_mask'][iy][:])
 
             s['TWL'][iy][:] = s['SWL'][iy][:]  + s['R'][iy][:]
             s['DSWL'][iy][:] = s['SWL'][iy][:] + eta            # Was s['zs'] before
@@ -196,8 +197,7 @@ def update(s, p, dt,t):
 
                 
             #Define index of shoreline location
-            # shl_ix =np.argmax(s['zb'] > setup,axis=1) - 1
-            shl_ix =np.argmax(s['zb'] > s['zs'],axis=1) - 1
+            shl_ix =np.argmax(s['zb'] > s['DSWL'],axis=1) - 1
             
 
             #Define index of runup limit
@@ -237,11 +237,11 @@ def update(s, p, dt,t):
             s['gw']=np.minimum(s['gw'], s['zb'])
 
             # Define cells below setup level
-            ixg=s['zb'] < s['zs']
+            ixg=s['zb'] < s['DSWL']
             
             # Set gw level to setup level in cells below setup level
             
-            s['gw'][ixg]=s['zs'][ixg]            
+            s['gw'][ixg]=s['DSWL'][ixg]            
 
 
 
@@ -404,8 +404,8 @@ def Boussinesq (GW,s,p,shl_ix):
     '''
 
     #Define seaward boundary gw=setup
-    GW[:,shl_ix] = s['zs'][:,shl_ix]
-    GW[:,shl_ix-1] = s['zs'][:,shl_ix-1]
+    GW[:,shl_ix] = s['DSWL'][:,shl_ix]
+    GW[:,shl_ix-1] = s['DSWL'][:,shl_ix-1]
     
     if p['boundary_gw'].lower() == 'no_flow':
         #Define landward boundary dgw/dx=0
