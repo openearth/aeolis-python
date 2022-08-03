@@ -69,8 +69,6 @@ def initialize(s, p):
 
     # initialize wind shear model (z0 according to Duran much smaller)
     # Otherwise no Barchan
-    # z0 = (np.sum(p['grain_size'])/p['nfractions']) / 30.                        # z0 = p['k'] if not dependent on grainsize?
-    #z0 = p['k']
     z0    = calculate_z0(p, s)
     
     if p['process_shear']:
@@ -132,7 +130,6 @@ def interpolate(s, p, t):
     # Compute wind shear velocity
     kappa = p['kappa']
     z     = p['z']
-    #z0 = p['k']
     z0    = calculate_z0(p, s)                                                                                                             
     
     s['ustars'] = s['uws'] * kappa / np.log(z/z0)
@@ -155,13 +152,17 @@ def calculate_z0(p, s):
     '''Calculate z0 according to chosen roughness method
 
     The z0 is required for the calculation of the shear velocity. Here, z0
-    is calculated based on a user-defined method. The constant method gives
-    z0 the value of. The mean_grainsize_initial method uses the intial
+    is calculated based on a user-defined method. The constant method defines 
+    the value of z0 as equal to k (z0 = ks). This was implemented to ensure 
+    backward compatibility and does not follow the definition of Nikuradse 
+    (z0 = k / 30). For following the definition of Nikuradse use the method 
+    constant_nikuradse. The mean_grainsize_initial method uses the intial
     mean grain size ascribed to the bed (grain_dist and grain_size in the 
-    input file). The median_grainsize_adaptive bases the z0 on the median 
-    grain size (D50) in the surface layer in every time step. The resulting 
-    z0 is variable accross the domain (x,y). The strypsteen_vanrijn method is
-    based on the roughness calculation in their paper. 
+    input file) to calculate the z0. The median_grainsize_adaptive bases the 
+    z0 on the median grain size (D50) in the surface layer in every time step. 
+    The resulting z0 is variable accross the domain (x,y). The 
+    strypsteen_vanrijn method is based on the roughness calculation in their 
+    paper. 
 
     Parameters
     ----------
@@ -177,12 +178,15 @@ def calculate_z0(p, s):
 
     '''
     if p['method_roughness'] == 'constant':
-        z0    = p['k'] / 30   # In previous versions there was no division by 30 here! Thus, this change lowers transport.
+        z0    = p['k']  # Here, the ks (roughness length) is equal to the z0, this method is implemented to assure backward compatibility. Note, this does not follow the definition of z0 = ks /30 by Nikuradse    
+        logger.warning('Warning: this roughness methods defines the z0 as the k (z0 = k), this was implemented to ensure backward compatibility and does not follow the definition of Nikuradse (z0 = k / 30).')
+    if p['method_roughness'] == 'constant_nikuradse':
+        z0    = p['k'] / 30   # This equaion follows the definition of the bed roughness as introduced by Nikuradse
     if p['method_roughness'] == 'mean_grainsize_initial': #(based on Nikuradse and Bagnold, 1941), can only be applied in case with uniform grain size and is most applicable to a flat bed
         z0    = np.sum(p['grain_size']*p['grain_dist']) / 30.
     if p['method_roughness'] == 'mean_grainsize_adaptive': # makes Nikuradse roughness method variable through time and space depending on grain size variations
         z0    = calc_mean_grain_size(p, s) / 30.
-    if p['method_roughness'] == 'median_grainsize_adaptive': # based on Sherman and Greenwood, 1982 - only appropriate fornaturally occurring grain size distribution
+    if p['method_roughness'] == 'median_grainsize_adaptive': # based on Sherman and Greenwood, 1982 - only appropriate for naturally occurring grain size distribution
         d50 = calc_grain_size(p, s, 50)
         z0 = 2*d50 / 30.
     if p['method_roughness'] == 'vanrijn_strypsteen': # based on van Rijn and Strypsteen, 2019; Strypsteen et al., 2021
