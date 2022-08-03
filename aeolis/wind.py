@@ -179,7 +179,6 @@ def calculate_z0(p, s):
     '''
     if p['method_roughness'] == 'constant':
         z0    = p['k']  # Here, the ks (roughness length) is equal to the z0, this method is implemented to assure backward compatibility. Note, this does not follow the definition of z0 = ks /30 by Nikuradse    
-        logger.warning('Warning: this roughness methods defines the z0 as the k (z0 = k), this was implemented to ensure backward compatibility and does not follow the definition of Nikuradse (z0 = k / 30).')
     if p['method_roughness'] == 'constant_nikuradse':
         z0    = p['k'] / 30   # This equaion follows the definition of the bed roughness as introduced by Nikuradse
     if p['method_roughness'] == 'mean_grainsize_initial': #(based on Nikuradse and Bagnold, 1941), can only be applied in case with uniform grain size and is most applicable to a flat bed
