@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 
 def initialize(s,p):
     if p['process_fences']:
-        s['fence_height'] = p['fence_file']
+        s['fence_height'][:,:] = p['fence_file']
         s['fence_base'] = copy(s['zb'])  # initial fence base is the bed elevation
         s['fence_top'] = s['fence_base'] + s['fence_height']
         s['fence_height_init'] = s['fence_height']
@@ -66,20 +66,19 @@ def update_fences(s,p):
     return s
 
 def update_fence_height(s, p):
-    dz = s['dzb']
-    fence_base = s['fence_base'] + dz
-    fence_height = s['fence_top'] - fence_base
+    s['fence_height'] = s['fence_top']-s['zb']
+    ix = s['fence_height_init'] < 0.1
+    s['fence_height'][ix] = 0
+    ix = s['fence_top'] < 0.1
+    s['fence_height'][ix] = 0
+    ix = s['fence_height'] < 0.1
+    s['fence_height'][ix] = 0
 
-    # if initial fence height was zero it should be zero here
-    for iy in range(p['ny']):
-        ix = s['fence_height_init'][iy,:] < 0.01
-        fence_height[iy, ix] = 0
+    #if exceeds 1.5 m then assume the fence has eroded out
+    ix = s['fence_height'] > 1.5
+    s['fence_height'][ix] = 0
+    s['fence_height_init'][ix] = 0
 
-        # ensure no sub-zero values
-        ix = fence_height[iy,:] < 0.01
-        fence_height[iy, ix] = 0
-
-    s['fence_height'] = fence_height
     return s
 
 
@@ -458,7 +457,7 @@ def interpolate(x, y, z, xi, yi):
 
 def fence_shear1d(s, p):
 
-    #initialize shear variables
+
     ustar = s['ustar'].copy()
     ustars = s['ustars'].copy()
     ustarn = s['ustarn'].copy()
@@ -467,35 +466,34 @@ def fence_shear1d(s, p):
     ix = ustar != 0
     ets[ix] = ustars[ix] / ustar[ix]
     etn[ix] = ustarn[ix] / ustar[ix]
-    udir = s['udir'][0,0]
+    udir = s['udir'][0,0]+180
 
-    if udir < 0:
-        udir = udir + 360
-    udir = udir - np.floor(udir / 360) * 360
-
-    #intialize other grid parameters
     x = s['x'][0,:]
     zp = s['fence_height'][0,:]
     red = np.zeros(x.shape)
     red_all = np.zeros(x.shape)
     nx = x.size
-
     c1 = p['okin_c1_fence']
     intercept = p['okin_initialred_fence']
 
+    if udir < 360:
+        udir = udir + 360
+
+    if udir > 360:
+        udir = udir - 360
+
+
+    #Calculate shear reduction by looking through all cells that have plants present and looking downwind of those features
     for igrid in range(nx):
 
-        # only look at cells with a roughness element
-        if zp[igrid] > 0:
-            # local parameters
-            xrel = x - x[igrid]
+        if zp[igrid] > 0:         # only look at cells with a roughness element
             mult = np.ones(x.shape)
-            h = zp[igrid]
+            h = zp[igrid] #vegetation height at the appropriate cell
 
             if udir >= 180 and udir <= 360:
-                xrel = x - x[igrid]
-            else:
                 xrel = -(x - x[igrid])
+            else:
+                xrel = x - x[igrid]
 
             for igrid2 in range(nx):
 
@@ -523,10 +521,12 @@ def fence_shear1d(s, p):
 
     # convert to a multiple
     mult_all = 1 - red_all
+    ustarfence = s['ustar'][0,:] * mult_all
+    ix = ustarfence < 0.01
+    ustarfence[ix] = 0.01 #some small number so transport code doesnt crash
 
-    s['ustar'][0,:] = s['ustar'][0,:] * mult_all
+    s['ustar'][0,:] = ustarfence
     s['ustars'][0,:] = s['ustar'][0,:] * ets[0,:]
     s['ustarn'][0,:] = s['ustar'][0,:] * etn[0,:]
 
     return s
-
