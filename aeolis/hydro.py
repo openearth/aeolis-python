@@ -114,7 +114,8 @@ def interpolate(s, p, t):
             s['eta'][iy][:] = eta
             s['sigma_s'][iy][:] = sigma_s
             
-            if s['runup_mask'] is not None:
+            
+            if s['runup_mask'] != 1.0:
                 s['R'][iy][:] = apply_mask(s['R'][iy][:], s['runup_mask'][iy][:])
 
             s['TWL'][iy][:] = s['SWL'][iy][:]  + s['R'][iy][:]
