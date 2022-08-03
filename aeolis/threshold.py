@@ -403,6 +403,7 @@ def compute_shelter(s, p):
 
     # compute inverse of shear stress ratio
     Rti = np.sqrt((1. - p['m'] * gd) * (1. + p['m'] * p['beta'] / p['sigma'] * gd))
+    s['Rti'] = Rti
 
     # modify shear velocity threshold
     s['uth'] *= Rti.reshape((ny,nx,1)).repeat(nf, axis=-1)
