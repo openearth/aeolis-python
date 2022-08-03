@@ -342,7 +342,12 @@ def equilibrium(s, p):
              
             s['Cu0'][ix]  = np.maximum(0., 2.* alpha_sauermann * rhoa / g * (ustar0[ix]**2 - uth0[ix]**2))
          
+        elif p['method_transport'].lower() == 'vanrijn_strypsteen':
+            s['Cu'][ix]  = np.maximum(0., p['Cb'] * rhoa / g * ((ustar[ix])**3 - (uth[ix])**3) / u[ix])
+            s['Cuf'][ix] = np.maximum(0., p['Cb'] * rhoa / g * ((ustar[ix])**3 - (uth[ix])**3) / u[ix])
             
+            s['Cu0'][ix] = np.maximum(0., p['Cb'] * rhoa / g * ((ustar0[ix])**3 - (uth0[ix])**3) / u[ix])
+        
         else:
             logger.log_and_raise('Unknown transport formulation [%s]' % p['method_transport'], exc=ValueError)   
 
