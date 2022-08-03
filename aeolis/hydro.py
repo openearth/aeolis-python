@@ -29,6 +29,7 @@ from __future__ import absolute_import, division
 
 import logging
 import numpy as np
+from matplotlib import pyplot as plt
 
 # package modules
 from aeolis.utils import *
@@ -63,23 +64,22 @@ def interpolate(s, p, t):
 
     if p['process_tide']:
         if p['tide_file'] is not None:
-            s['zs'][:,:] = interp_circular(t, 
-                                           p['tide_file'][:,0], 
-                                           p['tide_file'][:,1])
-            s['swl'][:,:] = interp_circular(t,
+            s['SWL'][:,:] = interp_circular(t,
                                            p['tide_file'][:,0],
                                            p['tide_file'][:,1])
         else:
-            s['zs'][:,:] = 0.
-            s['swl'][:,:] = 0.
+            s['SWL'][:,:] = 0.
 
         # apply complex mask
-        s['zs'] = apply_mask(s['zs'], s['tide_mask'])
+        s['SWL'] = apply_mask(s['SWL'], s['tide_mask'])
+
+    else:
+        s['SWL'] = s['zb'] * 0.
 
     if p['process_wave'] and p['wave_file'] is not None:
 
         # determine water depth
-        h = np.maximum(0., s['zs'] - s['zb'])
+        h = np.maximum(0., s['SWL'] - s['zb'])
     
         s['Hs'][:,:] = interp_circular(t,
                                        p['wave_file'][:,0],
@@ -95,19 +95,29 @@ def interpolate(s, p, t):
         s['Hs'] = apply_mask(s['Hs'], s['wave_mask'])
         s['Tp'] = apply_mask(s['Tp'], s['wave_mask'])
 
+    else:
+        s['Hs'] = s['zb'] * 0.
+        s['Tp'] = s['zb'] * 0.
+
+
     if p['process_runup']:
         ny = p['ny']
-        wl = interp_circular(t, p['tide_file'][:, 0], p['tide_file'][:, 1])
-        hs = interp_circular(t, p['wave_file'][:, 0], p['wave_file'][:, 1])
-        tp = interp_circular(t, p['wave_file'][:, 0], p['wave_file'][:, 2])
-        for iy in range(ny + 1):  # do this computation seperately on every y for now so alongshore variable wave runup can be added in the future
-            eta, sigma_s, R = calc_runup_stockdon(hs, tp, p['beach_slope'])
-            s['R'][iy][0] = R
-            s['eta'][iy][0] = eta
-            s['sigma_s'][iy][0] = sigma_s
-            s['TWL'][iy][0] = R + wl
-            s['zs'][iy,:] = eta + wl
 
+        for iy in range(ny + 1):  # do this computation seperately on every y for now so alongshore variable wave runup can be added in the future
+          
+            hs = s['Hs'][iy][0]
+            tp = s['Tp'][iy][0]
+            wl = s['SWL'][iy][0]
+
+            eta, sigma_s, R = calc_runup_stockdon(hs, tp, p['beach_slope'])
+            s['R'][iy][:] = R
+            s['eta'][iy][:] = eta
+            s['sigma_s'][iy][:] = sigma_s
+
+            s['R'][iy][:] = apply_mask(s['R'][iy][:], s['runup_mask'][iy][:])
+
+            s['TWL'][iy][:] = s['SWL'][iy][:]  + s['R'][iy][:]
+            s['DSWL'][iy][:] = s['SWL'][iy][:] + eta            # Was s['zs'] before
         
     if p['process_moist'] and p['method_moist_process'].lower() == 'surf_moisture' and p['meteo_file'] is not None: 
 
@@ -123,10 +133,11 @@ def interpolate(s, p, t):
         # U: Relative humidity, %
         s['meteo'] = dict(zip(('T','Q','RH','P','U') , m))
 
-    # ensure compatibility with XBeach: zs >= zb
 
-    #else:
-    #    s['zs'] = s['zb']
+    # Ensure compatibility with XBeach: zs >= zb
+    s['zs'] = s['SWL'].copy()
+    ix = (s['zb'] > s['zs'])
+    s['zs'][ix] = s['zb'][ix]
 
     return s
 

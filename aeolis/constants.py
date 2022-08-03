@@ -51,8 +51,8 @@ INITIAL_STATE = {
         'ustarn0',                          # [m/s] Component of wind shear velocity in y-direction over a flat bed
 
         'udir',                             # [rad] Wind direction
-        'zs',                               # [m] Water level above reference
-        'swl',                         #NEWCH     # [m] Still water level above reference
+        'zs',                               # [m] Water level above reference (or equal to zb if zb > zs)
+        'SWL',                              # [m] Still water level above reference
         'Hs',                               # [m] Wave height
         'Tp',                               # [s] Wave period for wave runup calculations
         'zne',                              # [m] Non-erodible layer
@@ -111,7 +111,9 @@ MODEL_STATE = {
         'R',                                # [m] wave runup
         'eta',                              # [m] wave setup
         'sigma_s',                          # [m] swash
-        'TWL',                              # [m] total water level
+        'TWL',                              # [m] Total Water Level above reference (SWL + Run-up)
+        'SWL',                              # [m] Still Water Level above reference
+        'DSWL',                             # [m] Dynamic Still water level above reference (SWL + Set-up)
     ),
     ('ny','nx','nfractions') : (
         'Cu',                               # [kg/m^2] Equilibrium sediment concentration integrated over saltation height
@@ -191,6 +193,7 @@ DEFAULT_CONFIG = {
     'veg_file'                      : None,               # Filename of ASCII file with initial vegetation density
     'wave_mask'                     : None,               # Filename of ASCII file with mask for wave height
     'tide_mask'                     : None,               # Filename of ASCII file with mask for tidal elevation
+    'runup_mask'                    : None,               # Filename of ASCII file with mask for run-up
     'threshold_mask'                : None,               # Filename of ASCII file with mask for the shear velocity threshold
     'gw_mask'                       : None,         #NEWCH      # Filename of ASCII file with mask for the groundwater level
     'nx'                            : 0,                  # [-] Number of grid cells in x-dimension

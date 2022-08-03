@@ -461,17 +461,21 @@ def visualize_spatial(s, p):
     y = s['y']
     
     # Reading masks and if constant, fill 2D-array
-    uth_mask = np.zeros(np.shape(x)) * s['threshold_mask']
-    tide_mask = np.zeros(np.shape(x)) * s['tide_mask']
-    wave_mask = np.zeros(np.shape(x)) * s['wave_mask']
+    uth_mask_multi = np.ones(np.shape(x)) * np.real(s['threshold_mask'])
+    tide_mask_multi = np.ones(np.shape(x)) * np.real(s['tide_mask'])
+    wave_mask_multi = np.ones(np.shape(x)) * np.real(s['wave_mask'])
+
+    uth_mask_add = np.ones(np.shape(x)) * np.imag(s['threshold_mask'])
+    tide_mask_add = np.ones(np.shape(x)) * np.imag(s['tide_mask'])
+    wave_mask_add = np.ones(np.shape(x)) * np.imag(s['wave_mask'])
 
     # Determine the maximum dimensions in x- and y-direction
     xlen = np.max(x)-np.min(x)
     ylen = np.max(y)-np.min(y)
 
     # Creating values
-    fig, axs = plt.subplots(4, 3)
-    pcs = [[None for _ in range(3)] for _ in range(4)]
+    fig, axs = plt.subplots(5, 3)
+    pcs = [[None for _ in range(3)] for _ in range(5)]
 
     # Plotting colormeshes
     if p['ny'] > 0:
@@ -484,9 +488,12 @@ def visualize_spatial(s, p):
         pcs[2][0] = axs[2,0].pcolormesh(x, y, s['moist'], cmap='Blues', clim= [0, 0.4])
         pcs[2][1] = axs[2,1].pcolormesh(x, y, s['gw'], cmap='viridis')
         pcs[2][2] = axs[2,2].pcolormesh(x, y, s['uth'][:,:,0], cmap='plasma')
-        pcs[3][0] = axs[3,0].pcolormesh(x, y, uth_mask, cmap='binary', clim= [0, 1])
-        pcs[3][1] = axs[3,1].pcolormesh(x, y, tide_mask, cmap='binary', clim= [0, 1])
-        pcs[3][2] = axs[3,2].pcolormesh(x, y, wave_mask, cmap='binary', clim= [0, 1])
+        pcs[3][0] = axs[3,0].pcolormesh(x, y, uth_mask_multi, cmap='binary', clim= [0, 1])
+        pcs[3][1] = axs[3,1].pcolormesh(x, y, tide_mask_multi, cmap='binary', clim= [0, 1])
+        pcs[3][2] = axs[3,2].pcolormesh(x, y, wave_mask_multi, cmap='binary', clim= [0, 1])
+        pcs[4][0] = axs[4,0].pcolormesh(x, y, uth_mask_add, cmap='binary', clim= [0, 1])
+        pcs[4][1] = axs[4,1].pcolormesh(x, y, tide_mask_add, cmap='binary', clim= [0, 1])
+        pcs[4][2] = axs[4,2].pcolormesh(x, y, wave_mask_add, cmap='binary', clim= [0, 1])
     else:
         pcs[0][0] = axs[0,0].scatter(x, y, c=s['zb'], cmap='viridis')
         pcs[0][1] = axs[0,1].scatter(x, y, c=s['zne'], cmap='viridis')
@@ -497,9 +504,12 @@ def visualize_spatial(s, p):
         pcs[2][0] = axs[2,0].scatter(x, y, c=s['moist'], cmap='Blues', clim= [0, 0.4])
         pcs[2][1] = axs[2,1].scatter(x, y, c=s['gw'], cmap='viridis')
         pcs[2][2] = axs[2,2].scatter(x, y, c=s['uth'][:,:,0], cmap='plasma')
-        pcs[3][0] = axs[3,0].scatter(x, y, c=uth_mask, cmap='binary', clim= [0, 1])
-        pcs[3][1] = axs[3,1].scatter(x, y, c=tide_mask, cmap='binary', clim= [0, 1])
-        pcs[3][2] = axs[3,2].scatter(x, y, c=wave_mask, cmap='binary', clim= [0, 1])
+        pcs[3][0] = axs[3,0].scatter(x, y, c=uth_mask_multi, cmap='binary', clim= [0, 1])
+        pcs[3][1] = axs[3,1].scatter(x, y, c=tide_mask_multi, cmap='binary', clim= [0, 1])
+        pcs[3][2] = axs[3,2].scatter(x, y, c=wave_mask_multi, cmap='binary', clim= [0, 1])
+        pcs[4][0] = axs[4,0].scatter(x, y, c=uth_mask_add, cmap='binary', clim= [0, 1])
+        pcs[4][1] = axs[4,1].scatter(x, y, c=tide_mask_add, cmap='binary', clim= [0, 1])
+        pcs[4][2] = axs[4,2].scatter(x, y, c=wave_mask_add, cmap='binary', clim= [0, 1])
 
     # Quiver for vectors
     skip = 10
@@ -517,9 +527,12 @@ def visualize_spatial(s, p):
     axs[2,0].set_title('Soil moisture content, (-)')
     axs[2,1].set_title('Ground water level, gw (m)')
     axs[2,2].set_title('Velocity threshold (0th fraction), uth (m/s)')
-    axs[3,0].set_title('Threshold mask (-)')
-    axs[3,1].set_title('Tide mask (-)')
-    axs[3,2].set_title('Wave mask (-)')
+    axs[3,0].set_title('Threshold multiplication mask (-)')
+    axs[3,1].set_title('Tide multiplication mask (-)')
+    axs[3,2].set_title('Wave multiplication mask (-)')
+    axs[4,0].set_title('Threshold addition mask (-)')
+    axs[4,1].set_title('Tide addition mask (-)')
+    axs[4,2].set_title('Wave addition mask (-)')
 
     # Formatting the plot
     for irow, ax_rows in enumerate(axs):

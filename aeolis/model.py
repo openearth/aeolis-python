@@ -350,7 +350,7 @@ class AeoLiS(IBmi):
         # Visualization of the model results after the first time step as a check for interpretation
         if self.c['time'] == 1 and self.p['visualization']:
             aeolis.inout.visualize_spatial(self.s, self.p)
-
+            
 
     def finalize(self):
         '''Finalize model'''

@@ -30,6 +30,7 @@ from __future__ import absolute_import, division
 import logging
 import numpy as np
 import aeolis.gridparams
+from matplotlib import pyplot as plt
 
 # package modules
 from aeolis.utils import *
