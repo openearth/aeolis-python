@@ -114,6 +114,7 @@ MODEL_STATE = {
         'TWL',                              # [m] Total Water Level above reference (SWL + Run-up)
         'SWL',                              # [m] Still Water Level above reference
         'DSWL',                             # [m] Dynamic Still water level above reference (SWL + Set-up)
+        'Rti',                              # [-] Factor taking into account sheltering by roughness elements
     ),
     ('ny','nx','nfractions') : (
         'Cu',                               # [kg/m^2] Equilibrium sediment concentration integrated over saltation height
