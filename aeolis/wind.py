@@ -70,8 +70,8 @@ def initialize(s, p):
     # initialize wind shear model (z0 according to Duran much smaller)
     # Otherwise no Barchan
     # z0 = (np.sum(p['grain_size'])/p['nfractions']) / 30.                        # z0 = p['k'] if not dependent on grainsize?
-    z0 = p['k']
-    #z0    = calculate_z0(p, s)
+    #z0 = p['k']
+    z0    = calculate_z0(p, s)
     
     if p['process_shear']:
         if p['ny'] > 0:
@@ -132,8 +132,8 @@ def interpolate(s, p, t):
     # Compute wind shear velocity
     kappa = p['kappa']
     z     = p['z']
-    z0 = p['k']
-    #z0    = calculate_z0(p, s)                                                                                                             
+    #z0 = p['k']
+    z0    = calculate_z0(p, s)                                                                                                             
     
     s['ustars'] = s['uws'] * kappa / np.log(z/z0)
     s['ustarn'] = s['uwn'] * kappa / np.log(z/z0) 
@@ -186,20 +186,24 @@ def calculate_z0(p, s):
         d50 = calc_grain_size(p, s, 50)
         z0 = 2*d50 / 30.
     if p['method_roughness'] == 'vanrijn_strypsteen': # based on van Rijn and Strypsteen, 2019; Strypsteen et al., 2021
-        d50 = calc_grain_size(p, s, 50) #calculate d50 and d90 per cell.
-        d90 = calc_grain_size(p, s, 90)
+        if len(p['grain_dist']) == 1:
+            d50 = p['grain_size']
+            d90 = 2*d50
+        else:
+            d50 = calc_grain_size(p, s, 50) #calculate d50 and d90 per cell.
+            d90 = calc_grain_size(p, s, 90)
         
         ustar_grain_stat = p['kappa'] * (s['uw'] / np.log(30*p['z']/d90))
         
         ustar_th_B = 0.1 * np.sqrt((p['rhog'] - p['rhoa']) / p['rhoa'] * p['g'] * d50) # Note that Aa could be filled in in the spot of 0.1
         
         T = (np.square(ustar_grain_stat) - np.square(ustar_th_B))/np.square(ustar_th_B) # T represents different phases of the transport related to the saltation layer and ripple formation
-        T[T < 0] = 0
+        #T[T < 0] = 0
         
         alpha1 = 15
         alpha2 = 1
         gamma_r = 1 + 1/T
-        z0    = (d90 + alpha1* gamma_r * d50 * np.power(T, alpha2)) / 30
+        z0    = (d90 + alpha1 * gamma_r * d50 * np.power(T, alpha2)) / 30
     return z0
 
 
