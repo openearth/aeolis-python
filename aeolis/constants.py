@@ -159,7 +159,7 @@ DEFAULT_CONFIG = {
     'th_drylayer'                   : False,              # Enable threshold based on drying of layer
     'th_humidity'                   : False,              # Enable wind velocity threshold based on humidity
     'th_salt'                       : False,              # Enable wind velocity threshold based on salt
-    'th_shelter'                    : False,               # Enable wind velocity threshold based on sheltering (roughness)
+    'th_sheltering'                 : False,               # Enable wind velocity threshold based on sheltering by roughness elements
     'th_nelayer'                    : False,              # Enable wind velocity threshold based on a non-erodible layer
     'process_avalanche'             : False,               # Enable the process of avalanching
     'process_shear'                 : False,               # Enable the process of wind shear
