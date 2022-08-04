@@ -214,6 +214,11 @@ def check_configuration(p):
     if p['th_salt']:
         logger.warning('Wind velocity threshold based on salt content following Nickling and '
                        'Ecclestone (1981) is implemented for testing only. Use with care.')
+        
+    if p['method_roughness'] == 'constant':        
+        logger.warning('Warning: the used roughness method (constant) defines the z0 as '
+                       'k (z0 = k), this was implemented to ensure backward compatibility '
+                       'and does not follow the definition of Nikuradse (z0 = k / 30).')
 
         
 def parse_value(val, parse_files=True, force_list=False):

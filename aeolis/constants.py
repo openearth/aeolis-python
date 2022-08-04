@@ -159,7 +159,7 @@ DEFAULT_CONFIG = {
     'th_drylayer'                   : False,              # Enable threshold based on drying of layer
     'th_humidity'                   : False,              # Enable wind velocity threshold based on humidity
     'th_salt'                       : False,              # Enable wind velocity threshold based on salt
-    'th_shelter'                    : False,               # Enable wind velocity threshold based on sheltering (roughness)
+    'th_sheltering'                 : False,               # Enable wind velocity threshold based on sheltering by roughness elements
     'th_nelayer'                    : False,              # Enable wind velocity threshold based on a non-erodible layer
     'process_avalanche'             : False,               # Enable the process of avalanching
     'process_shear'                 : False,               # Enable the process of wind shear
@@ -306,7 +306,7 @@ DEFAULT_CONFIG = {
     'constant_onshore_flux'         : 0.,                 # [kg/m/s] Constant input flux at offshore boundary
     'lateral_flux'                  : 0.,                 # [-] Factor to determine lateral boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
     'method_transport'              : 'bagnold',          # Name of method to compute equilibrium sediment transport rate
-    'method_roughness'              : 'constant',         # Name of method to compute the roughness height z0
+    'method_roughness'              : 'constant',         # Name of method to compute the roughness height z0, note that here the z0 = k, which does not follow the definition of Nikuradse where z0 = k/30.
     'method_grainspeed'             : 'windspeed',        # Name of method to assume/compute grainspeed (windspeed, duran, constant)
     'max_error'                     : 1e-6,               # [-] Maximum error at which to quit iterative solution in implicit numerical schemes
     'max_iter'                      : 1000,               # [-] Maximum number of iterations at which to quit iterative solution in implicit numerical schemes
