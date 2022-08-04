@@ -264,7 +264,7 @@ class AeoLiS(IBmi):
         '''
 
         self.p['_time'] = self.t        
-
+        
         # store previous state
         self.l = self.s.copy()
         self.l['zb'] = self.s['zb'].copy()
@@ -2983,7 +2983,7 @@ class AeoLiSRunner(AeoLiS):
 
         '''
 
-        p = self.t / self.p['tstop']
+        p = (self.t-self.p['tstart']) / (self.p['tstop']-self.p['tstart'])
         pr = np.ceil(p/fraction)*fraction
         t = time.time()
         interval = t - self.tlog
