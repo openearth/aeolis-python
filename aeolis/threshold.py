@@ -178,7 +178,8 @@ def compute_moisture(s, p):
     # geotechnical mass content (percentage of dry mass)
     mg = (s['moist'][:,:] * p['rhow'] / (p['rhog'] * (1. - p['porosity'])))
     mg = mg[:,:,np.newaxis].repeat(nf, axis=2)
-    ix = mg > 0.005
+    ix = mg > np.minimum(0.005,p['resw_moist'])
+    
     
     if p['method_moist_threshold'].lower() == 'belly_johnson':
         s['uth'][ix] *= np.maximum(1., 1.8+0.6*np.log10(mg[ix] * 100.))
@@ -193,41 +194,40 @@ def compute_moisture(s, p):
     elif p['method_moist_threshold'].lower() == 'shao':
         s['uth'][ix] *= np.exp(22.7 * mg[ix])
     elif p['method_moist_threshold'].lower() == 'dong_2002':
-        d[ix] = np.sum(p['grain_size'] * p['grain_dist']) * 1000
-        if d[ix] < 0.135:
+        d = np.sum(p['grain_size'] * p['grain_dist']) * 1000
+        if d < 0.135:
             K = 2.51
-        elif d[ix] < 0.150:
+        elif d < 0.150:
             K = 2.05
-        elif d[ix] < 0.200:
+        elif d < 0.200:
             K = 2.75
-        elif d[ix] < 0.250:
+        elif d < 0.250:
             K = 1.59
-        elif d[ix] < 0.400:
+        elif d < 0.400:
             K = 1.87
         else:
             K = 2.15
         s['uth'][ix] *= np.sqrt(1 + K * 100 * mg[ix])
     elif p['method_moist_threshold'].lower() == 'gregory_darwish':
-        d[ix] = np.sum(p['grain_size'] * p['grain_dist'])
-        wdiff[ix] = mg[ix] - 0.5 * p['w1_5']
-        if wdiff[ix] < 0:
-            wdiff[ix] = 0
+        d = np.sum(p['grain_size'] * p['grain_dist'])
+        wdiff = np.zeros(mg.shape)
+        wdiff[ix] = np.maximum(mg[ix] - 0.5 * p['w1_5'],0)
         a1 = 6.12e-05
         a2 = 738.8
         a3 = 0.1
-        s['uth'][ix] *= np.sqrt(1 + mg[ix] + 6 / np.pi * a1 / (p['rhog'] * p['g'] * d[ix] ** 2) \
-                                + a2 / (p['rhow'] * p['g'] * d[ix]) * np.exp(-a3 * mg[ix] / p['w1_5']) * wdiff[ix])
+        s['uth'][ix] *= np.sqrt(1 + mg[ix] + 6 / np.pi * a1 / (p['rhog'] * p['g'] * d ** 2) \
+                                + a2 / (p['rhow'] * p['g'] * d) * np.exp(-a3 * mg[ix] / p['w1_5']) * wdiff[ix])
     elif p['method_moist_threshold'].lower() == 'cornelis':
-        d[ix] = np.sum(p['grain_size'] * p['grain_dist'])
+        d = np.sum(p['grain_size'] * p['grain_dist'])
         a1 = 0.013
         a2 = 1.7e-4
         a3 = 3e14
-        s['uth'][ix] = np.sqrt(a1 * (1 + mg[ix] + a2 /((p['rhog'] - p['rhoa']) * p['g'] * d[ix] ** 2) \
-                                     * (1 + a3 * 0.075 ** 2 * d[ix] / (10 ** 9 * np.exp(-6.5 * mg[ix] / p['w1_5']))) \
-                                         * np.sqrt((p['rhog'] - p['rhoa']) / p['rhoa'] * p['g'] * d[ix])))
+        s['uth'][ix] = np.sqrt(a1 * (1 + mg[ix] + a2 /((p['rhog'] - p['rhoa']) * p['g'] * d ** 2) \
+                                     * (1 + a3 * 0.075 ** 2 * d / (10 ** 3 * np.exp(-6.5 * mg[ix] / p['w1_5']))) \
+                                         * np.sqrt((p['rhog'] - p['rhoa']) / p['rhoa'] * p['g'] * d)))
     elif p['method_moist_threshold'].lower() == 'dong_2007':
-        d[ix] = np.sum(p['grain_size'] * p['grain_dist'])        
-        s['uth'][ix] = 0.16 * np.sqrt((p['rhog'] - p['rhoa']) / p['rhoa'] * p['g'] * d[ix]) * (1 + 478.2 * mg[ix] ** 1.52);
+        d = np.sum(p['grain_size'] * p['grain_dist'])   
+        s['uth'][ix] = 0.16 * np.sqrt((p['rhog'] - p['rhoa']) / p['rhoa'] * p['g'] * d) * (1 + 478.2 * mg[ix] ** 1.52);
     else:
         logger.log_and_raise('Unknown moisture formulation [%s]' % p['method_moist'], exc=ValueError)
 
