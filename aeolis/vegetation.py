@@ -62,7 +62,7 @@ def initialize (s,p):
         if np.isnan(s['rhoveg'][0, 0]):
             s['rhoveg'][:,:] = 0.
 
-        ix = s['rhoveg'] < 0.03
+        ix = s['rhoveg'] < 0
         s['rhoveg'][ix] *= 0.
         s['hveg'][:,:] = p['hveg_max']*np.sqrt(s['rhoveg'])
 
@@ -139,15 +139,25 @@ def grow (s, p): #DURAN 2006
     s['dhveg'][ix] = p['V_ver'] * (1 - s['hveg'][ix] / p['hveg_max']) - np.abs(s['dzbveg'][ix]-p['dzb_opt']) * p['veg_gamma']  # m/year
 
     # Adding growth
-    s['hveg'] += s['dhveg']*(p['dt_opt'] * p['accfac']) / (365.25*24.*3600.)
+    if p['veggrowth_type'] == 'orig': #based primarily on vegetation height
+        s['hveg'] += s['dhveg']*(p['dt_opt'] * p['accfac']) / (365.25*24.*3600.)
+        s['hveg'] = np.maximum(np.minimum(s['hveg'], p['hveg_max']), 0.)
+        s['rhoveg'] = (s['hveg']/p['hveg_max'])**2
+    else:
+        rhoveg_max = p['rhoveg_max']
+        ix2 = s['rhoveg'] > rhoveg_max
+        s['rhoveg'][ix2] = rhoveg_max
+        if p['V_ver'] > 0:
+            s['drhoveg'][ix] = (rhoveg_max - s['rhoveg'][ix])/p['V_ver'] - (p['veg_gamma']/p['hveg_max'])*np.abs(s['dzbveg'][ix] - p['dzb_opt'])*p['veg_gamma']
+        else:
+            s['drhoveg'][ix] = 0
+        s['rhoveg'] += s['drhoveg']*(p['dt']*p['accfac'])/(365.25 * 24 *3600)
+        irem = s['rhoveg'] < 0
+        s['rhoveg'][irem] = 0
+        #now convert back to height for Okin or wherever else needed
+        s['hveg'][:,:] = p['hveg_max']*np.sqrt(s['rhoveg'])
 
-    # Compute the density
-
-    s['hveg'] = np.maximum(np.minimum(s['hveg'], p['hveg_max']), 0.)
-    s['rhoveg'] = (s['hveg']/p['hveg_max'])**2
-    
     # Plot has to vegetate again after dying
-
     s['germinate'] *= (s['rhoveg']!=0.)
     s['lateral'] *= (s['rhoveg']!=0.)
 
