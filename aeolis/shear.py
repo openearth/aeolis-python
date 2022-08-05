@@ -535,6 +535,8 @@ class WindShear:
 
         '''
         gc = self.cgrid
+        gi = self.igrid # initial grid
+
         
         if u0 == 0.:
             self.cgrid['dtaux'] = np.zeros(gc['z'].shape)
@@ -554,21 +556,27 @@ class WindShear:
         
         # Inner layer height
         l  = self.l    
-        
+ 
+        # interpolate roughness length z0 to computational grid
+        if np.size(z0)>1:
+            z0new = self.interpolate(gi['x'], gi['y'], z0, gc['x'], gc['y'], 0)
+        else:
+            z0new = z0
+
         for i in range(5):
-            l = 2 * 0.41**2 * L /np.log(l/z0)
+            l = 2 * 0.41**2 * L /np.log(l/z0new)
         
         # Middle layer height
         hm = 1.0
         for i in range(5):
-            hm = L / np.sqrt(np.log(hm/z0))
+            hm = L / np.sqrt(np.log(hm/z0new))
             
         # Non-dimensional velocity    
-        ul = np.log(l/z0) / np.log(hm/z0)
-        
+        ul = np.log(l/z0new) / np.log(hm/z0new)
+
         # Arrays in Fourier 
         k = np.sqrt(kx**2 + ky**2)
-        sigma = np.sqrt(1j * L * kx * z0 /l)
+        sigma = np.sqrt(1j * L * kx * z0new /l)
         
         
         time_start_perturbation = time.time()
@@ -576,7 +584,7 @@ class WindShear:
         # Shear stress perturbation
         
         dtaux_t = hs * kx**2 / k * 2 / ul**2 * \
-                  (-1. + (2. * np.log(l/z0) + k**2/kx**2) * sigma * \
+                  (-1. + (2. * np.log(l/z0new) + k**2/kx**2) * sigma * \
                     sc_kv(1., 2. * sigma) / sc_kv(0., 2. * sigma))
 
         
