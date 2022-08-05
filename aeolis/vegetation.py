@@ -144,16 +144,20 @@ def grow (s, p): #DURAN 2006
         s['hveg'] = np.maximum(np.minimum(s['hveg'], p['hveg_max']), 0.)
         s['rhoveg'] = (s['hveg']/p['hveg_max'])**2
     else:
+        t_veg = p['t_veg']/365
+        v_gam = p['v_gam']
         rhoveg_max = p['rhoveg_max']
         ix2 = s['rhoveg'] > rhoveg_max
         s['rhoveg'][ix2] = rhoveg_max
+        ixzero = s['rhoveg'] <= 0
         if p['V_ver'] > 0:
-            s['drhoveg'][ix] = (rhoveg_max - s['rhoveg'][ix])/p['V_ver'] - (p['veg_gamma']/p['hveg_max'])*np.abs(s['dzbveg'][ix] - p['dzb_opt'])*p['veg_gamma']
+            s['drhoveg'][ix] = (rhoveg_max - s['rhoveg'][ix])/t_veg - (v_gam/p['hveg_max'])*np.abs(s['dzbveg'][ix] - p['dzb_opt'])*p['veg_gamma']
         else:
             s['drhoveg'][ix] = 0
         s['rhoveg'] += s['drhoveg']*(p['dt']*p['accfac'])/(365.25 * 24 *3600)
         irem = s['rhoveg'] < 0
         s['rhoveg'][irem] = 0
+        s['rhoveg'][ixzero] = 0 #here only grow vegetation that already existed
         #now convert back to height for Okin or wherever else needed
         s['hveg'][:,:] = p['hveg_max']*np.sqrt(s['rhoveg'])
 
@@ -191,7 +195,7 @@ def vegshear_okin(s, p):
     ix = ustar != 0
     ets[ix] = ustars[ix] / ustar[ix]
     etn[ix] = ustarn[ix] / ustar[ix]
-    udir = s['udir'][0,0]+180
+    udir = s['udir'][0,0] + 180
 
     x = s['x'][0,:]
     zp = s['hveg'][0,:]
@@ -201,7 +205,7 @@ def vegshear_okin(s, p):
     c1 = p['okin_c1_veg']
     intercept = p['okin_initialred_veg']
 
-    if udir < 360:
+    if udir < 0:
         udir = udir + 360
 
     if udir > 360:
@@ -224,7 +228,7 @@ def vegshear_okin(s, p):
                 if xrel[igrid2] >= 0 and xrel[igrid2]/h < 20:
 
                     # apply okin model
-                    mult[igrid2] = intercept + (1 - intercept) * (1 - math.exp(-xrel[igrid2] * c1 / h))
+                    mult[igrid2] = intercept + (1 - intercept) * (1 - np.exp(-xrel[igrid2] * c1 / h))
 
             red = 1 - mult
 

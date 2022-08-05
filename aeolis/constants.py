@@ -324,7 +324,9 @@ DEFAULT_CONFIG = {
     'okin_initialred_veg'           : 0.32,               #initial shear reduction factor in Okin model for use with vegetation
     'okin_initialred_fence'         : 0.32,               #initial shear reduction factor in Okin model for use with sand fence module
     'veggrowth_type'                : 'duranmoore14',     #'orig', 'duranmoore14'
-    'rhoveg_max'                    : 0.5,                #maximum vegetation density
+    'rhoveg_max'                    : 0.5,                #maximum vegetation density, only used in duran and moore 14 formulation
+    't_veg'                         : 3,                  #time scale of vegetation growth (days), only used in duran and moore 14 formulation
+    'v_gam'                         : 1,                  # only used in duran and moore 14 formulation
 }
 
 REQUIRED_CONFIG = ['nx', 'ny']
