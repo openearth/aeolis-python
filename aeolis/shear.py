@@ -854,10 +854,17 @@ class WindShear:
         xyi = np.concatenate((yi.reshape((-1,1)),
                               xi.reshape((-1,1))), axis=1)
 
+        
+        # Interpolate 
+        pad_w = np.maximum(np.shape(x)[0], np.shape(x)[1])
+        x_pad = np.pad(x, ((pad_w, pad_w), (pad_w, pad_w)), 'reflect', reflect_type='odd')
+        y_pad = np.pad(y, ((pad_w, pad_w), (pad_w, pad_w)), 'reflect', reflect_type='odd')
+        z_pad = np.pad(z, ((pad_w, pad_w), (pad_w, pad_w)), 'edge')
+
         if self.istransect:
-            zi = np.interp(xi.flatten(), x.flatten(), z.flatten()).reshape(xi.shape)
+            zi = np.interp(xi.flatten(), x_pad.flatten(), z_pad.flatten()).reshape(xi.shape)
         else:
-            inter = scipy.interpolate.RegularGridInterpolator((y[:,0], x[0,:]), z, bounds_error = False, fill_value = z0)
+            inter = scipy.interpolate.RegularGridInterpolator((y_pad[:,0], x_pad[0,:]), z_pad, bounds_error = False, fill_value = z0)
             zi = inter(xyi).reshape(xi.shape)
             
         return zi
