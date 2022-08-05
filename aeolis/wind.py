@@ -189,7 +189,7 @@ def calculate_z0(p, s):
         d50 = calc_grain_size(p, s, 50)
         z0 = 2*d50 / 30.
     if p['method_roughness'] == 'vanrijn_strypsteen': # based on van Rijn and Strypsteen, 2019; Strypsteen et al., 2021
-        if len(p['grain_dist']) == 1:
+        if len(p['grain_dist']) == 1:  # if one grainsize is used the d90 is calculated with the d50 
             d50 = p['grain_size']
             d90 = 2*d50
         else:
