@@ -217,17 +217,19 @@ def compute_moisture(s, p):
         a3 = 0.1
         s['uth'][ix] *= np.sqrt(1 + mg[ix] + 6 / np.pi * a1 / (p['rhog'] * p['g'] * d ** 2) \
                                 + a2 / (p['rhow'] * p['g'] * d) * np.exp(-a3 * mg[ix] / p['w1_5']) * wdiff[ix])
-    elif p['method_moist_threshold'].lower() == 'cornelis':
-        d = np.sum(p['grain_size'] * p['grain_dist'])
-        a1 = 0.013
-        a2 = 1.7e-4
-        a3 = 3e14
-        s['uth'][ix] = np.sqrt(a1 * (1 + mg[ix] + a2 /((p['rhog'] - p['rhoa']) * p['g'] * d ** 2) \
-                                     * (1 + a3 * 0.075 ** 2 * d / (10 ** 3 * np.exp(-6.5 * mg[ix] / p['w1_5']))) \
-                                         * np.sqrt((p['rhog'] - p['rhoa']) / p['rhoa'] * p['g'] * d)))
-    elif p['method_moist_threshold'].lower() == 'dong_2007':
-        d = np.sum(p['grain_size'] * p['grain_dist'])   
-        s['uth'][ix] = 0.16 * np.sqrt((p['rhog'] - p['rhoa']) / p['rhoa'] * p['g'] * d) * (1 + 478.2 * mg[ix] ** 1.52);
+# Cornelis and Dong 2007 do not work - check papers for accurate constant values
+
+    # elif p['method_moist_threshold'].lower() == 'cornelis':
+    #     d = np.sum(p['grain_size'] * p['grain_dist'])
+    #     a1 = 0.013
+    #     a2 = 1.7e-4
+    #     a3 = 3e14
+    #     s['uth'][ix] = np.sqrt(a1 * (1 + mg[ix] + a2 /((p['rhog'] - p['rhoa']) * p['g'] * d ** 2) \
+    #                                  * (1 + a3 * 0.075 ** 2 * d / (10 ** 3 * np.exp(-6.5 * mg[ix] / p['w1_5']))) \
+    #                                      * np.sqrt((p['rhog'] - p['rhoa']) / p['rhoa'] * p['g'] * d)))
+    # elif p['method_moist_threshold'].lower() == 'dong_2007':
+    #     d = np.sum(p['grain_size'] * p['grain_dist'])   
+    #     s['uth'][ix] = 0.16 * np.sqrt((p['rhog'] - p['rhoa']) / p['rhoa'] * p['g'] * d) * (1 + 478.2 * mg[ix] ** 1.52);
     else:
         logger.log_and_raise('Unknown moisture formulation [%s]' % p['method_moist'], exc=ValueError)
 
