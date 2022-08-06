@@ -412,7 +412,7 @@ def visualize_timeseries(p, t):
     # Start and stop times
     tstart = p['tstart']
     tstop = p['tstop']
-
+    
     # Read the user input (wind)
     uw_t = p['wind_file'][:,0]
     uw_s = p['wind_file'][:,1]
@@ -441,7 +441,7 @@ def visualize_timeseries(p, t):
     axs[0].set_title('Wind velocity at height z, uw (m/s)')
     axs[1].set_title('Wind direction, udir (deg)')
     axs[2].set_title('Wave height, Hs (m)')
-    axs[3].set_title('Wave period, Tp (m)')
+    axs[3].set_title('Wave period, Tp (sec)')
     axs[4].set_title('Water level, zs (m)')
 
     for ax in axs:
