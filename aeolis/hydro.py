@@ -226,7 +226,7 @@ def update(s, p, dt,t):
                     fx[i,fx_ix[i]]=1
                     
                 # Update groundwater level with overheight due to runup
-                s['gw'] = s['gw'] + p['Cl_gw'] * fx * p['K_gw'] / p['ne_gw']
+                s['gw'] = s['gw'] + p['Cl_gw'] * fx
             
 
             # Apply GW complex mask
