@@ -172,6 +172,11 @@ def update(s, p, dt,t):
     # Groundwater level Boussinesq (1D CS-transects)
     if p['process_groundwater']:
         
+        #Initialize GW levels
+        if t==0:
+            s['gw'][:,:]=p['in_gw']
+            s['gw_prev'] = s['gw']
+            s['wetting'] = s['gw'] > s['gw_prev']       
 
         #Specify wetting or drying conditions in previous timestep
         s['wetting'] = s['gw'] > s['gw_prev']
@@ -183,18 +188,6 @@ def update(s, p, dt,t):
         for i in range(int(dt / dt_gw)):
             t_gw = t + i * dt_gw
             interpolate(s,p,t_gw)
-        
-            # #Compute setup and runup
-            # setup=np.max(s['swl'] + 0.35 * p['xi'] * s['Hs']) #Stockdon et al (2006)
-#            setup=s['swl'] + s['eta'] #Stockdon et al (2006)
-            # runup=np.max(s['zs'])
-
-            #Initialize GW levels
-            if t==0:
-                s['gw'][:,:]=p['in_gw']
-                s['gw_prev'] = s['gw']
-                s['wetting'] = s['gw'] > s['gw_prev']
-
                 
             #Define index of shoreline location
             shl_ix =np.argmax(s['zb'] > s['DSWL'],axis=1) - 1
@@ -404,9 +397,12 @@ def Boussinesq (GW,s,p,shl_ix):
     '''
 
     #Define seaward boundary gw=setup
-    GW[:,shl_ix] = s['DSWL'][:,shl_ix]
-    GW[:,shl_ix-1] = s['DSWL'][:,shl_ix-1]
-    
+    for i in range (len(GW[:,0])):
+        GW[i,shl_ix[i]] = s['DSWL'][i,shl_ix[i]]
+        GW[i,shl_ix[i-1]] = s['DSWL'][i,shl_ix[i-1]]
+    # GW[:,shl_ix] = s['DSWL'][:,shl_ix]
+    # GW[:,shl_ix-1] = s['DSWL'][:,shl_ix-1]
+
     if p['boundary_gw'].lower() == 'no_flow':
         #Define landward boundary dgw/dx=0
         GW[:,-1] = GW[:,-4] 
@@ -433,6 +429,7 @@ def Boussinesq (GW,s,p,shl_ix):
     a = np.zeros(s['gw'].shape)
     b = np.zeros(s['gw'].shape)
     c = np.zeros(s['gw'].shape)
+    
 
 
 
@@ -442,6 +439,7 @@ def Boussinesq (GW,s,p,shl_ix):
             b[i,shl_ix[i]:-2]=(GW[i,shl_ix[i]:-2] * (GW[i,shl_ix[i]+1:-1] + GW[i,shl_ix[i]-1:-3])) / s['ds'][i,shl_ix[i]:-2]                  
             c[i,shl_ix[i]+1:-3]=(b[i,shl_ix[i]+2:-2]-b[i,shl_ix[i]:-4])/s['ds'][i,shl_ix[i]+1:-3]
             dGW[i,shl_ix[i]+1:-3]=p['K_gw'] / p['ne_gw'] * (p['D_gw'] * a[i,shl_ix[i]+1:-3] + c[i,shl_ix[i]+1:-3])
+
     return dGW
 
 #@jit
