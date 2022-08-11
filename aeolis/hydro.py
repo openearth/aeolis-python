@@ -115,10 +115,11 @@ def interpolate(s, p, t):
             s['sigma_s'][iy][:] = sigma_s
             
             if hasattr(s['runup_mask'], "__len__"):
+                s['eta'][iy][:] = apply_mask(s['eta'][iy][:], s['runup_mask'][iy][:])
                 s['R'][iy][:] = apply_mask(s['R'][iy][:], s['runup_mask'][iy][:])
 
             s['TWL'][iy][:] = s['SWL'][iy][:]  + s['R'][iy][:]
-            s['DSWL'][iy][:] = s['SWL'][iy][:] + eta            # Was s['zs'] before
+            s['DSWL'][iy][:] = s['SWL'][iy][:] + s['eta'][iy][:]            # Was s['zs'] before
         
     if p['process_moist'] and p['method_moist_process'].lower() == 'surf_moisture' and p['meteo_file'] is not None: 
 
@@ -173,8 +174,8 @@ def update(s, p, dt,t):
     if p['process_groundwater']:
         
         #Initialize GW levels
-        if t==0:
-            s['gw'][:,:]=p['in_gw']
+        if t == p['tstart']:
+            s['gw'][:,:] = p['in_gw']
             s['gw_prev'] = s['gw']
             s['wetting'] = s['gw'] > s['gw_prev']       
 
