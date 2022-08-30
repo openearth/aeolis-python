@@ -59,7 +59,7 @@ alfaw_moist=0.034
 alfad_moist=0.019
 K_gw=0.000085
 D_gw=12
-Cl_gw=705
+Cl_gw=0.7
 tfac_gw=30
 in_gw = 0
 
