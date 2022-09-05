@@ -30,6 +30,7 @@ from __future__ import absolute_import, division
 import logging
 import numpy as np
 from matplotlib import pyplot as plt
+from numba import njit
 
 # package modules
 from aeolis.utils import *
@@ -178,7 +179,7 @@ def update(s, p, dt,t):
             s['gw'][:,:] = p['in_gw']
             s['gw_prev'] = s['gw']
             s['wetting'] = s['gw'] > s['gw_prev']       
-
+            
         #Specify wetting or drying conditions in previous timestep
         s['wetting'] = s['gw'] > s['gw_prev']
         #Save groundwater from previous timestep
@@ -196,12 +197,25 @@ def update(s, p, dt,t):
 
             #Define index of runup limit
             runup_ix =np.argmax(s['zb'] > s['TWL'],axis=1) - 1
+            
+            # Landward boundary condition
+            if p['boundary_gw'].lower() == 'no_flow':
+                #Define landward boundary dgw/dx=0
+                bound = 0
+            
+            elif p['boundary_gw'].lower() == 'static':
+               #Define landward boundary 
+                bound = 1
+                
+            else:
+                 logger.log_and_raise('Unknown landward groundwater boundary condition' % p['boundary_gw'], exc=ValueError)
+
         
             #Runge-Kutta timestepping
-            f1 = Boussinesq(s['gw'],s,p,shl_ix)
-            f2 = Boussinesq(s['gw'] + dt_gw / 2 * f1,s,p, shl_ix)
-            f3 = Boussinesq(s['gw'] + dt_gw / 2 * f2,s,p, shl_ix)
-            f4 = Boussinesq(s['gw'] + dt_gw * f3,s,p, shl_ix)
+            f1 = Boussinesq(s['gw'],s['DSWL'], s['ds'], p['GW_stat'], p['K_gw'], p['ne_gw'], p['D_gw'],shl_ix, bound)
+            f2 = Boussinesq(s['gw'] + dt_gw / 2 * f1,s['DSWL'], s['ds'], p['GW_stat'], p['K_gw'], p['ne_gw'], p['D_gw'], shl_ix, bound)
+            f3 = Boussinesq(s['gw'] + dt_gw / 2 * f2,s['DSWL'], s['ds'], p['GW_stat'], p['K_gw'], p['ne_gw'], p['D_gw'], shl_ix, bound)
+            f4 = Boussinesq(s['gw'] + dt_gw * f3,s['DSWL'], s['ds'], p['GW_stat'], p['K_gw'], p['ne_gw'], p['D_gw'], shl_ix, bound)
             
             #Update groundwater level
             s['gw'] = s['gw'] + dt_gw / 6 * (f1 + 2 * f2 + 2 * f3 + f4)
@@ -211,17 +225,10 @@ def update(s, p, dt,t):
                 #Compute f(x) = distribution of infiltrated water
                 fx=np.zeros(s['gw'].shape)
                 fx_ix=np.zeros_like(shl_ix)
-                for i in range(len(s['gw'][:,0])):
-                    #Define index of peak f(x)
-                    fx_ix[i] = (shl_ix[i]) + (2/3 * (runup_ix[i] - shl_ix[i]))
-                    #Compute f(X)
-                    fx[i,shl_ix[i]:fx_ix[i]] = (s['x'][i,shl_ix[i]:fx_ix[i]] - s['x'][i,shl_ix[i]]) / (2 / 3 * (s['x'][i,runup_ix[i]] - s['x'][i,shl_ix[i]]))
-                    fx[i,fx_ix[i]+1:runup_ix[i]] = 3 - (s['x'][i,fx_ix[i]+1:runup_ix[i]]- s['x'][i,shl_ix[i]])  / (1 / 3 * (s['x'][i,runup_ix[i]] - s['x'][i,shl_ix[i]]))
-                    fx[i,fx_ix[i]]=1
+                runup_overheight_distr(fx, fx_ix, shl_ix, runup_ix, s['x'])
                     
                 # Update groundwater level with overheight due to runup
                 s['gw'] = s['gw'] + p['Cl_gw'] * fx
-            
 
             # Apply GW complex mask
             s['gw'] = apply_mask(s['gw'], s['gw_mask'])
@@ -286,27 +293,7 @@ def update(s, p, dt,t):
                     s['scan_d'][:,:] == False
                 else:
                     #Compute h_delta
-                    for i in range(len(s['wetting'][:,0])):
-                        for j in range(len(s['wetting'][0,:])):
-                            #Compute h delta on the main drying and wetting curve
-                            if s['scan_w'][i,j] == False and s['wetting'][i,j] == True and s['gw'][i,j] < s['gw_prev'][i,j] or s['scan_d'][i,j] == False and s['wetting'][i,j] == False and s['gw'][i,j] > s['gw_prev'][i,j]:
-                                s['h_delta'][i,j]=np.maximum(0,(s['zb'][i,j] - s['gw'][i,j])*100)
-                            #Compute h_delta if there is a reversal on the wetting scanning curve
-                            if s['scan_w'][i,j] == True and s['wetting'][i,j] == True and s['gw'][i,j] < s['gw_prev'][i,j]:
-                                #Solve hdelta from drying scanning curve for which moist(h) on drying scanning curve equals moist(h) on wetting scanning curve 
-                                #intermediate solution:
-                                w_hdelta_int = np.minimum((s['scan_w_moist'][i,j] - s['w_h'][i,j]) * (p['satd_moist'] - s['w_h'][i,j]) / (s['d_h'][i,j] - s['w_h'][i,j]) + s['w_h'][i,j], p['satw_moist'])
-                                #Solve hdelta from wetting curve
-                                s['h_delta'][i,j] = np.maximum( 1 / p['alfaw_moist'] * (((p['satw_moist'] - p['resw_moist']) \
-                                  / np.maximum((w_hdelta_int - p['resw_moist']),0.00001)) ** (1 / p['mw_moist']) - 1) ** (1 / p['nw_moist']),0)
-                            #Compute h_delta if there is a reversal on the drying scanning curve
-                            if s['scan_d'][i,j] == True and s['wetting'][i,j] == False and s['gw'][i,j] > s['gw_prev'][i,j]:
-                                #Solve hdelta from wetting scanning curve for which moist(h) on wetting scanning curve equals moist(h) on drying scanning curve
-                               
-                                #Simple iteration method
-                                hdelta=0 #initialize hdelta
-                                it_hdelta(hdelta,s,p,i,j)
-                                s['h_delta'][i,j] = hdelta
+                    s['h_delta'] = hdelta(s['wetting'], s['scan_w'], s['gw'],s['gw_prev'],s['scan_d'],s['h_delta'],s['zb'],s['scan_w_moist'],s['w_h'],p['satd_moist'],s['d_h'],p['satw_moist'],p['alfaw_moist'],p['resw_moist'],p['mw_moist'],p['nw_moist'])
                     
                     #Compute moisture of h for the wetting curve
                     s['w_h'] = p['resw_moist'] + (p['satw_moist'] - p['resw_moist']) \
@@ -328,38 +315,7 @@ def update(s, p, dt,t):
                                                       * (s['d_h'] - s['w_h']), s['d_h']),s['w_h'])
                     
                     #Select SWR curve to compute moisture content due to capillary processes
-                    for i in range(len(s['wetting'][:,0])):
-                        for j in range(len(s['wetting'][0,:])):
-                            #Wetting conditions main curve
-                            if s['gw'][i,j] >= s['gw_prev'][i,j] and s['wetting'][i,j] == True and s['scan_w'][i,j] == False:
-                                s['moist_swr'][i,j]=s['w_h'][i,j]
-                                s['scan_w'][i,j] = False
-                                s['scan_d'][i,j] = False
-                            #wetting conditions, timestep of reversal - move onto wetting scanning curve
-                            elif s['gw'][i,j] >= s['gw_prev'][i,j] and s['wetting'][i,j] == False:
-                                s['moist_swr'][i,j] = s['scan_w_moist'][i,j]
-                                s['scan_w'][i,j] = s['scan_w_moist'] [i,j] > s['w_h'][i,j]
-                                s['scan_d'][i,j] = False
-                            #wetting conditions - followed a wetting scanning curve in previous timestep - continue following scanning curve unless main curve is reached
-                            elif s['gw'][i,j] >= s['gw_prev'][i,j] and s['wetting'][i,j] == True and s['scan_w'][i,j] == True:
-                                s['moist_swr'][i,j] = s['scan_w_moist'][i,j]
-                                s['scan_w'][i,j] = s['scan_w_moist'] [i,j] > s['w_h'][i,j]
-                                s['scan_d'][i,j] = False
-                            #Drying conditions main curve
-                            elif s['gw'][i,j] < s['gw_prev'][i,j] and s['wetting'][i,j] == False and s['scan_d'][i,j] == False:
-                                s['moist_swr'][i,j]=s['d_h'][i,j]
-                                s['scan_d'][i,j] = False
-                                s['scan_w'][i,j] = False
-                            #Drying conditions, timestep of reversal - move onto a drying scanning curve
-                            elif s['gw'][i,j] < s['gw_prev'][i,j] and s['wetting'][i,j] == True:
-                                s['moist_swr'][i,j] = s['scan_d_moist'][i,j]
-                                s['scan_d'][i,j] = s['scan_d_moist'] [i,j] < s['d_h'][i,j]
-                                s['scan_w'][i,j] = False
-                            #Drying conditions - followed a drying scanning curve in previous timestep - continue following scanning curve unless main curve is reached
-                            elif s['gw'][i,j] < s['gw_prev'][i,j] and s['wetting'][i,j] == False and s['scan_d'][i,j] == True:
-                                s['moist_swr'][i,j] = s['scan_d_moist'][i,j]
-                                s['scan_d'][i,j] = s['scan_d_moist'] [i,j] < s['d_h'][i,j]
-                                s['scan_w'][i,j] = False
+                    s['moist_swr'], s['scan_d'], s['scan_w'] = SWR_curve(s['wetting'],s['gw'],s['gw_prev'],s['scan_w'],s['moist_swr'],s['w_h'],s['scan_d'],s['scan_w_moist'],s['d_h'],s['scan_d_moist'])
                 
             else:
                 ixw = s['wetting'] == True
@@ -390,8 +346,8 @@ def update(s, p, dt,t):
 
 
 
-
-def Boussinesq (GW,s,p,shl_ix):
+@njit
+def Boussinesq (GW, DSWL, ds, GW_stat, K_gw, ne_gw, D_gw,shl_ix, bound):
     '''
     Add description
     
@@ -399,25 +355,23 @@ def Boussinesq (GW,s,p,shl_ix):
 
     #Define seaward boundary gw=setup
     for i in range (len(GW[:,0])):
-        GW[i,shl_ix[i]] = s['DSWL'][i,shl_ix[i]]
-        GW[i,shl_ix[i-1]] = s['DSWL'][i,shl_ix[i-1]]
+        GW[i,shl_ix[i]] = DSWL[i,shl_ix[i]]
+        GW[i,shl_ix[i-1]] = DSWL[i,shl_ix[i-1]]
     # GW[:,shl_ix] = s['DSWL'][:,shl_ix]
     # GW[:,shl_ix-1] = s['DSWL'][:,shl_ix-1]
 
-    if p['boundary_gw'].lower() == 'no_flow':
+    if bound == 0:
         #Define landward boundary dgw/dx=0
         GW[:,-1] = GW[:,-4] 
         GW[:,-2] = GW[:,-4] 
         GW[:,-3] = GW[:,-4]
     
-    elif p['boundary_gw'].lower() == 'static':
+    elif bound == 1:
        #Define landward boundary 
-        GW[:,-1] = p['GW_stat']
-        GW[:,-2] = p['GW_stat']
-        GW[:,-3] = p['GW_stat'] 
+        GW[:,-1] = GW_stat
+        GW[:,-2] = GW_stat
+        GW[:,-3] = GW_stat 
         
-    else:
-         logger.log_and_raise('Unknown landward groundwater boundary condition' % p['boundary_gw'], exc=ValueError)
     
     # #Set GW levels to ground level within seepage face
     # ixs = np.argmin(GW + 0.001 >= s['zb'],axis=1)
@@ -426,39 +380,105 @@ def Boussinesq (GW,s,p,shl_ix):
     #         GW[i,shl_ix[i]:ixs[i]-1] = s['zb'][i,shl_ix[i]:ixs[i]-1]
     
     #Compute groundwater level change dGW/dt (Boussinesq equation)
-    dGW = np.zeros(s['gw'].shape)
-    a = np.zeros(s['gw'].shape)
-    b = np.zeros(s['gw'].shape)
-    c = np.zeros(s['gw'].shape)
+    dGW = np.zeros(GW.shape)
+    a = np.zeros(GW.shape)
+    b = np.zeros(GW.shape)
+    c = np.zeros(GW.shape)
     
 
 
 
     for i in range(len(a[:,0])):
         if shl_ix[i] < len(a[0,:]) - 3:   
-            a[i,shl_ix[i]:-2]=(GW[i,shl_ix[i]+1:-1] - 2 * GW[i,shl_ix[i]:-2] + GW[i,shl_ix[i]-1:-3]) / s['ds'][i,shl_ix[i]:-2] ** 2
-            b[i,shl_ix[i]:-2]=(GW[i,shl_ix[i]:-2] * (GW[i,shl_ix[i]+1:-1] + GW[i,shl_ix[i]-1:-3])) / s['ds'][i,shl_ix[i]:-2]                  
-            c[i,shl_ix[i]+1:-3]=(b[i,shl_ix[i]+2:-2]-b[i,shl_ix[i]:-4])/s['ds'][i,shl_ix[i]+1:-3]
-            dGW[i,shl_ix[i]+1:-3]=p['K_gw'] / p['ne_gw'] * (p['D_gw'] * a[i,shl_ix[i]+1:-3] + c[i,shl_ix[i]+1:-3])
+            a[i,shl_ix[i]:-2]=(GW[i,shl_ix[i]+1:-1] - 2 * GW[i,shl_ix[i]:-2] + GW[i,shl_ix[i]-1:-3]) / ds[i,shl_ix[i]:-2] ** 2
+            b[i,shl_ix[i]:-2]=(GW[i,shl_ix[i]:-2] * (GW[i,shl_ix[i]+1:-1] + GW[i,shl_ix[i]-1:-3])) / ds[i,shl_ix[i]:-2]                  
+            c[i,shl_ix[i]+1:-3]=(b[i,shl_ix[i]+2:-2]-b[i,shl_ix[i]:-4])/ds[i,shl_ix[i]+1:-3]
+            dGW[i,shl_ix[i]+1:-3]=K_gw / ne_gw * (D_gw * a[i,shl_ix[i]+1:-3] + c[i,shl_ix[i]+1:-3])
 
     return dGW
 
-#@jit
-def it_hdelta(hdelta,s,p,i,j):
+@njit
+def runup_overheight_distr(fx, fx_ix,shl_ix,runup_ix, x):
     '''
     Add description
     
     '''
-    F_hdelta =1
-    while F_hdelta > 0.01:           
-        hdelta = hdelta + 0.01
-        w_hdelta = (p['resw_moist'] + (p['satw_moist'] - p['resw_moist']) / (1 + abs(p['alfaw_moist'] * hdelta) ** p['nw_moist']) ** p['mw_moist'])
-        d_hdelta = (p['resd_moist'] + (p['satd_moist'] - p['resd_moist']) / (1 + abs(p['alfad_moist'] * hdelta) ** p['nd_moist']) ** p['md_moist'])
-        F_hdelta = s['w_h'][i,j] + (p['satw_moist'] - s['w_h'][i,j]) / np.maximum(p['satw_moist'] - w_hdelta,0.0001) * (d_hdelta - w_hdelta) - s['scan_d_moist'][i,j]
+    for i in range(len(fx[:,0])):
+        #Define index of peak f(x)
+        fx_ix[i] = (shl_ix[i]) + (2/3 * (runup_ix[i] - shl_ix[i]))
+        #Compute f(X)
+        fx[i,shl_ix[i]:fx_ix[i]] = (x[i,shl_ix[i]:fx_ix[i]] - x[i,shl_ix[i]]) / (2 / 3 * (x[i,runup_ix[i]] - x[i,shl_ix[i]]))
+        fx[i,fx_ix[i]+1:runup_ix[i]] = 3 - (x[i,fx_ix[i]+1:runup_ix[i]]- x[i,shl_ix[i]])  / (1 / 3 * (x[i,runup_ix[i]] - x[i,shl_ix[i]]))
+        fx[i,fx_ix[i]]=1
+    return fx
 
+@njit
+def hdelta(wetting, scan_w, gw,gw_prev,scan_d,h_delta,zb,scan_w_moist,w_h,satd_moist,d_h,satw_moist,alfaw_moist,resw_moist,mw_moist,nw_moist):
+    for i in range(len(wetting[:,0])):
+        for j in range(len(wetting[0,:])):
+            #Compute h delta on the main drying and wetting curve
+            if scan_w[i,j] == False and wetting[i,j] == True and gw[i,j] < gw_prev[i,j] or scan_d[i,j] == False and wetting[i,j] == False and gw[i,j] > gw_prev[i,j]:
+                h_delta[i,j]=np.maximum(0,(zb[i,j] - gw[i,j])*100)
+            #Compute h_delta if there is a reversal on the wetting scanning curve
+            if scan_w[i,j] == True and wetting[i,j] == True and gw[i,j] < gw_prev[i,j]:
+                #Solve hdelta from drying scanning curve for which moist(h) on drying scanning curve equals moist(h) on wetting scanning curve 
+                #intermediate solution:
+                w_hdelta_int = np.minimum((scan_w_moist[i,j] - w_h[i,j]) * (satd_moist - w_h[i,j]) / (d_h[i,j] - w_h[i,j]) + w_h[i,j], satw_moist)
+                #Solve hdelta from wetting curve
+                h_delta[i,j] = np.maximum( 1 / alfaw_moist * (((satw_moist - resw_moist) \
+                    / np.maximum((w_hdelta_int - resw_moist),0.00001)) ** (1 / mw_moist) - 1) ** (1 / nw_moist),0)
+            #Compute h_delta if there is a reversal on the drying scanning curve
+            if scan_d[i,j] == True and wetting[i,j] == False and gw[i,j] > gw_prev[i,j]:
+            #Solve hdelta from wetting scanning curve for which moist(h) on wetting scanning curve equals moist(h) on drying scanning curve
+                #Simple iteration method
+                hdelta_it=0 #initialize hdelta
+                F_hdelta =1
+                while F_hdelta > 0.01:           
+                    hdelta_it = hdelta_it + 0.01
+                    w_hdelta = (resw_moist + (satw_moist - resw_moist) / (1 + np.abs(alfaw_moist * hdelta_it) ** nw_moist) ** mw_moist)
+                    d_hdelta = (resd_moist + (satd_moist - resd_moist) / (1 + np.abs(alfad_moist * hdelta_it) ** nd_moist) ** md_moist)
+                    F_hdelta = w_h + (satw_moist - w_h) / np.maximum(satw_moist - w_hdelta,0.0001) * (d_hdelta - w_hdelta) - scan_d_moist
+                
+                hdelta[i,j] = hdelta_it
+                
     return hdelta
 
-
+@njit
+def SWR_curve(wetting,gw,gw_prev,scan_w,moist_swr,w_h,scan_d,scan_w_moist,d_h,scan_d_moist):
+    for i in range(len(wetting[:,0])):
+        for j in range(len(wetting[0,:])):
+            #Wetting conditions main curve
+            if gw[i,j] >= gw_prev[i,j] and wetting[i,j] == True and scan_w[i,j] == False:
+                moist_swr[i,j]=w_h[i,j]
+                scan_w[i,j] = False
+                scan_d[i,j] = False
+            #wetting conditions, timestep of reversal - move onto wetting scanning curve
+            elif gw[i,j] >= gw_prev[i,j] and wetting[i,j] == False:
+                moist_swr[i,j] = scan_w_moist[i,j]
+                scan_w[i,j] = scan_w_moist[i,j] > w_h[i,j]
+                scan_d[i,j] = False
+            #wetting conditions - followed a wetting scanning curve in previous timestep - continue following scanning curve unless main curve is reached
+            elif gw[i,j] >= gw_prev[i,j] and wetting[i,j] == True and scan_w[i,j] == True:
+                moist_swr[i,j] = scan_w_moist[i,j]
+                scan_w[i,j] = scan_w_moist[i,j] > w_h[i,j]
+                scan_d[i,j] = False
+            #Drying conditions main curve
+            elif gw[i,j] < gw_prev[i,j] and wetting[i,j] == False and scan_d[i,j] == False:
+                moist_swr[i,j]=d_h[i,j]
+                scan_d[i,j] = False
+                scan_w[i,j] = False
+            #Drying conditions, timestep of reversal - move onto a drying scanning curve
+            elif gw[i,j] < gw_prev[i,j] and wetting[i,j] == True:
+                moist_swr[i,j] = scan_d_moist[i,j]
+                scan_d[i,j] = scan_d_moist[i,j] < d_h[i,j]
+                scan_w[i,j] = False
+            #Drying conditions - followed a drying scanning curve in previous timestep - continue following scanning curve unless main curve is reached
+            elif gw[i,j] < gw_prev[i,j] and wetting[i,j] == False and scan_d[i,j] == True:
+                moist_swr[i,j] = scan_d_moist[i,j]
+                scan_d[i,j] = scan_d_moist[i,j] < d_h[i,j]
+                scan_w[i,j] = False
+                                
+    return moist_swr, scan_d, scan_w
 
 def evaporation(s,p,met):
     '''Compute evaporation according to the Penman equation (Shuttleworth, 1993)
