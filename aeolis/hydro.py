@@ -63,41 +63,59 @@ def interpolate(s, p, t):
     '''
 
     if p['process_tide']:
-        if p['tide_file'] is not None:
-            s['SWL'][:,:] = interp_circular(t,
-                                           p['tide_file'][:,0],
-                                           p['tide_file'][:,1])
-        else:
-            s['SWL'][:,:] = 0.
+        # Check if SWL or zs are not provided by some external model
+        # In that case, skip initialization
+        if ('SWL' not in p['external_vars']) and ('zs' not in p['external_vars']) :
+            if p['tide_file'] is not None:
+                s['SWL'][:,:] = interp_circular(t,
+                                            p['tide_file'][:,0],
+                                            p['tide_file'][:,1])
+            else:
+                s['SWL'][:,:] = 0.
 
-        # apply complex mask
-        s['SWL'] = apply_mask(s['SWL'], s['tide_mask'])
+            # apply complex mask
+            s['SWL'] = apply_mask(s['SWL'], s['tide_mask'])
+
+        # apply complex mask (also for external model input)
+        else:
+            s['SWL'] = apply_mask(s['SWL'], s['tide_mask'])
 
     else:
         s['SWL'] = s['zb'] * 0.
 
-    if p['process_wave'] and p['wave_file'] is not None:
+    # Check if Hs or Tp are not provided by some external model
+    # In that case, skip initialization
+    if ('Hs' not in p['external_vars']) and ('Tp' not in p['external_vars']):
 
-        # determine water depth
-        h = np.maximum(0., s['SWL'] - s['zb'])
-    
-        s['Hs'][:,:] = interp_circular(t,
-                                       p['wave_file'][:,0],
-                                       p['wave_file'][:,1])
+        if p['process_wave'] and p['wave_file'] is not None:
 
-        s['Tp'][:,:] = interp_circular(t,
-                                       p['wave_file'][:,0],
-                                       p['wave_file'][:,2])
+            # First compute wave height, than run-up + set-up and finally wave height including set-up for mixing
 
-        s['Hs'] = np.minimum(h * p['gamma'], s['Hs'])
+            # determine water depth
+            h = np.maximum(0., s['SWL'] - s['zb'])
+        
+            s['Hs'][:,:] = interp_circular(t,
+                                        p['wave_file'][:,0],
+                                        p['wave_file'][:,1])
 
-        # apply complex mask
+            s['Tp'][:,:] = interp_circular(t,
+                                        p['wave_file'][:,0],
+                                        p['wave_file'][:,2])
+
+            s['Hs'] = np.minimum(h * p['gamma'], s['Hs'])
+
+            # apply complex mask
+            s['Hs'] = apply_mask(s['Hs'], s['wave_mask'])
+            s['Tp'] = apply_mask(s['Tp'], s['wave_mask'])
+
+        else:
+            s['Hs'] = s['zb'] * 0.
+            s['Tp'] = s['zb'] * 0.
+
+    # apply complex mask (also for external model input)
+    else:
         s['Hs'] = apply_mask(s['Hs'], s['wave_mask'])
         s['Tp'] = apply_mask(s['Tp'], s['wave_mask'])
-
-    else:
-        s['Hs'] = s['zb'] * 0.
-        s['Tp'] = s['zb'] * 0.
 
 
     if p['process_runup']:
@@ -120,6 +138,20 @@ def interpolate(s, p, t):
 
             s['TWL'][iy][:] = s['SWL'][iy][:]  + s['R'][iy][:]
             s['DSWL'][iy][:] = s['SWL'][iy][:] + s['eta'][iy][:]            # Was s['zs'] before
+
+    if p['process_wave'] and p['wave_file'] is not None:
+
+        h_mix = np.maximum(0., s['TWL'] - s['zb'])
+
+        s['Hsmix'][:,:] = interp_circular(t,
+                                       p['wave_file'][:,0],
+                                       p['wave_file'][:,1])
+
+        s['Hsmix'] = np.minimum(h_mix * p['gamma'], s['Hsmix'])
+
+        # apply complex mask
+        s['Hsmix'] = apply_mask(s['Hsmix'], s['wave_mask'])
+
         
     if p['process_moist'] and p['method_moist_process'].lower() == 'surf_moisture' and p['meteo_file'] is not None: 
 

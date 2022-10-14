@@ -54,6 +54,7 @@ INITIAL_STATE = {
         'zs',                               # [m] Water level above reference (or equal to zb if zb > zs)
         'SWL',                              # [m] Still water level above reference
         'Hs',                               # [m] Wave height
+        'Hsmix',                            # [m] Wave height for mixing (including setup, TWL)
         'Tp',                               # [s] Wave period for wave runup calculations
         'zne',                              # [m] Non-erodible layer
     ),
@@ -217,6 +218,7 @@ DEFAULT_CONFIG = {
                                        'uth', 'mass'
                                        'pickup', 'w'],    # Names of spatial grids to be included in output
     'output_types'                  : [],                 # Names of statistical parameters to be included in output (avg, sum, var, min or max)
+    'external_vars'                 : [],                 # Names of variables that are overwritten by an external (coupling) model, i.e. CoCoNuT
     'grain_size'                    : [225e-6],           # [m] Average grain size of each sediment fraction
     'grain_dist'                    : [1.],               # [-] Initial distribution of sediment fractions
     'nlayers'                       : 3,                  # [-] Number of bed layers

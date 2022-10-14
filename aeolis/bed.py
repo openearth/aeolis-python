@@ -152,7 +152,7 @@ def mixtoplayer(s, p):
         nf = p['nfractions']
 
         # compute depth of disturbance for each cell and repeat for each layer
-        DOD = p['facDOD'] * s['Hs']
+        DOD = p['facDOD'] * s['Hsmix']
 
         # compute ratio total layer thickness and depth of disturbance 
         ix = DOD > 0.
@@ -180,7 +180,8 @@ def mixtoplayer(s, p):
                                        .repeat(nl, axis=2)
 
             mass1 = np.nanmean(mass, axis=2, keepdims=True).repeat(nl, axis=2)
-            mass2 = gd * s['thlyr'][:,:,:,np.newaxis].repeat(nf, axis=-1)
+            mass2 = gd * s['thlyr'][:,:,:,np.newaxis].repeat(nf, axis=-1) # FIXME!
+
             mass = mass1 * f + mass2 * (1. - f)
         
             s['mass'][ix] = mass[ix]
