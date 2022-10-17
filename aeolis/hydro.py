@@ -77,7 +77,14 @@ def interpolate(s, p, t):
             s['SWL'] = apply_mask(s['SWL'], s['tide_mask'])
 
         # apply complex mask (also for external model input)
-        else:
+        elif ('SWL' in p['external_vars']):
+            s['SWL'] = apply_mask(s['SWL'], s['tide_mask'])
+
+        elif ('zs' in p['external_vars']):
+            s['SWL'] = s['zs'][:]
+            print('!Be carefull, according to current implementation of importing waterlevel from Flexible Mesh, SWL is equal to DSWL = zs!')
+            logger.warning('!Be carefull, according to current implementation of importing waterlevel from Flexible Mesh, SWL is equal to DSWL = zs!')
+
             s['SWL'] = apply_mask(s['SWL'], s['tide_mask'])
 
     else:
@@ -139,9 +146,14 @@ def interpolate(s, p, t):
             s['TWL'][iy][:] = s['SWL'][iy][:]  + s['R'][iy][:]
             s['DSWL'][iy][:] = s['SWL'][iy][:] + s['eta'][iy][:]            # Was s['zs'] before
 
+
     if p['process_wave'] and p['wave_file'] is not None:
 
-        h_mix = np.maximum(0., s['TWL'] - s['zb'])
+        # In case SWL is imported from an external model (FIXME!)
+        if ('zs' in p['external_vars']):
+            h_mix = np.maximum(0., s['SWL'] - s['zb'])
+        else:
+            h_mix = np.maximum(0., s['TWL'] - s['zb'])
 
         s['Hsmix'][:,:] = interp_circular(t,
                                        p['wave_file'][:,0],
