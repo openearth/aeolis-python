@@ -56,7 +56,8 @@ setup(
 	    'netCDF4',
         'scipy',
         'numpy',
-        'matplotlib'
+        'matplotlib',
+        'numba'
     ],
     python_requires='>=2.7, <4',
     tests_require=[
