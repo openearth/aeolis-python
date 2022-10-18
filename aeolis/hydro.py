@@ -31,6 +31,7 @@ import logging
 import numpy as np
 from matplotlib import pyplot as plt
 from numba import njit
+from scipy.interpolate import NearestNDInterpolator
 
 # package modules
 from aeolis.utils import *
@@ -66,7 +67,7 @@ def interpolate(s, p, t):
     if p['process_tide']:
         # Check if SWL or zs are not provided by some external model
         # In that case, skip initialization
-        if ('SWL' not in p['external_vars']) and ('zs' not in p['external_vars']) :
+        if ('zs' not in p['external_vars']) :
             if p['tide_file'] is not None:
                 s['SWL'][:,:] = interp_circular(t,
                                             p['tide_file'][:,0],
@@ -77,16 +78,29 @@ def interpolate(s, p, t):
             # apply complex mask
             s['SWL'] = apply_mask(s['SWL'], s['tide_mask'])
 
-        # apply complex mask (also for external model input)
-        elif ('SWL' in p['external_vars']):
+        # External model input:
+        elif ('zs' in p['external_vars']):
+            
+
+            s['SWL'] = s['zs'][:]
             s['SWL'] = apply_mask(s['SWL'], s['tide_mask'])
 
-        elif ('zs' in p['external_vars']):
-            s['SWL'] = s['zs'][:]
+            # The dry points have to be filtered out, to prevent issues with run-up calculation later
+            iwet = s['zs'] - s['zb'] > 2. * p['eps']
+            s['SWL'][~iwet] = np.NaN
+            mask = np.where(~np.isnan(s['SWL']))
+            interp = NearestNDInterpolator(np.transpose(mask), s['SWL'][mask])
+            s['SWL'] = interp( * np.indices(s['SWL'].shape))
+
+            # fig, ax = plt.subplots()
+            # pc = plt.pcolormesh(s['x'], s['y'], s['SWL'])#, vmin=1, vmax=1.3)
+            # ax.set_aspect('equal')
+            # fig.colorbar(pc, ax=ax)
+            # plt.show()
+
             print('!Be carefull, according to current implementation of importing waterlevel from Flexible Mesh, SWL is equal to DSWL = zs!')
             logger.warning('!Be carefull, according to current implementation of importing waterlevel from Flexible Mesh, SWL is equal to DSWL = zs!')
 
-            s['SWL'] = apply_mask(s['SWL'], s['tide_mask'])
 
     else:
         s['SWL'] = s['zb'] * 0.
@@ -129,32 +143,42 @@ def interpolate(s, p, t):
     if p['process_runup']:
         ny = p['ny']
 
-        for iy in range(ny + 1):  # do this computation seperately on every y for now so alongshore variable wave runup can be added in the future
-          
-            hs = s['Hs'][iy][0]
-            tp = s['Tp'][iy][0]
-            wl = s['SWL'][iy][0]
+        if ('Hs' not in p['external_vars']):
 
-            eta, sigma_s, R = calc_runup_stockdon(hs, tp, p['beach_slope'])
-            s['R'][iy][:] = R
-            s['eta'][iy][:] = eta
-            s['sigma_s'][iy][:] = sigma_s
+            for iy in range(ny + 1):  # do this computation seperately on every y for now so alongshore variable wave runup can be added in the future
             
-            if hasattr(s['runup_mask'], "__len__"):
-                s['eta'][iy][:] = apply_mask(s['eta'][iy][:], s['runup_mask'][iy][:])
-                s['R'][iy][:] = apply_mask(s['R'][iy][:], s['runup_mask'][iy][:])
+                hs = s['Hs'][iy][0]
+                tp = s['Tp'][iy][0]
+                wl = s['SWL'][iy][0]
 
-            s['TWL'][iy][:] = s['SWL'][iy][:]  + s['R'][iy][:]
-            s['DSWL'][iy][:] = s['SWL'][iy][:] + s['eta'][iy][:]            # Was s['zs'] before
+                eta, sigma_s, R = calc_runup_stockdon(hs, tp, p['beach_slope'])
+                s['R'][iy][:] = R
+                s['eta'][iy][:] = eta
+                s['sigma_s'][iy][:] = sigma_s
+                
+                if hasattr(s['runup_mask'], "__len__"):
+                    s['eta'][iy][:] = apply_mask(s['eta'][iy][:], s['runup_mask'][iy][:])
+                    s['R'][iy][:] = apply_mask(s['R'][iy][:], s['runup_mask'][iy][:])
+
+                s['TWL'][iy][:] = s['SWL'][iy][:]  + s['R'][iy][:]
+                s['DSWL'][iy][:] = s['SWL'][iy][:] + s['eta'][iy][:]            # Was s['zs'] before
+
+        if ('Hs' in p['external_vars']):
+
+            eta, sigma_s, R = calc_runup_stockdon(s['Hs'], s['Tp'], p['beach_slope'])
+            s['R'][:] = R
+
+            if hasattr(s['runup_mask'], "__len__"):
+                s['eta'] = apply_mask(s['eta'], s['runup_mask'])
+                s['R'] = apply_mask(s['R'], s['runup_mask'])
+
+            s['TWL'][:] = s['SWL'][:]  + s['R'][:]
+            s['DSWL'][:] = s['SWL'][:] # + s['eta'][:]       # DSWL is actually provided by FM (?)
 
 
     if p['process_wave'] and p['wave_file'] is not None:
 
-        # In case SWL is imported from an external model (FIXME!)
-        if ('zs' in p['external_vars']):
-            h_mix = np.maximum(0., s['SWL'] - s['zb'])
-        else:
-            h_mix = np.maximum(0., s['TWL'] - s['zb'])
+        h_mix = np.maximum(0., s['TWL'] - s['zb'])
 
         s['Hsmix'][:,:] = interp_circular(t,
                                        p['wave_file'][:,0],
@@ -603,24 +627,46 @@ def calc_runup_stockdon(Ho, Tp, beta):
     """
     Calculate runup according to /Stockdon et al 2006.
     """
-    if Ho > 0 and Tp > 0 and beta > 0:
+    
+    if hasattr(Ho, "__len__"):
+
+        R = np.zeros(np.shape(Ho))
+        sigma_s = np.zeros(np.shape(Ho))
+        eta = np.zeros(np.shape(Ho))
+
         Lo = 9.81 * Tp * Tp / (2 * np.pi) #wavelength
         iribarren = beta / (Ho / Lo) ** (0.5) #irribarren number
 
-        if iribarren < 0.3:
-            R = 0.043 * np.sqrt(Ho * Lo) #formula for dissipative conditions
-            sigma_s = 0.046 * np.sqrt(Ho * Lo) /2
-            eta = R - sigma_s
-        else:
-            nsigma = 2  # nsigma=1 for R16% and nsigma=2 for R2%
-            Lo = 9.81 * Tp * Tp /(2 * np.pi)
-            eta = 0.35 * beta * np.sqrt(Ho * Lo)
-            sigma_s = np.sqrt(Ho * Lo * (0.563 * (beta * beta) + 0.0004)) * nsigma / 2 / 2
-            R = 1.1 * (eta + sigma_s) #result for non-dissipative conditions
+        i_iri = (Ho > 0) * (iribarren < 0.3)
+        R[i_iri] = 0.043 * np.sqrt(Ho[i_iri] * Lo[i_iri]) #formula for dissipative conditions
+        sigma_s[i_iri] = 0.046 * np.sqrt(Ho[i_iri] * Lo[i_iri]) /2
+        eta[i_iri] = R[i_iri] - sigma_s[i_iri]
+
+        i_iri = (Ho > 0) * (iribarren > 0.3)
+        nsigma = 2  # nsigma=1 for R16% and nsigma=2 for R2%
+        eta[i_iri] = 0.35 * beta * np.sqrt(Ho[i_iri] * Lo[i_iri])
+        sigma_s[i_iri] = np.sqrt(Ho[i_iri] * Lo[i_iri] * (0.563 * (beta * beta) + 0.0004)) * nsigma / 2 / 2
+        R[i_iri] = 1.1 * (eta[i_iri] + sigma_s[i_iri]) #result for non-dissipative conditions
+
     else:
-        R = 0
-        sigma_s = 0
-        eta = 0
+        if Ho > 0 and Tp > 0 and beta > 0:
+            Lo = 9.81 * Tp * Tp / (2 * np.pi) #wavelength
+            iribarren = beta / (Ho / Lo) ** (0.5) #irribarren number
+
+            if iribarren < 0.3:
+                R = 0.043 * np.sqrt(Ho * Lo) #formula for dissipative conditions
+                sigma_s = 0.046 * np.sqrt(Ho * Lo) /2
+                eta = R - sigma_s
+            else:
+                nsigma = 2  # nsigma=1 for R16% and nsigma=2 for R2%
+                Lo = 9.81 * Tp * Tp /(2 * np.pi)
+                eta = 0.35 * beta * np.sqrt(Ho * Lo)
+                sigma_s = np.sqrt(Ho * Lo * (0.563 * (beta * beta) + 0.0004)) * nsigma / 2 / 2
+                R = 1.1 * (eta + sigma_s) #result for non-dissipative conditions
+        else:
+            R = 0
+            sigma_s = 0
+            eta = 0
 
     return eta, sigma_s, R
 
