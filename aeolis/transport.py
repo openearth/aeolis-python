@@ -330,10 +330,10 @@ def equilibrium(s, p):
             s['Cuf'][ix] = np.maximum(0., p['Cl'] * rhoa / g * ustar[ix]**2 * (ustar[ix] - uthf[ix]) / u[ix])
 
         elif p['method_transport'].lower() == 'dk':
-            s['Cu'][ix]  = np.maximum(0., p['Cdk'] * rhoa / g * uth[ix] * (ustar[ix]**2 - uth[ix]**2) / u[ix])
-            s['Cuf'][ix] = np.maximum(0., p['Cdk'] * rhoa / g * uthf[ix] * (ustar[ix]**2 - uthf[ix]**2) / u[ix])
+            s['Cu'][ix]  = np.maximum(0., p['Cdk'] * rhoa / g * 0.8*uth[ix] * (ustar[ix]**2 - (0.8*uth[ix])**2) / u[ix])
+            s['Cuf'][ix] = np.maximum(0., p['Cdk'] * rhoa / g * 0.8*uthf[ix] * (ustar[ix]**2 - (0.8*uthf[ix])**2) / u[ix])
             
-            s['Cu0'][ix]  = np.maximum(0., p['Cdk'] * rhoa / g * uth0[ix] * (ustar0[ix]**2 - uth0[ix]**2) / u[ix])
+            s['Cu0'][ix]  = np.maximum(0., p['Cdk'] * rhoa / g * 0.8*uth0[ix] * (ustar0[ix]**2 - (0.8*uth0[ix])**2) / u[ix])
          
         elif p['method_transport'].lower() == 'sauermann':
             alpha_sauermann = 0.35
