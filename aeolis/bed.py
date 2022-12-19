@@ -174,15 +174,15 @@ def mixtoplayer(s, p):
             mass = s['mass'].copy()
             mass[~ix] = np.nan
             
-            gd = normalize(p['grain_dist']) * p['rhog'] * (1. - p['porosity'])
-            gd = gd.reshape((1,1,1,-1)).repeat(ny, axis=0) \
-                                       .repeat(nx, axis=1) \
-                                       .repeat(nl, axis=2)
+            # gd = normalize(p['grain_dist']) * p['rhog'] * (1. - p['porosity'])
+            # gd = gd.reshape((1,1,1,-1)).repeat(ny, axis=0) \
+                                       # .repeat(nx, axis=1) \
+                                       # .repeat(nl, axis=2)
 
             mass1 = np.nanmean(mass, axis=2, keepdims=True).repeat(nl, axis=2)
-            mass2 = gd * s['thlyr'][:,:,:,np.newaxis].repeat(nf, axis=-1) # FIXME!
+            # mass2 = gd * s['thlyr'][:,:,:,np.newaxis].repeat(nf, axis=-1)
+            mass = mass1 * f + mass * (1. - f)
 
-            mass = mass1 * f + mass2 * (1. - f)
         
             s['mass'][ix] = mass[ix]
             
