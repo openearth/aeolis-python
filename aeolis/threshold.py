@@ -178,7 +178,7 @@ def compute_moisture(s, p):
     # geotechnical mass content (percentage of dry mass)
     mg = (s['moist'][:,:] * p['rhow'] / (p['rhog'] * (1. - p['porosity'])))
     mg = mg[:,:,np.newaxis].repeat(nf, axis=2)
-    ix = mg > p['resw_moist']* p['rhow'] / (p['rhog'] * (1. - p['porosity']))
+    ix = mg > p['resw_moist']* p['rhow'] / (p['rhog'] * (1. - p['porosity'])) + 0.005
     
     
     if p['method_moist_threshold'].lower() == 'belly_johnson':
