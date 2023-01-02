@@ -143,7 +143,14 @@ or
     \label{eq:lin}
    \end{gathered}
 
-with (this is coded in the solver as A matrix)
+or the linear system of equations in general form:
+
+.. math::
+   :label: conservative_general
+
+    A \cdot \delta c_{i,j,k} = y_{i,j,k}
+
+Where :math:`A` is a 3-dimensional sparse matrix that is compiled using the matrix diagonals (:math:`A0, Am1, Ap1, Amx, Apx`) which are defined as: 
 
 .. math:: 
 
@@ -226,7 +233,7 @@ and
 .. math::
     E_{i,j,k} = \min(U_{i,j,k},A_{i,j,k})
 
-After solving equation :math:`\delta c_{i,j,k}` using (???), :math`c^{n+1}_{i,j,k}` can be calculated using equation (????).
+After solving equation :math:`\delta c_{i,j,k}` using (:eq:`conservative_general`), :math:`c^{n+1}_{i,j,k}` can be calculated using equation (:eq:`conservative2`).
 
 Also, the pickup per grid cell can be calculated using:
 
@@ -592,8 +599,8 @@ read:
 :math:`n_{\mathrm{x}}` and :math:`n_{\mathrm{y}}` denote the number of
 spatial grid cells in x- and y-direction.
 
-Implicit solver
----------------
+Iterations to solve for multiple fractions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The linear system defined in Equation :eq:`apx-system` is solved by a
 sparse matrix solver for each sediment fraction separately in
