@@ -233,7 +233,7 @@ and
 .. math::
     E_{i,j,k} = \min(U_{i,j,k},A_{i,j,k})
 
-After solving equation :math:`\delta c_{i,j,k}` using (:eq:`conservative_general`), :math:`c^{n+1}_{i,j,k}` can be calculated using equation (:eq:`conservative2`).
+After solving equation :math:`\delta c_{i,j,k}` using :eq:`conservative_general`, :math:`c^{n+1}_{i,j,k}` can be calculated using equation :eq:`conservative2`.
 
 Also, the pickup per grid cell can be calculated using:
 
@@ -243,6 +243,122 @@ Also, the pickup per grid cell can be calculated using:
     \label{eq:pickup}
 
 note that this is only valid when using an Euler backward scheme. 
+
+Solving the Linear System of Equations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The linear system of equations can be elaborated :
+
+.. math::
+  :label: apx-system
+  
+  \left[
+    \begin{array}{cccccc}
+      A^0_1      & A^{1}_1    & \textbf{0} & \cdots       & \textbf{0}    & A^{n_{\mathrm{y}}+1}_1 \\
+      A^{-1}_2   & A^0_2      & \ddots     & \ddots       &               & \textbf{0} \\
+      \textbf{0} & \ddots     & \ddots     & \ddots       & \ddots        & \vdots     \\
+      \vdots     & \ddots     & \ddots     & \ddots       & \ddots        & \textbf{0} \\
+      \textbf{0} &            & \ddots     & \ddots       & A^0_{n_{\mathrm{y}}}      & A^1_{n_{\mathrm{y}}}   \\
+      A^{-n_{\mathrm{y}}-1}_{n_{\mathrm{y}}+1} & \textbf{0} & \cdots     & \textbf{0}   & A^{-1}_{n_{\mathrm{y}}+1} & A^0_{n_{\mathrm{y}}+1} \\
+    \end{array}
+  \right] \left[
+    \begin{array}{c}
+      \vec{c}_1 \\ \vec{c}_2 \\ \vdots \\ \vdots \\ \vec{c}_{n_{\mathrm{y}}} \\ \vec{c}_{n_{\mathrm{y}}+1} \\
+    \end{array} 
+  \right] = \left[ 
+    \begin{array}{c}
+      \vec{y}_1 \\ \vec{y}_2 \\ \vdots \\ \vdots \\ \vec{y}_{n_{\mathrm{y}}} \\ \vec{y}_{n_{\mathrm{y}}+1} \\
+    \end{array} 
+  \right]
+    
+where each item in the matrix is again a matrix :math:`A^l_j` and
+each item in the vectors is again a vector :math:`\vec{c}_j` and
+:math:`\vec{y}_j` respectively. The form of the matrix :math:`A^l_j` depends on
+the diagonal index :math:`l` and reads:
+
+.. math::
+  :label: apx-diagonal
+   
+  A^0_j = 
+  \left[
+    \begin{array}{ccccccc}
+      0              & 0               & 0                & 0
+      & \cdots           & \cdots           & 0                 \\
+      a^{0,-1}_{2,j} & a^{0,0}_{2,j}    & a^{0,1}_{2,j}    & \ddots
+      &                  &                  & \vdots            \\
+      0              & a^{0,-1}_{3,j}   & a^{0,0}_{3,j}    & a^{0,1}_{3,j}
+      & \ddots           &                  & \vdots            \\
+      \vdots         & \ddots           & \ddots           & \ddots
+      & \ddots           & \ddots           & \vdots            \\
+      \vdots         &                  & \ddots           & a^{0,-1}_{n_{\mathrm{x}}-1,j}
+      & a^{0,0}_{n_{\mathrm{x}}-1,j} & a^{0,1}_{n_{\mathrm{x}}-1,j} & 0                 \\
+      \vdots         &                  &                  & 0
+      & a^{0,-1}_{n_{\mathrm{x}},j}  & a^{0,0}_{n_{\mathrm{x}},j}   & a^{0,1}_{n_{\mathrm{x}},j}    \\
+      0              & \cdots           & \cdots           & 0
+      & 1                & -2               & 1                 \\
+    \end{array}
+  \right]
+
+for :math:`l = 0` and 
+
+.. math::
+  :label: apx-offdiagonal
+   
+  A^l_j = 
+  \left[
+    \begin{array}{ccccccc}
+      1               & 0                & \cdots           & \cdots
+      & \cdots           & \cdots           & 0                 \\
+      0               & a^{l,0}_{2,j}    & \ddots           &
+      &                  &                  & \vdots            \\
+      \vdots          & \ddots           & a^{l,0}_{3,j}    & \ddots
+      &                  &                  & \vdots            \\
+      \vdots          &                  & \ddots           & \ddots
+      & \ddots           &                  & \vdots            \\
+      \vdots          &                  &                  & \ddots
+      & a^{l,0}_{n_{\mathrm{x}}-1,j} & \ddots           & \vdots            \\
+      \vdots          &                  &                  &
+      & \ddots           & a^{l,0}_{n_{\mathrm{x}},j}   & 0                 \\
+      0               & \cdots           & \cdots           & \cdots  
+      & \cdots           & 0                & 1                 \\
+    \end{array}
+  \right]
+
+for :math:`l \neq 0`. The vectors :math:`\vec{c}_{j,k}` and :math:`\vec{y}_{j,k}`
+read:
+
+.. math::
+  :label: c-array
+
+  \begin{array}{rclrcl}
+    \vec{c}_{j,k} &=& \left[ 
+      \begin{array}{c}
+        c^{n+1}_{1,j,k} \\
+        c^{n+1}_{2,j,k} \\
+        c^{n+1}_{3,j,k} \\
+        \vdots \\
+        c^{n+1}_{n_{\mathrm{x}}-1,j,k} \\
+        c^{n+1}_{n_{\mathrm{x}},j,k} \\
+        c^{n+1}_{n_{\mathrm{x}}+1,j,k} \\
+    \end{array}
+    \right] & ~ \mathrm{and} ~
+    \vec{y}_{j,k} &=& \left[ 
+      \begin{array}{c}
+        0 \\
+        y^n_{2,j,k} \\
+        y^n_{3,j,k} \\
+        \vdots \\
+        y^n_{n_{\mathrm{x}}-1,j,k} \\
+        y^n_{n_{\mathrm{x}},j,k} \\
+        0 \\
+      \end{array}
+    \right] \\
+    \end{array}
+
+:math:`n_{\mathrm{x}}` and :math:`n_{\mathrm{y}}` denote the number of
+spatial grid cells in x- and y-direction.
+
+
 
 Euler Schemes in non conservative form
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -486,118 +602,7 @@ boundaries are circular:
     c^{n+1}_{i,n_{\mathrm{y}}+1,k} &=& c^{n+1}_{i,1,k} \\
   \end{array}
 
-These boundary conditions can be combined with Equation
-:eq:`apx-combined-simplified`, :eq:`apx-implicitcoef` and
-:eq:`apx-explicitrhs` into a linear system of equations:
 
-.. math::
-  :label: apx-system
-  
-  \left[
-    \begin{array}{cccccc}
-      A^0_1      & A^{1}_1    & \textbf{0} & \cdots       & \textbf{0}    & A^{n_{\mathrm{y}}+1}_1 \\
-      A^{-1}_2   & A^0_2      & \ddots     & \ddots       &               & \textbf{0} \\
-      \textbf{0} & \ddots     & \ddots     & \ddots       & \ddots        & \vdots     \\
-      \vdots     & \ddots     & \ddots     & \ddots       & \ddots        & \textbf{0} \\
-      \textbf{0} &            & \ddots     & \ddots       & A^0_{n_{\mathrm{y}}}      & A^1_{n_{\mathrm{y}}}   \\
-      A^{-n_{\mathrm{y}}-1}_{n_{\mathrm{y}}+1} & \textbf{0} & \cdots     & \textbf{0}   & A^{-1}_{n_{\mathrm{y}}+1} & A^0_{n_{\mathrm{y}}+1} \\
-    \end{array}
-  \right] \left[
-    \begin{array}{c}
-      \vec{c}_1 \\ \vec{c}_2 \\ \vdots \\ \vdots \\ \vec{c}_{n_{\mathrm{y}}} \\ \vec{c}_{n_{\mathrm{y}}+1} \\
-    \end{array} 
-  \right] = \left[ 
-    \begin{array}{c}
-      \vec{y}_1 \\ \vec{y}_2 \\ \vdots \\ \vdots \\ \vec{y}_{n_{\mathrm{y}}} \\ \vec{y}_{n_{\mathrm{y}}+1} \\
-    \end{array} 
-  \right]
-    
-where each item in the matrix is again a matrix :math:`A^l_j` and
-each item in the vectors is again a vector :math:`\vec{c}_j` and
-:math:`\vec{y}_j` respectively. The form of the matrix :math:`A^l_j` depends on
-the diagonal index :math:`l` and reads:
-
-.. math::
-  :label: apx-diagonal
-   
-  A^0_j = 
-  \left[
-    \begin{array}{ccccccc}
-      0              & 0               & 0                & 0
-      & \cdots           & \cdots           & 0                 \\
-      a^{0,-1}_{2,j} & a^{0,0}_{2,j}    & a^{0,1}_{2,j}    & \ddots
-      &                  &                  & \vdots            \\
-      0              & a^{0,-1}_{3,j}   & a^{0,0}_{3,j}    & a^{0,1}_{3,j}
-      & \ddots           &                  & \vdots            \\
-      \vdots         & \ddots           & \ddots           & \ddots
-      & \ddots           & \ddots           & \vdots            \\
-      \vdots         &                  & \ddots           & a^{0,-1}_{n_{\mathrm{x}}-1,j}
-      & a^{0,0}_{n_{\mathrm{x}}-1,j} & a^{0,1}_{n_{\mathrm{x}}-1,j} & 0                 \\
-      \vdots         &                  &                  & 0
-      & a^{0,-1}_{n_{\mathrm{x}},j}  & a^{0,0}_{n_{\mathrm{x}},j}   & a^{0,1}_{n_{\mathrm{x}},j}    \\
-      0              & \cdots           & \cdots           & 0
-      & 1                & -2               & 1                 \\
-    \end{array}
-  \right]
-
-for :math:`l = 0` and 
-
-.. math::
-  :label: apx-offdiagonal
-   
-  A^l_j = 
-  \left[
-    \begin{array}{ccccccc}
-      1               & 0                & \cdots           & \cdots
-      & \cdots           & \cdots           & 0                 \\
-      0               & a^{l,0}_{2,j}    & \ddots           &
-      &                  &                  & \vdots            \\
-      \vdots          & \ddots           & a^{l,0}_{3,j}    & \ddots
-      &                  &                  & \vdots            \\
-      \vdots          &                  & \ddots           & \ddots
-      & \ddots           &                  & \vdots            \\
-      \vdots          &                  &                  & \ddots
-      & a^{l,0}_{n_{\mathrm{x}}-1,j} & \ddots           & \vdots            \\
-      \vdots          &                  &                  &
-      & \ddots           & a^{l,0}_{n_{\mathrm{x}},j}   & 0                 \\
-      0               & \cdots           & \cdots           & \cdots  
-      & \cdots           & 0                & 1                 \\
-    \end{array}
-  \right]
-
-for :math:`l \neq 0`. The vectors :math:`\vec{c}_{j,k}` and :math:`\vec{y}_{j,k}`
-read:
-
-.. math::
-  :label: c-array
-
-  \begin{array}{rclrcl}
-    \vec{c}_{j,k} &=& \left[ 
-      \begin{array}{c}
-        c^{n+1}_{1,j,k} \\
-        c^{n+1}_{2,j,k} \\
-        c^{n+1}_{3,j,k} \\
-        \vdots \\
-        c^{n+1}_{n_{\mathrm{x}}-1,j,k} \\
-        c^{n+1}_{n_{\mathrm{x}},j,k} \\
-        c^{n+1}_{n_{\mathrm{x}}+1,j,k} \\
-    \end{array}
-    \right] & ~ \mathrm{and} ~
-    \vec{y}_{j,k} &=& \left[ 
-      \begin{array}{c}
-        0 \\
-        y^n_{2,j,k} \\
-        y^n_{3,j,k} \\
-        \vdots \\
-        y^n_{n_{\mathrm{x}}-1,j,k} \\
-        y^n_{n_{\mathrm{x}},j,k} \\
-        0 \\
-      \end{array}
-    \right] \\
-    \end{array}
-
-:math:`n_{\mathrm{x}}` and :math:`n_{\mathrm{y}}` denote the number of
-spatial grid cells in x- and y-direction.
 
 Iterations to solve for multiple fractions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
