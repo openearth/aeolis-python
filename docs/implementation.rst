@@ -62,6 +62,7 @@ When now assuming an upwind scheme in space, we can derive 4 concentrations at t
 We assume in x direction:
 
 .. math::
+
     c^{n+1}_{i+1/2,j,k} =
     \begin{cases}
         c^{n+1 *}_{i,j,k} + \delta c_{i,j,k} & \text{if $u_{\text{x},i+1/2,j} > 0$,}\\
@@ -69,6 +70,7 @@ We assume in x direction:
     \end{cases}
 
 .. math::
+
     c^{n+1}_{i-1/2,j,k} =
     \begin{cases}
         c^{n+1 *}_{i-1,j,k} + \delta c_{i-1,j,k} & \text{if $u_{\text{x},i-1/2,j} > 0$,}\\
@@ -78,6 +80,7 @@ We assume in x direction:
 and in y-direction
 
 .. math::
+
     c^{n+1}_{i,j+1/2,k} =
     \begin{cases}
         c^{n+1 *}_{i,j,k} + \delta c_{i,j,k} & \text{if $u_{\text{y},i,j+1/2} > 0$,}\\
@@ -85,6 +88,7 @@ and in y-direction
     \end{cases}
 
 .. math::
+
     c^{n+1}_{i,j-1/2,k} =
     \begin{cases}
         c^{n+1 *}_{i,j-1,k} + \delta c_{i,j-1,k} & \text{if $u_{\text{y},i,j-1/2} > 0$,}\\
