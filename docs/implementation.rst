@@ -32,12 +32,13 @@ The formulation is discretized in different ways to allow for different types of
 
 Default scheme -- Conservative Euler Backward Implicit
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 The default numerical method assumes the advection scheme in a conservative form in combination with an euler backward scheme. This scheme is prepared to use a TVD method but this is not implemented yet (add footnote{Total Variance Diminishing, this is explained in the lecture notes by Zijlema p94}) 
 
 The fluxes at the interface of the cells are defined used in the advection terms:
 
 .. math::
-   :label: conservative-1
+   :label: conservative1
    
    \frac{c^{n+1}_{i,j,k} - c^n_{i,j,k}}{\Delta t} + \\
    \frac{u_{\text{x},i+1/2,j} \cdot c^{n+1}_{i+1/2,j,k} - u_{\text{x},i-1/2,j} \cdot c^{n+1}_{i-1/2,j,k}}{\Delta x} + \\
@@ -47,6 +48,13 @@ The fluxes at the interface of the cells are defined used in the advection terms
    
 In which :math:`n` is the time step index, :math:`i` and :math:`j` are the cross-shore and alongshore spatial grid cell indices and :math:`k` is the grain size fraction index. :math:`w` [-] is the weighting factor used for the weighted addition of the saturated sediment concentrations over all grain size fractions. Note that u is spatially varying but has no temporal index. This is because u is a result of a separate wind solver and considered temporally invariant in the advection solver. 
 
+Now we use a correction algorithm where 
+.. math::
+   :label: conservative2
+   
+   c^{n+1}_{i,j,k} = c^{n+1 *}_{i,j,k} + \delta c_{i,j,k}
+   
+where :math:`\delta c_{i,j,k}` is solved for and :math:`*` denotes the previous iteration. 
 
 
 
