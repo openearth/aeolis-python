@@ -96,6 +96,7 @@ and in y-direction:
     \end{cases}
 
 Now we assume:
+
 - :math:`\Gamma_x = 1` if :math:`u_{\text{x},i+1/2,j,k} > 0` and :math:`\Gamma_x = 0` if :math:`u_{\text{x},i+1/2,j,k} \leq 0`
 - :math:`\Gamma_y = 1` if :math:`u_{\text{y},i,j+1/2,k} > 0` and :math:`\Gamma_x = 0` if :math:`u_{\text{y},i,j+1/2,k} \leq 0`
    
@@ -116,6 +117,126 @@ Let's continue for the moment so that
    \end{gathered}
 
 (note that the above does not take converging and diverging flows into account, also :math:`\delta c_{i,j,k}` at the right hand side in the "min" brackets is difficult to solve for. In the code, this term is neglected which may cause some inaccuracy when calculating pickup. Although mass continuity is corrected for in the implicit scheme when calculating pickup using equation ???)
+
+Now we simplify:
+
+.. math::
+
+\begin{gathered}
+    (\frac{\Delta x \Delta y}{\Delta t} + \Gamma_x\Delta y \cdot u_{\text{x},i+1/2,j} - (1-\Gamma_x)\Delta y \cdot u_{\text{x},i-1/2,j} + \Gamma_y\Delta x \cdot u_{\text{y},i,j+1/2}\\ - (1-\Gamma_y)\Delta x \cdot u_{\text{y},i,j-1/2}+\frac{\Delta x \Delta y}{T_s})\cdot \delta c_{i,j,k}\\
+    -(\Gamma_x\Delta y \cdot u_{\text{x},i-1/2,j})\cdot \delta c_{i-1,j,k}\\
+    +((1-\Gamma_x)\Delta y \cdot u_{\text{x},i+1/2,j})\cdot \delta c_{i+1,j,k}\\ 
+    -(\Gamma_y\Delta x \cdot u_{\text{y},i,j-1/2})\cdot \delta c_{i,j-1,k}\\ 
+    + ((1-\Gamma_y)\Delta x \cdot u_{\text{y},i,j+1/2})\cdot \delta c_{i,j+1,k}\\ 
+\end{gathered}
+
+or
+
+.. math::
+
+\begin{gathered}
+    A0 \cdot \delta c_{i,j,k}
+    + A\text{m1} \cdot \delta c_{i-1,j,k}
+    + A\text{p1} \cdot \delta c_{i+1,j,k}\\ 
+    + A\text{mx} \cdot \delta c_{i,j-1,k} 
+    + A\text{px} \cdot \delta c_{i,j+1,k} = y_{i,j,k}
+    \label{eq:lin}
+\end{gathered}
+
+with (this is coded in the solver as A matrix)
+
+.. math:: 
+
+\begin{aligned}
+A0 = & +\frac{\Delta x \Delta y}{\Delta t} \\
+ & +\frac{\Delta x \Delta y}{T_s} \\
+ & - (1-\Gamma_x)\Delta y \cdot u_{\text{x},i-1/2,j} \\
+ & + \Gamma_x\Delta y \cdot u_{\text{x},i+1/2,j} \\
+ & - (1-\Gamma_y)\Delta x \cdot u_{\text{y},i,j-1/2} \\
+ & + \Gamma_y\Delta x \cdot u_{\text{y},i,j+1/2} \\
+\end{aligned}
+
+and
+
+.. math::
+
+    A\text{m}1 = -\Gamma_x\Delta y \cdot u_{\text{x},i-1/2,j}
+
+and
+
+.. math::
+
+    A\text{p}1 = (1-\Gamma_x)\Delta y \cdot u_{\text{x},i+1/2,j} 
+
+and
+
+.. math::
+    A\text{mx} = -\Gamma_y\Delta x \cdot u_{\text{y},i,j-1/2}
+
+and
+
+.. math::
+
+    A\text{px} = (1-\Gamma_y)\Delta x \cdot u_{\text{y},i,j+1/2}
+
+Let's go towards the RHS
+
+.. math::
+
+\begin{aligned}  
+    y_{i,j,k} = & - \frac{\Delta x \Delta y}{\Delta t}(c^{n+1 *}_{i,j,k}-c^{n}_{i,j,k}) \\
+    & + \frac{\Delta x \Delta y}{T_s}(\min(\hat{w}^{n+1}_{i,j,k} \cdot c^{n+1}_{\mathrm{sat},i,j,k},m_{i,j,k} + c^{n+1 *}_{i,j,k}) - c^{n+1 *}_{i,j,k}) \\
+    & + \Delta y \cdot u_{\text{x},i-1/2,j} \cdot 
+    (\Gamma_x \cdot c^{n+1 *}_{i-1,j,k} + (1-\Gamma_x) c^{n+1 *}_{i,j,k})\\
+    & - \Delta y \cdot u_{\text{x},i+1/2,j} \cdot (\Gamma_x \cdot c^{n+1 *}_{i,j,k} + (1-\Gamma_x) c^{n+1 *}_{i+1,j,k})\\
+    & + \Delta x \cdot u_{\text{y},i,j-1/2} \cdot (\Gamma_y \cdot c^{n+1 *}_{i,j-1,k} + (1-\Gamma_y) c^{n+1 *}_{i,j,k})\\
+    & - \Delta x \cdot u_{\text{y},i,j+1/2} \cdot (\Gamma_y \cdot c^{n+1 *}_{i,j,k} + (1-\Gamma_y) c^{n+1 *}_{i,j+1,k})\\ 
+\end{aligned}
+
+in the python code some intermediate variable is defined to make it easier to shift indexes
+
+.. math::
+
+    \text{Ctxfs} =(\Gamma_x \cdot c^{n+1 *}_{i,j,k} + (1-\Gamma_x) c^{n+1 *}_{i+1,j,k})
+
+and
+
+.. math::
+
+    \text{Ctxfn} =(\Gamma_y \cdot c^{n+1 *}_{i,j,k} + (1-\Gamma_y) c^{n+1 *}_{i,j+1,k})
+
+also Erosion and deposition are defined using seperate variables.
+
+.. math::
+    D_{i,j,k}= \frac{\Delta x \Delta y}{T_s}c^{n+1 *}_{i,j,k}
+
+and 
+
+.. math::
+
+    A_{i,j,k}= \frac{\Delta x \Delta y}{T_s}m_{i,j,k} + D_{i,j,k}
+
+and
+
+.. math::
+    U_{i,j,k}= \frac{\Delta x \Delta y}{T_s}\hat{w}^{n+1}_{i,j,k} \cdot c^{n+1}_{\mathrm{sat},i,j,k}
+
+and 
+
+.. math::
+    E_{i,j,k} = \min(U_{i,j,k},A_{i,j,k})
+
+After solving equation :math:`\delta c_{i,j,k}` using (???), :math`c^{n+1}_{i,j,k}` can be calculated using equation (????).
+
+Also, the pickup per grid cell can be calculated using:
+
+.. math::
+
+   \text{pickup} = \frac{\hat{w}^{n+1}_{i,j,k} \cdot c^{n+1}_{\mathrm{sat},i,j,k}- c^{n+1}_{i,j,k}}{T_s}\Delta t
+    \label{eq:pickup}
+
+note that this is only valid when using an Euler backward scheme. 
+
 
 The formulation is discretized following a first order upwind scheme
 assuming that the wind velocity :math:`u_z` is positive in both
