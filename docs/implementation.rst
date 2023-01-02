@@ -28,6 +28,21 @@ y-component of the wind velocity at height :math:`z` [m], :math:`T` [s] is an
 adaptation time scale, :math:`t` [s] denotes time and :math:`x` [m] and :math:`y` [m]
 denote cross-shore and alongshore distances respectively.
 
+The formulation is discretized in different ways to allow for different types of simulations balancing accuracy vs. computational resources. The conservative method combined with an euler backward scheme (written by Prof. Rauwoens) is the current default for most simulations. Non-conservative methods end explicit Euler forward schemes are also available. 
+
+Default scheme - Conservative Euler Backward Implicit
+-----------------------------------------------------
+The default numerical method assumes the advection scheme in a conservative form in combination with an euler backward scheme. This scheme is prepared to use a TVD method but this is not implemented yet (add footnote{Total Variance Diminishing, this is explained in the lecture notes by Zijlema p94}) 
+
+
+
+
+
+
+
+
+
+
 The formulation is discretized following a first order upwind scheme
 assuming that the wind velocity :math:`u_z` is positive in both
 x-direction and y-direction:
