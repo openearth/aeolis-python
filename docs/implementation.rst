@@ -31,10 +31,19 @@ denote cross-shore and alongshore distances respectively.
 The formulation is discretized in different ways to allow for different types of simulations balancing accuracy vs. computational resources. The conservative method combined with an euler backward scheme (written by Prof. Rauwoens) is the current default for most simulations. Non-conservative methods end explicit Euler forward schemes are also available. 
 
 Default scheme - Conservative Euler Backward Implicit
------------------------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The default numerical method assumes the advection scheme in a conservative form in combination with an euler backward scheme. This scheme is prepared to use a TVD method but this is not implemented yet (add footnote{Total Variance Diminishing, this is explained in the lecture notes by Zijlema p94}) 
 
-
+the fluxes at the interface of the cells are defined used in the advection terms:
+.. math::
+   :label: conservative-1
+   \frac{c^{n+1}_{i,j,k} - c^n_{i,j,k}}{\Delta t} + \\
+   \frac{u_{\text{x},i+1/2,j} \cdot c^{n+1}_{i+1/2,j,k} - u_{\text{x},i-1/2,j} \cdot c^{n+1}_{i-1/2,j,k}}{\Delta x} + \\
+   \frac{u_{\text{y},i,j+1/2} \cdot c^{n+1}_{i,j+1/2,k} - u_{\text{y},i,j-1/2} \cdot c^{n+1}_{i,j-1/2,k}}{\Delta y} +
+   \\ = \\
+   \frac{\min(\hat{w}^{n+1}_{i,j,k} \cdot c^{n+1}_{\mathrm{sat},i,j,k},m_{i.j.k} + c^{n+1}_{i,j,k} ) - c^{n+1}_{i,j,k}}{T}
+   
+In which :math:`n` is the time step index, :math:`i` and :math:`j` are the cross-shore and alongshore spatial grid cell indices and :math:`k` is the grain size fraction index. :math:`w` [-] is the weighting factor used for the weighted addition of the saturated sediment concentrations over all grain size fractions. Note that u is spatially varying but has no temporal index. This is because u is a result of a separate wind solver and considered temporally invariant in the advection solver. 
 
 
 
