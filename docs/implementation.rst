@@ -122,39 +122,39 @@ Now we simplify:
 
 .. math::
 
-\begin{gathered}
+   \begin{gathered}
     (\frac{\Delta x \Delta y}{\Delta t} + \Gamma_x\Delta y \cdot u_{\text{x},i+1/2,j} - (1-\Gamma_x)\Delta y \cdot u_{\text{x},i-1/2,j} + \Gamma_y\Delta x \cdot u_{\text{y},i,j+1/2}\\ - (1-\Gamma_y)\Delta x \cdot u_{\text{y},i,j-1/2}+\frac{\Delta x \Delta y}{T_s})\cdot \delta c_{i,j,k}\\
     -(\Gamma_x\Delta y \cdot u_{\text{x},i-1/2,j})\cdot \delta c_{i-1,j,k}\\
     +((1-\Gamma_x)\Delta y \cdot u_{\text{x},i+1/2,j})\cdot \delta c_{i+1,j,k}\\ 
     -(\Gamma_y\Delta x \cdot u_{\text{y},i,j-1/2})\cdot \delta c_{i,j-1,k}\\ 
     + ((1-\Gamma_y)\Delta x \cdot u_{\text{y},i,j+1/2})\cdot \delta c_{i,j+1,k}\\ 
-\end{gathered}
+   \end{gathered}
 
 or
 
 .. math::
 
-\begin{gathered}
+   \begin{gathered}
     A0 \cdot \delta c_{i,j,k}
     + A\text{m1} \cdot \delta c_{i-1,j,k}
     + A\text{p1} \cdot \delta c_{i+1,j,k}\\ 
     + A\text{mx} \cdot \delta c_{i,j-1,k} 
     + A\text{px} \cdot \delta c_{i,j+1,k} = y_{i,j,k}
     \label{eq:lin}
-\end{gathered}
+   \end{gathered}
 
 with (this is coded in the solver as A matrix)
 
 .. math:: 
 
-\begin{aligned}
-A0 = & +\frac{\Delta x \Delta y}{\Delta t} \\
- & +\frac{\Delta x \Delta y}{T_s} \\
- & - (1-\Gamma_x)\Delta y \cdot u_{\text{x},i-1/2,j} \\
- & + \Gamma_x\Delta y \cdot u_{\text{x},i+1/2,j} \\
- & - (1-\Gamma_y)\Delta x \cdot u_{\text{y},i,j-1/2} \\
- & + \Gamma_y\Delta x \cdot u_{\text{y},i,j+1/2} \\
-\end{aligned}
+   \begin{aligned}
+   A0 = & +\frac{\Delta x \Delta y}{\Delta t} \\
+    & +\frac{\Delta x \Delta y}{T_s} \\
+    & - (1-\Gamma_x)\Delta y \cdot u_{\text{x},i-1/2,j} \\
+    & + \Gamma_x\Delta y \cdot u_{\text{x},i+1/2,j} \\
+    & - (1-\Gamma_y)\Delta x \cdot u_{\text{y},i,j-1/2} \\
+    & + \Gamma_y\Delta x \cdot u_{\text{y},i,j+1/2} \\
+   \end{aligned}
 
 and
 
@@ -183,15 +183,15 @@ Let's go towards the RHS
 
 .. math::
 
-\begin{aligned}  
-    y_{i,j,k} = & - \frac{\Delta x \Delta y}{\Delta t}(c^{n+1 *}_{i,j,k}-c^{n}_{i,j,k}) \\
-    & + \frac{\Delta x \Delta y}{T_s}(\min(\hat{w}^{n+1}_{i,j,k} \cdot c^{n+1}_{\mathrm{sat},i,j,k},m_{i,j,k} + c^{n+1 *}_{i,j,k}) - c^{n+1 *}_{i,j,k}) \\
-    & + \Delta y \cdot u_{\text{x},i-1/2,j} \cdot 
-    (\Gamma_x \cdot c^{n+1 *}_{i-1,j,k} + (1-\Gamma_x) c^{n+1 *}_{i,j,k})\\
-    & - \Delta y \cdot u_{\text{x},i+1/2,j} \cdot (\Gamma_x \cdot c^{n+1 *}_{i,j,k} + (1-\Gamma_x) c^{n+1 *}_{i+1,j,k})\\
-    & + \Delta x \cdot u_{\text{y},i,j-1/2} \cdot (\Gamma_y \cdot c^{n+1 *}_{i,j-1,k} + (1-\Gamma_y) c^{n+1 *}_{i,j,k})\\
-    & - \Delta x \cdot u_{\text{y},i,j+1/2} \cdot (\Gamma_y \cdot c^{n+1 *}_{i,j,k} + (1-\Gamma_y) c^{n+1 *}_{i,j+1,k})\\ 
-\end{aligned}
+   \begin{aligned}  
+       y_{i,j,k} = & - \frac{\Delta x \Delta y}{\Delta t}(c^{n+1 *}_{i,j,k}-c^{n}_{i,j,k}) \\
+       & + \frac{\Delta x \Delta y}{T_s}(\min(\hat{w}^{n+1}_{i,j,k} \cdot c^{n+1}_{\mathrm{sat},i,j,k},m_{i,j,k} + c^{n+1 *}_{i,j,k}) - c^{n+1 *}_{i,j,k}) \\
+       & + \Delta y \cdot u_{\text{x},i-1/2,j} \cdot 
+       (\Gamma_x \cdot c^{n+1 *}_{i-1,j,k} + (1-\Gamma_x) c^{n+1 *}_{i,j,k})\\
+       & - \Delta y \cdot u_{\text{x},i+1/2,j} \cdot (\Gamma_x \cdot c^{n+1 *}_{i,j,k} + (1-\Gamma_x) c^{n+1 *}_{i+1,j,k})\\
+       & + \Delta x \cdot u_{\text{y},i,j-1/2} \cdot (\Gamma_y \cdot c^{n+1 *}_{i,j-1,k} + (1-\Gamma_y) c^{n+1 *}_{i,j,k})\\
+       & - \Delta x \cdot u_{\text{y},i,j+1/2} \cdot (\Gamma_y \cdot c^{n+1 *}_{i,j,k} + (1-\Gamma_y) c^{n+1 *}_{i,j+1,k})\\ 
+   \end{aligned}
 
 in the python code some intermediate variable is defined to make it easier to shift indexes
 
@@ -237,6 +237,8 @@ Also, the pickup per grid cell can be calculated using:
 
 note that this is only valid when using an Euler backward scheme. 
 
+Non Conservative Euler Backward Implicit Scheme
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The formulation is discretized following a first order upwind scheme
 assuming that the wind velocity :math:`u_z` is positive in both
