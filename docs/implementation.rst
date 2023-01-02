@@ -57,6 +57,45 @@ Now we use a correction algorithm where:
    
 where :math:`\delta c_{i,j,k}` is solved for and :math:`*` denotes the previous iteration. 
 
+When now assuming an upwind scheme in space, we can derive 4 concentrations at the cell faces which are dependent on the velocity at the cell faces.
+
+We assume in x direction:
+
+.. math::
+    c^{n+1}_{i+1/2,j,k} =
+    \begin{cases}
+        c^{n+1 *}_{i,j,k} + \delta c_{i,j,k} & \text{if $u_{\text{x},i+1/2,j} > 0$,}\\
+        c^{n+1 *}_{i+1,j,k} + \delta c_{i+1,j,k} & \text{if $u_{\text{x},i+1/2,j} < 0$.}
+    \end{cases}
+
+.. math::
+    c^{n+1}_{i-1/2,j,k} =
+    \begin{cases}
+        c^{n+1 *}_{i-1,j,k} + \delta c_{i-1,j,k} & \text{if $u_{\text{x},i-1/2,j} > 0$,}\\
+        c^{n+1 *}_{i,j,k} + \delta c_{i,j,k} & \text{if $u_{\text{x},i-1/2,j} < 0$.}
+    \end{cases}
+
+and in y-direction
+
+.. math::
+    c^{n+1}_{i,j+1/2,k} =
+    \begin{cases}
+        c^{n+1 *}_{i,j,k} + \delta c_{i,j,k} & \text{if $u_{\text{y},i,j+1/2} > 0$,}\\
+        c^{n+1 *}_{i,j+1,k} + \delta c_{i,j+1,k} & \text{if $u_{\text{y},i,j+1/2} < 0$.}
+    \end{cases}
+
+.. math::
+    c^{n+1}_{i,j-1/2,k} =
+    \begin{cases}
+        c^{n+1 *}_{i,j-1,k} + \delta c_{i,j-1,k} & \text{if $u_{\text{y},i,j-1/2} > 0$,}\\
+        c^{n+1 *}_{i,j,k} + \delta c_{i,j,k} & \text{if $u_{\text{y},i,j-1/2} < 0$.}
+    \end{cases}
+
+
+
+
+
+
 The formulation is discretized following a first order upwind scheme
 assuming that the wind velocity :math:`u_z` is positive in both
 x-direction and y-direction:
