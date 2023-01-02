@@ -48,7 +48,8 @@ The fluxes at the interface of the cells are defined used in the advection terms
    
 In which :math:`n` is the time step index, :math:`i` and :math:`j` are the cross-shore and alongshore spatial grid cell indices and :math:`k` is the grain size fraction index. :math:`w` [-] is the weighting factor used for the weighted addition of the saturated sediment concentrations over all grain size fractions. Note that u is spatially varying but has no temporal index. This is because u is a result of a separate wind solver and considered temporally invariant in the advection solver. 
 
-Now we use a correction algorithm where 
+Now we use a correction algorithm where:
+
 .. math::
    :label: conservative2
    
