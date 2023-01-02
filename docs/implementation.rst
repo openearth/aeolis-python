@@ -263,7 +263,7 @@ The linear system of equations can be elaborated :
     \end{array}
   \right] \left[
     \begin{array}{c}
-      \vec{c}_1 \\ \vec{c}_2 \\ \vdots \\ \vdots \\ \vec{c}_{n_{\mathrm{y}}} \\ \vec{c}_{n_{\mathrm{y}}+1} \\
+      \vec{\delta c}_1 \\ \vec{\delta c}_2 \\ \vdots \\ \vdots \\ \vec{\delta c}_{n_{\mathrm{y}}} \\ \vec{\delta c}_{n_{\mathrm{y}}+1} \\
     \end{array} 
   \right] = \left[ 
     \begin{array}{c}
@@ -272,7 +272,7 @@ The linear system of equations can be elaborated :
   \right]
     
 where each item in the matrix is again a matrix :math:`A^l_j` and
-each item in the vectors is again a vector :math:`\vec{c}_j` and
+each item in the vectors is again a vector :math:`\vec{\delta c}_j` and
 :math:`\vec{y}_j` respectively. The form of the matrix :math:`A^l_j` depends on
 the diagonal index :math:`l` and reads:
 
@@ -324,22 +324,22 @@ for :math:`l = 0` and
     \end{array}
   \right]
 
-for :math:`l \neq 0`. The vectors :math:`\vec{c}_{j,k}` and :math:`\vec{y}_{j,k}`
+for :math:`l \neq 0`. The vectors :math:`\vec{\delta c}_{j,k}` and :math:`\vec{y}_{j,k}`
 read:
 
 .. math::
   :label: c-array
 
   \begin{array}{rclrcl}
-    \vec{c}_{j,k} &=& \left[ 
+    \vec{\delta c}_{j,k} &=& \left[ 
       \begin{array}{c}
-        c^{n+1}_{1,j,k} \\
-        c^{n+1}_{2,j,k} \\
-        c^{n+1}_{3,j,k} \\
+        \delta c^{n+1}_{1,j,k} \\
+        \delta c^{n+1}_{2,j,k} \\
+        \delta c^{n+1}_{3,j,k} \\
         \vdots \\
-        c^{n+1}_{n_{\mathrm{x}}-1,j,k} \\
-        c^{n+1}_{n_{\mathrm{x}},j,k} \\
-        c^{n+1}_{n_{\mathrm{x}}+1,j,k} \\
+        \delta c^{n+1}_{n_{\mathrm{x}}-1,j,k} \\
+        \delta c^{n+1}_{n_{\mathrm{x}},j,k} \\
+        \delta c^{n+1}_{n_{\mathrm{x}}+1,j,k} \\
     \end{array}
     \right] & ~ \mathrm{and} ~
     \vec{y}_{j,k} &=& \left[ 
@@ -358,9 +358,44 @@ read:
 :math:`n_{\mathrm{x}}` and :math:`n_{\mathrm{y}}` denote the number of
 spatial grid cells in x- and y-direction.
 
+Iterations to solve for multiple fractions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+The linear system defined in Equation :eq:`apx-system` is solved by a
+sparse matrix solver for each sediment fraction separately in
+ascending order of grain size. Initially, the weights
+:math:`\hat{w}^{n+1}_{i,j,k}` are chosen according to the grain size
+distribution in the bed and the air. The sediment availability
+constraint is checked after each solve:
 
-Euler Schemes in non conservative form
+.. math::
+  :label: solve
+
+     m_{\mathrm{a}} \geq \frac{\hat{w}^{n+1}_{i,j,k} c^{n+1}_{\mathrm{sat},i,j,k} - c^{n+1}_{i,j,k}}{T} \Delta t^n
+
+If the constraint if violated, a new estimate for the weights
+is back-calculated following:
+
+.. math::
+  :label: solve-weights
+
+  \hat{w}^{n+1}_{i,j,k} = \frac{ c^{n+1}_{i,j,k} + m_{\mathrm{a}} \frac{T}{\Delta t^n} }{c^{n+1}_{\mathrm{sat},i,j,k}}
+
+The system is solved again using the new weights. This
+procedure is repeated until a weight is found that does not violate
+the sediment availability constraint. If the time step is not too
+large, the procedure typically converges in only a few
+iterations. Finally, the weights of the larger grains are increased
+proportionally as to ensure that the sum of all weights remains
+unity. If no larger grains are defined, not enough sediment is
+available for transport and the grid cell is truly
+availability-limited. This situation should only occur occasionally as
+the weights in the next time step are computed based on the new bed
+composition and thus will be skewed towards the large fractions. If
+the situation occurs regularly, the time step is chosen too large
+compared to the rate of armoring.
+
+Euler Schemes in non-conservative form
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Early model results relied on Euler schemes in a non conservative form. This allowed for a relatively easy implementation but did not guarantee mass conservation. In version 2 of AEOLIS the conservative form became the default. However, some users still use the older scheme.
@@ -601,46 +636,6 @@ boundaries are circular:
     c^{n+1}_{i,1,k} &=& c^{n+1}_{i,n_{\mathrm{y}}+1,k} \\
     c^{n+1}_{i,n_{\mathrm{y}}+1,k} &=& c^{n+1}_{i,1,k} \\
   \end{array}
-
-
-
-Iterations to solve for multiple fractions
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The linear system defined in Equation :eq:`apx-system` is solved by a
-sparse matrix solver for each sediment fraction separately in
-ascending order of grain size. Initially, the weights
-:math:`\hat{w}^{n+1}_{i,j,k}` are chosen according to the grain size
-distribution in the bed and the air. The sediment availability
-constraint is checked after each solve:
-
-.. math::
-  :label: solve
-
-     m_{\mathrm{a}} \geq \frac{\hat{w}^{n+1}_{i,j,k} c^{n+1}_{\mathrm{sat},i,j,k} - c^{n+1}_{i,j,k}}{T} \Delta t^n
-
-If the constraint if violated, a new estimate for the weights
-is back-calculated following:
-
-.. math::
-  :label: solve-weights
-
-  \hat{w}^{n+1}_{i,j,k} = \frac{ c^{n+1}_{i,j,k} + m_{\mathrm{a}} \frac{T}{\Delta t^n} }{c^{n+1}_{\mathrm{sat},i,j,k}}
-
-The system is solved again using the new weights. This
-procedure is repeated until a weight is found that does not violate
-the sediment availability constraint. If the time step is not too
-large, the procedure typically converges in only a few
-iterations. Finally, the weights of the larger grains are increased
-proportionally as to ensure that the sum of all weights remains
-unity. If no larger grains are defined, not enough sediment is
-available for transport and the grid cell is truly
-availability-limited. This situation should only occur occasionally as
-the weights in the next time step are computed based on the new bed
-composition and thus will be skewed towards the large fractions. If
-the situation occurs regularly, the time step is chosen too large
-compared to the rate of armoring.
-
 
 Shear stress perturbation for non-perpendicular wind directions
 ---------------------------------------------------------------
