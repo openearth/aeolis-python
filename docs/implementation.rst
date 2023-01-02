@@ -77,7 +77,7 @@ We assume in x direction:
         c^{n+1 *}_{i,j,k} + \delta c_{i,j,k} & \text{if $u_{\text{x},i-1/2,j} < 0$.}
     \end{cases}
 
-and in y-direction
+and in y-direction:
 
 .. math::
 
@@ -95,7 +95,7 @@ and in y-direction
         c^{n+1 *}_{i,j,k} + \delta c_{i,j,k} & \text{if $u_{\text{y},i,j-1/2} < 0$.}
     \end{cases}
 
-
+bla
 
 
 
