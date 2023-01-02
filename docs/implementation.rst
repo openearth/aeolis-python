@@ -96,13 +96,8 @@ and in y-direction:
     \end{cases}
 
 Now we assume:
-
-.. math::
-
-   \begin{itemize}
-      \item $\Gamma_x = 1$ if $u_{\text{x},i+1/2,j,k} > 0$ and $\Gamma_x = 0$ if $u_{\text{x},i+1/2,j,k} \leq 0$  
-      \item $\Gamma_y = 1$ if $u_{\text{y},i,j+1/2,k} > 0$ and $\Gamma_x = 0$ if $u_{\text{y},i,j+1/2,k} \leq 0$
-   \end{itemize}
+- :math:`\Gamma_x = 1` if :math:`u_{\text{x},i+1/2,j,k} > 0` and :math:`\Gamma_x = 0` if :math:`u_{\text{x},i+1/2,j,k} \leq 0`
+- :math:`\Gamma_y = 1` if :math:`u_{\text{y},i,j+1/2,k} > 0` and :math:`\Gamma_x = 0` if :math:`u_{\text{y},i,j+1/2,k} \leq 0`
    
 (We did not test if this works well with diverging and converging flows. We may need another term that describes the conditions at the negative cell faces if they are of opposite direction than the positive cell faces and vice versa)
 
