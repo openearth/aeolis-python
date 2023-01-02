@@ -237,8 +237,10 @@ Also, the pickup per grid cell can be calculated using:
 
 note that this is only valid when using an Euler backward scheme. 
 
-Non Conservative Euler Backward Implicit Scheme
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Euler Schemes in non conservative form
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Early model results relied on Euler schemes in a non conservative form. This allowed for a relatively easy implementation but did not guarantee mass conservation. In version 2 of AEOLIS the conservative form became the default. However, some users still use the older scheme.
 
 The formulation is discretized following a first order upwind scheme
 assuming that the wind velocity :math:`u_z` is positive in both
