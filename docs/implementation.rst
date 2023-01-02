@@ -95,10 +95,32 @@ and in y-direction:
         c^{n+1 *}_{i,j,k} + \delta c_{i,j,k} & \text{if $u_{\text{y},i,j-1/2} < 0$.}
     \end{cases}
 
-bla
+Now we assume:
 
+.. math::
 
+   \begin{itemize}
+      \item $\Gamma_x = 1$ if $u_{\text{x},i+1/2,j,k} > 0$ and $\Gamma_x = 0$ if $u_{\text{x},i+1/2,j,k} \leq 0$  
+      \item $\Gamma_y = 1$ if $u_{\text{y},i,j+1/2,k} > 0$ and $\Gamma_x = 0$ if $u_{\text{y},i,j+1/2,k} \leq 0$
+   \end{itemize}
+   
+(We did not test if this works well with diverging and converging flows. We may need another term that describes the conditions at the negative cell faces if they are of opposite direction than the positive cell faces and vice versa)
 
+Let's continue for the moment so that
+
+.. math::
+
+   \begin{gathered}
+   \frac{c^{n+1 *}_{i,j,k} + \delta c_{i,j,k} - c^n_{i,j,k}}{\Delta t} + \\
+   \Gamma_x \cdot \frac{u_{\text{x},i+1/2,j} \cdot (c^{n+1 *}_{i,j,k} + \delta c_{i,j,k}) - u_{\text{x},i-1/2,j} \cdot (c^{n+1 *}_{i-1,j,k} + \delta c_{i-1,j,k})}{\Delta x} + \\
+   (1-\Gamma_x) \cdot \frac{u_{\text{x},i+1/2,j} \cdot (c^{n+1 *}_{i+1,j,k} + \delta c_{i+1,j,k}) - u_{\text{x},i-1/2,j} \cdot (c^{n+1 *}_{i,j,k} + \delta c_{i,j,k})}{\Delta x} + \\
+   \Gamma_y \cdot \frac{u_{\text{y},i,j+1/2} \cdot (c^{n+1 *}_{i,j,k} + \delta c_{i,j,k}) - u_{\text{y},i,j-1/2} \cdot (c^{n+1 *}_{i,j-1,k} + \delta c_{i,j-1,k})}{\Delta y} + \\
+   (1-\Gamma_y) \cdot \frac{u_{\text{y},i,j+1/2} \cdot (c^{n+1 *}_{i,j+1,k} + \delta c_{i,j+1,k}) - u_{\text{y},i,j-1/2} \cdot (c^{n+1 *}_{i,j,k} + \delta c_{i,j,k})}{\Delta y} +
+   \\ = \\
+   \frac{\min(\hat{w}^{n+1}_{i,j,k} \cdot c^{n+1}_{\mathrm{sat},i,j,k},m_{i,j,k}+c^{n+1 *}_{i,j,k} + \xcancel{\delta c_{i,j,k}}) - c^{n+1 *}_{i,j,k} + \delta c_{i,j,k}}{T}
+   \end{gathered}
+
+(note that the above does not take converging and diverging flows into account, also :math:`\delta c_{i,j,k}` at the right hand side in the "min" brackets is difficult to solve for. In the code, this term is neglected which may cause some inaccuracy when calculating pickup. Although mass continuity is corrected for in the implicit scheme when calculating pickup using equation ???)
 
 The formulation is discretized following a first order upwind scheme
 assuming that the wind velocity :math:`u_z` is positive in both
