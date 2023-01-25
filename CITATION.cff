@@ -1,0 +1,33 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: AeoLiS
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Sierd
+    family-names: Vries
+    orcid: 'https://orcid.org/0000-0001-5865-3715'
+    affiliation: Delft University of Technology
+    email: Sierd.deVries@tudelft.nl
+    name-particle: de
+  - given-names: Bart
+    name-particle: van
+    family-names: Westen
+    affiliation: Deltares
+    email: Bart.vanWesten@deltares.nl
+  - given-names: Any
+    family-names: Other
+repository-code: 'https://github.com/openearth/aeolis-python'
+url: 'https://aeolis.readthedocs.io/'
+abstract: >-
+  AeoLiS is a process-based model for simulating aeolian
+  sediment transport in situations where supply-limiting
+  factors are important, like in coastal environments. 
+keywords:
+  - python
+license: AGPL-3.0
+version: 2.0.0
