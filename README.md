@@ -43,3 +43,11 @@ Previous members and contributors are:
 aeolis params.txt
 aeolis-wind wind.txt --mean=6 --duration=3600
 ```
+
+## Contributing
+
+If you want to contribute to the development of AeoLiS, have a look at the [contributing guidelines](CONTRIBUTING.md).
+
+## Acknowledgements
+
+The contributing guidelines for AeoLiS are sourced from the [NLeSC/python-template](https://github.com/NLeSC/python-template).
