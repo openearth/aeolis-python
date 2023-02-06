@@ -17,12 +17,41 @@ like in coastal environments. Supply-limitations currently supported
 are soil moisture contents, sediment sorting and armouring, bed slope
 effects, air humidity and roughness elements.
 
-Documentation can be found at
-http://aeolis.readthedocs.io/.
+## Installation
 
+### Installing from source
+
+Requirements:
+
+- Python 3.x
+- setuptools
+- pip 
+
+
+1. Clone the repository (AEOLIS_V2 branch)
+2. Go to the root directory and install using pip
+   ```shell
+   pip install .
+   ```
+
+### Running AEOLIS
+
+Example:
+
+```shell
+aeolis params.txt
+aeolis-wind wind.txt --mean=6 --duration=3600
+```
+
+## Documentation
+Detailed documentation can be found at http://aeolis.readthedocs.io/
+
+
+## AEOLIS Developer Team
 The maintenance and development is done by the AEOLIS developer team:
 
-Current members of the AEOLIS developer team are:
+**Current Members:**
+
 - [Bart van Westen](mailto:Bart.vanWesten@deltares.nl) at Deltares
 - [Nick Cohn](mailto:nick.cohn@usace.army.mil) at U.S. Army Engineer Research and Development Center (ERDC) 
 - [Sierd de Vries](mailto:Sierd.deVries@tudelft.nl) (founder) at Delft University of Technology
@@ -31,15 +60,21 @@ Current members of the AEOLIS developer team are:
 - [Glenn Strypsteen](mailto:glenn.strypsteen@kuleuven.be) at Katholieke Universiteit Leuven
 - [Janelle Skaden](mailto:Janelle.E.Skaden@usace.army.mil) at U.S. Army Engineer Research and Development Center (ERDC)
 
-Previous members and contributors are:
+**Previous Members & Contributors:**
 - [Bas Hoonhout](mailto:bas@hoonhout.com) (founder) 
 - Tom Pak 
 - Pieter Rauwoens
 - Lisa Meijer
 
-## Examples
+## Citation
 
-```
-aeolis params.txt
-aeolis-wind wind.txt --mean=6 --duration=3600
-```
+Please, cite this software as follows:
+
+*de Name, A., & Other, A. AeoLiS (Version 2.0.0) [Computer software].* 
+
+## Acknowlegdements
+
+The AEOLIS project is supported by the [Digital Competence Centre](ddc.tudelft.nl), Delft University of Technology.
+
+&copy; (YEAR) [Author(s)], Delft, The Netherlands. 
+
