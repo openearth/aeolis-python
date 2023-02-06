@@ -40,7 +40,6 @@ The sections below outlines the steps to make your contribution to the software 
 1. Set up your code editor to follow [PEP 8](https://peps.python.org/pep-0008/) (remove trailing white space, no tabs, etc.). Check code with flake8.
 1. Write tests for any new lines of code you add. 
 1. Include in-code documentation in form of comments and docstrings. Update the user documentation if relevant. Use the [numpydoc](https://numpydoc.readthedocs.io/en/latest/format.html#docstring-standard) documentation style.
-1. Update the `CHANGELOG.md` file with the changes introduced. 
 1. Push your feature branch to (your fork of) the aeolis repository on GitHub.
 1. Create a pull request, for example, following the instructions [here](https://help.github.com/articles/creating-a-pull-request/).
 
@@ -48,4 +47,4 @@ In case you feel you've made a valuable contribution, but you don't know how to 
 
 ## Acknowledgements
 
-The contributing guidelines for AeoLiS are sourced from the [NLeSC/python-template](https://github.com/NLeSC/python-template).
+The contributing guidelines for AeoLiS are based on the [NLeSC/python-template](https://github.com/NLeSC/python-template).
