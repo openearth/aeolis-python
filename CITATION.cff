@@ -8,17 +8,12 @@ message: >-
   metadata from this file.
 type: software
 authors:
-  - given-names: Sierd
-    family-names: Vries
+  - given-names: Author1
+    family-names: Name
     orcid: 'https://orcid.org/0000-0001-5865-3715'
     affiliation: Delft University of Technology
     email: Sierd.deVries@tudelft.nl
     name-particle: de
-  - given-names: Bart
-    name-particle: van
-    family-names: Westen
-    affiliation: Deltares
-    email: Bart.vanWesten@deltares.nl
   - given-names: Any
     family-names: Other
 repository-code: 'https://github.com/openearth/aeolis-python'
