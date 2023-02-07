@@ -284,7 +284,7 @@ def parse_value(val, parse_files=True, force_list=False):
     elif re.match('None', val):
         return None
     elif os.path.isfile(val) and parse_files:
-        for dtype in [np.float, np.complex]:
+        for dtype in [float, complex]:
             try:
                 val = np.loadtxt(val, dtype=dtype)
                 break

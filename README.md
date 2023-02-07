@@ -51,6 +51,7 @@ Detailed documentation can be found at [AeoLiS ReadTheDocs](http://aeolis.readth
 ## AeoLiS Developer Team
 The maintenance and development is done by a group of very enthusiastic people.
 
+**Get Involve:**
 Read our [Contribution Guidelines](CONTRIBUTING.md) to know how you can help to develop AeoLiS.
 
 **Current Members:**
@@ -77,6 +78,7 @@ Please, cite this software as follows:
 
 ## Acknowlegdements
 
-AeoLiS is supported by the [Digital Competence Centre](https://dcc.tudelft.nl), Delft University of Technology.
+- AeoLiS is supported by the [Digital Competence Centre](https://dcc.tudelft.nl), Delft University of Technology.
+- The contributing guidelines for AeoLiS are derived from the [NLeSC/python-template](https://github.com/NLeSC/python-template) and [numpy contributing guide](https://numpy.org/devdocs/dev/index.html#development-process-summary)
 
 &copy; (2023) AeoLiS Development Team, Delft, The Netherlands. 
