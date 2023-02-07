@@ -22,7 +22,7 @@ effects, air humidity and roughness elements.
 
 Requirements:
 
-- Python 3.x
+- Python 3.8 or higher 
 - setuptools
 - pip 
 
