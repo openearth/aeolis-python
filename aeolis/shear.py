@@ -399,7 +399,7 @@ class WindShear:
         zsep =  np.zeros(z.shape)                                                  # total separation bubble      
         zsep_new =  np.zeros(z.shape)                                               # first-oder separation bubble surface
                 
-        zfft = np.zeros((ny,nx), dtype=np.complex)
+        zfft = np.zeros((ny,nx), dtype=complex)
 
         # Compute bed slope angle in x-dir
         dzx[:,:-2] = np.rad2deg(np.arctan((z[:,2:]-z[:,:-2])/(2.*dx)))
