@@ -423,7 +423,7 @@ def separation1d(s, p):
     zsep0 = np.zeros(z.shape)  # zero-order separation bubble surface
     zsep1 = np.zeros(z.shape)  # first-oder separation bubble surface
 
-    zfft = np.zeros((ny, nx), dtype=np.complex)
+    zfft = np.zeros((ny, nx), dtype=complex)
 
     # Compute bed slope angle in x-dir
     dzx[:, :-1] = np.rad2deg(np.arctan((z[:, 1:] - z[:, :-1]) / dx))
