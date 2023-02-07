@@ -50,4 +50,4 @@ If you want to contribute to the development of AeoLiS, have a look at the [cont
 
 ## Acknowledgements
 
-The contributing guidelines for AeoLiS are based on the [NLeSC/python-template](https://github.com/NLeSC/python-template).
+The contributing guidelines for AeoLiS are derived from the [NLeSC/python-template](https://github.com/NLeSC/python-template) and [numpy contributing guide](https://numpy.org/devdocs/dev/index.html#development-process-summary)

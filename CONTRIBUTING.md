@@ -26,21 +26,68 @@ The sections below outlines the steps to make your contribution to the software 
 
 ## You want to make changes to the code base
 
-1. (**important**) Announce your plan to the rest of the community *before you start working*. This announcement should be in the form of a (new) issue on the Github repository.
-1. (**important**) Wait until a consensus is reached about your idea being a good idea.
-1. *Core team members with write access to the aeolis-python GitHub repository*: Clone the repository and create your own feature branch off of the latest commit on the AEOLIS_V2 branch.
+### Announce your plan
 
-    *External contributors*: Fork the repository to your own Github profile and create your own feature branch off of the latest commit on the AEOLIS_V2 branch. While working on your feature branch, make sure to stay up to date with the AEOLIS_V2 branch by pulling in changes from the 'upstream' repository (follow the instructions [here](https://help.github.com/articles/configuring-a-remote-for-a-fork/) and [here](https://help.github.com/articles/syncing-a-fork/));
-1. Set up a development environment on your PC by installing the package in development mode with the following command: 
+1. (**important**) Announce your plan to the rest of the community *before you start working*. This announcement should be in the form of a (new) issue on the Github repository.
+2. (**important**) Wait until a consensus is reached about your idea being a good idea.
+
+
+### Set up a local development environment to work on your changes
+
+1. If you are a part of the AeoLiS team and have write access to the aeolis-python GitHub repository, skip to the next subsection 'Develop your contribution'. All other contributors, follow the below steps.
+
+1. Go to the [aeolis-python GitHub repository](https://github.com/openearth/aeolis-python) and click on 'Fork'. This will create a copy of the aeolis-python repository in your GitHub account. 
+            
+1. Clone the project to your local computer:
+        
+    ```bash
+    git clone https://github.com/your-username/aeolis-python.git
+    ```
+
+1. Change the directory
+
+    ```bash
+    cd aeolis-python
+    ```
+
+1. Add the upstream repository
+
+    ```bash
+    git remote add upstream https://github.com/openearth/aeolis-python.git
+    ```  
+
+1. Now, git remote -v will show two remote repositories named:
+
+        `upstream`, which refers to the aeolis-python repository <br>
+        `origin`, which refers to your personal fork
+
+
+### Develop your contribution
+
+1. Create a branch off the latest commit on the AEOLIS_V2 branch to work on your feature.
+
+    ```bash
+    git checkout -b my-feature
+    ```  
+
+1. Set up a development environment on your PC by installing the package in development mode with the following command: (Consider using a virtual environment for this purpose.)
+
     ```bash
     pip install -e .
     ```
-    Consider using a virtual environment for this purpose.
+    
+1. Set up your code editor to follow [PEP 8](https://peps.python.org/pep-0008/) (remove trailing white space, no tabs, etc.). Check code with [flake8](https://flake8.pycqa.org/en/latest/).
 
-1. Set up your code editor to follow [PEP 8](https://peps.python.org/pep-0008/) (remove trailing white space, no tabs, etc.). Check code with flake8.
 1. Write tests for any new lines of code you add. 
+
 1. Include in-code documentation in form of comments and docstrings. Update the user documentation if relevant. Use the [numpydoc](https://numpydoc.readthedocs.io/en/latest/format.html#docstring-standard) documentation style.
-1. Push your feature branch to (your fork of) the aeolis repository on GitHub.
+
+
+### Submitting your contribution
+
+
+1. Push your feature branch to (your fork of) the aeolis-python GitHub repository.
+
 1. Create a pull request, for example, following the instructions [here](https://help.github.com/articles/creating-a-pull-request/).
 
 In case you feel you've made a valuable contribution, but you don't know how to write or run tests for it, or how to generate the documentation: don't let this discourage you from making the pull request; we can help you! Just go ahead and submit the pull request, but keep in mind that you might be asked to append additional commits to your pull request.
