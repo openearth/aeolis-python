@@ -11,18 +11,51 @@
 [![DOI](https://zenodo.org/badge/7830/openearth/aeolis-python.svg)](https://zenodo.org/badge/latestdoi/7830/openearth/aeolis-python)
 
 # AeoLiS
-AeoLiS is a process-based model for simulating aeolian sediment
-transport in situations where supply-limiting factors are important,
+AeoLiS is a process-based model for simulating aeolian sediment transport in situations where supply-limiting factors are important,
 like in coastal environments. Supply-limitations currently supported
 are soil moisture contents, sediment sorting and armouring, bed slope
 effects, air humidity and roughness elements.
 
-Documentation can be found at
-http://aeolis.readthedocs.io/.
+## Installation
 
-The maintenance and development is done by the AEOLIS developer team:
+### Installing from source
 
-Current members of the AEOLIS developer team are:
+Requirements:
+
+- Python 3.8 or higher 
+- setuptools
+- pip 
+
+
+1. Clone the repository (AEOLIS_V2 branch) using git, or download the source code.
+
+2. Go to the `aeolis-python` directory and install using pip
+   ```shell
+   cd aeolis-python/
+   pip install .
+   ```
+
+### Running AeoLiS
+
+Example from command line:
+
+```shell
+aeolis params.txt
+aeolis-wind wind.txt --mean=6 --duration=3600
+```
+
+## Documentation
+Detailed documentation can be found at [AeoLiS ReadTheDocs](http://aeolis.readthedocs.io/)
+
+
+## AeoLiS Developer Team
+The maintenance and development is done by a group of very enthusiastic people.
+
+**Get Involve:**
+Read our [Contribution Guidelines](CONTRIBUTING.md) to know how you can help to develop AeoLiS.
+
+**Current Members:**
+
 - [Bart van Westen](mailto:Bart.vanWesten@deltares.nl) at Deltares
 - [Nick Cohn](mailto:nick.cohn@usace.army.mil) at U.S. Army Engineer Research and Development Center (ERDC) 
 - [Sierd de Vries](mailto:Sierd.deVries@tudelft.nl) (founder) at Delft University of Technology
@@ -31,23 +64,21 @@ Current members of the AEOLIS developer team are:
 - [Glenn Strypsteen](mailto:glenn.strypsteen@kuleuven.be) at Katholieke Universiteit Leuven
 - [Janelle Skaden](mailto:Janelle.E.Skaden@usace.army.mil) at U.S. Army Engineer Research and Development Center (ERDC)
 
-Previous members and contributors are:
+**Previous Members & Contributors:**
 - [Bas Hoonhout](mailto:bas@hoonhout.com) (founder) 
 - Tom Pak 
 - Pieter Rauwoens
 - Lisa Meijer
 
-## Examples
+## Citation
 
-```
-aeolis params.txt
-aeolis-wind wind.txt --mean=6 --duration=3600
-```
+Please, cite this software as follows:
 
-## Contributing
+*AeoLiS Development Team. AeoLiS (Version 2.0.0) [Computer software].* 
 
-If you want to contribute to the development of AeoLiS, have a look at the [contributing guidelines](CONTRIBUTING.md).
+## Acknowlegdements
 
-## Acknowledgements
+- AeoLiS is supported by the [Digital Competence Centre](https://dcc.tudelft.nl), Delft University of Technology.
+- The contributing guidelines for AeoLiS are derived from the [NLeSC/python-template](https://github.com/NLeSC/python-template) and [numpy contributing guide](https://numpy.org/devdocs/dev/index.html#development-process-summary)
 
-The contributing guidelines for AeoLiS are derived from the [NLeSC/python-template](https://github.com/NLeSC/python-template) and [numpy contributing guide](https://numpy.org/devdocs/dev/index.html#development-process-summary)
+&copy; (2023) AeoLiS Development Team, Delft, The Netherlands. 
