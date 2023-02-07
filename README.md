@@ -11,8 +11,7 @@
 [![DOI](https://zenodo.org/badge/7830/openearth/aeolis-python.svg)](https://zenodo.org/badge/latestdoi/7830/openearth/aeolis-python)
 
 # AeoLiS
-AeoLiS is a process-based model for simulating aeolian sediment
-transport in situations where supply-limiting factors are important,
+AeoLiS is a process-based model for simulating aeolian sediment transport in situations where supply-limiting factors are important,
 like in coastal environments. Supply-limitations currently supported
 are soil moisture contents, sediment sorting and armouring, bed slope
 effects, air humidity and roughness elements.
@@ -28,15 +27,17 @@ Requirements:
 - pip 
 
 
-1. Clone the repository (AEOLIS_V2 branch)
-2. Go to the root directory and install using pip
+1. Clone the repository (AEOLIS_V2 branch) using git, or download the source code.
+
+2. Go to the `aeolis-python` directory and install using pip
    ```shell
+   cd aeolis-python/
    pip install .
    ```
 
-### Running AEOLIS
+### Running AeoLiS
 
-Example:
+Example from command line:
 
 ```shell
 aeolis params.txt
@@ -44,11 +45,13 @@ aeolis-wind wind.txt --mean=6 --duration=3600
 ```
 
 ## Documentation
-Detailed documentation can be found at http://aeolis.readthedocs.io/
+Detailed documentation can be found at [AeoLiS ReadTheDocs](http://aeolis.readthedocs.io/)
 
 
-## AEOLIS Developer Team
-The maintenance and development is done by the AEOLIS developer team:
+## AeoLiS Developer Team
+The maintenance and development is done by a group of very enthusiastic people.
+
+Read our [Contribution Guidelines](CONTRIBUTING.md) to know how you can help to develop AeoLiS.
 
 **Current Members:**
 
@@ -70,11 +73,10 @@ The maintenance and development is done by the AEOLIS developer team:
 
 Please, cite this software as follows:
 
-*de Name, A., & Other, A. AeoLiS (Version 2.0.0) [Computer software].* 
+*AeoLiS Development Team. AeoLiS (Version 2.0.0) [Computer software].* 
 
 ## Acknowlegdements
 
-The AEOLIS project is supported by the [Digital Competence Centre](ddc.tudelft.nl), Delft University of Technology.
+AeoLiS is supported by the [Digital Competence Centre](https://dcc.tudelft.nl), Delft University of Technology.
 
-&copy; (YEAR) [Author(s)], Delft, The Netherlands. 
-
+&copy; (2023) AeoLiS Development Team, Delft, The Netherlands. 
