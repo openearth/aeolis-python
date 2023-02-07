@@ -34,7 +34,7 @@ The sections below outlines the steps to make your contribution to the software 
 
 ### Set up a local development environment to work on your changes
 
-If you are a part of the AeoLiS team and have write access to the aeolis-python GitHub repository, skip to the next subsection 'Develop your contribution'. If you are a first-time contributor, follow the below steps:
+If you are a part of the AeoLiS team and have write access to the aeolis-python GitHub repository, skip to the next subsection [Develop your contribution](CONTRIBUTING.md#develop-your-contribution). If you are a first-time contributor, follow the below steps:
 
 1. Go to the [aeolis-python GitHub repository](https://github.com/openearth/aeolis-python) and click on 'Fork'. This will create a copy of the aeolis-python repository in your GitHub account. 
             
