@@ -34,7 +34,7 @@ The sections below outlines the steps to make your contribution to the software 
 
 ### Set up a local development environment to work on your changes
 
-1. If you are a part of the AeoLiS team and have write access to the aeolis-python GitHub repository, skip to the next subsection 'Develop your contribution'. All other contributors, follow the below steps.
+If you are a part of the AeoLiS team and have write access to the aeolis-python GitHub repository, skip to the next subsection 'Develop your contribution'. If you are a first-time contributor, follow the below steps:
 
 1. Go to the [aeolis-python GitHub repository](https://github.com/openearth/aeolis-python) and click on 'Fork'. This will create a copy of the aeolis-python repository in your GitHub account. 
             
@@ -69,6 +69,8 @@ The sections below outlines the steps to make your contribution to the software 
     ```bash
     git checkout -b my-feature
     ```  
+
+1. If you are contributing via a fork, make sure to pull in changes from the 'upstream' repository to stay up to date with the AEOLIS_V2 branch while working on your feature branch. Follow the instructions [here](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/configuring-a-remote-repository-for-a-fork) and [here](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/syncing-a-fork).
 
 1. Set up a development environment on your PC by installing the package in development mode with the following command: (Consider using a virtual environment for this purpose.)
 
