@@ -11,9 +11,7 @@ authors:
   - given-names: 
     family-names: AEOLIS Development Team
     affiliation: Delft University of Technology
-    email: Sierd.deVries@tudelft.nl
-  - given-names: Any
-    family-names: Other
+    email: 
 repository-code: 'https://github.com/openearth/aeolis-python'
 url: 'https://aeolis.readthedocs.io/'
 abstract: >-
