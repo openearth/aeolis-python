@@ -52,7 +52,7 @@ setup(
         'matplotlib',
         'numba'
     ],
-    python_requires='>=2.7, <4',
+    python_requires='>=3.7, <4',
     tests_require=[
         'nose'
     ],
