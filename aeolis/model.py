@@ -835,8 +835,8 @@ class AeoLiS(IBmi):
             beta = abs(beta)
             if beta >= 1.:
                 # define upwind direction
-                ixs = np.asarray(us[:,:] >= 0., dtype=np.float)
-                ixn = np.asarray(un[:,:] >= 0., dtype=np.float)
+                ixs = np.asarray(us[:,:] >= 0., dtype=float)
+                ixn = np.asarray(un[:,:] >= 0., dtype=float)
                 sgs = 2. * ixs - 1.
                 sgn = 2. * ixn - 1.
             
@@ -1208,8 +1208,8 @@ class AeoLiS(IBmi):
             beta = abs(beta)
             if beta >= 1.:
                 # define upwind direction
-                ixs = np.asarray(s['us'][:,:,i] >= 0., dtype=np.float)
-                ixn = np.asarray(s['un'][:,:,i] >= 0., dtype=np.float)
+                ixs = np.asarray(s['us'][:,:,i] >= 0., dtype=float)
+                ixn = np.asarray(s['un'][:,:,i] >= 0., dtype=float)
                 sgs = 2. * ixs - 1.
                 sgn = 2. * ixn - 1.
             
@@ -1547,8 +1547,8 @@ class AeoLiS(IBmi):
             beta = abs(beta)
             if beta >= 1.:
                 # define upwind direction
-                ixfs = np.asarray(ufs >= 0., dtype=np.float)
-                ixfn = np.asarray(ufn >= 0., dtype=np.float)
+                ixfs = np.asarray(ufs >= 0., dtype=float)
+                ixfn = np.asarray(ufn >= 0., dtype=float)
             else:
                 # or centralizing weights
                 ixfs = beta + np.zeros(ufs)
@@ -1962,8 +1962,8 @@ class AeoLiS(IBmi):
             beta = abs(beta)
             if beta >= 1.:
                 # define upwind direction
-                ixfs = np.asarray(ufs >= 0., dtype=np.float)
-                ixfn = np.asarray(ufn >= 0., dtype=np.float)
+                ixfs = np.asarray(ufs >= 0., dtype=float)
+                ixfn = np.asarray(ufn >= 0., dtype=float)
             else:
                 # or centralizing weights
                 ixfs = beta + np.zeros(ufs)
