@@ -53,9 +53,9 @@ setup(
     install_requires=[
         'docopt==0.6.1',
         'bmi-python',
-	    'netCDF4',
-        'scipy==1.9.3',
-        'numpy==1.23.5',
+        'netCDF4',
+        'scipy',
+        'numpy',
         'matplotlib',
         'numba'
     ],
