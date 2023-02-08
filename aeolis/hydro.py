@@ -280,10 +280,10 @@ def update(s, p, dt,t):
 
         
             #Runge-Kutta timestepping
-            f1 = Boussinesq(s['gw'],s['DSWL'], s['ds'], p['GW_stat'], p['K_gw'], p['ne_gw'], p['D_gw'],shl_ix, bound)
-            f2 = Boussinesq(s['gw'] + dt_gw / 2 * f1,s['DSWL'], s['ds'], p['GW_stat'], p['K_gw'], p['ne_gw'], p['D_gw'], shl_ix, bound)
-            f3 = Boussinesq(s['gw'] + dt_gw / 2 * f2,s['DSWL'], s['ds'], p['GW_stat'], p['K_gw'], p['ne_gw'], p['D_gw'], shl_ix, bound)
-            f4 = Boussinesq(s['gw'] + dt_gw * f3,s['DSWL'], s['ds'], p['GW_stat'], p['K_gw'], p['ne_gw'], p['D_gw'], shl_ix, bound)
+            f1 = Boussinesq(s['gw'],s['DSWL'], s['ds'], p['GW_stat'], p['K_gw'], p['ne_gw'], p['D_gw'],shl_ix, bound,s['zb'],p['process_seepage_face'])
+            f2 = Boussinesq(s['gw'] + dt_gw / 2 * f1,s['DSWL'], s['ds'], p['GW_stat'], p['K_gw'], p['ne_gw'], p['D_gw'], shl_ix, bound,s['zb'],p['process_seepage_face'])
+            f3 = Boussinesq(s['gw'] + dt_gw / 2 * f2,s['DSWL'], s['ds'], p['GW_stat'], p['K_gw'], p['ne_gw'], p['D_gw'], shl_ix, bound,s['zb'],p['process_seepage_face'])
+            f4 = Boussinesq(s['gw'] + dt_gw * f3,s['DSWL'], s['ds'], p['GW_stat'], p['K_gw'], p['ne_gw'], p['D_gw'], shl_ix, bound,s['zb'],p['process_seepage_face'])
             
             #Update groundwater level
             s['gw'] = s['gw'] + dt_gw / 6 * (f1 + 2 * f2 + 2 * f3 + f4)
@@ -415,7 +415,7 @@ def update(s, p, dt,t):
 
 
 @njit
-def Boussinesq (GW, DSWL, ds, GW_stat, K_gw, ne_gw, D_gw,shl_ix, bound):
+def Boussinesq (GW, DSWL, ds, GW_stat, K_gw, ne_gw, D_gw,shl_ix, bound,zb,process_seepage_face):
     '''
     Add description
     
@@ -441,11 +441,12 @@ def Boussinesq (GW, DSWL, ds, GW_stat, K_gw, ne_gw, D_gw,shl_ix, bound):
         GW[:,-3] = GW_stat 
         
     
-    # #Set GW levels to ground level within seepage face
-    # ixs = np.argmin(GW + 0.001 >= s['zb'],axis=1)
-    # for i in range(len(ixs)):
-    #     if shl_ix[i] < ixs[i] - 1:
-    #         GW[i,shl_ix[i]:ixs[i]-1] = s['zb'][i,shl_ix[i]:ixs[i]-1]
+    #Set GW levels to ground level within seepage face
+    if process_seepage_face:
+        ixs = np.argmin(GW + 0.05 >= zb,axis=1)
+        for i in range(len(ixs)):
+            if shl_ix[i] < ixs[i] - 1:
+                GW[i,shl_ix[i]:ixs[i]-1] = zb[i,shl_ix[i]:ixs[i]-1]
     
     #Compute groundwater level change dGW/dt (Boussinesq equation)
     dGW = np.zeros(GW.shape)
