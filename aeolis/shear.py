@@ -872,7 +872,9 @@ class WindShear:
         if self.istransect:
             zi = np.interp(xi.flatten(), x_pad.flatten(), z_pad.flatten()).reshape(xi.shape)
         else:
-            inter = scipy.interpolate.RegularGridInterpolator((y_pad[:,0], x_pad[0,:]), z_pad, bounds_error = False, fill_value = z0)
+            # in the scipy 1.10 version the regular grid interpolator does not work with non c-contigous arrays.
+            # Here we make a copy as a dirty solution feeding the interpolator with ordered copies             
+            inter = scipy.interpolate.RegularGridInterpolator((y_pad[:,0].copy(order='C'), x_pad[0,:].copy(order='C')), z_pad, bounds_error = False, fill_value = z0)
             zi = inter(xyi).reshape(xi.shape)
             
         return zi

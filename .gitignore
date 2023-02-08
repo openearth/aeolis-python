@@ -6,3 +6,5 @@
 _build
 *.whl
 *.gz
+*.log
+*.nc
