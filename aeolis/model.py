@@ -285,7 +285,12 @@ class AeoLiS(IBmi):
         if self.p['process_vegetation']: 
             self.s = aeolis.vegetation.vegshear(self.s, self.p)
         
-        # determine optimal time step
+        # TEMP FIXME FOR BMI!
+        # if self.dt < self.p['dt']:
+        self.dt = self.p['dt']
+        dt = self.p['dt']
+
+        # determine optimal time step:
         self.dt_prev = self.dt
         if not self.set_timestep(dt):
             return
@@ -325,7 +330,7 @@ class AeoLiS(IBmi):
             self.s = aeolis.bed.wet_bed_reset(self.s, self.p)
 
             # calculate average bed level change over time
-            self.s = aeolis.bed.average_change(self.l, self.s, self.p)
+            # self.s = aeolis.bed.average_change(self.l, self.s, self.p)
 
         # compute dune erosion
         if self.p['process_dune_erosion']:
@@ -2724,6 +2729,8 @@ class AeoLiSRunner(AeoLiS):
 
         '''
 
+        # FIXME: Temporary solution to store _sum and _avg output parameters
+        self.clear = False
         if self.clear or self.dt < -1:
             self.output_clear()
             self.clear = False
