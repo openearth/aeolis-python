@@ -48,7 +48,7 @@ setup(
         'bmi-python',
         'netCDF4',
         'scipy',
-        'numpy',
+        'numpy<1.24',
         'matplotlib',
         'numba'
     ],
