@@ -54,7 +54,7 @@ setup(
     ],
     python_requires='>=3.7, <4',
     tests_require=[
-        'nose'
+        'pytest'
     ],
     test_suite='nose.collector',
     entry_points={'console_scripts': [
