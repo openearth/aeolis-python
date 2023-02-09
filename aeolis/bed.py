@@ -100,6 +100,8 @@ def initialize(s, p):
                 s['mass'][:,:,i,j] = p['rhog'] * (1. - p['porosity']) \
                                      * s['thlyr'][:,:,i] * gs[j]
     else:
+        # Read from file
+        p['grain_dist'] = np.zeros(p['nfractions'])
         s['mass'][:,:,:,:] = p['bedcomp_file'].reshape(s['mass'].shape)                
 
     # initialize masks
