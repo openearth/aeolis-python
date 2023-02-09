@@ -72,7 +72,7 @@ Read our [Contribution Guidelines](CONTRIBUTING.md) to know how you can help to 
 
 Please, cite this software as follows:
 
-*AeoLiS Development Team. AeoLiS (Version 2.0.0) [Computer software].* 
+*AeoLiS Development Team. AeoLiS (Version 2.1.0) [Computer software].* 
 
 ## Acknowlegdements
 
