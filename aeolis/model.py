@@ -75,12 +75,10 @@ logger = logging.getLogger(__name__)
 
 
 __version__ = ''
-__gitversion__ = ''
 __root__ = os.path.dirname(__file__)
 
 try:
     __version__ = open(os.path.join(__root__, 'VERSION')).read().strip()
-    __gitversion__ = open(os.path.join(__root__, 'GITVERSION')).read().strip()
 except:
     logger.warning('WARNING: Unknown model version.')
 
@@ -2532,7 +2530,7 @@ class AeoLiSRunner(AeoLiS):
         logger.info('  d88P     888  "Y8888   "Y88P"  88888888 888  "Y8888P"   ')
         logger.info('                                                          ')
         logger.info('  Version:  %-45s' % __version__)
-        logger.info('  Git hash: %-45s' % __gitversion__)
+        # logger.info('  Git hash: %-45s' % __gitversion__) # commenting for now until we implement pyproject.toml
         logger.info('                                                          ')
 
         # set working directory
