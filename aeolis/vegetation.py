@@ -289,3 +289,76 @@ def vegshear_raupach(s, p):
     s['ustarn'] = s['ustar'] * etn
 
     return s
+
+
+def foredune(s, p):
+
+    ''' Overwrite the vegetation(mask) / rhoveg based on certain slope and elevation. 
+    Place holder implementation for dunefoot migration in accretive coast. Note: NOT PROCESS-BASED
+    '''
+
+    critical_vegetation_slope = np.deg2rad(8)        # [rad]
+    critical_vegetation_elevation_1 = 4.            # [m + NAP]
+    critical_vegetation_elevation_2 = 6.            # [m + NAP]
+    rhoveg = 0.2
+
+    # Overwrite rhoveg with zeros
+    s['rhoveg'][:,:] *= 0 
+
+    # Compute gradients (from avalanching module)
+    max_grad_h, grad_h, grad_h_down = calc_gradients(s['zb'], p['nx']+1, p['ny']+1, s['ds'], s['dn'], s['zne'])
+
+    # Compute max gradients from neighbouring cells
+    grad_h_neighbours = np.zeros((np.shape(grad_h)[0], np.shape(grad_h)[1], 5))
+    grad_h_neighbours[:-1, :, 0] = grad_h[1:, :]
+    grad_h_neighbours[1:, :, 1] = grad_h[:-1, :]
+    grad_h_neighbours[:, :-1, 2] = grad_h[:, 1:]
+    grad_h_neighbours[:, 1:, 3] = grad_h[:, :-1]
+    grad_h_neighbours[:, :, 4] = grad_h[:, :]
+    grad_h_neighbour_max = np.max(np.abs(grad_h_neighbours), axis=2)
+
+    # Compute vegetation cover based on max gradients of neighbouring cells
+    crit1a = (grad_h_neighbour_max > critical_vegetation_slope)         # Criterium based on slope (and elevation)
+    crit1b = (s['zb'] > critical_vegetation_elevation_1)                # Criterium based on elevation (and slope)
+    crit2 = (s['zb'] > critical_vegetation_elevation_2)                 # Criterium based on elevation
+    ix_veg = np.maximum( crit1a * crit1b, crit2)
+
+    s['rhoveg'][ix_veg] = rhoveg
+
+    # Filter all too far offshore
+    s['rhoveg'][:, :-30] = 0.
+
+    # Cover everything in vegetation onshore of first vegetation
+    for iy in range(len(s['x'][:, 0])):
+        
+        # Find first offshore index of vegetation cover
+        try:
+            ix_veg_first = np.where( s['rhoveg'][iy, :] > 0.01)[0][0]
+
+            # Cover everything onshore
+            # print('iy: ' + str(iy))
+            # print('ix: ' + str(ix_veg_first))
+            s['rhoveg'][iy, ix_veg_first:] = rhoveg
+        except:
+            # print('iy: NOT FOUND for ' + str(iy))
+            continue
+
+        
+    # # Plotting for testing
+    # fig, axs = plt.subplots(1,3)
+
+    # pc = axs[0].pcolormesh(s['x'], s['y'], s['zb'], vmin=4, vmax=8, cmap='RdBu')
+    # axs[0].set_aspect('equal')
+    # plt.colorbar(pc, ax=axs[0])
+
+    # pc = axs[1].pcolormesh(s['x'], s['y'], s['rhoveg'])
+    # axs[1].set_aspect('equal')
+    # plt.colorbar(pc, ax=axs[1])
+
+    # pc = axs[2].pcolormesh(s['x'], s['y'], np.rad2deg(grad_h_neighbour_max), vmin=5, vmax=10, cmap='RdBu')
+    # axs[2].set_aspect('equal')
+    # plt.colorbar(pc, ax=axs[2])
+
+    # plt.show()
+
+    return s

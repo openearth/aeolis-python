@@ -184,6 +184,7 @@ DEFAULT_CONFIG = {
     'process_fences'                : False,              # Enable the process of sand fencing
     'process_dune_erosion'          : False,              # Enable the process of wave-driven dune erosion
     'process_seepage_face'          : False,              # Enable the process of groundwater seepage (NB. only applicable to positive beach slopes)
+    'process_foredune'              : False,              # Enable the process of vegetation cover based on slope and elevation
     'visualization'                 : False,               # Boolean for visualization of model interpretation before and just after initialization
     'xgrid_file'                    : None,               # Filename of ASCII file with x-coordinates of grid cells
     'ygrid_file'                    : None,               # Filename of ASCII file with y-coordinates of grid cells
