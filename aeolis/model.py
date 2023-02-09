@@ -338,6 +338,11 @@ class AeoLiS(IBmi):
             self.s = aeolis.vegetation.germinate(self.s, self.p)
             self.s = aeolis.vegetation.grow(self.s, self.p)
 
+        # TEMP! grow vegetation (only) based on elevation and foredune slope
+        if self.p['process_foredune']:
+            self.s = aeolis.vegetation.foredune(self.s, self.p)
+
+
         # increment time
         self.t += self.dt * self.p['accfac']
         self._count('time')
