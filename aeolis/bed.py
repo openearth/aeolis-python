@@ -152,7 +152,8 @@ def mixtoplayer(s, p):
         nf = p['nfractions']
 
         # compute depth of disturbance for each cell and repeat for each layer
-        DOD = p['facDOD'] * s['Hsmix']
+        DOD = p['facDOD'] * s['Hs'] # s['Hsmix']
+        s['DOD'] = DOD.copy()
 
         # compute ratio total layer thickness and depth of disturbance 
         ix = DOD > 0.
