@@ -47,7 +47,7 @@ setup(
         'docopt==0.6.1',
         'bmi-python',
         'netCDF4',
-        'scipy<1.10',
+        'scipy',
         'numpy<1.24,>=1.18',
         'matplotlib',
         'numba'
