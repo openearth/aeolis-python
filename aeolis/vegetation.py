@@ -31,6 +31,7 @@ import numpy as np
 import math
 #import matplotlib.pyplot as plt
 from aeolis.wind import *
+from aeolis.avalanching import calc_gradients
 
 # package modules
 import aeolis.wind
@@ -166,11 +167,11 @@ def grow (s, p): #DURAN 2006
     s['lateral'] *= (s['rhoveg']!=0.)
 
     # Dying of vegetation due to hydrodynamics (Dynamic Vegetation Limit)
-    if p['process_tide']:
-        s['rhoveg']     *= (s['zb'] +0.01 >= s['zs'])
-        s['hveg']       *= (s['zb'] +0.01 >= s['zs'])
-        s['germinate']  *= (s['zb'] +0.01 >= s['zs'])
-        s['lateral']    *= (s['zb'] +0.01 >= s['zs'])
+    # if p['process_tide']:
+    #     s['rhoveg']     *= (s['zb'] +0.01 >= s['zs'])
+    #     s['hveg']       *= (s['zb'] +0.01 >= s['zs'])
+    #     s['germinate']  *= (s['zb'] +0.01 >= s['zs'])
+    #     s['lateral']    *= (s['zb'] +0.01 >= s['zs'])
 
     ix = s['zb'] < p['veg_min_elevation']
     s['rhoveg'][ix] = 0
