@@ -85,18 +85,12 @@ def interpolate(s, p, t):
             s['SWL'] = s['zs'][:]
             s['SWL'] = apply_mask(s['SWL'], s['tide_mask'])
 
-            # The dry points have to be filtered out, to prevent issues with run-up calculation later
-            iwet = s['zs'] - s['zb'] > 2. * p['eps']
-            s['SWL'][~iwet] = np.NaN
-            mask = np.where(~np.isnan(s['SWL']))
-            interp = NearestNDInterpolator(np.transpose(mask), s['SWL'][mask])
-            s['SWL'] = interp( * np.indices(s['SWL'].shape))
-
-            # fig, ax = plt.subplots()
-            # pc = plt.pcolormesh(s['x'], s['y'], s['SWL'])#, vmin=1, vmax=1.3)
-            # ax.set_aspect('equal')
-            # fig.colorbar(pc, ax=ax)
-            # plt.show()
+            # # The dry points have to be filtered out, to prevent issues with run-up calculation later
+            # iwet = s['zs'] - s['zb'] > 2. * p['eps']
+            # s['SWL'][~iwet] = np.NaN
+            # mask = np.where(~np.isnan(s['SWL']))
+            # interp = NearestNDInterpolator(np.transpose(mask), s['SWL'][mask])
+            # s['SWL'] = interp( * np.indices(s['SWL'].shape))
 
             print('!Be carefull, according to current implementation of importing waterlevel from Flexible Mesh, SWL is equal to DSWL = zs!')
             logger.warning('!Be carefull, according to current implementation of importing waterlevel from Flexible Mesh, SWL is equal to DSWL = zs!')
