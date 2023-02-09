@@ -76,6 +76,8 @@ MODEL_STATE = {
         'zdry',                             # [m]
         'dzdry',                            # [m]
         'dzb',                              # [m/dt] Bed level change per time step (computed after avalanching!)
+        'dzbpos',                           # [m/dt] Cumulative, positive bed level change (temp external parameter, not computed in the model)
+        'dzbneg',                           # [m/dt] Cumulative, negative bed level change (temp external parameter, not computed in the model)
         'dzbyear',                          # [m/yr] Bed level change translated to m/y
         'dzbavg',                           # [m/year] Bed level change averaged over collected time steps
         'S',                                # [-] Level of saturation
