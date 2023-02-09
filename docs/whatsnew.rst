@@ -9,6 +9,22 @@
 What's New
 ==========
 
+v2.1.0 (February 2023)
+-------------------
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* Solve unrealistic behaviour for large tidal ranges and mildly sloping beaches (Caroline Hallin)
+* Solve comflict between versions of Numpy and Numba (Sierd de Vrise & Niket Agrawal)
+* Reduce computational time when using Numba (Caroline Hallin)
+
+Improvements
+^^^^^^^^^^^^
+* Solve incompatibility with Scipy 1.10 (Sierd de Vries)
+* Better documentation on numerical solvers (Sied de Vries)
+* Adopt Pytest as testing framework (Manuel Garcia)
+
+
 v2.0.0 (April 2022)
 -------------------
 
