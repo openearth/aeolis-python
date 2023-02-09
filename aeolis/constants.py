@@ -116,6 +116,7 @@ MODEL_STATE = {
         'SWL',                              # [m] Still Water Level above reference
         'DSWL',                             # [m] Dynamic Still water level above reference (SWL + Set-up)
         'Rti',                              # [-] Factor taking into account sheltering by roughness elements
+        'DOD',                              # [m] Depth of Disturbance, i.e. the mixing depth as a result of wave impacts
     ),
     ('ny','nx','nfractions') : (
         'Cu',                               # [kg/m^2] Equilibrium sediment concentration integrated over saltation height
