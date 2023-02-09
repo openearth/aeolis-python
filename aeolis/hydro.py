@@ -183,14 +183,14 @@ def interpolate(s, p, t):
 
         h_mix = np.maximum(0., s['TWL'] - s['zb'])
 
-        s['Hsmix'][:,:] = interp_circular(t,
-                                       p['wave_file'][:,0],
-                                       p['wave_file'][:,1])
+        # s['Hsmix'][:,:] = interp_circular(t,
+        #                                p['wave_file'][:,0],
+        #                                p['wave_file'][:,1])
 
-        s['Hsmix'] = np.minimum(h_mix * p['gamma'], s['Hsmix'])
+        # s['Hsmix'] = np.minimum(h_mix * p['gamma'], s['Hsmix'])
 
-        # apply complex mask
-        s['Hsmix'] = apply_mask(s['Hsmix'], s['wave_mask'])
+        # # apply complex mask
+        # s['Hsmix'] = apply_mask(s['Hsmix'], s['wave_mask'])
 
         
     if p['process_moist'] and p['method_moist_process'].lower() == 'surf_moisture' and p['meteo_file'] is not None: 
