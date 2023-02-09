@@ -71,6 +71,7 @@ MODEL_STATE = {
 #        'alfa',                             # [rad] Real-world grid cell orientation #Sierd_comm in later releases this needs a revision 
         'zb',                               # [m] Bed level above reference
         'zs',                               # [m] Water level above reference
+        'hw',                               # [m] Water depth. Not used in model, but only if provided by external model to compute zs = zb + hw
         'zne',                              # [m] Height above reference of the non-erodible layer
         'zb0',                              # [m] Initial bed level above reference
         'zdry',                             # [m]

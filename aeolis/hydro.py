@@ -67,7 +67,7 @@ def interpolate(s, p, t):
     if p['process_tide']:
         # Check if SWL or zs are not provided by some external model
         # In that case, skip initialization
-        if ('zs' not in p['external_vars']) :
+        if ('zs' not in p['external_vars']) and ('hw' not in p['external_vars']):
             if p['tide_file'] is not None:
                 s['SWL'][:,:] = interp_circular(t,
                                             p['tide_file'][:,0],
@@ -101,6 +101,15 @@ def interpolate(s, p, t):
             print('!Be carefull, according to current implementation of importing waterlevel from Flexible Mesh, SWL is equal to DSWL = zs!')
             logger.warning('!Be carefull, according to current implementation of importing waterlevel from Flexible Mesh, SWL is equal to DSWL = zs!')
 
+
+        # External model input (water depth instead of waterlevel)
+        elif ('hw' in p['external_vars']):
+            
+            s['zs'] = s['zb'] + s['hw']
+            s['SWL'] = s['zs'][:].copy()
+            s['SWL'] = apply_mask(s['SWL'], s['tide_mask'])
+
+            logger.info('External model parameter water depth (h) given. This is not directly used, but added to bed level (zb) to compute the water level (zs)')
 
     else:
         s['SWL'] = s['zb'] * 0.
