@@ -15,14 +15,21 @@ effects, air humidity and roughness elements.
 
 ## Installation
 
-### Installing from source
-
-Requirements:
+**Requirements:**
 
 - Python 3.8 or higher 
-- setuptools
+- Setuptools
 - pip 
 
+### Installing with PyPI
+
+On the comand line of your working environment (Bash/Shell, Conda, Mamba, or similar), run the following: 
+
+```shell
+pip install AeoLiS
+```
+
+### Installing from source
 
 1. Clone the repository (AEOLIS_V2 branch) using git, or download the source code.
 
@@ -48,7 +55,7 @@ Detailed documentation can be found at [AeoLiS ReadTheDocs](http://aeolis.readth
 ## AeoLiS Developer Team
 The maintenance and development is done by a group of very enthusiastic people.
 
-**Get Involve:**
+**Get Involved:**
 Read our [Contribution Guidelines](CONTRIBUTING.md) to know how you can help to develop AeoLiS.
 
 **Current Members:**
