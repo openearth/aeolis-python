@@ -27,7 +27,7 @@ import numpy as np
 
 class TestIsIterable:
     """
-    Test if iterable variables can be correctly distinguished from non-iterable variao bles
+    Test if iterable variables can be correctly distinguished from non-iterable variables
     """
     def test_isiterable(self):
         x_iterable = np.random.rand(3,2)
