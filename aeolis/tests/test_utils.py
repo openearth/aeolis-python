@@ -32,12 +32,12 @@ class TestIsIterable:
     def test_isiterable(self):
         x_iterable = np.random.rand(3,2)
         """
-        Check if an inerable variable returns True.
+        Check if an iterable object as input returns True.
         """
         assert utils.isiterable(x_iterable) == True
 
     def test_not_iterable(self):
-        """Check if non-iterable variable returns False"""
+        """Check if non-iterable object as input returns False"""
         x_iterable = None
         assert utils.isiterable(x_iterable) == False
 
