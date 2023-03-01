@@ -58,6 +58,9 @@ import aeolis.vegetation
 import aeolis.fences
 import aeolis.gridparams
 
+# type hints
+from typing import Any
+
 from aeolis.utils import *
 
 class StreamFormatter(logging.Formatter):
@@ -74,7 +77,6 @@ class StreamFormatter(logging.Formatter):
 
 # initialize logger
 logger = logging.getLogger(__name__)
-
 
 __version__ = ''
 __root__ = os.path.dirname(__file__)
@@ -99,7 +101,7 @@ class ModelState(dict):
         super(ModelState, self).__init__(*args, **kwargs)
 
 
-    def __setitem__(self, k:str, v) -> None:
+    def __setitem__(self, k:str, v:Any) -> None:
         """sets new and existing mutable model variables and thier values 
         to the model state
         """
