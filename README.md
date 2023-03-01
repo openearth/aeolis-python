@@ -23,7 +23,7 @@ effects, air humidity and roughness elements.
 - Setuptools
 - pip 
 
-### Installing with PyPI
+### Installing from PyPI
 
 On the comand line of your working environment (Bash/Shell, Conda, Mamba, or similar), run the following: 
 
