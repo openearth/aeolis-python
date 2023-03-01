@@ -13,7 +13,7 @@ bed composition module is used to compute the sediment availability
 for each sediment fraction individually. This model approach is a
 generalization of existing model concepts, like the shear velocity
 threshold and critical fetch, and therefore compatible with these
-existing concepts.
+existing concepts..
 
 Advection Scheme
 ----------------
