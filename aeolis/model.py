@@ -61,8 +61,11 @@ import aeolis.gridparams
 from aeolis.utils import *
 
 class StreamFormatter(logging.Formatter):
+    """A formater for log messages"""
 
-    def format(self, record):
+    def format(self, record) -> str:
+        """Formats log messages for consult standard output"""
+
         if record.levelname == 'INFO':
             return record.getMessage()
         else:
@@ -76,6 +79,7 @@ logger = logging.getLogger(__name__)
 __version__ = ''
 __root__ = os.path.dirname(__file__)
 
+# Collect model version from VERSION file
 try:
     __version__ = open(os.path.join(__root__, 'VERSION')).read().strip()
 except:
@@ -83,37 +87,41 @@ except:
 
 
 class ModelState(dict):
-    '''Dictionary-like object to store model state
-
+    """Dictionary-like object to store model state.
     Model state variables are mutable by default, but can be set
-    immutable. In the latter case any actions that set the immutable
+    to immutable. In the latter case any actions that set the immutable
     model state variable are ignored.
+    """
 
-    '''
-
-
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
+        """Initialize dictionary for model states"""
         self.ismutable = set()
         super(ModelState, self).__init__(*args, **kwargs)
 
 
-    def __setitem__(self, k, v):
+    def __setitem__(self, k:str, v) -> None:
+        """sets new and existing mutable model variables and thier values 
+        to the model state
+        """
+        
         if k not in self.keys() or k in self.ismutable:
             super(ModelState, self).__setitem__(k, v)
             self.set_mutable(k)
 
 
-    def set_mutable(self, k):
+    def set_mutable(self, k:str) -> None:
+        """Adds mutable variable to the model state"""
         self.ismutable.add(k)
 
 
-    def set_immutable(self, k):
+    def set_immutable(self, k:str) -> None:
+        """Removes existing model varialble from the set of mutable variables"""
         if k in self.ismutable:
             self.ismutable.remove(k)
 
 
 class AeoLiS(IBmi):
-    '''AeoLiS model class
+    """AeoLiS model class
 
     AeoLiS is a process-based model for simulating supply-limited
     aeolian sediment transport. This model class is compatible with
@@ -136,10 +144,9 @@ class AeoLiS(IBmi):
     >>> for i in range(10):
     >>>     model.update(60.) # step 60 seconds forward
     >>> model.finalize()
+    """
 
-    '''
-
-    def __init__(self, configfile):
+    def __init__(self, configfile: str):
         '''Initialize class
 
         Parameters
