@@ -2376,11 +2376,9 @@ class AeoLiSRunner(AeoLiS):
     See Also
     --------
     console.aeolis
-
     '''
 
-
-    def __init__(self, configfile='aeolis.txt'):
+    def __init__(self, configfile:str='aeolis.txt') -> None:
         '''Initialize class
 
         Reads model configuration file without parsing all referenced
@@ -2428,7 +2426,7 @@ class AeoLiSRunner(AeoLiS):
             logger.log_and_raise('Configuration file not found [%s]' % self.configfile, exc=IOError)
 
 
-    def run(self, callback=None, restartfile=None):
+    def run(self, callback=None, restartfile:str=None) -> None:
         '''Start model time loop
 
         Changes current working directory to the model directory,
@@ -2542,7 +2540,7 @@ class AeoLiSRunner(AeoLiS):
         logging.shutdown()
 
 
-    def set_configfile(self, configfile):
+    def set_configfile(self, configfile:str) -> None:
         '''Set model configuration file name'''
 
         self.changed = False
@@ -2552,7 +2550,7 @@ class AeoLiSRunner(AeoLiS):
             self.configfile = configfile
 
 
-    def set_params(self, **kwargs):
+    def set_params(self, **kwargs) -> None:
         '''Set model configuration parameters'''
 
         if len(kwargs) > 0:
@@ -2560,7 +2558,7 @@ class AeoLiSRunner(AeoLiS):
             self.p.update(kwargs)
 
 
-    def get_statistic(self, var, stat='avg'):
+    def get_statistic(self, var:str, stat:str='avg') -> Union[ndarray, None]:
         '''Return statistic of spatial grid
 
         Parameters
@@ -2572,9 +2570,7 @@ class AeoLiSRunner(AeoLiS):
 
         Returns
         -------
-        numpy.ndarray
             Statistic of spatial grid
-
         '''
 
         if stat in ['min', 'max', 'sum']:
@@ -2594,7 +2590,7 @@ class AeoLiSRunner(AeoLiS):
             return None
 
 
-    def get_var(self, var, clear=True):
+    def get_var(self, var:str, clear:bool=True) -> Union[ndarray, int, float, str, list]:
         '''Returns spatial grid, statistic or model configuration parameter
 
         Overloads the :func:`~model.AeoLiS.get_var()` function and
@@ -2629,7 +2625,6 @@ class AeoLiSRunner(AeoLiS):
         See Also
         --------
         model.AeoLiS.get_var
-
         '''
 
         self.clear = clear
@@ -2650,7 +2645,7 @@ class AeoLiSRunner(AeoLiS):
         return super(AeoLiSRunner, self).get_var(var)
 
 
-    def initialize(self):
+    def initialize(self) -> None:
         '''Initialize model
 
         Overloads the :func:`~model.AeoLiS.initialize()` function, but
@@ -2661,8 +2656,7 @@ class AeoLiSRunner(AeoLiS):
         super(AeoLiSRunner, self).initialize()
         self.output_init()
 
-
-    def update(self, dt=-1):
+    def update(self, dt:float=-1) -> None:
         '''Time stepping function
 
         Overloads the :func:`~model.AeoLiS.update()` function,
@@ -2684,7 +2678,7 @@ class AeoLiSRunner(AeoLiS):
         self.output_update()
 
 
-    def write_params(self):
+    def write_params(self) -> None:
         '''Write updated model configuration to configuration file
 
         Creates a backup in case the model configration file already
@@ -2702,7 +2696,7 @@ class AeoLiSRunner(AeoLiS):
             self.changed = False
 
 
-    def output_init(self):
+    def output_init(self) -> None:
 
         '''Initialize netCDF4 output file and output statistics dictionary'''
 
@@ -2738,7 +2732,7 @@ class AeoLiSRunner(AeoLiS):
         self.output_clear()
 
 
-    def output_clear(self):
+    def output_clear(self) -> None:
         '''Clears output statistics dictionary
 
         Creates a matrix for minimum, maximum, variance and summed
@@ -2757,7 +2751,7 @@ class AeoLiSRunner(AeoLiS):
         self.n = 0
 
 
-    def output_update(self):
+    def output_update(self) -> None:
         '''Updates output statistics dictionary
 
         Updates matrices with minimum, maximum, variance and summed
@@ -2783,7 +2777,7 @@ class AeoLiSRunner(AeoLiS):
         self.n += 1
 
 
-    def output_write(self):
+    def output_write(self) -> None:
         '''Appends output to netCDF4 output file
 
         If the time since the last output is equal or larger than the
@@ -2791,7 +2785,6 @@ class AeoLiSRunner(AeoLiS):
         output file. Computes the average and variance values based on
         available output statistics and clear output statistics
         dictionary.
-
         '''
 
         if self.t - self.tout >= self.p['output_times'] or self.t == 0.:
@@ -2815,7 +2808,7 @@ class AeoLiSRunner(AeoLiS):
             self.trestart = self.t
 
 
-    def load_hotstartfiles(self):
+    def load_hotstartfiles(self) -> None:
         '''Load model state from hotstart files
 
         Hotstart files are plain text representations of model state
@@ -2843,18 +2836,22 @@ class AeoLiSRunner(AeoLiS):
                 logger.warning('Unrecognized hotstart file [%s]' % fname)
 
 
-    def load_restartfile(self, restartfile):
+    def load_restartfile(self, restartfile:str) -> bool:
         '''Load model state from restart file
 
         Parameters
         ----------
         restartfile : str
             Path to previously written restartfile.
-
+        
+        Returns
+        -------
+            True if model state from restartfile is loaded successfully
         '''
 
         if restartfile:
             if os.path.exists(restartfile):
+                # Load model state
                 with open(restartfile, 'r') as fp:
                     state = pickle.load(fp)
 
@@ -2869,12 +2866,11 @@ class AeoLiSRunner(AeoLiS):
                     return True
             else:
                 logger.log_and_raise('Restart file not found [%s]' % restartfile, exc=IOError)
+                return False
 
-        return False
 
-
-    def dump_restartfile(self):
-        '''Dump model state to restart file'''
+    def dump_restartfile(self) -> None:
+        '''Dumps model state to restart file'''
 
         restartfile = '%s.r%010d' % (os.path.splitext(self.p['output_file'])[0], int(self.t))
         with open(restartfile, 'w') as fp:
@@ -2905,7 +2901,6 @@ class AeoLiSRunner(AeoLiS):
         -------
         function
             Python callback function
-
         '''
 
         if isinstance(callback, str):
@@ -2924,18 +2919,17 @@ class AeoLiSRunner(AeoLiS):
         return None
 
 
-    def print_progress(self, fraction=.01, min_interval=1., max_interval=60.):
+    def print_progress(self, fraction:float=.01, min_interval:float=1., max_interval:float=60.) -> None:
         '''Print progress to screen
 
         Parameters
         ----------
-        fraction : float, optional
+        fraction : optional
             Fraction of simulation at which to print progress (default: 1%)
-        min_interval : float, optional
+        min_interval :  optional
             Minimum time in seconds between subsequent progress prints (default: 1s)
-        max_interval : float, optional
+        max_interval : optional
             Maximum time in seconds between subsequent progress prints (default: 60s)
-
         '''
 
         p = (self.t-self.p['tstart']) / (self.p['tstop']-self.p['tstart'])
@@ -2962,7 +2956,7 @@ class AeoLiSRunner(AeoLiS):
             
 
 
-    def print_params(self):
+    def print_params(self) -> None:
         '''Print model configuration parameters to screen'''
 
         maxl = np.max([len(par) for par in self.p.keys()])
@@ -2990,7 +2984,7 @@ class AeoLiSRunner(AeoLiS):
         logger.info('')
 
 
-    def print_stats(self):
+    def print_stats(self) -> None:
         '''Print model run statistics to screen'''
 
         n_time = self.get_count('time')
@@ -3044,12 +3038,12 @@ class WindGenerator():
 
 
     def __init__(self,
-                 mean_speed=9.0,
-                 max_speed=30.0,
-                 dt=60.,
-                 n_states=30,
-                 shape=2.,
-                 scale=2.):
+                 mean_speed:float=9.0,
+                 max_speed:float=30.0,
+                 dt:float=60.,
+                 n_states:int=30,
+                 shape:float=2.,
+                 scale:float=2.) -> None:
 
         self.mean_speed=mean_speed
         self.max_speed=max_speed
@@ -3103,11 +3097,11 @@ class WindGenerator():
         self.MTMcum = np.cumsum(MTM,1)
 
 
-    def __getitem__(self, s):
+    def __getitem__(self, s)-> ndarray:
         return np.asarray(self.wind_speeds[s])
 
 
-    def generate(self, duration=3600.):
+    def generate(self, duration:float=3600.):
 
         # initialise series
         self.state = 0
@@ -3125,7 +3119,7 @@ class WindGenerator():
         return self
 
 
-    def update(self):
+    def update(self) -> None:
         r1 = np.random.uniform(0,1)
         r2 = np.random.uniform(0,1)
 
@@ -3141,7 +3135,7 @@ class WindGenerator():
         self.t += self.dt
 
 
-    def get_time_series(self):
+    def get_time_series(self) -> Any:
         u = np.asarray(self.wind_speeds)
         t = np.arange(len(u)) * self.dt
 
