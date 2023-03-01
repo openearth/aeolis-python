@@ -29,7 +29,6 @@ from __future__ import absolute_import, division
 
 import os
 import imp
-import sys
 import time
 import glob
 import logging
