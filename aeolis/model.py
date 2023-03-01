@@ -59,7 +59,8 @@ import aeolis.fences
 import aeolis.gridparams
 
 # type hints
-from typing import Any
+from typing import Any, Union, Tuple
+from numpy import ndarray
 
 from aeolis.utils import *
 
@@ -148,44 +149,41 @@ class AeoLiS(IBmi):
     >>> model.finalize()
     """
 
-    def __init__(self, configfile: str):
+    def __init__(self, configfile: str) -> None:
         '''Initialize class
 
         Parameters
         ----------
-        configfile : str
-            Model configuration file. See :func:`~inout.read_configfile()`.
+        configfile:
+            Path to model configuration file. See :func:`~inout.read_configfile()`.
 
         '''
 
-        self.t = 0.
-        self.dt = 0.
-        self.configfile = ''
+        self.t: float = 0
+        self.dt: float = 0
+        self.configfile: str = ''
 
-        self.l = {} # previous spatial grids
-        self.s = ModelState() # spatial grids
-        self.p = {} # parameters
-        self.c = {} # counters
+        self.l: dict = {} # previous spatial grids
+        self.s: ModelState = ModelState() # spatial grids
+        self.p: dict = {} # parameters
+        self.c: dict = {} # counters
 
         self.configfile = configfile
 
-
     def __enter__(self):
+        """Initialize AeoliS class"""
         self.initialize()
         return self
 
-
-    def __exit__(self, *args):
+    def __exit__(self, *args) -> None:
+        """Calls to terminate AeoLiS class"""
         self.finalize()
 
-
-    def initialize(self):
-        '''Initialize model
-
-        Read model configuration file and initialize parameters and
-        spatial grids dictionary and load bathymetry and bed
+    def initialize(self)-> None:
+        '''
+        Read model configuration file, initialize parameters and
+        spatial grids dictionary, and load bathymetry and bed
         composition.
-
         '''
 
         # read configuration file
@@ -243,7 +241,7 @@ class AeoLiS(IBmi):
             aeolis.inout.visualize_timeseries(self.p, self.t)
 
 
-    def update(self, dt=-1):
+    def update(self, dt:float=-1) -> None:
         '''Time stepping function
 
         Takes a single step in time. Interpolates wind and
@@ -261,7 +259,7 @@ class AeoLiS(IBmi):
 
         Parameters
         ----------
-        dt : float, optional
+        dt : optional
             Time step in seconds. The time step specified in the model
             configuration file is used in case dt is smaller than
             zero. For explicit numerical schemes the time step is
@@ -277,7 +275,7 @@ class AeoLiS(IBmi):
         self.l['dzbavg'] = self.s['dzbavg'].copy()
         
         # interpolate wind time series
-        self.s = aeolis.wind.interpolate(self.s, self.p, self.t)     
+        self.s = aeolis.wind.interpolate(self.s, self.p, self.t)  
     
         # Rotate gridparams, such that the grids is alligned horizontally
         self.s = self.grid_rotate(self.p['alpha'])
@@ -338,7 +336,8 @@ class AeoLiS(IBmi):
         # compute dune erosion
         if self.p['process_dune_erosion']:
             self.s = aeolis.erosion.run_ph12(self.s, self.p, self.t)
-            self.s = aeolis.avalanching.angele_of_repose(self.s, self.p) #Since the aeolian module is only run for winds above threshold, also run avalanching routine here
+            self.s = aeolis.avalanching.angele_of_repose(self.s, self.p) #Since the aeolian module is 
+            # only run for winds above threshold, also run avalanching routine here
             self.s = aeolis.avalanching.avalanche(self.s, self.p)
 
         # grow vegetation
@@ -360,47 +359,38 @@ class AeoLiS(IBmi):
 
     def finalize(self):
         '''Finalize model'''
-
         pass
 
 
-    def get_current_time(self):
+    def get_current_time(self) -> float:
         '''
         Returns
         -------
         float
             Current simulation time
-
         '''
 
         return self.t
 
-
-    def get_end_time(self):
+    def get_end_time(self) -> float:
         '''
         Returns
         -------
-        float
             Final simulation time
-
         '''
 
         return self.p['tstop']
 
-
-    def get_start_time(self):
+    def get_start_time(self) -> float:
         '''
         Returns
         -------
-        float
             Initial simulation time
-
         '''
 
         return self.p['tstart']
 
-
-    def get_var(self, var):
+    def get_var(self, var:str) -> Union[ndarray, int, float, str, list]:
         '''Returns spatial grid or model configuration parameter
 
         If the given variable name matches with a spatial grid, the
@@ -411,7 +401,7 @@ class AeoLiS(IBmi):
 
         Parameters
         ----------
-        var : str
+        var:
             Name of spatial grid or model configuration parameter
 
         Returns
@@ -430,7 +420,6 @@ class AeoLiS(IBmi):
         See Also
         --------
         model.AeoLiS.set_var
-
         '''
 
         if var in self.s:
@@ -444,31 +433,28 @@ class AeoLiS(IBmi):
             return None
 
 
-    def get_var_count(self):
+    def get_var_count(self) -> int:
         '''
         Returns
         -------
-        int
             Number of spatial grids
-
         '''
 
         return len(self.s)
 
 
-    def get_var_name(self, i):
+    def get_var_name(self, i: int) -> Union[str, int]:
         '''Returns name of spatial grid by index (in alphabetical order)
 
         Parameters
         ----------
-        i : int
+        i : 
             Index of spatial grid
 
         Returns
         -------
         str or -1
             Name of spatial grid or -1 in case index exceeds the number of grids
-
         '''
 
         if len(self.s) > i:
@@ -476,20 +462,17 @@ class AeoLiS(IBmi):
         else:
             return -1
 
-
-    def get_var_rank(self, var):
+    def get_var_rank(self, var: str) -> int:
         '''Returns rank of spatial grid
 
         Parameters
         ----------
-        var : str
+        var :
             Name of spatial grid
 
         Returns
         -------
-        int
             Rank of spatial grid or -1 if not found
-
         '''
 
         if var in self.s:
@@ -498,19 +481,17 @@ class AeoLiS(IBmi):
             return -1
 
 
-    def get_var_shape(self, var):
+    def get_var_shape(self, var:str) -> Union[Tuple, str]:
         '''Returns shape of spatial grid
 
         Parameters
         ----------
-        var : str
+        var : 
             Name of spatial grid
 
         Returns
         -------
-        tuple or int
             Dimensions of spatial grid or -1 if not found
-
         '''
 
         if var in self.s:
@@ -519,19 +500,17 @@ class AeoLiS(IBmi):
             return -1
 
 
-    def get_var_type(self, var):
-        '''Returns variable type of spatial grid
+    def get_var_type(self, var:str) -> Union[str, int]:
+        '''Returns data type of variable in spatial grid
 
         Parameters
         ----------
-        var : str
+        var :
             Name of spatial grid
 
         Returns
         -------
-        str or int
             Variable type of spatial grid or -1 if not found
-
         '''
 
         if var in self.s:
@@ -539,16 +518,15 @@ class AeoLiS(IBmi):
         else:
             return -1
 
-
-    def inq_compound(self):
+    def inq_compound(self) -> None:
         logger.log_and_raise('Method not yet implemented [inq_compound]', exc=NotImplementedError)
 
 
-    def inq_compound_field(self):
+    def inq_compound_field(self) -> None:
         logger.log_and_raise('Method not yet implemented [inq_compound_field]', exc=NotImplementedError)
 
 
-    def set_var(self, var, val):
+    def set_var(self, var:str, val:Union[ndarray, int, float, str, list]) -> None:
         '''Sets spatial grid or model configuration parameter
 
         If the given variable name matches with a spatial grid, the
@@ -558,9 +536,9 @@ class AeoLiS(IBmi):
 
         Parameters
         ----------
-        var : str
+        var : 
             Name of spatial grid or model configuration parameter
-        val : np.ndarray or int, float, str or list
+        val : 
             Spatial grid or model configuration parameter
 
         Examples
@@ -574,7 +552,6 @@ class AeoLiS(IBmi):
         See Also
         --------
         model.AeoLiS.get_var
-
         '''
 
         if var in self.s:
@@ -583,27 +560,26 @@ class AeoLiS(IBmi):
             self.p[var] = val
 
 
-    def set_var_index(self, i, val):
+    def set_var_index(self, i:int, val:ndarray) -> None:
         '''Set spatial grid by index (in alphabetical order)
 
         Parameters
         ----------
-        i : int
+        i :
             Index of spatial grid
-        val : np.ndarray
+        val : 
             Spatial grid
-
         '''
 
         var = self.get_var_name(i)
         self.set_var(var, val)
 
 
-    def set_var_slice(self):
+    def set_var_slice(self) -> None:
         logger.log_and_raise('Method not yet implemented [set_var_slice]', exc=NotImplementedError)
 
 
-    def set_timestep(self, dt=-1.):
+    def set_timestep(self, dt:float=-1.0) -> bool:
         '''Determine optimal time step
 
         If no time step is given the optimal time step is
@@ -627,12 +603,11 @@ class AeoLiS(IBmi):
 
         Parameters
         ----------
-        df : float, optional
+        df :
             Preferred time step
 
         Returns
         -------
-        bool
             False if determination of time step was unsuccessful, True otherwise
 
         '''
@@ -663,10 +638,9 @@ class AeoLiS(IBmi):
             
         self.p['dt_opt'] = self.dt
 
-
         return True
 
-    def grid_rotate(self, angle):
+    def grid_rotate(self, angle:float) -> ModelState:
         
         s = self.s
         p = self.p
@@ -688,7 +662,7 @@ class AeoLiS(IBmi):
         
         return s
     
-    def euler_forward(self):
+    def euler_forward(self) -> Any:
         '''Convenience function for explicit solver based on Euler forward scheme
 
         See Also
@@ -709,7 +683,7 @@ class AeoLiS(IBmi):
         return solve
 
 
-    def euler_backward(self):
+    def euler_backward(self) -> Any:
         '''Convenience function for implicit solver based on Euler backward scheme
 
         See Also
@@ -729,13 +703,12 @@ class AeoLiS(IBmi):
             
         return solve
 
-    def crank_nicolson(self):
+    def crank_nicolson(self) -> Any:
         '''Convenience function for semi-implicit solver based on Crank-Nicolson scheme
 
         See Also
         --------
         model.AeoLiS.solve
-
         '''
 
         if self.p['solver'].lower() == 'trunk':
@@ -750,9 +723,8 @@ class AeoLiS(IBmi):
         return solve
 
 
-    def solve_steadystate(self):
+    def solve_steadystate(self) -> dict:
         '''Implements the steady state solution
-
         '''
         # upwind scheme:
         beta = 1. 
@@ -1001,8 +973,7 @@ class AeoLiS(IBmi):
                 # solve system with current weights
                 Ct_i = scipy.sparse.linalg.spsolve(A, y_i.flatten())
                 Ct_i = prevent_tiny_negatives(Ct_i, p['max_error'])
-                
-                    
+                   
                 # check for negative values
                 if Ct_i.min() < 0.:
                     ix = Ct_i < 0.
@@ -1095,7 +1066,7 @@ class AeoLiS(IBmi):
                     q=q)
         
         
-    def solve(self, alpha=.5, beta=1.):
+    def solve(self, alpha:float=.5, beta:float=1.) -> dict:
         '''Implements the explicit Euler forward, implicit Euler backward and semi-implicit Crank-Nicolson numerical schemes
 
         Determines weights of sediment fractions, sediment pickup and
@@ -1105,14 +1076,13 @@ class AeoLiS(IBmi):
 
         Parameters
         ----------
-        alpha : float, optional
+        alpha :
             Implicitness coefficient (0.0 for Euler forward, 1.0 for Euler backward or 0.5 for Crank-Nicolson, default=0.5)
-        beta : float, optional
+        beta : 
             Centralization coefficient (1.0 for upwind or 0.5 for centralized, default=1.0)
 
         Returns
         -------
-        dict
             Partial spatial grid dictionary
 
         Examples
@@ -1390,13 +1360,10 @@ class AeoLiS(IBmi):
                 if p['boundary_onshore'] == 'constant':
                     y_i[:,-1] = p['constant_onshore_flux'] / s['u'][:,-1,i]
 
-
-
                 # solve system with current weights
                 Ct_i = scipy.sparse.linalg.spsolve(A, y_i.flatten())
                 Ct_i = prevent_tiny_negatives(Ct_i, p['max_error'])
                 
-
                 # check for negative values
                 if Ct_i.min() < 0.:
                     ix = Ct_i < 0.
@@ -1425,7 +1392,6 @@ class AeoLiS(IBmi):
                 deficit_i = pickup_i - mass_i
                 ix = (deficit_i > p['max_error']) \
                      & (w_i * Cu_i > 0.)
-
 
                 # quit the iteration if there is no deficit, otherwise
                 # back-compute the maximum weight allowed to get zero
@@ -1478,11 +1444,8 @@ class AeoLiS(IBmi):
                                       minweight=np.sum(w, axis=-1).min(),
                                       **logprops))
            
-
-
         qs = Ct * s['us'] 
         qn = Ct * s['un'] 
-
 
         return dict(Ct=Ct,
                     qs=qs,
@@ -1494,7 +1457,7 @@ class AeoLiS(IBmi):
                     w_bed=w_bed)
         
         
-    def solve_steadystatepieter(self):
+    def solve_steadystatepieter(self) -> dict:
         
         beta = 1. 
         
@@ -1718,8 +1681,7 @@ class AeoLiS(IBmi):
                 yCt_i[:,:-1]  -= s['dn'][:,:-1] * ufs[:,1:-1] * Ctxfs_i[:,1:-1] #upper x-face
                 yCt_i[1:,:]   += s['ds'][1:,:]  * ufn[1:-1,:] * Ctxfn_i[1:-1,:] #lower y-face
                 yCt_i[:-1,:]  -= s['ds'][:-1,:] * ufn[1:-1,:] * Ctxfn_i[1:-1,:] #upper y-face
-             
-                    
+                
                 # boundary conditions
                 # offshore boundary (i=0)
 
@@ -1799,7 +1761,6 @@ class AeoLiS(IBmi):
                     Ct_i[~ix] *= 1. + Ct_i[ix].sum() / Ct_i[~ix].sum()
                     Ct_i[ix] = 0.
 
-
                 # determine pickup and deficit for current fraction
                 Cu_i = s['Cu'][:,:,i].flatten()
                 mass_i = s['mass'][:,:,0,i].flatten()
@@ -1853,7 +1814,6 @@ class AeoLiS(IBmi):
                                        **logprops))
         # end loop over frations
 
-
         # check if there are any cells where the sum of all weights is
         # smaller than unity. these cells are supply-limited for all
         # fractions. Log these events.
@@ -1877,7 +1837,7 @@ class AeoLiS(IBmi):
                     w_bed=w_bed)
     
     
-    def solve_pieter(self, alpha=.5, beta=1.):
+    def solve_pieter(self, alpha:float=.5, beta:float=1.) -> dict:
         '''Implements the explicit Euler forward, implicit Euler backward and semi-implicit Crank-Nicolson numerical schemes
 
         Determines weights of sediment fractions, sediment pickup and
@@ -1887,14 +1847,13 @@ class AeoLiS(IBmi):
 
         Parameters
         ----------
-        alpha : float, optional
+        alpha : 
             Implicitness coefficient (0.0 for Euler forward, 1.0 for Euler backward or 0.5 for Crank-Nicolson, default=0.5)
         beta : float, optional
             Centralization coefficient (1.0 for upwind or 0.5 for centralized, default=1.0)
 
         Returns
         -------
-        dict
             Partial spatial grid dictionary
 
         Examples
@@ -1910,10 +1869,8 @@ class AeoLiS(IBmi):
         model.AeoLiS.crank_nicolson
         transport.compute_weights
         transport.renormalize_weights
-
         '''
 
-        
         l = self.l
         s = self.s
         p = self.p
@@ -2088,7 +2045,6 @@ class AeoLiS(IBmi):
             # solve transport for each fraction separately using latest
             # available weights
         
-
             # renormalize weights for all fractions equal or larger
             # than the current one such that the sum of all weights is
             # unity
@@ -2140,8 +2096,7 @@ class AeoLiS(IBmi):
                 yCt_i[:,:-1]  -= s['dn'][:,:-1] * ufs[:,1:-1] * Ctxfs_i[:,1:-1] #upper x-face
                 yCt_i[1:,:]   += s['ds'][1:,:]  * ufn[1:-1,:] * Ctxfn_i[1:-1,:] #lower y-face
                 yCt_i[:-1,:]  -= s['ds'][:-1,:] * ufn[1:-1,:] * Ctxfn_i[1:-1,:] #upper y-face
-                
-                    
+                  
                 # boundary conditions
                 # offshore boundary (i=0)
 
@@ -2223,7 +2178,6 @@ class AeoLiS(IBmi):
                     Ct_i[~ix] *= 1. + Ct_i[ix].sum() / Ct_i[~ix].sum()
                     Ct_i[ix] = 0.
 
-
                 # determine pickup and deficit for current fraction
                 Cu_i = s['Cu'][:,:,i].flatten()
                 mass_i = s['mass'][:,:,0,i].flatten()
@@ -2277,7 +2231,6 @@ class AeoLiS(IBmi):
                                        **logprops))
         # end loop over frations
 
-
         # check if there are any cells where the sum of all weights is
         # smaller than unity. these cells are supply-limited for all
         # fractions. Log these events.
@@ -2306,8 +2259,7 @@ class AeoLiS(IBmi):
                     w_bed=w_bed,
                     q=q)        
 
-
-    def get_count(self, name):
+    def get_count(self, name:str) -> int:
         '''Get counter value
 
         Parameters
@@ -2323,16 +2275,15 @@ class AeoLiS(IBmi):
             return 0
 
 
-    def _count(self, name, n=1):
+    def _count(self, name:str, n:int=1) -> None:
         '''Increase counter
 
         Parameters
         ----------
-        name : str
+        name : 
             Name of counter
-        n : int, optional
+        n : optional
             Increment of counter (default: 1)
-
         '''
 
         if name not in self.c:
@@ -2340,7 +2291,7 @@ class AeoLiS(IBmi):
         self.c[name] += n
 
 
-    def _dims2shape(self, dims):
+    def _dims2shape(self, dims) -> Tuple:
         '''Converts named dimensions to numbered shape
 
         Supports only dimension names that can be found in the model
@@ -2355,7 +2306,6 @@ class AeoLiS(IBmi):
 
         Returns
         -------
-        tuple
             Shape of spatial grid
 
         '''
@@ -2369,12 +2319,12 @@ class AeoLiS(IBmi):
 
 
     @staticmethod
-    def dimensions(var=None):
+    def dimensions(var:str=None) -> Union[Tuple, dict]:
         '''Static method that returns named dimensions of all spatial grids
 
         Parameters
         ----------
-        var : str, optional
+        var : optional
             Name of spatial grid
 
         Returns
@@ -2384,7 +2334,6 @@ class AeoLiS(IBmi):
             dictionary with all named dimensions of all spatial
             grids. Returns nothing if requested spatial grid is not
             defined.
-
         '''
 
         dims = {s:d
