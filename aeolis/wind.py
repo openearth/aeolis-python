@@ -121,10 +121,7 @@ def interpolate(s, p, t):
     s['uws'] = - s['uw'] * np.sin((-p['alfa'] + s['udir']) / 180. * np.pi)        # alfa [deg] is real world grid cell orientation (clockwise)
     s['uwn'] = - s['uw'] * np.cos((-p['alfa'] + s['udir']) / 180. * np.pi)
 
-    
-    if p['ny'] == 0:
-        s['uwn'][:,:] = 0.
-        
+          
     s['uw'] = np.abs(s['uw'])
     
     # Compute wind shear velocity

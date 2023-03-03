@@ -109,6 +109,7 @@ MODEL_STATE = {
         'germinate',                        # vegetation germination
         'lateral',                          # vegetation lateral expansion
         'vegfac',                           # Vegetation factor to modify shear stress by according to Raupach 1993
+        'fence_height',                     # Fence height
         'R',                                # [m] wave runup
         'eta',                              # [m] wave setup
         'sigma_s',                          # [m] swash
