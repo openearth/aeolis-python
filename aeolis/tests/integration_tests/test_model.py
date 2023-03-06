@@ -1,5 +1,5 @@
 """
-WIP: Test to check 2D and 1D base cases.
+WIP: Test to verify the model's expected behavior for 1D and 2D base cases.
 Add more description...
 """
 
@@ -22,17 +22,26 @@ def test_model():
     path_integration_test_dir = os.path.dirname(os.path.abspath(__file__))
     path_examples_dir = path_integration_test_dir + "/examples/"
 
-    # Run simulation for all cases in 1D and 2D examples
-    # Simulations must run from the respective case directory
+    # Loop through all cases in 1D and 2D and run the simulation for each case
     for dimension in os.listdir(path_examples_dir):
         for case in os.listdir(path_examples_dir + "/" + dimension):
+            # Simulations must run from the respective case directory
             os.chdir(path_examples_dir + "/" + dimension + "/" + case)
-            # print(os.getcwd())  # for debugging only
+
             temp_model = initialize_model()
+
             run_model(temp_model)
-            are_output_files_generated()
+
+            # Check if output netCDF files are created successfully
+            verify_netCDF_file_creation()
+
+            # Check if continuity/mass conservation holds
             check_continuity()
-            # check_num_params_in_output_file()
+
+            # Check number of parameters in the output netCDF file
+            # check_num_params_netcdf()
+
+            # Generated output files become obsolete after all the tests cases are run
             delete_output_files()
 
 
@@ -45,7 +54,10 @@ def run_model(temp_model):
     temp_model.run()
 
 
-def are_output_files_generated():
+def verify_netCDF_file_creation():
+    """Verify the successful generation of the output netCDF file and the log
+    file post the completion of the simulation.
+    """
     filenames = os.listdir(os.getcwd())
     # check for correct filenames
     assert "aeolis.log" in filenames
@@ -72,31 +84,40 @@ def check_continuity():
         # get spatial dimensions and bed levels
         zb = ds.variables["zb"][...]
         qs_sum = ds.variables["qs_sum"][:, :]
+        Ct = ds.variables["Ct"][:, :]
+        pickup_sum = ds.variables["pickup_sum"][:, :]
+        print("Ct shape is", Ct.shape)
         zb_initial = zb[0, 0, :]
         zb_end = zb[-1, 0, :]
-        delta_zb = np.sum(zb_initial, axis=0) - np.sum(zb_end, axis=0)
+        delta_zb = np.sum(zb_end, axis=0) - np.sum(zb_initial, axis=0)
         print("delta zb is: ", delta_zb)
-        qs_sum_trimmed = qs_sum[:, :, 0 :: ((np.ma.size(qs_sum, axis=2)) - 1)]
-        cum_sum_qs = np.sum(qs_sum_trimmed, axis=2).sum(axis=0)
-        print("cum_sum_qs is: ", np.ndarray.item(cum_sum_qs))
-        # assert (delta_zb - np.ndarray.item(cum_sum_qs)) == pytest.approx(0.01)
+        q_in = qs_sum[:, :, 0]
+        q_out = qs_sum[:, :, -1]
+        q_in_sum = np.sum(q_in, axis=0)
+        q_out_sum = np.sum(q_out, axis=0)
+        cum_sum_qs = q_in_sum - q_out_sum
+        print("cum_sum_qs is: ", cum_sum_qs)
+        Ct_final = Ct[-1, 0, :, 0]
+        Ct_final_sum = np.sum(Ct_final, axis=0)
+        print("Ct final sum is: ", Ct_final_sum)
         # plt.plot(zb[49, 0, :])
-        # print("zb trimmed array is :", zb_trimmed)
-        # print("qs_sum trimmed array is :", qs_sum_trimmed)
-        # print("cum sum zb is: ", cum_sum_zb)
-        # print("cum sum qs is: ", np.ndarray.item(cum_sum_qs) * 3600)
+        density = 2650  # global constant?
+        porosity = 0.4  # global constant?
+        delta_mass = (delta_zb * density * 0.5) / (1 - porosity)
+        delta_pos = (
+            np.sum(np.absolute(zb_end - zb_initial), axis=0) / 2 * density * 0.5
+        ) / (1 - porosity)
+        print(
+            "pickup sum", np.sum(np.sum(pickup_sum[:, 0, :, 0], axis=0), axis=0)
+        )
+        print("delta pos ", delta_pos)
+        print("delta mass", delta_mass)
 
 
 def delete_output_files():
     for file_name in os.listdir(os.getcwd()):
         if file_name.endswith((".log", ".nc")):
             os.remove(file_name)
-
-
-# def test_output_file_contents():
-#     check_dimensions()
-#     check_num_parameters()
-#     check continuity()
 
 
 # def check_dimensions():
@@ -113,24 +134,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-## Examples directory can be manually copied in integration test directory for
-## now. Real time copying can be added later if needed. Examples for testing
-## can differ from the user examples.
-# def prepare_inputs_for_integration_test():
-#     """
-#     This function copies the example folders in the root of the repository
-#     to the integration test/ directory. The example folder would then serve as
-#     a collection of inputs to feed to integration test.
-#     """
-
-#     # find relative path to the examples directory
-#     # Should we do this via command line? by launching a temporary shell
-
-
-#     # copy example folder
-#     shutil.copytree()
-
-# # #     # move to current dir
-# # #     # paste the example folder here
