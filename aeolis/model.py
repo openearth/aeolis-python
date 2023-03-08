@@ -3110,7 +3110,7 @@ class WindGenerator():
         return np.asarray(self.wind_speeds[s])
 
 
-    def generate(self, duration:float=3600.) -> WindGenerator:
+    def generate(self, duration:float=3600.):
         """Generates wind velocities
 
         Parameters:
