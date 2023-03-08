@@ -3036,11 +3036,11 @@ class WindGenerator():
     # source:
     # http://www.lutralutra.co.uk/2012/07/02/simulating-a-wind-speed-time-series-in-python/
 
-
+    
     def __init__(self,
                  mean_speed:float=9.0,
                  max_speed:float=30.0,
-                 dt:float=60.,
+                 dt:float=60., # what is the meaning of dt?
                  n_states:int=30,
                  shape:float=2.,
                  scale:float=2.) -> None:
@@ -3097,11 +3097,26 @@ class WindGenerator():
         self.MTMcum = np.cumsum(MTM,1)
 
 
-    def __getitem__(self, s)-> ndarray:
+    def __getitem__(self, s:int)-> ndarray:
+        """
+        Retrieves item from list of wind speeds as an array 
+        
+        Parameters:
+        -----------
+        s: 
+            index in a list
+        """
+
         return np.asarray(self.wind_speeds[s])
 
 
-    def generate(self, duration:float=3600.):
+    def generate(self, duration:float=3600.) -> WindGenerator:
+        """Generates wind velocities
+
+        Parameters:
+        -----------
+            duration: duration of time series in seconds
+        """
 
         # initialise series
         self.state = 0
@@ -3120,6 +3135,10 @@ class WindGenerator():
 
 
     def update(self) -> None:
+        """
+        Generates wind speeds base on ramdom uniform distribution 
+        """
+
         r1 = np.random.uniform(0,1)
         r2 = np.random.uniform(0,1)
 
@@ -3136,13 +3155,23 @@ class WindGenerator():
 
 
     def get_time_series(self) -> Any:
+        """
+        returns time series
+        """
         u = np.asarray(self.wind_speeds)
         t = np.arange(len(u)) * self.dt
 
         return t, u
 
 
-    def write_time_series(self, fname):
+    def write_time_series(self, fname:str) -> None:
+        """
+        Saves time series to file
+
+        Parameters:
+        -----------
+            fname: file name to write time series to
+        """
         t, u = self.get_time_series()
         M = np.concatenate((np.asmatrix(t),
                             np.asmatrix(u),
@@ -3152,6 +3181,12 @@ class WindGenerator():
 
 
     def plot(self):
+        """
+        Creates plot of wind speed vs. time
+        
+        Returns:
+
+        """
         t, u = self.get_time_series()
 
         fig, axs = plt.subplots(figsize=(10,4))
@@ -3167,6 +3202,12 @@ class WindGenerator():
 
 
     def hist(self):
+        """
+        Creates histogram for wind speeds
+
+        Returns:
+
+        """
         fig, axs = plt.subplots(figsize=(10,4))
         axs.hist(self.wind_speeds, bins=self.bins, normed=True, color='k')
         axs.set_xlabel('wind speed [m/s]')
@@ -3178,6 +3219,7 @@ class WindGenerator():
 
     @staticmethod
     def weibullpdf(data, scale, shape):
+        # TODO: add description
         return [(shape/scale)
                 * ((x/scale)**(shape-1))
                 * np.exp(-1*(x/scale)**shape)
@@ -3186,4 +3228,5 @@ class WindGenerator():
 
     @staticmethod
     def matmult4(m, v):
+        # TODO: add description
         return [reduce(operator.add, map(operator.mul,r,v)) for r in m]
