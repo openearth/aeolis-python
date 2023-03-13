@@ -7,7 +7,6 @@ from aeolis import model
 import os
 import netCDF4
 import numpy as np
-import pytest
 
 
 def test_model():
@@ -35,8 +34,12 @@ def test_model():
             # Check if output netCDF files are created successfully
             verify_netCDF_file_creation()
 
+            # The contents of the output netCDF file should be consistent with
+            # the contents of the reference netCDF file generated using the same input
+            verify_netCDF_content()
+
             # Check if continuity/mass conservation holds
-            check_continuity()
+            # check_continuity()
 
             # Check number of parameters in the output netCDF file
             # check_num_params_netcdf()
@@ -69,54 +72,47 @@ def verify_netCDF_file_creation():
     assert os.path.isfile(filepath_aeolis_nc) == True
 
 
-def check_continuity():
-    """Check for mass conservation.
+def verify_netCDF_content():
+    """Compare the values of all the variables in the output netCDF file with
+    the expected values in the reference output file.
 
-    Total erosion = outbound flux + sediment in transport
-    cum_sum(zb) = cum_sum(qs_total(at boundaries)) + sum(Ct(at t_end))
-    cm _sum(zb): sum of all elements in z dimension on the 50th row (50th time step)
-    cum_sum(qs): sum of 1st and last values in z dimension for all 50 rows
-
-    To do:
-        Order of precision to compare the above equation
+    To do: Remove duplicated code for each variable by using a for loop
     """
-    with netCDF4.Dataset("aeolis.nc", "r") as ds:
-        # get spatial dimensions and bed levels
-        zb = ds.variables["zb"][...]
-        qs_sum = ds.variables["qs_sum"][:, :]
-        Ct = ds.variables["Ct"][:, :]
-        pickup_sum = ds.variables["pickup_sum"][:, :]
-        print("Ct shape is", Ct.shape)
-        zb_initial = zb[0, 0, :]
-        zb_end = zb[-1, 0, :]
-        delta_zb = np.sum(zb_end, axis=0) - np.sum(zb_initial, axis=0)
-        print("delta zb is: ", delta_zb)
-        q_in = qs_sum[:, :, 0]
-        q_out = qs_sum[:, :, -1]
-        q_in_sum = np.sum(q_in, axis=0)
-        q_out_sum = np.sum(q_out, axis=0)
-        cum_sum_qs = q_in_sum - q_out_sum
-        print("cum_sum_qs is: ", cum_sum_qs)
-        Ct_final = Ct[-1, 0, :, 0]
-        Ct_final_sum = np.sum(Ct_final, axis=0)
-        print("Ct final sum is: ", Ct_final_sum)
-        # plt.plot(zb[49, 0, :])
-        density = 2650  # global constant?
-        porosity = 0.4  # global constant?
-        delta_mass = (delta_zb * density * 0.5) / (1 - porosity)
-        delta_pos = (
-            np.sum(np.absolute(zb_end - zb_initial), axis=0) / 2 * density * 0.5
-        ) / (1 - porosity)
-        print(
-            "pickup sum", np.sum(np.sum(pickup_sum[:, 0, :, 0], axis=0), axis=0)
-        )
-        print("delta pos ", delta_pos)
-        print("delta mass", delta_mass)
+    with netCDF4.Dataset("aeolis.nc", "r") as ds, netCDF4.Dataset(
+        "aeolis_expected.nc", "r"
+    ) as ds_expected:
+        zb = ds.variables["zb"]
+        zb_expected = ds_expected.variables["zb"]
+        assert np.array_equal(zb[:], zb_expected[:]) == True
+
+        Ct = ds.variables["Ct"]
+        Ct_expected = ds_expected.variables["Ct"]
+        assert np.array_equal(Ct[:], Ct_expected[:]) == True
+
+        zs = ds.variables["zs"]
+        zs_expected = ds_expected.variables["zs"]
+        assert np.array_equal(zs[:], zs_expected[:]) == True
+
+        w = ds.variables["w"]
+        w_expected = ds_expected.variables["w"]
+        assert np.array_equal(w[:], w_expected[:]) == True
+
+        mass = ds.variables["mass"]
+        mass_expected = ds_expected.variables["mass"]
+        assert np.array_equal(mass[:], mass_expected[:]) == True
+
+        Hs = ds.variables["Hs"]
+        Hs_expected = ds_expected.variables["Hs"]
+        assert np.array_equal(Hs[:], Hs_expected[:]) == True
+
+        zs = ds.variables["zs"]
+        zs_expected = ds_expected.variables["zs"]
+        assert np.array_equal(zs[:], zs_expected[:]) == True
 
 
 def delete_output_files():
     for file_name in os.listdir(os.getcwd()):
-        if file_name.endswith((".log", ".nc")):
+        if file_name.endswith((".log", "aeolis.nc")):
             os.remove(file_name)
 
 

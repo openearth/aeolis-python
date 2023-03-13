@@ -1,5 +1,5 @@
 %% --------------------------- [Timing] --------------------------- %%
-dt                             =  1800
+dt                             =  3600
 tstart                         =  0.000000
 tstop                          =  172800
 
@@ -24,7 +24,7 @@ wind_file                      =  wind.txt
 
 %% --------------------------- [Outputs] --------------------------- %%
 output_times                   =  3600.000000
-output_vars                    =  zb zs qs mass w Hs qs_sum Ct pickup_sum 
+output_vars                    =  zb zs qs mass w Hs Ct
 
 %% ------------------------ [Process Flags] ------------------------ %%
 process_wind                   =  T
@@ -95,10 +95,10 @@ Cdk                            =  5.000000
 
 %% --------------------------- [Solver] --------------------------- %%
 T                              =  1.000000
-solver                         =  pieter
+solver                         =  trunk
 CFL                            =  1.000000
 scheme                         =  euler_backward
-max_error                      =  0.000000001
+max_error                      =  0.000001
 
 %% --------------------- [Boundary Conditions] --------------------- %%
 boundary_onshore               =  gradient
