@@ -123,8 +123,18 @@ up in test_model.py module.
 #         print(variable_value_dict)
 
 
+# def print_ds_values():
+#     with netCDF4.Dataset(
+#         "/~/../aeolis-python/aeolis/tests/integration_tests/aeolis.nc",
+#         "r",
+#     ) as ds:
+#         for var in ds.variables.values():
+#             print(var)
+
+
 # if __name__ == "__main__":
-#     verify_netCDF_content_atomic()
-#     # verify_netCDF_content()
-#     # verify_netCDF_content_merged()
-#     # verify_netCDF_content_atomic_extended()
+# verify_netCDF_content_atomic()
+# verify_netCDF_content()
+# verify_netCDF_content_merged()
+# verify_netCDF_content_atomic_extended()
+# print_ds_values()

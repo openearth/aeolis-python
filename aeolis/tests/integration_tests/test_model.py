@@ -41,9 +41,6 @@ def test_model():
             # Check if continuity/mass conservation holds
             # check_continuity()
 
-            # Check number of parameters in the output netCDF file
-            # check_num_params_netcdf()
-
             # Generated output files become obsolete after all the tests cases are run
             delete_output_files()
 
@@ -75,53 +72,25 @@ def verify_netCDF_file_creation():
 def verify_netCDF_content():
     """Compare the values of all the variables in the output netCDF file with
     the expected values in the reference output file.
-
-    To do: Remove duplicated code for each variable by using a for loop
     """
     with netCDF4.Dataset("aeolis.nc", "r") as ds, netCDF4.Dataset(
         "aeolis_expected.nc", "r"
     ) as ds_expected:
-        zb = ds.variables["zb"]
-        zb_expected = ds_expected.variables["zb"]
-        assert np.array_equal(zb[:], zb_expected[:]) == True
+        for variable in ds.variables.values():
+            variable_value = variable[:]  # Collect the array values
+            variable_value_expected = ds_expected.variables[variable.name][:]
 
-        Ct = ds.variables["Ct"]
-        Ct_expected = ds_expected.variables["Ct"]
-        assert np.array_equal(Ct[:], Ct_expected[:]) == True
-
-        zs = ds.variables["zs"]
-        zs_expected = ds_expected.variables["zs"]
-        assert np.array_equal(zs[:], zs_expected[:]) == True
-
-        w = ds.variables["w"]
-        w_expected = ds_expected.variables["w"]
-        assert np.array_equal(w[:], w_expected[:]) == True
-
-        mass = ds.variables["mass"]
-        mass_expected = ds_expected.variables["mass"]
-        assert np.array_equal(mass[:], mass_expected[:]) == True
-
-        Hs = ds.variables["Hs"]
-        Hs_expected = ds_expected.variables["Hs"]
-        assert np.array_equal(Hs[:], Hs_expected[:]) == True
-
-        zs = ds.variables["zs"]
-        zs_expected = ds_expected.variables["zs"]
-        assert np.array_equal(zs[:], zs_expected[:]) == True
+            assert variable.shape == ds_expected.variables[variable.name].shape
+            assert variable.ndim == ds_expected.variables[variable.name].ndim
+            assert (
+                np.array_equal(variable_value, variable_value_expected) == True
+            )
 
 
 def delete_output_files():
     for file_name in os.listdir(os.getcwd()):
         if file_name.endswith((".log", "aeolis.nc")):
             os.remove(file_name)
-
-
-# def check_dimensions():
-#     pass
-
-
-# def check_num_parameters():
-#     pass
 
 
 def main():
