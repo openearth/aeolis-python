@@ -40,8 +40,16 @@ def run_model(tmp_model):
 def verify_netCDF_file_creation():
     filepath_aeolis_log = os.getcwd() + "/aeolis.log"
     filepath_aeolis_nc = os.getcwd() + "/aeolis.nc"
-    assert os.path.isfile(filepath_aeolis_log) == True
-    assert os.path.isfile(filepath_aeolis_nc) == True
+    assert os.path.isfile(filepath_aeolis_log) == True, (
+        "A successful simulation should generate, upon its completion, a log"
+        " file with the name 'aeolis.log' in the same directory as the"
+        " configuration file"
+    )
+    assert os.path.isfile(filepath_aeolis_nc) == True, (
+        "A successful simulation should generate, upon its completion, a netCDF"
+        " file with the name 'aeolis.nc' in the same directory as the"
+        " configuration file"
+    )
 
 
 def verify_netCDF_file_content():
@@ -58,10 +66,24 @@ def verify_netCDF_file_content():
             variable_value = variable[:]
             variable_value_expected = ds_expected.variables[variable.name][:]
 
-            assert variable.shape == ds_expected.variables[variable.name].shape
-            assert variable.ndim == ds_expected.variables[variable.name].ndim
+            assert (
+                variable.shape == ds_expected.variables[variable.name].shape
+            ), (
+                f"Array shape of the paremeter '{variable.name}' is expected to"
+                " remain consistent across simulations for the same model"
+                " parameter file"
+            )
+            assert variable.ndim == ds_expected.variables[variable.name].ndim, (
+                f"Dimension of the parameter '{variable.name}' are expected to"
+                " remain consistent across simulations for the same model"
+                " parameter file"
+            )
             assert (
                 np.array_equal(variable_value, variable_value_expected) == True
+            ), (
+                f"Array values of the parameter '{variable.name}' are expected"
+                " to remain consistent across simulations for the same model"
+                " parameter file"
             )
 
 
