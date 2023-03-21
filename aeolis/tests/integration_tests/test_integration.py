@@ -1,5 +1,5 @@
 """
-Integration test to verify the model's behavior for 1D and 2D cases.
+Integration test to verify the model's expected result for 1D and 2D cases.
 
 """
 
