@@ -12,8 +12,9 @@ from aeolis import model
 
 def test_integration():
     """
-    Black-box test to verify if the model produces the same output for the
-    same input.
+    Initializes and runs the model for a collection of 1D and 2D cases and
+    checks if the model produces the same output for the same input for each
+    case.
     """
     path_integration_test_dir = os.path.dirname(os.path.abspath(__file__))
     path_inputs_dir = path_integration_test_dir + "/inputs/"
