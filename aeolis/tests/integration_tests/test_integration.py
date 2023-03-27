@@ -25,7 +25,7 @@ def test_integration():
             tmp_model = initialize_model()
             run_model(tmp_model)
             verify_netCDF_file_creation()
-            verify_netCDF_file_content()
+            verify_netCDF_file_content(dimension, case)
             delete_output_files()
 
 
@@ -53,7 +53,7 @@ def verify_netCDF_file_creation():
     )
 
 
-def verify_netCDF_file_content():
+def verify_netCDF_file_content(dimension: str, case: str):
     """
     Checks if the dimension, shape, and the array values of all the
     variables in the generated output netCDF file mirrors the expected
@@ -72,19 +72,19 @@ def verify_netCDF_file_content():
             ), (
                 f"Array shape of the paremeter '{variable.name}' is expected to"
                 " remain consistent across simulations for the same model"
-                " parameter file"
+                f" parameter file for {dimension} {case}"
             )
             assert variable.ndim == ds_expected.variables[variable.name].ndim, (
                 f"Dimension of the parameter '{variable.name}' are expected to"
                 " remain consistent across simulations for the same model"
-                " parameter file"
+                f" parameter file for {dimension} {case}"
             )
             assert (
                 np.array_equal(variable_value, variable_value_expected) == True
             ), (
                 f"Array values of the parameter '{variable.name}' are expected"
                 " to remain consistent across simulations for the same model"
-                " parameter file"
+                f" parameter file for {dimension} {case}"
             )
 
 

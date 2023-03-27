@@ -79,9 +79,11 @@ If you are a part of the AeoLiS team and have write access to the aeolis-python 
     
 4. Set up your code editor to follow [PEP 8](https://peps.python.org/pep-0008/) (remove trailing white space, no tabs, etc.). Check code with [flake8](https://flake8.pycqa.org/en/latest/).
 
-5. Write tests for any new lines of code you add. 
+5. Make sure the existing tests pass by running `pytest` from the root of the repository. 
 
-6. Include in-code documentation in form of comments and docstrings. Update the user documentation if relevant. Use the [numpydoc](https://numpydoc.readthedocs.io/en/latest/format.html#docstring-standard) documentation style.
+6. Write tests for any new lines of code you add. 
+
+7. Include in-code documentation in form of comments and docstrings. Update the user documentation if relevant. Use the [numpydoc](https://numpydoc.readthedocs.io/en/latest/format.html#docstring-standard) documentation style.
 
 ### Submitting your contribution
 
