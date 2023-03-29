@@ -9,6 +9,23 @@
 What's New
 ==========
 
+
+v2.1.1 (March 2023)
+-------------------
+
+Improvements
+^^^^^^^^^^^^
+* New variable to simulate fences `fence_height` (Glenn Strypsteen)
+
+Bug fixes
+^^^^^^^^^
+*  Issue with checking the size of `y` in input file for 1D cases (Glenn Strypsteen)
+
+Documentation
+^^^^^^^^^^^^^
+* Update references to default branch in contributing guide
+
+
 v2.1.0 (February 2023)
 -------------------
 
