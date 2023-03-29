@@ -100,3 +100,6 @@ cython_debug/
 
 # VS Code
 .vscode/
+
+# Developer Notes
+dev-notes/
