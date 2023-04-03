@@ -25,11 +25,11 @@ def test_netCDF_file_content(path_test_input):
             os.chdir(path_test_input + "/" + dimension + "/" + case)
             tmp_model = initialize_model()
             run_model(tmp_model)
-            verify_netCDF_file_creation(dimension, case)
+            verify_netCDF_file_content(dimension, case)
             delete_output_files()
 
 
-def verify_netCDF_file_creation(dimension: str, case: str):
+def verify_netCDF_file_content(dimension: str, case: str):
     with netCDF4.Dataset("aeolis.nc", "r") as ds, netCDF4.Dataset(
         "output_expected.nc", "r"
     ) as ds_expected:
