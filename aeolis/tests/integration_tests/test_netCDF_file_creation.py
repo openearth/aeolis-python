@@ -1,5 +1,4 @@
 import os
-import netCDF4
 import numpy as np
 import pytest
 
