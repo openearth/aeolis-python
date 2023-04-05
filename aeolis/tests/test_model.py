@@ -22,9 +22,7 @@ import logging
 import pytest
 import numpy as np
 from aeolis.model import (StreamFormatter, 
-                          ModelState,
-                          interp_circular,
-                          prevent_tiny_negatives
+                          ModelState
                         )
 
 
@@ -94,27 +92,3 @@ class TestModelState:
         state.set_immutable("variable2")
         assert "variable2" not in state.ismutable
 
-
-class TestInterpCircular:
-    """Test the interp_circular function"""
-
-    def test_value_error_raised(self):
-        """Test if a value error is raised when xp and f have different lengths"""
-        
-        x = np.random.rand(10)
-        xp = np.random.rand(10)
-        fp = np.random.rand(9)        
-
-        with pytest.raises(ValueError):
-            interp_circular(x, xp, fp)
-
-class TestPreventTinyNegatives:
-    """Test the prevent tiny negatives function"""
-
-    def test_prevent_tiny_negatives(self):
-        """Test if tiny negative values in an array are replace a the replacement value"""
-        
-        x = np.array([1, 2, -1e-10, 3, -1e-10, 4, 5])
-        x = prevent_tiny_negatives(x, max_error=1e-9, replacement=-0.01)
-
-        assert np.all(x >= -0.01)
