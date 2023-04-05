@@ -23,7 +23,8 @@ import pytest
 import numpy as np
 from aeolis.model import (StreamFormatter, 
                           ModelState,
-                          interp_circular
+                          interp_circular,
+                          prevent_tiny_negatives
                         )
 
 
@@ -106,3 +107,14 @@ class TestInterpCircular:
 
         with pytest.raises(ValueError):
             interp_circular(x, xp, fp)
+
+class TestPreventTinyNegatives:
+    """Test the prevent tiny negatives function"""
+
+    def test_prevent_tiny_negatives(self):
+        """Test if tiny negative values in an array are replace a the replacement value"""
+        
+        x = np.array([1, 2, -1e-10, 3, -1e-10, 4, 5])
+        x = prevent_tiny_negatives(x, max_error=1e-9, replacement=-0.01)
+
+        assert np.all(x >= -0.01)
