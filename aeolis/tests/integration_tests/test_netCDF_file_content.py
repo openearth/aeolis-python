@@ -51,31 +51,15 @@ def verify_netCDF_file_content(dimension: str, case: str):
                 f" parameter file for {dimension} {case}"
             )
 
-            # Unmask the arrays and collect the underlying data
+            # Unmask the arrays to get the underlying data
             variable_value_data = np.ma.getdata(variable_value)
             variable_value_expected_data = np.ma.getdata(
                 variable_value_expected
             )
 
-            # Extract the mask
-            variable_value_mask = np.ma.getmask(variable_value)
-            variable_value_expected_mask = np.ma.getmask(
-                variable_value_expected
-            )
-
-            # Compare non-masked elements using numpy.allclose
-
-            # Using numpy.allclose to compare two masked arrays element-wise generates the
-            # error "TypeError: ufunc 'bitwise_and' not supported for the input types,
-            # and the inputs could not be safely coerced to any supported types according
-            # to the casting rule safe". Unmasking the arrays converts them to regular
-            # numpy arrays, which are compatible with element-wise comparisons of numpy.allclose.
-
+            # Compare unmasked elements using numpy.allclose
             assert np.allclose(
-                variable_value_data[~variable_value_mask],
-                variable_value_expected_data[~variable_value_expected_mask],
-                rtol=1e-5,
-                atol=1e-8,
+                variable_value_data, variable_value_expected_data
             ), (
                 f"Array values of the parameter '{variable.name}' are expected"
                 " to remain consistent across simulations for the same model"
