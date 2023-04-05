@@ -32,5 +32,5 @@ E. Make any relavant updates or changes to the package documentation. Then, push
 
 A. On GitHub, create a new release. Use `v.x.x.x` as tag and title for the new release. In the description of the release use the same text we used in `docs/whatsnew.rst`. Mind about the MarkDown formatting.
 
-C. Then, publish the relaese. This will trigger the `Upload PyPI release` workflow which builds and uploads the package to PyPI. This will take some time to complete.
+B. Then, publish the relaese. This will trigger the `Upload PyPI release` workflow which builds and uploads the package to PyPI. This will take some time to complete.
 
