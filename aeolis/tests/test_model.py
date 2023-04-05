@@ -19,7 +19,12 @@ To run an specific test, use:
 """
 
 import logging
-from aeolis.model import StreamFormatter, ModelState
+import pytest
+import numpy as np
+from aeolis.model import (StreamFormatter, 
+                          ModelState,
+                          interp_circular
+                        )
 
 
 class TestStreamFormatter:
@@ -88,3 +93,16 @@ class TestModelState:
         state.set_immutable("variable2")
         assert "variable2" not in state.ismutable
 
+
+class TestInterpCircular:
+    """Test the interp_circular function"""
+
+    def test_value_error_raised(self):
+        """Test if a value error is raised when xp and f have different lengths"""
+        
+        x = np.random.rand(10)
+        xp = np.random.rand(10)
+        fp = np.random.rand(9)        
+
+        with pytest.raises(ValueError):
+            interp_circular(x, xp, fp)
