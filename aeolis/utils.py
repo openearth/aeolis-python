@@ -30,6 +30,7 @@ import numpy as np
 #import numba
 #import numba_scipy
 import scipy
+from numpy import ndarray
 
 
 def isiterable(x):
@@ -66,7 +67,8 @@ def isarray(x):
         return False
 
 
-def interp_array(x, xp, fp, circular=False, **kwargs):
+def interp_array(x: ndarray, xp: ndarray, 
+                 fp: ndarray, circular: bool=False, **kwargs: dict) -> ndarray:
     '''Interpolate multiple time series at once
 
     Parameters
