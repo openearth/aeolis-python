@@ -10,17 +10,17 @@ packaging instructions are in the the following files:
 * `setup.cfg`
 * `setup.py`
 
-A. Before generating a package, we first need to install `build`.
-
-```bash
-pip install build 
-```
+A. Before generating a new release, make sure that all  relevant code changes have been merge to the **main** branch.
 
 B. Bump the version by updating the `aeolis/VERISON`. For consistency, you have to update the version on `CITATION.cff` and `README.md` (citation section).
 
-C. To test if the Python source package (`.tar.gz`) and the binary package (`.whl`) can be built without problem in the `dist/` directory, do:
+C. To test if the Python source package (`.tar.gz`) and the binary package (`.whl`) can be built without problem in the `dist/` directory, install `build` and build the package:
 
 ```bash
+# install build
+pip install build
+
+# build package
 python -m build
 ```
 
