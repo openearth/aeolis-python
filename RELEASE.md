@@ -1,6 +1,6 @@
 # Making a new release of AeoLiS
 
-We publish the package on PyPI. Only administrators can create new releases.
+We publish the package on PyPI. Only administrators can create new releases, and releases are made using the **main** branch.
 
 ## 1. Prepare Release
  All of the Python
