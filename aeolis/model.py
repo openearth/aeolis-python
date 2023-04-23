@@ -284,7 +284,7 @@ class AeoLiS(IBmi):
         # compute vegetation shear
         if self.p['process_vegetation']: 
             self.s = aeolis.vegetation.vegshear(self.s, self.p)
-        
+
         # determine optimal time step
         self.dt_prev = self.dt
         if not self.set_timestep(dt):

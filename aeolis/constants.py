@@ -104,6 +104,7 @@ MODEL_STATE = {
         'rhoveg',                           # [-] Vegetation cover
         'drhoveg',                          # Change in vegetation cover
         'hveg',                             # [m] height of vegetation
+        'hvegadjusted',                             # [m] height of vegetation after flexure equation
         'dhveg',                            # [m] Difference in vegetation height per time step
         'dzbveg',                           # [m] Bed level change used for calculation of vegetation growth
         'germinate',                        # vegetation germination
