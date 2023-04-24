@@ -30,6 +30,7 @@ import numpy as np
 #import numba
 #import numba_scipy
 import scipy
+from numpy import ndarray
 
 
 def isiterable(x):
@@ -66,7 +67,8 @@ def isarray(x):
         return False
 
 
-def interp_array(x, xp, fp, circular=False, **kwargs):
+def interp_array(x: ndarray, xp: ndarray, 
+                 fp: ndarray, circular: bool=False, **kwargs: dict) -> ndarray:
     '''Interpolate multiple time series at once
 
     Parameters
@@ -99,7 +101,7 @@ def interp_array(x, xp, fp, circular=False, **kwargs):
     return f
 
 
-def interp_circular(x, xp, fp, **kwargs):
+def interp_circular(x: ndarray, xp: ndarray, fp: ndarray, **kwargs) -> ndarray:
     '''One-dimensional linear interpolation.
 
     Returns the one-dimensional piecewise linear interpolant to a
@@ -139,7 +141,7 @@ def interp_circular(x, xp, fp, **kwargs):
     return np.interp(x, xp, fp, **kwargs)
 
 
-def normalize(x, ref=None, axis=0, fill=0.):
+def normalize(x: ndarray, ref:ndarray = None, axis: int =0, fill: float =0.):
     '''Normalize array
 
     Normalizes an array to make it sum to unity over a specific
@@ -152,9 +154,9 @@ def normalize(x, ref=None, axis=0, fill=0.):
         The array to be normalized
     ref : array_like, optional
         Alternative normalization reference, if not specified, the sum of x is used
-    axis : int, optional
+    axis : optional
         The normalization axis (default: 0)
-    fill : float, optional
+    fill : optional
         The return value for all-zero dimensions (default: 0.)
 
     '''
@@ -168,7 +170,7 @@ def normalize(x, ref=None, axis=0, fill=0.):
     return y
 
 
-def prevent_tiny_negatives(x, max_error=1e-10, replacement=0.):
+def prevent_tiny_negatives(x: ndarray, max_error: float =1e-10, replacement: float =0.) -> ndarray:
     '''Replace tiny negative values in array
     
     Parameters
