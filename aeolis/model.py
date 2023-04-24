@@ -3040,7 +3040,7 @@ class WindGenerator():
     def __init__(self,
                  mean_speed:float=9.0,
                  max_speed:float=30.0,
-                 dt:float=60., # what is the meaning of dt?
+                 dt:float=60., # size of time step
                  n_states:int=30,
                  shape:float=2.,
                  scale:float=2.) -> None:
