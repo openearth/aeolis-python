@@ -361,8 +361,7 @@ def update(s, p, dt,t):
                     s['scan_d'][:,:] == False
                 else:
                     #Compute h_delta
-                    s['h_delta'] = hdelta(s['wetting'], s['scan_w'], s['gw'],s['gw_prev'],s['scan_d'],s['h_delta'],s['zb'],s['scan_w_moist'],s['w_h'],p['satd_moist'],s['d_h'],p['satw_moist'],p['alfaw_moist'],p['resw_moist'],p['mw_moist'],p['nw_moist'])
-                    
+                    s['h_delta'] = hdelta(s['wetting'], s['scan_w'], s['gw'],s['gw_prev'],s['scan_d'],s['h_delta'],s['zb'],s['scan_w_moist'],s['scan_d_moist'],s['w_h'],p['satd_moist'],s['d_h'],p['satw_moist'],p['alfaw_moist'],p['alfad_moist'],p['resw_moist'],p['resd_moist'],p['mw_moist'],p['md_moist'],p['nw_moist'],p['nd_moist'])
                     #Compute moisture of h for the wetting curve
                     s['w_h'] = p['resw_moist'] + (p['satw_moist'] - p['resw_moist']) \
                                       / (1 + abs(p['alfaw_moist'] * h) ** p['nw_moist']) ** p['mw_moist']
@@ -482,7 +481,7 @@ def runup_overheight_distr(fx, fx_ix,shl_ix,runup_ix, x):
     return fx
 
 @njit
-def hdelta(wetting, scan_w, gw,gw_prev,scan_d,h_delta,zb,scan_w_moist,w_h,satd_moist,d_h,satw_moist,alfaw_moist,resw_moist,mw_moist,nw_moist):
+def hdelta(wetting, scan_w, gw,gw_prev,scan_d,h_delta,zb,scan_w_moist,scan_d_moist,w_h,satd_moist,d_h,satw_moist,alfaw_moist,alfad_moist,resw_moist,resd_moist,mw_moist,md_moist,nw_moist,nd_moist):
     for i in range(len(wetting[:,0])):
         for j in range(len(wetting[0,:])):
             #Compute h delta on the main drying and wetting curve
