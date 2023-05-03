@@ -7,20 +7,44 @@ message: >-
   If you use this software, please cite it using the
   metadata from this file.
 type: software
+contact:
+  - affiliation: AeoLis Development Team
+    email: Sierd.deVries@tudelft.nl
+    family-names: Sierd
+    given-names: de Vries
 authors:
-  - given-names: 
-    family-names: AEOLIS Development Team
+  - given-names: Sierd
+    family-names: Vries
     affiliation: Delft University of Technology
-    email: 
+    email: Sierd.deVries@tudelft.nl
+    orcid: 'https://orcid.org/0000-0001-5865-3715'
+    name-particle: de
+  - given-names: Caroline
+    family-names: Hallin
+    email: e.c.hallin@tudelft.nl
+    affiliation: Delft University of Technology
+  - given-names: Manuel
+    family-names: Garcia Alvarez
+    email: m.g.garciaalvarez@tudelft.nl
+    affiliation: Delft University of Technology
+    orcid: 'https://orcid.org/0000-0003-1579-9989'
+  - given-names: Bart
+    name-particle: van
+    family-names: Westen
+    orcid: 'https://orcid.org/0000-0001-7903-6062'
+    affiliation: Delft University of Technology
+  - given-names: Crista
+    affiliation: Delft University of Technology
+  - given-names: Glen
+  - given-names: Nick
 repository-code: 'https://github.com/openearth/aeolis-python'
 url: 'https://aeolis.readthedocs.io/'
-abstract: >-
-  AeoLiS is a process-based model for simulating aeolian
-  sediment transport in situations where supply-limiting
-  factors are important, like in costal environments. 
+abstract: AeoLiS is a process-based model for simulating aeolian sediment transport in situations where supply-limiting factors are important, like in costal environments. 
 keywords:
   - python
   - simulation
   - sediment
 license: GPL-3.0
+commit: 0adaedfc8015f18b3b551bed1dda38d630cd8c95
 version: 2.1.1
+date-released: '2023-03-29'
