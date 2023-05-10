@@ -78,10 +78,9 @@ Read our [Contribution Guidelines](CONTRIBUTING.md) to know how you can help to 
 
 ## Citation
 
-
 Please, cite this software as follows:
 
-*AeoLiS Development Team. AeoLiS (Version 2.1.1) [Computer software].* 
+*de Vries, S., Hallin, C., van IJzendoorn, C., van Westen, B., Cohn, N., Strypsteen, G., Skaden, J., Agrawal, N., & Garcia Alvarez, M. (2023). AeoLiS (Version 2.1.1) [Computer software]. https://github.com/openearth/aeolis-python*
 
 ## Acknowlegdements
 
