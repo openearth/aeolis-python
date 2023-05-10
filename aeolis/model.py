@@ -24,8 +24,7 @@ The Netherlands                  The Netherlands
 
 '''
 
-
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division # TODO: where's this being used?
 
 import os
 import imp
@@ -62,7 +61,10 @@ import aeolis.gridparams
 from typing import Any, Union, Tuple
 from numpy import ndarray
 
-from aeolis.utils import *
+import aeolis.utils as utils # TODO: Find where utils is being used and replace with aeolis.utils
+# from aeolis.utils import * 
+
+
 
 class StreamFormatter(logging.Formatter):
     """A formater for log messages"""
