@@ -64,8 +64,6 @@ from numpy import ndarray
 import aeolis.utils as utils # TODO: Find where utils is being used and replace with aeolis.utils
 # from aeolis.utils import * 
 
-
-
 from multiprocessing import Pool
 
 class StreamFormatter(logging.Formatter):
