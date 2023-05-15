@@ -31,6 +31,7 @@ import logging
 import numpy as np
 import aeolis.gridparams
 from matplotlib import pyplot as plt
+from numba import njit
 
 # package modules
 from aeolis.utils import *
@@ -219,7 +220,6 @@ def wet_bed_reset(s, p):
 
 
 
-
 def update(s, p):
     '''Update bathymetry and bed composition
 
@@ -276,12 +276,16 @@ def update(s, p):
     
     # move mass among layers
     m[:,0,:] -= pickup
-    for i in range(1,nl):
-        m[ix_ero,i-1,:] -= dm[ix_ero,:] * d[ix_ero,i,:]
-        m[ix_ero,i,  :] += dm[ix_ero,:] * d[ix_ero,i,:]
-        m[ix_dep,i-1,:] -= dm[ix_dep,:] * d[ix_dep,i-1,:]
-        m[ix_dep,i,  :] += dm[ix_dep,:] * d[ix_dep,i-1,:]
-    m[ix_dep,-1,:] -= dm[ix_dep,:] * d[ix_dep,-1,:]
+    m = arrange_layers(m,dm,d,nl,ix_ero,ix_dep)
+    
+    # this is replaced by arrange_layers and speed up using numba
+    # for i in range(1,nl):
+    #     m[ix_ero,i-1,:] -= dm[ix_ero,:] * d[ix_ero,i,:]
+    #     m[ix_ero,i,  :] += dm[ix_ero,:] * d[ix_ero,i,:]
+    #     m[ix_dep,i-1,:] -= dm[ix_dep,:] * d[ix_dep,i-1,:]
+    #     m[ix_dep,i,  :] += dm[ix_dep,:] * d[ix_dep,i-1,:]
+    #m[ix_dep,-1,:] -= dm[ix_dep,:] * d[ix_dep,-1,:]
+
     if p['grain_dist'].ndim == 2: 
         m[ix_ero,-1,:] -= dm[ix_ero,:] * normalize(p['grain_dist'][-1,:])[np.newaxis,:].repeat(np.sum(ix_ero), axis=0)
     elif type(p['bedcomp_file']) == np.ndarray:
@@ -463,3 +467,42 @@ def average_change(l, s, p):
     
     
     return s
+
+@njit
+def arrange_layers(m,dm,d,nl,ix_ero,ix_dep):
+    '''Arranges mass redistrubution between layers. 
+    This function is called in the bed.update fucntion to speed up code using numba
+    
+    
+
+    Parameters
+    ----------
+    m       :   array
+                mass in layers
+    dm      :   array
+                total mass exchanged between layers derrived from pickup
+    d       :   array
+                normalized mass in layers
+    nl      :   int
+                number of layers
+    ix_dep  :   array
+                cells for deposition
+    ix_ero  :   array
+                cells for erosion
+
+   
+    Returns
+    -------
+    m
+     
+    '''
+    for i in range(1,nl):
+        m[ix_ero,i-1,:] -= dm[ix_ero,:] * d[ix_ero,i,:]
+        m[ix_ero,i,  :] += dm[ix_ero,:] * d[ix_ero,i,:]
+        m[ix_dep,i-1,:] -= dm[ix_dep,:] * d[ix_dep,i-1,:]
+        m[ix_dep,i,  :] += dm[ix_dep,:] * d[ix_dep,i-1,:]
+    m[ix_dep,-1,:] -= dm[ix_dep,:] * d[ix_dep,-1,:]
+
+    return m
+    
+
