@@ -20,6 +20,8 @@ def decomp2(Ct_i,A,yCt_i):
     comb = np.vstack((Ct_i_dec1[0:75,:],Ct_i_dec2[4:,:]))
     return comb
 
+
+
 def decomp4(Ct_i,A,yCt_i):
     # devide domain specifying overlap
     # we have a 151 by 301 domain which we devide by 4 with about 5 cells ovelap
@@ -44,7 +46,7 @@ def solve_matrix(A,Ct_i):
     # solve the matrix
     result  = scipy.sparse.linalg.spsolve(A,Ct_i)
 
-    return result
+    return result.reshape(80,301)
 
 
 if __name__ == '__main__':
@@ -55,27 +57,29 @@ if __name__ == '__main__':
     A = scipy.sparse.load_npz('parallell_solve/A.npz')
     yCt_i = np.load('parallell_solve/yCt_i.npy')
 
-    start_time = time.time()
-    # devide matrices in 2 domains
-    decs =    [ 
-        (A[0:24080,0:24080], yCt_i.flatten()[0:24080]), # first dec
-        (A[21371:,21371:], yCt_i.flatten()[21371:]), # second dec
-    ]
+    def pool_2():
 
-    with Pool(processes=4) as pool:
-        results = pool.starmap(solve_matrix, decs)
+        start_time = time.time()
+        # devide matrices in 2 domains
+        decs =    [ 
+            (A[0:24080,0:24080], yCt_i.flatten()[0:24080]), # first dec
+            (A[21371:,21371:], yCt_i.flatten()[21371:]), # second dec
+        ]
 
-    reshaped_results = [result.reshape(80,301) for result in results]
-  
-    # combine the results
-    comb_pool2 = np.vstack((
-        reshaped_results[0][0:75,:],
-        reshaped_results[1][4:,:]
-        ))
+        with Pool(processes=5) as pool:
+            results = pool.starmap(solve_matrix, decs)
     
-    end_time = time.time()
-    print(end_time)
-    multiprocess_time = end_time - start_time
+        # combine the results
+        comb_pool2 = np.vstack((
+            results[0][0:75,:],
+            results[1][4:,:]
+            ))
+        
+        return comb_pool2
+        
+        # end_time = time.time()
+        # print(end_time)
+        # multiprocess_time = end_time - start_time
 
     solve_sp = scipy.sparse.linalg.spsolve(A, yCt_i.flatten()).reshape(151,301)
     comb2 = decomp2(Ct_i,A,yCt_i)
@@ -83,14 +87,22 @@ if __name__ == '__main__':
 
     diff_comb2 = (comb2-solve_sp).max()
     diff_comb4 = (comb4-solve_sp).max()
+
+    comb_pool2 = pool_2()
     diff_comb_pool2 = (comb_pool2-solve_sp).max()
 
-    print('')
-    print('spsolve gives %.2f seconds, this is the benchmark' % timeit.timeit('solve_sp = scipy.sparse.linalg.spsolve(A, yCt_i.flatten()).reshape(151,301)',number=10,globals=globals()))
-    print('decompostion in 2 domains solved sequentially gives %.2f seconds with an accuracy of %.2e ' %  (timeit.timeit('comb2 = decomp2(Ct_i,A,yCt_i)',number=10,globals=globals()), diff_comb2))
-    print('decompostion in 4 domains solved sequentially gives %.2f seconds with an accuracy of %.2e ' %  ( timeit.timeit('comb4 = decomp4(Ct_i,A,yCt_i)', number=10,globals=globals()), diff_comb4 ) )
+    start_time = time.time()
+    solve_sp = scipy.sparse.linalg.spsolve(A, yCt_i.flatten()).reshape(151,301)
+    end_time = time.time()
+    solve_sp_time = end_time - start_time
 
-    print(f'decompostion using Pool and 2 domains gives {multiprocess_time} seconds with an accuracy of {diff_comb_pool2}' )
+    print('')
+    print('spsolve gives %.2f seconds, this is the benchmark' % timeit.timeit('solve_sp = scipy.sparse.linalg.spsolve(A, yCt_i.flatten()).reshape(151,301)',number=1024,globals=globals()))
+    print('decompostion in 2 domains solved sequentially gives %.2f seconds with an accuracy of %.2e ' %  (timeit.timeit('comb2 = decomp2(Ct_i,A,yCt_i)',number=1,globals=globals()), diff_comb2))
+    print('decompostion in 4 domains solved sequentially gives %.2f seconds with an accuracy of %.2e ' %  ( timeit.timeit('comb4 = decomp4(Ct_i,A,yCt_i)', number=1,globals=globals()), diff_comb4 ) )
+
+    print('decompostion using Pool with 2 domains solved sequentially gives %.2f seconds with an accuracy of %.2e ' %  ( timeit.timeit('comb_pool2 = pool_2()', number=1,globals=globals()), diff_comb_pool2 ) )
+
                                                                                                                          
     print('')
     print('next step is to solve for domains in parallell')
