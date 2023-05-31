@@ -163,6 +163,7 @@ DEFAULT_CONFIG = {
     'th_salt'                       : False,              # Enable wind velocity threshold based on salt
     'th_sheltering'                 : False,               # Enable wind velocity threshold based on sheltering by roughness elements
     'th_nelayer'                    : False,              # Enable wind velocity threshold based on a non-erodible layer
+    'parallell'                     : False,               # Enable parallell computations
     'process_avalanche'             : False,               # Enable the process of avalanching
     'process_shear'                 : False,               # Enable the process of wind shear
     'process_tide'                  : False,               # Enable the process of tides

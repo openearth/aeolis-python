@@ -2163,13 +2163,13 @@ class AeoLiS(IBmi):
                 
                 # solve system with current weights
                 Ct_i = Ct[:,:,i].flatten()
-                parallel2 = True
-                if parallel2 == True:
+                #p['parallell'] = True
+                if p['parallell'] == True:
                     #domain 1 limit
-                    d1 = np.int((np.floor(yCt_i.shape[0]/2)+1)*yCt_i.shape[1])
+                    #d1 = np.int((np.floor(yCt_i.shape[0]/2)+1)*yCt_i.shape[1])
                     #domain 2 limit including 1 row overlap with d1
-                    d2 = np.int((np.floor(yCt_i.shape[0]/2))*yCt_i.shape[1])
-
+                    #d2 = np.int((np.floor(yCt_i.shape[0]/2))*yCt_i.shape[1])
+                    print('parallell test')
                     #Lets try 4 domains
                     d1 = np.int((np.floor(yCt_i.shape[0]*1/4)+1)*yCt_i.shape[1])
                     d2 = np.int((np.floor(yCt_i.shape[0]*1/4))*yCt_i.shape[1])
@@ -2178,8 +2178,8 @@ class AeoLiS(IBmi):
                     d5 = np.int((np.floor(yCt_i.shape[0]*3/4)+1)*yCt_i.shape[1])
                     d6 = np.int((np.floor(yCt_i.shape[0]*3/4))*yCt_i.shape[1])
 
-                    with Pool(processes=2) as pool:
-                        results = pools.starmap(scipy.sparse.linalg.spsolve,
+                    #with Pool(processes=2) as pool:
+                    results = pools.starmap(scipy.sparse.linalg.spsolve,
                                                [(A[0:d1,0:d1], yCt_i.flatten()[0:d1]),
                                                  (A[d2:d3,d2:d3], yCt_i.flatten()[d2:d3]),
                                                  (A[d4:d5,d4:d5], yCt_i.flatten()[d4:d5]),
@@ -2192,15 +2192,16 @@ class AeoLiS(IBmi):
                     # Ct_i[d4:d5] += scipy.sparse.linalg.spsolve(A[d4:d5,d4:d5], yCt_i.flatten()[d4:d5])    
                     # Ct_i[d6:] += scipy.sparse.linalg.spsolve(A[d6:,d6:], yCt_i.flatten()[d6:])  
                  
-                    # Ct_i[0:d1] += results[0]    
-                    # Ct_i[d2:d3] += results[1]
-                    # Ct_i[d4:d5] += results[2]    
-                    # Ct_i[d6:] += results[3]
+                    Ct_i[0:d1] += results[0]    
+                    Ct_i[d2:d3] += results[1]
+                    Ct_i[d4:d5] += results[2]    
+                    Ct_i[d6:] += results[3]
 
                     # in the current approach, the seam gets overwritten twice. This is incorrect but 
                     # I will proceed for the sake of process optimization 
                     # this needs to be corrected for.
                 else:
+                    print('sequential')
                     Ct_i += scipy.sparse.linalg.spsolve(A, yCt_i.flatten())    
 
                 Ct_i = prevent_tiny_negatives(Ct_i, p['max_error'])
