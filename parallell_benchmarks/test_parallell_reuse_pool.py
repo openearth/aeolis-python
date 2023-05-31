@@ -2,13 +2,6 @@ import scipy.sparse
 import numpy as np
 import timeit
 
-def solve_matrix(A,Ct_i):
-    # solve the matrix
-    result  = scipy.sparse.linalg.spsolve(A,Ct_i)
-
-    return result.reshape(80,301)
-
-
 def solve_matrix4(A,Ct_i):
     # solve the matrix
     result  = scipy.sparse.linalg.spsolve(A,Ct_i)
@@ -75,5 +68,8 @@ if __name__ == '__main__':
     plt.xlabel('iterations')
     plt.ylabel('Time [s]')
     plt.legend()
+    plt.savefig('parallell_solve/plot-shared-pool.png')
     plt.show()
 
+
+    

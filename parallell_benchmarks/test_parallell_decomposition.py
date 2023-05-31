@@ -8,7 +8,8 @@ def solve_matrix(A,Ct_i):
 
     return result.reshape(80,301)
 
-# similar to the above, but without reshaping
+# similar to the above, but without reshaping,
+# only used for the 4 domains
 def solve_matrix4(A,Ct_i):
     # solve the matrix
     result  = scipy.sparse.linalg.spsolve(A,Ct_i)
@@ -104,5 +105,6 @@ if __name__ == '__main__':
     plt.xlabel('Time [s]')
     plt.ylabel('iterations')
     plt.legend()
-    plt.show()
+    plt.savefig('parallell_solve/plot-decomposition.png')
+    # plt.show()
 
