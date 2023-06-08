@@ -361,8 +361,7 @@ def update(s, p, dt,t):
                     s['scan_d'][:,:] == False
                 else:
                     #Compute h_delta
-                    s['h_delta'] = hdelta(s['wetting'], s['scan_w'], s['gw'],s['gw_prev'],s['scan_d'],s['h_delta'],s['zb'],s['scan_w_moist'],s['w_h'],p['satd_moist'],s['d_h'],p['satw_moist'],p['alfaw_moist'],p['resw_moist'],p['mw_moist'],p['nw_moist'])
-                    
+                    s['h_delta'] = hdelta(s['wetting'], s['scan_w'], s['gw'],s['gw_prev'],s['scan_d'],s['h_delta'],s['zb'],s['scan_w_moist'],s['scan_d_moist'],s['w_h'],p['satd_moist'],s['d_h'],p['satw_moist'],p['alfaw_moist'],p['alfad_moist'],p['resw_moist'],p['resd_moist'],p['mw_moist'],p['md_moist'],p['nw_moist'],p['nd_moist'])
                     #Compute moisture of h for the wetting curve
                     s['w_h'] = p['resw_moist'] + (p['satw_moist'] - p['resw_moist']) \
                                       / (1 + abs(p['alfaw_moist'] * h) ** p['nw_moist']) ** p['mw_moist']
@@ -482,7 +481,7 @@ def runup_overheight_distr(fx, fx_ix,shl_ix,runup_ix, x):
     return fx
 
 @njit
-def hdelta(wetting, scan_w, gw,gw_prev,scan_d,h_delta,zb,scan_w_moist,w_h,satd_moist,d_h,satw_moist,alfaw_moist,resw_moist,mw_moist,nw_moist):
+def hdelta(wetting, scan_w, gw,gw_prev,scan_d,h_delta,zb,scan_w_moist,scan_d_moist,w_h,satd_moist,d_h,satw_moist,alfaw_moist,alfad_moist,resw_moist,resd_moist,mw_moist,md_moist,nw_moist,nd_moist):
     for i in range(len(wetting[:,0])):
         for j in range(len(wetting[0,:])):
             #Compute h delta on the main drying and wetting curve
@@ -500,17 +499,16 @@ def hdelta(wetting, scan_w, gw,gw_prev,scan_d,h_delta,zb,scan_w_moist,w_h,satd_m
             if scan_d[i,j] == True and wetting[i,j] == False and gw[i,j] > gw_prev[i,j]:
             #Solve hdelta from wetting scanning curve for which moist(h) on wetting scanning curve equals moist(h) on drying scanning curve
                 #Simple iteration method
-                hdelta_it=0 #initialize hdelta
+                h_delta_it=0 #initialize hdelta
                 F_hdelta =1
                 while F_hdelta > 0.01:           
-                    hdelta_it = hdelta_it + 0.01
-                    w_hdelta = (resw_moist + (satw_moist - resw_moist) / (1 + np.abs(alfaw_moist * hdelta_it) ** nw_moist) ** mw_moist)
-                    d_hdelta = (resd_moist + (satd_moist - resd_moist) / (1 + np.abs(alfad_moist * hdelta_it) ** nd_moist) ** md_moist)
-                    F_hdelta = w_h + (satw_moist - w_h) / np.maximum(satw_moist - w_hdelta,0.0001) * (d_hdelta - w_hdelta) - scan_d_moist
-                
-                hdelta[i,j] = hdelta_it
-                
-    return hdelta
+                    h_delta_it = h_delta_it + 0.01
+                    w_hdelta = (resw_moist + (satw_moist - resw_moist) / (1 + np.abs(alfaw_moist * h_delta_it) ** nw_moist) ** mw_moist)
+                    d_hdelta = (resd_moist + (satd_moist - resd_moist) / (1 + np.abs(alfad_moist * h_delta_it) ** nd_moist) ** md_moist)
+                    F_hdelta = w_h[i,j] + (satw_moist - w_h[i,j]) / np.maximum(satw_moist - w_hdelta,0.0001) * (d_hdelta - w_hdelta) - scan_d_moist[i,j]
+
+                h_delta[i,j] = h_delta_it          
+    return h_delta
 
 @njit
 def SWR_curve(wetting,gw,gw_prev,scan_w,moist_swr,w_h,scan_d,scan_w_moist,d_h,scan_d_moist):
