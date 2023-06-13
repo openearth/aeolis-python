@@ -752,7 +752,67 @@ instantaneous salt content. The spatial varying salt content needs to
 be specified by the user, for example through the BMI interface.
 
 
+Speeding up code using Domain decomposition and Parallel programming [In development]
+--------------------------------------------------------------------------------------------
+
+This subsection describes the Proof of Concept implementation for applying domain decomposition and parallel programming to speed up code execution in AeoLiS. The impelementation is currently in an experimental stage. While a significant speedup of upto 2.7X over the current sequential version could be achieved for simulations of larger models, the results could not be verified for correctness yet.  
+
+Overview
+^^^^^^^^
+When domains get larger (more gridpoints), the calculation slows down. Solving the sparse system of equations (Ax=b) accounts for a large portion of this calculation time (as confirmed via profiling the code). This is done here:
+
+Domain decomposition is a technique in which a model is divided into several smaller domains (ref Delft3D manual). These domains can then be computed upon in parallel by spawning a pool of processes and distributing the domains among these processes.
+
+Profiling of the sequential version revealed that the code is spending 50% of it's time in a single function. This function solves sparse system of equations. 
+
+
+
+Details of implementation
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+Desribe the code changes, how matrix is partitioned, etc. Be brief here.
+
+
+Results
+^^^^^^^
+
+
+Example 1 : Sandmotor example with large grids (attach config files with modified layer size)
+
+Attach screenshot or type result of simulation: total execution time, time spent in solevr function, etc. 
+
+Example 2: Sandmotor example with small grid size
+
+Observations:
+- Speed up is significant with larger grids
+- Tests fails
+- Generalization is not the right approach
+
+
+Conclusion
+^^^^^^^^^^
+
+- Tests for parallel version need be rethought. Existing tests may not be correct due to the overlap. To check the difference in the output is checked precisely. Existing tests need to be investigated for applicability to the parallel version. 
+- Keep PoC for reference.
+- 
+
+Usage (experimental only!)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Changes are in the fetaure branch `parallel-update`. Use this branch.
+- The parallel computation can be enabled by setting the keyword `parallel` to `T` in aeolis.txt file. To do this, append a line at the end of the parameters in aeolis.txt and set 'parallel' to `T` as shown in the screenshot below. The code by default will run the sequential version of the solver. 
+
+Future work
+^^^^^^^^^^^
+
+- Investigate how the the parallel version of the solver can be tested for the correctness of the results produced. 
+
+
+
 .. rubric:: Bibliography
 
 .. bibliography:: aeolis.bib
    :cited:
+
+
