@@ -273,7 +273,7 @@ def equilibrium(s, p):
     if p['process_transport']:
                 
         nf = p['nfractions']
-	nx = p['nx']      
+        nx = p['nx']      
         
         # u via grainvelocity:
         
