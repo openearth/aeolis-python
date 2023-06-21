@@ -64,7 +64,7 @@ from numpy import ndarray
 
 from aeolis.utils import *
 
-from multiprocessing import Pool, Value, Array
+from multiprocessing import Pool
 
 class StreamFormatter(logging.Formatter):
     """A formater for log messages"""
