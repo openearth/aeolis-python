@@ -1,6 +1,8 @@
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+[tool.hatchling.build]
+exclude = ["tests", "docs", "examples", "notebooks"]
 
 [project]
 name = "AeoLiS"
@@ -15,7 +17,7 @@ maintainers = [
 description = "A process-based model for simulating supply-limited aeolian sediment transport"
 readme = "README.md"
 requires-python = ">=3.8, <4"
-license = {file = "LICENSE"}
+license = {file = "LICENSE.txt"}
 keywords = ["aeolian sediment", "transport", "model", "deltares", "tudelft"]
 dependencies = [
           "docopt==0.6.1",
@@ -42,9 +44,19 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Physics",
 ]
 
+[project.optional-dependencies]
+  test = [
+    "pytest",
+    "pytest-cov",
+  ]
+  docs = [
+    "python3-sphinx",
+    "sphinx-rtd-theme",
+  ]
+
 [project.scripts]
-aeolis = "aeolis:aeolis.console"
-aeolis-wind = "aeolis:wind.console"
+aeolis = "aeolis.console:aeolis"
+aeolis-wind = "aeolis.console:wind"
 
 [project.urls]
 Homepage = "https://github.com/openearth/aeolis-python"
