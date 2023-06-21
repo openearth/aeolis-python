@@ -24,13 +24,13 @@ requires-python = ">=3.8, <4"
 license = {file = "LICENSE.txt"}
 keywords = ["aeolian sediment", "transport", "model", "deltares", "tudelft"]
 dependencies = [
-          "docopt==0.6.1",
-        "bmi-python",
-        "netCDF4",
-        "scipy",
-        "numpy<1.24,>=1.18",
-        "matplotlib",
-        "numba",
+  "docopt==0.6.1",
+  "bmi-python",
+  "netCDF4",
+  "scipy",
+  "numpy<1.24,>=1.18",
+  "matplotlib",
+  "numba",
 ]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
@@ -49,12 +49,10 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-  test = [
+  dev = [ 
     "pytest",
     "pytest-cov",
-  ]
-  docs = [
-    "python3-sphinx",
+    "Sphinx",
     "sphinx-rtd-theme",
   ]
 
