@@ -8,9 +8,16 @@ version = "2.1.1"
 authors = [
   { name="Sierd de Vries", email="sierd.devries@tudelft.nl" },
 ]
+maintainers = [
+  {name="Sierd de Vries", email="sierd.devries@tudelft.nl"},
+  {name="Bart van de Westen"},
+]
 description = "A process-based model for simulating supply-limited aeolian sediment transport"
 readme = "README.md"
 requires-python = ">=3.8, <4"
+license = "GPLv3"
+keywords = ["aeolian sediment", "transport", "model", "deltares", "tudelft"]
+
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
