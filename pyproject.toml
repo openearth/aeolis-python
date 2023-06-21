@@ -15,26 +15,38 @@ maintainers = [
 description = "A process-based model for simulating supply-limited aeolian sediment transport"
 readme = "README.md"
 requires-python = ">=3.8, <4"
-license = "GPLv3"
+license = {file = "LICENSE"}
 keywords = ["aeolian sediment", "transport", "model", "deltares", "tudelft"]
-
+dependencies = [
+          "docopt==0.6.1",
+        "bmi-python",
+        "netCDF4",
+        "scipy",
+        "numpy<1.24,>=1.18",
+        "matplotlib",
+        "numba",
+]
 classifiers = [
-    "Development Status :: 5 - Production/Stable",
-    "Environment :: Console",
-    "Intended Audience :: Developers",
-    "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-    "Natural Language :: English",
-    "Operating System :: MacOS :: MacOS X",
-    "Operating System :: Microsoft :: Windows",
-    "Operating System :: POSIX",
-    "Operating System :: Unix",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.10",
-    "Topic :: Scientific/Engineering :: Physics",
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+  "Natural Language :: English",
+  "Operating System :: MacOS :: MacOS X",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX",
+  "Operating System :: Unix",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.10",
+  "Topic :: Scientific/Engineering :: Physics",
 ]
 
+[project.scripts]
+aeolis = "aeolis:aeolis.console"
+aeolis-wind = "aeolis:wind.console"
+
 [project.urls]
-"Homepage" = "https://github.com/openearth/aeolis-python"
-"Documentation" = "https://aeolis-python.readthedocs.io"
+Homepage = "https://github.com/openearth/aeolis-python"
+Documentation = "https://aeolis-python.readthedocs.io"
 "Bug Tracker" = "https://github.com/openearth/aeolis-python/issues"
