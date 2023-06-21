@@ -2,3 +2,32 @@
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[project]
+name = "AeoLiS"
+version = "2.1.1"
+authors = [
+  { name="Sierd de Vries", email="sierd.devries@tudelft.nl" },
+]
+description = "A process-based model for simulating supply-limited aeolian sediment transport"
+readme = "README.md"
+requires-python = ">=3.8, <4"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Natural Language :: English",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX",
+    "Operating System :: Unix",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/openearth/aeolis-python"
+"Documentation" = "https://aeolis-python.readthedocs.io"
+"Bug Tracker" = "https://github.com/openearth/aeolis-python/issues"
