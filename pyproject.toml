@@ -1,8 +1,12 @@
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
-[tool.hatchling.build]
-exclude = ["tests", "docs", "examples", "notebooks"]
+[tool.hatch.build]
+exclude = [
+  "/docs", 
+  "/notebooks",
+  "/aeolis/tests",
+]
 
 [project]
 name = "AeoLiS"
