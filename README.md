@@ -20,7 +20,6 @@ effects, air humidity and roughness elements.
 **Requirements:**
 
 - Python 3.8 or higher 
-- Setuptools
 - pip 
 
 ### Installing from PyPI
@@ -35,10 +34,16 @@ pip install AeoLiS
 
 1. Clone the repository (AEOLIS_V2 branch) using git, or download the source code.
 
-2. Go to the `aeolis-python` directory and install using pip
+2. AeoLiS users may install the package with only the required dependencies. Go to `aeolis-python` directory and install using pip
    ```shell
    cd aeolis-python/
    pip install .
+   ```
+
+3. AeoLiS developers may install the package including additional dependencies (test and documentation files). Go to `aeolis-python` directory and install as follows:
+   ```shell
+   cd aeolis-python/
+   pip install .[dev]
    ```
 
 ### Running AeoLiS
