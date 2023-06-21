@@ -1,3 +1,7 @@
+"""
+A benchmark for the parallellization reusing the processing pool
+"""
+
 import scipy.sparse
 import numpy as np
 import timeit

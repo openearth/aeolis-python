@@ -1,3 +1,7 @@
+"""
+Benchmark using Pool for parallelization
+"""
+
 import scipy.sparse
 import numpy as np
 import timeit
