@@ -1,11 +1,12 @@
+"""
+First test the speed of the spsolve function from scipy.sparse.linalg
+using data decomposition in 2 and 4 domains.
+"""
+
 import scipy.sparse
 import numpy as np
 import timeit
 import matplotlib.pyplot as plt
-
-
-
-
 
 def decomp2(Ct_i,A,yCt_i):
     # devide domain specifying overlap

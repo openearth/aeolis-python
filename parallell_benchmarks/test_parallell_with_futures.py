@@ -1,3 +1,7 @@
+"""
+Benchmarking the parallellization of the solve_matrix function using the concurrent.futures module.
+"""
+
 import scipy.sparse
 import numpy as np
 
