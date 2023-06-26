@@ -2,7 +2,7 @@ Domain decomposition and Parallel programming
 =============================================
 
 
-This section describes the Proof of Concept implementation for speeding up code execution in AeoLiS using domain decomposition and parallel programming techniques. 
+This section describes the Proof of Concept implementation for speeding up code execution in AeoLiS using domain decomposition and parallel programming.
 
 
 Overview
@@ -24,13 +24,13 @@ Implementation details
 
 - Issue tracker: `Issue #115 <https://github.com/openearth/aeolis-python/issues/115>`_  
 
-- Simulation in parallel mode is enabled via a keyword `parallel` in the configuration file (aeolis.txt). The default value of this keyword is `F` (False). When the keyword is set to `T` (True), the parallel implementation is enabled.
+- Simulation in parallel mode is enabled via a keyword `parallel` in the configuration file (aeolis.txt). When the keyword is set to `T` (True), the parallel implementation is enabled. 
 
 
 Experiments and Results
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-The parallel verison of AeoLiS is benchmarked on the sandengine example with 2 different grid sizes. The example is run on a laptop computer with 4 cores and 8GB RAM. 
+The parallel verison of AeoLiS is benchmarked on the sandengine example with 2 different grid sizes. The simulation is run on a laptop computer with 4 cores and 8GB RAM. 
 
 The results are shown in the table below.
 
@@ -42,11 +42,11 @@ The results are shown in the table below.
       - Sequential version
       - Parallel version
       - Speed-up achieved
-    * - `Sandengine with small grids <add-link-to-aeolis.txt>`_
+    * - `Sandengine with small grids <https://github.com/openearth/aeolis-python/tree/parallell_update/examples/sandengine_small_grids/aeolis.txt>`_
       - 7 mins 2 secs
       - 4 mins 23 secs
       - 1.6X
-    * - `Sandengine with large grids <add-link-to-aeolis.txt>`_
+    * - `Sandengine with large grids <https://github.com/openearth/aeolis-python/tree/parallell_update/examples/sandengine_large_grids/aeolis.txt>`_
       - 1 hr 07 mins 30 secs
       - 17 mins 17 secs
       - 3.9X
@@ -63,8 +63,8 @@ Key findings
 Reflections and To do
 ^^^^^^^^^^^^^^^^^^^^^
 
-- Testing for the parallel version need be reconsidered. Existing tests may not be applicable for the parallel version due to the overlap of the domains. 
-- The proof of concept implementation uses a hardcoded approach to divide the big domain into smaller subdomains.This approach is not generic and may not work for all use cases. Replacing the hardcoded approach with a generalized function to decompose the domains based on the domain properties could be a possible improvement, but this needs to be investigated further. 
+- Testing for the parallel version need be reconsidered. Existing tests may not be applicable for the parallel version due to the overlap of the subdomains. 
+- The proof of concept implementation uses a hardcoded approach to divide the big domain into smaller subdomains. This approach is not generic and may not work for all use cases. Replacing the hardcoded approach with a generalized function to decompose the domains based on the domain properties could be a possible improvement, but this needs to be investigated further. 
 
 
 Try it yourself: Running AeoLiS in parallel mode 
@@ -72,7 +72,7 @@ Try it yourself: Running AeoLiS in parallel mode
 
 You can run AeoLiS in parallel mode by following the below steps:
 
-1. Clone the aeolis-python GitHub repository and checkout the `parallel-update` branch.
+1. Clone the aeolis-python GitHub repository and checkout the `parallel-update <https://github.com/openearth/aeolis-python/tree/parallell_update/>`_ branch.
 2. Install AeoLiS in development mode by running the command `pip install -e .` from the root directory of the repository.
 3. Navigate to the folder `examples/sandmotor_large_grids/` and run the command `aeolis aeolis.txt` to run the sandmotor simulation with large grids. The keyword `parallel` in the configuration file (aeolis.txt) is set to `T` (True) by default, so the simulation will run in parallel mode. This can also be confirmed by looking at the print statements in the terminal.
 4. You may not have sufficient memory available on your computer to run the sandengine large grids example. In that case, try running the sandmotor example with smaller grid size. Navigate to the folder `examples/sandmotor_small_grids/` and run the command `aeolis aeolis.txt` to run the sandmotor simulation with small grids. 
