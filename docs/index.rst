@@ -31,6 +31,14 @@ Contents
    installation
    whatsnew
    
+.. toctree::
+   :caption: Ongoing development
+   :maxdepth: 1
+
+   domain_decomposition
+
+
+   
 
 Acknowledgements
 ================
