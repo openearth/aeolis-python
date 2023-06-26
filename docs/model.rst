@@ -756,5 +756,3 @@ be specified by the user, for example through the BMI interface.
 
 .. bibliography:: aeolis.bib
    :cited:
-
-
