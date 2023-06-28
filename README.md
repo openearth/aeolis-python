@@ -19,8 +19,8 @@ effects, air humidity and roughness elements.
 
 **Requirements:**
 
-- Python 3.8 or higher 
-- pip 
+- Python 3.8 or newer 
+- pip 22.0 or newer
 
 ### Installing from PyPI
 
