@@ -754,5 +754,5 @@ be specified by the user, for example through the BMI interface.
 
 .. rubric:: Bibliography
 
-.. bibliography:: aeolis.bib
-   :cited:
+.. .. bibliography:: aeolis.bib
+..    :cited:
