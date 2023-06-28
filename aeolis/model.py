@@ -2911,13 +2911,16 @@ class AeoLiSRunner(AeoLiS):
                     mod = importlib.machinery.SourceFileLoader('callback', fname).load_module()
                     if hasattr(mod, func):
                         return getattr(mod, func)
+                else:
+                    logger.error('Invalid callback definition [%s]', callback)
+                    raise IOError('Check definition in input file [%s]' % callback)
+          
         elif hasattr(callback, '__call__'):
             return callback
         elif callback is None:
             return callback
-
-        logger.warning('Invalid callback definition [%s]', callback)
-        return None
+        else:
+            return None
 
 
     def print_progress(self, fraction:float=.01, min_interval:float=1., max_interval:float=60.) -> None:
