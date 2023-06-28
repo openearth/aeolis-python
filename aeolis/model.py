@@ -28,8 +28,8 @@ The Netherlands                  The Netherlands
 from __future__ import absolute_import, division
 
 import os
+import importlib.machinery
 import importlib.metadata
-import imp
 import time
 import glob
 import logging
@@ -64,6 +64,7 @@ from typing import Any, Union, Tuple
 from numpy import ndarray
 
 from aeolis.utils import *
+
 
 class StreamFormatter(logging.Formatter):
     """A formater for log messages"""
@@ -2904,16 +2905,19 @@ class AeoLiSRunner(AeoLiS):
             if ':' in callback:
                 fname, func = callback.split(':')
                 if os.path.exists(fname):
-                    mod = imp.load_source('callback', fname)
+                    mod = importlib.machinery.SourceFileLoader('callback', fname).load_module()
                     if hasattr(mod, func):
                         return getattr(mod, func)
+                else:
+                    logger.error('Invalid callback definition [%s]', callback)
+                    raise IOError('Check definition in input file [%s]' % callback)
+                #     logger.error(f"Callback function not found: {fname}. Check the reference to the callback in the input file")
         elif hasattr(callback, '__call__'):
             return callback
         elif callback is None:
             return callback
-
-        logger.warning('Invalid callback definition [%s]', callback)
-        return None
+        else:
+            return None
 
 
     def print_progress(self, fraction:float=.01, min_interval:float=1., max_interval:float=60.) -> None:
