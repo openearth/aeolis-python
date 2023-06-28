@@ -39,10 +39,10 @@ needs_sphinx = '3.0.1'
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
-    'sphinxcontrib.napoleon',
+    'sphinx.ext.napoleon',
     'sphinx.ext.mathjax',
-    'sphinxcontrib.bibtex',
     'sphinx.ext.viewcode',
+    'sphinx-copybutton',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
