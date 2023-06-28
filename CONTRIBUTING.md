@@ -74,7 +74,7 @@ If you are a part of the AeoLiS team and have write access to the aeolis-python 
 3. Set up a development environment on your computer by installing the AeoLiS in development mode with the following command: (Consider using a virtual environment for this purpose.)
 
     ```bash
-    pip install -e .
+    pip install -e .[dev]
     ```
     
 4. Set up your code editor to follow [PEP 8](https://peps.python.org/pep-0008/) (remove trailing white space, no tabs, etc.). Check code with [flake8](https://flake8.pycqa.org/en/latest/).
