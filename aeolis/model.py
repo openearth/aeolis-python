@@ -2914,7 +2914,7 @@ class AeoLiSRunner(AeoLiS):
                 else:
                     logger.error('Invalid callback definition [%s]', callback)
                     raise IOError('Check definition in input file [%s]' % callback)
-          
+                #     logger.error(f"Callback function not found: {fname}. Check the reference to the callback in the input file")
         elif hasattr(callback, '__call__'):
             return callback
         elif callback is None:
