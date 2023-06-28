@@ -40,10 +40,10 @@ pip install AeoLiS
    pip install .
    ```
 
-3. AeoLiS developers may install the package including additional dependencies (test and documentation files). Go to `aeolis-python` directory and install as follows:
+3. AeoLiS users who intend to modify the sourcecode can install additional dependencies for test and documentation as follows. Go to root directory `aeolis-python/` and:
+   
    ```shell
-   cd aeolis-python/
-   pip install .[dev]
+   pip install -e .[dev]
    ```
 
 ### Running AeoLiS
