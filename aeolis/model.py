@@ -28,8 +28,7 @@ The Netherlands                  The Netherlands
 from __future__ import absolute_import, division
 
 import os
-# import imp
-import importlib
+import importlib.machinery
 import time
 import glob
 import logging
@@ -2909,7 +2908,7 @@ class AeoLiSRunner(AeoLiS):
             if ':' in callback:
                 fname, func = callback.split(':')
                 if os.path.exists(fname):
-                    mod = imp.load_source('callback', fname)
+                    mod = importlib.machinery.SourceFileLoader('callback', fname).load_module()
                     if hasattr(mod, func):
                         return getattr(mod, func)
         elif hasattr(callback, '__call__'):
