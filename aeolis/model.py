@@ -28,6 +28,7 @@ The Netherlands                  The Netherlands
 from __future__ import absolute_import, division
 
 import os
+import importlib.metadata
 import imp
 import time
 import glob
@@ -79,13 +80,9 @@ class StreamFormatter(logging.Formatter):
 # initialize logger
 logger = logging.getLogger(__name__)
 
-__version__ = ''
-__root__ = os.path.dirname(__file__)
+__version__ = importlib.metadata.version('aeolis')
 
-# Collect model version from VERSION file
-try:
-    __version__ = open(os.path.join(__root__, 'VERSION')).read().strip()
-except:
+if not __version__ :
     logger.warning('WARNING: Unknown model version.')
 
 
