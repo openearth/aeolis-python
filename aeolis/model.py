@@ -28,7 +28,8 @@ The Netherlands                  The Netherlands
 from __future__ import absolute_import, division
 
 import os
-import imp
+# import imp
+import importlib
 import time
 import glob
 import logging
@@ -63,6 +64,7 @@ from typing import Any, Union, Tuple
 from numpy import ndarray
 
 from aeolis.utils import *
+
 
 class StreamFormatter(logging.Formatter):
     """A formater for log messages"""
