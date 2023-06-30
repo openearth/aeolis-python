@@ -24,7 +24,44 @@ Implementation details
 
 - Issue tracker: `Issue #115 <https://github.com/openearth/aeolis-python/issues/115>`_  
 
+- Domain decomposition in AeoLis is implemented by dividing a large domain into several smaller overlapping sub domains and computing them in parallel. The parallel computation of the subdomains is facilitated by a pool of Python processes created using the multiprocessing module in Python. The results of the parallel computations are collected and combined to get the final result.
+
 - Simulation in parallel mode is enabled via a keyword `parallel` in the configuration file (aeolis.txt). When the keyword is set to `T` (True), the parallel implementation is enabled. 
+
+..  code-block:: python
+    
+    #create a pool of processes
+    p = Pool(5)
+
+    #divide the domain into smaller subdomains
+
+    if p['parallell'] == True:
+        d1 = np.int((np.floor(yCt_i.shape[0]*1/4)+1)*yCt_i.shape[1])
+        d2 = np.int((np.floor(yCt_i.shape[0]*1/4))*yCt_i.shape[1])
+        d3 = np.int((np.floor(yCt_i.shape[0]*2/4)+1)*yCt_i.shape[1])
+        d4 = np.int((np.floor(yCt_i.shape[0]*2/4))*yCt_i.shape[1])
+        d5 = np.int((np.floor(yCt_i.shape[0]*3/4)+1)*yCt_i.shape[1])
+        d6 = np.int((np.floor(yCt_i.shape[0]*3/4))*yCt_i.shape[1])
+                
+
+..  code-block:: python
+    
+    # Solve the system of equations in parallel. Distribute the smaller computations among the pool of processes.
+
+    results = pools.starmap(scipy.sparse.linalg.spsolve,
+                            [(A[0:d1,0:d1], yCt_i.flatten()[0:d1]),
+                            (A[d2:d3,d2:d3], yCt_i.flatten()[d2:d3]),
+                            (A[d4:d5,d4:d5], yCt_i.flatten()[d4:d5]),
+                            (A[d6:,d6:], yCt_i.flatten()[d6:])
+                            ])
+
+
+    # Collect the results from the pool of processes and combine them to get the final result.
+
+    Ct_i[0:d1] += results[0]    
+    Ct_i[d2:d3] += results[1]
+    Ct_i[d4:d5] += results[2]    
+    Ct_i[d6:] += results[3]
 
 
 Experiments and Results
