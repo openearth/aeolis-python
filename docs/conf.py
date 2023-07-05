@@ -43,7 +43,7 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'sphinx_copybutton',
-    'sphinxcontrib.bibtex'
+    'sphinxcontrib.bibtex',
 ]
 
 bibtex_bibfiles = ['aeolis.bib']

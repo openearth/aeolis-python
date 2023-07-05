@@ -751,8 +751,3 @@ content [mg/g]. Currently, no model is implemented that predicts the
 instantaneous salt content. The spatial varying salt content needs to
 be specified by the user, for example through the BMI interface.
 
-
-.. rubric:: Bibliography
-
-.. .. bibliography:: aeolis.bib
-..    :cited:
