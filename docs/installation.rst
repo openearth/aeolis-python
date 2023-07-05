@@ -4,23 +4,43 @@ Installation
 Requirements
 ------------
 
-Python packages
-^^^^^^^^^^^^^^^
+- Python 3.8 or higher 
+- Setuptools
+- pip 
 
-* bmi-python: http://github.com/openearth/bmi-python
-* numpy
-* scipy
-* netCDF4
-* docopt
+Installing from PyPI
+---------------------
 
-External libraries (Windows)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+On the comand line of your working environment (Bash/Shell, Conda, Mamba, or similar), run the following: 
 
-These libraries are needed on Windows if the Python package netCDF4 is installed manually.
+.. code:: shell
 
-* Microsoft Visual C++ Compiler for Python 2.7: http://aka.ms/vcpython27
-* msinttypes for stdint.h: https://code.google.com/archive/p/msinttypes/
-* HDF5 headers: https://www.hdfgroup.org/HDF5/release/obtain5.html
-* netCDF4 headers: https://github.com/Unidata/netcdf-c/releases
+   pip install AeoLiS
 
-* Set environment variables HDF5_DIR and NETCDF_DIR to the respective installation paths
+.. note::
+
+   For Windows users, the recommend way to install AeoLiS is to use `Anaconda <https://docs.anaconda.com/free/anaconda/install/windows/>`_.
+
+
+Installing from source
+-----------------------
+
+
+1. Clone the repository using Git, or download the source code.
+
+2. Go to the `aeolis-python` directory and install using pip
+   ```shell
+   cd aeolis-python/
+   pip install .
+   ```
+
+Running AeoLiS
+----------------
+
+Example from command line:
+
+
+.. code:: shell
+
+   aeolis params.txt
+   aeolis-wind wind.txt --mean=6 --duration=3600
