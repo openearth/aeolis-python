@@ -108,7 +108,7 @@ Multi-fraction Erosion and Deposition
 
 The formulation for the equilibrium or saturated sediment
 concentration :math:`c_{\mathrm{sat}}` (Equation
-:eq:`equilibrium-transport`) is capable of dealing with variations in
+:eq:`equilibrium-conc`) is capable of dealing with variations in
 grain size through the variables :math:`u_{\mathrm{th}}`,
 :math:`d_{\mathrm{n}}` and :math:`C` (:cite:`Bagnold1937a`). However,
 the transport formulation only describes the saturated sediment
@@ -249,7 +249,7 @@ The parameterization of the exchange of momentum between sediment
 fractions is an aspect of saltation that is still poorly
 understood. Therefore calibration of the bed interaction parameter
 :math:`\zeta` is necessary. The model parameters in Equation
-:eq:`equilibrium-transport` can be chosen in accordance with the
+:eq:`equilibrium-conc` can be chosen in accordance with the
 assumptions underlying multi-fraction sediment transport. :math:`C` should
 be set to 1.5 as each individual sediment fraction is well-sorted,
 :math:`d_{\mathrm{n}}` should be chosen equal to :math:`D_{\mathrm{n}}` as the
