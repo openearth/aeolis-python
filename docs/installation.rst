@@ -1,6 +1,8 @@
 Installation
 ============
 
+AeoLiS is a Python package that can be installed from PyPI or from source. For the source code, see the `GitHub repository <https://github.com/openearth/aeolis-python>`_.
+
 Requirements
 ------------
 
@@ -29,10 +31,12 @@ Installing from source
 1. Clone the repository using Git, or download the source code.
 
 2. Go to the `aeolis-python` directory and install using pip
-   ```shell
-   cd aeolis-python/
-   pip install .
-   ```
+   
+   .. code:: shell
+
+    cd aeolis-python/
+    pip install .
+   
 
 Running AeoLiS
 ----------------
