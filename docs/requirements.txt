@@ -1,3 +1,4 @@
-sphinxcontrib-bibtex<2.0.0
-sphinxcontrib-napoleon
-AeoLiS==2.0.0.dev2
+sphinxcontrib-bibtex
+AeoLiS
+sphinx-copybutton==0.5.2
+plot==0.6.5
