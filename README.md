@@ -31,6 +31,9 @@ On the comand line of your working environment (Bash/Shell, Conda, Mamba, or sim
 pip install AeoLiS
 ```
 
+> For Windows users, the recommend way to install AeoLiS is to use [Anaconda](https://docs.anaconda.com/free/anaconda/install/windows/).
+
+
 ### Installing from source
 
 1. Clone the repository using Git, or download the source code.
