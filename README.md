@@ -33,7 +33,7 @@ pip install AeoLiS
 
 ### Installing from source
 
-1. Clone the repository (AEOLIS_V2 branch) using git, or download the source code.
+1. Clone the repository using Git, or download the source code.
 
 2. Go to the `aeolis-python` directory and install using pip
    ```shell
