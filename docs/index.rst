@@ -3,14 +3,19 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to AeoLiS's documentation!
+Welcome to AeoLiS's Documentation
 ==================================
 
-AeoLiS is a process-based model for simulating aeolian sediment
-transport in situations where supply-limiting factors are important,
-like in coastal environments. Supply-limitations currently supported
-are soil moisture contents, sediment sorting and armouring, bed slope
-effects, air humidity and roughness elements.
+.. raw:: html
+
+   <div style="overflow: hidden;">
+      <iframe src="https://www.youtube.com/embed/dHr2NlGkSE4?&autoplay=1"  width="100%" height="315" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; web-share"></iframe>
+   </div>
+
+-------
+
+AeoLiS is a process-based model for simulating aeolian sediment transport in situations where supply-limiting factors are important,
+like in coastal environments. Supply-limitations currently supported are soil moisture contents, sediment sorting and armouring, bed slope effects, air humidity and roughness elements.
 
 This documentation describes the Python implementation of the AeoLiS
 model. The source code of the Python implementation can be found at
@@ -20,47 +25,34 @@ Contents
 --------
 
 .. toctree::
+   :caption: User Documentation
    :maxdepth: 2
 
-   model
-   implementation
-   sourcecode
-   inputfiles
-   defaults
-   output
    installation
    whatsnew
+   model
+   implementation
+   defaults
+   inputfiles
+   output
+   sourcecode
+   bibliography
    
 .. toctree::
-   :caption: Ongoing development
-   :maxdepth: 1
+   :caption: Developer Documentation
+   :maxdepth: 2
 
    domain_decomposition
 
 
-   
-
 Acknowledgements
 ================
 
-.. AeoLiS is initially developed by `Bas Hoonhout
-   <b.m.hoonhout@tudelft.nl>`_ at `Delft University of Technology
-   <http://www.tudelft.nl>`_ with support from the ERC-Advanced Grant
-   291206 Nearshore Monitoring and Modeling (`NEMO
-   <http://nemo.citg.tudelft.nl>`_) and `Deltares
-   <http://www.deltares.nl>`_. AeoLiS is currently maintained by `Bas Hoonhout
-   <bas.hoonhout@deltares.nl>`_ at Deltares and `Sierd de Vries
-   <Sierd.deVries@tudelft.nl.nl>` at Delft University of Technology.
+* AeoLiS was initially developed at Delft University of Technology with support from the ERC-Advanced Grant 291206 Nearshore Monitoring and Modeling (`NEMO <http://nemo.citg.tudelft.nl>`_) and `Deltares <http://www.deltares.nl>`_. 
+* AeoLiS is currently maintained by `Bart van Westen <Bart.vanWesten@deltares.nl>`_ at Deltares, `Nick Cohn <nick.cohn@usace.army.mil>`_ at U.S. Army Engineer Research and Development Center (ERDC) and `Sierd de Vries <Sierd.deVries@tudelft.nl>`_ at Delft University of Technology.
+* Further developement of AeoLiS is supported by the `Digital Competence Centre <https://dcc.tudelft.nl>`_, Delft University of Technology.
 
-AeoLiS is initially developed at Delft University of Technology with support from the ERC-Advanced
-Grant 291206 Nearshore Monitoring and Modeling
-(`NEMO
-<http://nemo.citg.tudelft.nl>`_) and `Deltares
-<http://www.deltares.nl>`_. AeoLiS is currently maintained by `Bart van Westen
-<Bart.vanWesten@deltares.nl>`_ at Deltares, `Nick Cohn
-<nick.cohn@usace.army.mil>`_ at U.S. Army Engineer Research and Development Center (ERDC) and `Sierd de Vries
-<Sierd.deVries@tudelft.nl>`_ at Delft University of Technology.
-   
+
 Indices and tables
 ==================
 
