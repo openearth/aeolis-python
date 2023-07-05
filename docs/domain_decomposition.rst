@@ -33,7 +33,7 @@ Implementation details
 ..  code-block:: python
     
     #create a pool of processes
-    p = Pool(5)
+    pools = Pool(5)
 
     #divide the domain into smaller subdomains
 
