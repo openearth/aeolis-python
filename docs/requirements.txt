@@ -1,3 +1,4 @@
 sphinxcontrib-bibtex>=2.5.0
 sphinx-copybutton==0.5.2
 plot==0.6.5
+AeoLiS
