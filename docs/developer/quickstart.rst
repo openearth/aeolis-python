@@ -24,6 +24,7 @@ Set up
 AeoLiS is developed in Python 3.10.x and tested for versions 3.8, 3.9, and 3.11. It is recommended to use a virtual environment to install the required dependencies.
 
 .. code-block:: bash
+    
     # Using virtualenv
     python3 -m venv venv
     source venv/bin/activate
