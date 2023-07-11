@@ -84,5 +84,6 @@ To check the docstrings, intall `flake8-docstrings` and run the following comman
 
     flake8 --docstring-convention google <your-module>
 
-
-
+.. warning::
+     
+    For legacy reasons, some docstrings in AeoLiS are written in ReStructuredText. This is not recommended for new code.
