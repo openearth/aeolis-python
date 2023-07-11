@@ -42,7 +42,7 @@ Contents
    :maxdepth: 2
 
    developer/quickstart
-   unit-tests
+   developer/unit-testing
    ci-tests   
 
 .. toctree::
