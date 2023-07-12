@@ -11,8 +11,7 @@ The next step is to write the actual test code. This is the code which will run 
 To to define the test cases for a particular scenario, use the `test scenario <https://github.com/openearth/aeolis-python/issues/new/choose>`_ template available in the GitHub issue tracker. Below we provide a few examples.
 
 
-Example: Writing Tests for StreamFormatter
--------------------------------------------
+
 
 The ``StreamFormatter`` class is used to customize the way log messages are formatted when they are printed to the console, and it is a subclass of the ``Formatter`` class in the ``logging`` package. The code of the ``StreamFormatter`` class is shown below:
 
@@ -30,6 +29,7 @@ Test scenario
 
 We need to implement tests for the following scenario:
 
+
 * **Description:** Test `StreamFormatter` class formats log messages based on their log level.
 * **Code Reference:** `see repository <https://github.com/openearth/aeolis-python/blob/0596eef57f1a69946698cd0a4fdcb719411f0a1c/aeolis/model.py#L64>`_
 
@@ -42,6 +42,7 @@ Test Cases:
    
    .. note:: This test case is not strictly necessary, but it is a good practice to check whether the class we are testing is an instance of the class you expect it to be. This is because some might modify the code in this class in such a way that, it is not a subclass of ``Formatter`` anymore. If this is the case, the test must fail and we will know that we need fix the code.
    
+
    * **Preconditions:** None
    * **Test Steps:** 
      1. Create an instance of `StreamFormatter` class.
@@ -76,6 +77,6 @@ The test code for the test cases above can be grouped in a single test class (us
    :pyobject: TestStreamFormatter
    :linenos:
 
+
 Explanation:
 """"""""""""""
-
