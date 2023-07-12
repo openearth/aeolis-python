@@ -42,6 +42,16 @@ Contents
    :caption: Developer Documentation
    :maxdepth: 2
 
+   get-started
+   unit-tests
+   ci-tests   
+
+.. toctree::
+   :caption: Current Development
+   :maxdepth: 2
+
+   modularity
+   test-coverage 
    domain_decomposition
 
 
