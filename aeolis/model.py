@@ -28,7 +28,8 @@ The Netherlands                  The Netherlands
 from __future__ import absolute_import, division
 
 import os
-import imp
+import importlib.machinery
+import importlib.metadata
 import time
 import glob
 import logging
@@ -64,6 +65,7 @@ from numpy import ndarray
 
 from aeolis.utils import *
 
+
 class StreamFormatter(logging.Formatter):
     """A formater for log messages"""
 
@@ -79,13 +81,9 @@ class StreamFormatter(logging.Formatter):
 # initialize logger
 logger = logging.getLogger(__name__)
 
-__version__ = ''
-__root__ = os.path.dirname(__file__)
+__version__ = importlib.metadata.version('aeolis')
 
-# Collect model version from VERSION file
-try:
-    __version__ = open(os.path.join(__root__, 'VERSION')).read().strip()
-except:
+if not __version__ :
     logger.warning('WARNING: Unknown model version.')
 
 
@@ -2907,16 +2905,19 @@ class AeoLiSRunner(AeoLiS):
             if ':' in callback:
                 fname, func = callback.split(':')
                 if os.path.exists(fname):
-                    mod = imp.load_source('callback', fname)
+                    mod = importlib.machinery.SourceFileLoader('callback', fname).load_module()
                     if hasattr(mod, func):
                         return getattr(mod, func)
+                else:
+                    logger.error('Invalid callback definition [%s]', callback)
+                    raise IOError('Check definition in input file [%s]' % callback)
+                #     logger.error(f"Callback function not found: {fname}. Check the reference to the callback in the input file")
         elif hasattr(callback, '__call__'):
             return callback
         elif callback is None:
             return callback
-
-        logger.warning('Invalid callback definition [%s]', callback)
-        return None
+        else:
+            return None
 
 
     def print_progress(self, fraction:float=.01, min_interval:float=1., max_interval:float=60.) -> None:

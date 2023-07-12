@@ -11,9 +11,11 @@ The next step is to write the actual test code. This is the code which will run 
 To to define the test cases for a particular scenario, use the `test scenario <https://github.com/openearth/aeolis-python/issues/new/choose>`_ template available in the GitHub issue tracker. Below we provide a few examples.
 
 
-
-
 The ``StreamFormatter`` class is used to customize the way log messages are formatted when they are printed to the console, and it is a subclass of the ``Formatter`` class in the ``logging`` package. The code of the ``StreamFormatter`` class is shown below:
+=======
+Example: Formatting log messages
+---------------------------------
+
 
 .. literalinclude:: ../../aeolis/model.py
    :language: python
@@ -51,11 +53,12 @@ Test Cases:
    * **Expected Result:** check returns `True`.
    * **Postcondition:** None
 
+
 2. Case: change the formatting of log messages other than INFO level.
 
    .. note:: 
       As we have described avobe, the ``format()`` method shall return the log level and the log message when the log level is not ``INFO``. We can test this by creating a log record with a log level other than ``INFO`` and checking whether the ``format()`` method returns a string contraining the log level and the log message.
-   
+  
 
    * **Preconditions:** log record of type `INFO` is created.
    * **Test Steps:** 

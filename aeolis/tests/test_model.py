@@ -22,7 +22,8 @@ import logging
 import pytest
 import numpy as np
 from aeolis.model import (StreamFormatter, 
-                          ModelState
+                          ModelState,
+                            AeoLiSRunner,
                         )
 
 
@@ -92,3 +93,22 @@ class TestModelState:
         state.set_immutable("variable2")
         assert "variable2" not in state.ismutable
 
+class TestAeoLiSRunner:
+    """Test AeoLiSRunner class"""
+
+    def test_parse_callback_from_module(self):
+        """Test if the callback function can be loaded from a file"""
+        runner = AeoLiSRunner("aeolis/tests/aeolis.txt")
+        callback = runner.parse_callback("aeolis/tests/callback_example.py:mock_callback")
+        assert callable(callback)
+        assert callback.__name__ == "mock_callback"
+        assert callback() == True
+
+
+    def test_parse_callback_invalid_callback(self):
+        """Test if the parser raises error when path to callback file does not exist"""
+        runner = AeoLiSRunner("aeolis/tests/aeolis.txt")
+        with pytest.raises(IOError) as excinfo:
+            callback = runner.parse_callback("aeolis/tests/invalid_file.py:mock_callback")
+        assert "Check definition in input file" in str(excinfo.value)
+        
