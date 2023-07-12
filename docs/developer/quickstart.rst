@@ -58,23 +58,29 @@ AeoLiS strive to comply with the  `PEP8 <https://www.python.org/dev/peps/pep-000
 Docstrings
 ''''''''''''
  
-AeoLiS uses `napoleon <https://sphinxcontrib-napoleon.readthedocs.io/en/latest/>`_ to parse the docstrings in the source code and automatically generate this documentation. We recommend to use the `Google style <https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings>`_ for docstrings. The use of `type hints <https://peps.python.org/pep-0484/>`_ is encouraged. For example:
+AeoLiS uses `napoleon <https://sphinxcontrib-napoleon.readthedocs.io/en/latest/>`_ to parse the docstrings in the source code and automatically generate this documentation. We recommend to follow the `Numpy style <https://numpydoc.readthedocs.io/en/latest/format.html#docstring-standard>`_ for docstrings. The use of `type hints <https://peps.python.org/pep-0484/>`_ is encouraged. For example:
 
 .. code-block:: python
 
     def my_function(arg1:int, arg2:str) -> bool:
         """Summary line.
 
-        Extended description of function with Google's style docstrings.
+        Extended summary about the fuctionality of the function, using the Numpy style.
 
-        Args:
-            arg1: Description of arg1
-            arg2: Description of arg2
+        Parameters:
+        -----------
+        arg1: int 
+            Description of arg1
+        arg2: str 
+            Description of arg2
 
         Returns:
-            bool: Description of return value
+        ---------
+        bool
+            Description of return value
 
         """
+
         return True
 
 To check the docstrings, intall `flake8-docstrings` and run the following command from the root directory of the source code:
@@ -82,8 +88,4 @@ To check the docstrings, intall `flake8-docstrings` and run the following comman
 
 .. code-block:: bash
 
-    flake8 --docstring-convention google <your-module>
-
-.. warning::
-     
-    For legacy reasons, some docstrings in AeoLiS are written in ReStructuredText. This is not recommended for new code.
+    flake8 --docstring-convention numpy <your-module>
