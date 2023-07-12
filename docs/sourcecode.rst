@@ -1,4 +1,4 @@
-Source code documentation
+Source code 
 =========================
 
 Use of documentation

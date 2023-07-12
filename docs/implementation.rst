@@ -648,15 +648,15 @@ To overcome this limitation and to allow for modelling directional winds, an ove
 
 1. Create a computational grid alligned with the wind direction (set_computational_grid)
 2. Add and fill buffer around the original grid
-3. Populate computation grid by rotating it to the current wind direction and interpolate the original
-topography on it. Additionally, edges around 
+3. Populate computation grid by rotating it to the current wind direction and interpolate the original topography on it. Additionally, edges around 
 4. Compute the morphology-wind induced shear stress by using the perturbation theory
 5. Add the only wind induced wind shear stresses to the computational grid
 6. Rotate both the grids and the total shear stress results in opposite direction
 7. Interpolate the total shear stress results from the computational grid to the original grid
 8. Rotate the wind shear stress results and the original grid back to the original orientation
-Note: the extra rotations in the last two steps are necessary as a simplified, but faster in terms of
-computational time, interpolation method is used.
+
+.. note:: 
+   The extra rotations in the last two steps are necessary as a simplified, but faster in terms of computational time, interpolation method is used.
 
 
 Boussinesq groundwater equation
@@ -728,8 +728,9 @@ input file or through the model command-line options as
      val_new[:,:] = np.loadtxt('measured_topography.txt')
      model.set_var('zb', val_new)
 
+.. .. rubric:: Bibliography
 
-.. rubric:: Bibliography
+.. .. bibliography:: 
+..    :labelprefix: A
+..    :keyprefix: a-
 
-.. bibliography:: aeolis.bib
-   :cited:
