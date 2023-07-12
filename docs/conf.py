@@ -47,7 +47,7 @@ extensions = [
 ]
 
 bibtex_bibfiles = ['aeolis.bib']
-
+bibtex_reference_style = 'apa_style'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -241,7 +241,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
   (master_doc, 'AeoLiS.tex', u'AeoLiS Documentation',
-   u'Bas Hoonhout', 'manual'),
+   u'AeoLiS Team', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -306,3 +306,32 @@ texinfo_documents = [
 intersphinx_mapping = {'https://docs.python.org/': None}
 
 numfig = True
+
+# A custom APA-like bibliography style
+
+# TODO: https://github.com/mcmtroffaes/sphinxcontrib-bibtex/blob/develop/test/roots/test-bibliography_style_label_1/conf.py
+
+from dataclasses import dataclass, field
+import sphinxcontrib.bibtex.plugin
+from sphinxcontrib.bibtex.style.referencing import BracketStyle
+from sphinxcontrib.bibtex.style.referencing.author_year import AuthorYearReferenceStyle
+
+def bracket_style() -> BracketStyle:
+    return BracketStyle(
+        left='(',
+        right=')',
+    )
+
+@dataclass
+class MyReferenceStyle(AuthorYearReferenceStyle):
+    bracket_parenthetical: BracketStyle = field(default_factory=bracket_style)
+    bracket_textual: BracketStyle = field(default_factory=bracket_style)
+    bracket_author: BracketStyle = field(default_factory=bracket_style)
+    bracket_label: BracketStyle = field(default_factory=bracket_style)
+    bracket_year: BracketStyle = field(default_factory=bracket_style)
+
+sphinxcontrib.bibtex.plugin.register_plugin(
+    'sphinxcontrib.bibtex.style.referencing',
+    'apa_style',
+    MyReferenceStyle
+)
