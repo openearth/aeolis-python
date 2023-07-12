@@ -18,8 +18,7 @@ AeoLiS is a process-based model for simulating aeolian sediment transport in sit
 like in coastal environments. Supply-limitations currently supported are soil moisture contents, sediment sorting and armouring, bed slope effects, air humidity and roughness elements.
 
 This documentation describes the Python implementation of the AeoLiS
-model. The source code of the Python implementation can be found at
-`<https://github.com/openearth/aeolis-python>`_.
+model. The source code of the Python implementation can be found in `GitHub <https://github.com/openearth/aeolis-python>`_.
 
 Contents
 --------
@@ -42,8 +41,8 @@ Contents
    :caption: Developer Documentation
    :maxdepth: 2
 
-   get-started
-   unit-tests
+   developer/quickstart
+   developer/unit-testing
    ci-tests   
 
 .. toctree::
