@@ -323,7 +323,7 @@ def bracket_style() -> BracketStyle:
     )
 
 @dataclass
-class MyReferenceStyle(AuthorYearReferenceStyle):
+class ApaLike(AuthorYearReferenceStyle):
     bracket_parenthetical: BracketStyle = field(default_factory=bracket_style)
     bracket_textual: BracketStyle = field(default_factory=bracket_style)
     bracket_author: BracketStyle = field(default_factory=bracket_style)
@@ -333,5 +333,5 @@ class MyReferenceStyle(AuthorYearReferenceStyle):
 sphinxcontrib.bibtex.plugin.register_plugin(
     'sphinxcontrib.bibtex.style.referencing',
     'apa_style',
-    MyReferenceStyle
+    ApaLike,
 )
