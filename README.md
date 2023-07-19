@@ -21,13 +21,14 @@ effects, air humidity and roughness elements.
 
 - Python 3.8 or newer 
 - pip 22.0 or newer
+- netCDF4
 
 ### Installing from PyPI
 
 On the comand line of your working environment (Bash/Shell, Conda, Mamba, or similar), run the following: 
 
 ```shell
-pip install AeoLiS
+pip install aeolis
 ```
 
 > For Windows users, the recommend way to install AeoLiS is to use [Anaconda](https://docs.anaconda.com/free/anaconda/install/windows/).
@@ -51,10 +52,11 @@ pip install AeoLiS
 
 ### Running AeoLiS
 
-Example from command line:
+Examples from command line:
 
 ```shell
 aeolis params.txt
+# or wind module
 aeolis-wind wind.txt --mean=6 --duration=3600
 ```
 
