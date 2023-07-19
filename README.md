@@ -2,11 +2,11 @@
 
 [![Codecov](https://codecov.io/gh/openearth/aeolis-python/branch/master/graph/badge.svg)](https://codecov.io/gh/openearth/aeolis-python)
 [![ReadTheDocs](http://readthedocs.org/projects/aeolis/badge/?version=latest)](http://aeolis.readthedocs.io/en/latest/)
-[![PyPI](https://img.shields.io/pypi/v/AeoLiS.svg)](https://pypi.python.org/pypi/AeoLiS)
-[![PyPI_versions](https://img.shields.io/pypi/pyversions/AeoLiS.svg)](https://pypi.python.org/pypi/AeoLiS)
-[![PyPI_status](https://img.shields.io/pypi/status/AeoLiS.svg)](https://pypi.python.org/pypi/AeoLiS)
-[![PyPI_format](https://img.shields.io/pypi/format/AeoLiS.svg)](https://pypi.python.org/pypi/AeoLiS)
-[![License](https://img.shields.io/pypi/l/AeoLiS.svg)](https://pypi.python.org/pypi/AeoLiS)
+[![PyPI](https://img.shields.io/pypi/v/aeolis.svg)](https://pypi.python.org/pypi/aeolis)
+[![PyPI_versions](https://img.shields.io/pypi/pyversions/aeolis.svg)](https://pypi.python.org/pypi/aeolis)
+[![PyPI_status](https://img.shields.io/pypi/status/aeolis.svg)](https://pypi.python.org/pypi/aeolis)
+[![PyPI_format](https://img.shields.io/pypi/format/aeolis.svg)](https://pypi.python.org/pypi/aeolis)
+[![License](https://img.shields.io/pypi/l/aeolis.svg)](https://pypi.python.org/pypi/aeolis)
 [![DOI](https://zenodo.org/badge/7830/openearth/aeolis-python.svg)](https://zenodo.org/badge/latestdoi/7830/openearth/aeolis-python)
 
 # AeoLiS
