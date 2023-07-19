@@ -9,7 +9,7 @@ exclude = [
 ]
 
 [project]
-name = "AeoLiS"
+name = "aeolis"
 version = "2.1.1"
 authors = [
   { name="Sierd de Vries", email="sierd.devries@tudelft.nl" },
