@@ -1,7 +1,7 @@
 Unit testing
 ============
 
-Unit testing is method by which individual units of source code are tested to determine whether they are fit for use. Writing unit tests for your code is considered a best practice and is a great way to ensure that your code works as expected when you make changes to it or when other people use it. We use `Pytest <https://docs.pytest.org/en/7.1.x/index.html>`_ for writing unit test for AeoLiS. 
+Unit testing is a method by which individual units of source code are tested to determine whether they are fit for use. Writing unit tests for your code is considered a best practice and is a great way to ensure that your code works as expected when you make changes to it or when other people use it. We use `Pytest <https://docs.pytest.org/en/7.1.x/index.html>`_ for writing unit test for AeoLiS. 
 
 
 The first step for writing unit tests is to write test cases. A test case is a set of conditions which is used to determine whether a particular piece of functionality of your code is working as expected. For example, if you have a function which adds two numbers, you can write a test case to check whether the function returns the correct result when you pass it two numbers.
