@@ -84,7 +84,7 @@ Based on the observations after running the tests in aeolis and examining the te
 
 - Tests produce a pass or fail status as the output to indicate whether the target software is working as expected or not.
 
-- A test script is a collection of functions that are prefixed with the word `test_`. These functions call the functions in various modules within the aeolis source code with certain inputs and check whether the output is as expected. If the output is as expected, the test passes. If the output is not as expected, the test fails. This is the basic idea behind software tests. For an example, see the section Example formatting log messages in unit testing page to see how the test functions are written.
+- A test script is a collection of functions that are prefixed with the word `test_`. These functions call the functions in various modules within the aeolis source code with certain inputs and check whether the output is as expected. If the output is as expected, the test passes. If the output is not as expected, the test fails. This is the basic idea behind software tests. For an example, see the section *Example: formatting log messages* in :doc:`unit testing <unit-testing>` to learn how to write test functions.
 
 
 Types of tests
@@ -102,8 +102,8 @@ Software tests can be classified into different types based on the scope of the 
 Software testing setup in aeolis
 --------------------------------
 
-- aeolis currently has two types of tests: unit tests and functional tests. Read the implementation details of the above tests in aeolis in the document [Unit testing](unit_testing.md) and [Functional testing](functional_testing.md).
-- aeolis-python GitHub repository has automated testing enabled to run tests automatically on every push to main branch to catch any potential bugs that the new code may introduce. Read more about this in the document [Automated testing](automated_testing.md).
+- aeolis currently has two types of tests: unit tests and functional tests. Read the implementation details of the above tests in aeolis in the document :doc:`unit testing <unit-testing>` and :doc:`functional testing <functional-testing>`.
+- aeolis-python GitHub repository has automated testing enabled to run tests automatically on every push to main branch to catch any potential bugs that the new code may introduce. Read more about this in the document :doc:`automated testing <automated-testing>`.
 
 
 
