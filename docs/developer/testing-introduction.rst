@@ -19,37 +19,65 @@ Software tests in aeolis
 
 In order to know what do software tests look like and how they work in practice, we start by running the existing tests in aeolis and observing the results.
 
-Run 'pytest' from the root of the repsoitory to run the existing tests in aeolis. 
+Clone the aeolis-python GitHub repository on your local machine and execute ```pytest``` from the root of the repsoitory.
 
-```pytest```
+You will see the below output on the console. 
 
-Pytest is a Python package that is used to run software tests. It is a framework that is used to write and run software tests. It is a third-party package that is not part of the Python standard library. It is installed as a dependency when you install aeolis. 
+.. code-block:: console
 
+    :~/aeolis-python$ pytest
+    ============================================================================ test session starts ============================================================================
+    platform linux -- Python 3.8.10, pytest-7.2.2, pluggy-1.0.0
+    rootdir: /~/aeolis-python
+    plugins: cov-4.0.0
+    collected 18 items
 
-You will see the below prompt on the command line. 
-"test session starts..."
-
-(Add screenshot.)
-
-
-After all the scripts are run (~ 4 minutes), you see the below output on the command line. 
-
-```=========================== 2 passed in 0.04s ===========================```
-
-Add screenshot
-
-This output indicates that all the tests have passed. If tests fail, it will be indicated in the output.
+    aeolis/tests/test_model.py ........                                                                                                                                   [ 44%]
+    aeolis/tests/test_utils.py ........                                                                                                                                   [ 88%]
+    aeolis/tests/functional_tests/test_netCDF_file_content.py
 
 
-Key observations
-^^^^^^^^^^^^^^^^
 
-- Executing `pytest` on the command line starts the execution of a set of Python scripts. These scripts start with the name `test_`. These scripts are called tests. You can find these scripts in aeolis/tests/ folder.
+- Executing `pytest` on the command line starts the execution of a set of Python scripts. These scripts start with the name `test_`. These scripts are called tests. You can find these scripts in aeolis/tests/ folder of the aeois source code. 
 
-- **Software tests are essentially a piece of code, for example, Python scripts, that are run to check whether a target software, for example Aeolis, is working as expected or not.** 
+- Pytest is a Python package that is used to run software tests. It is a framework that is used to write and run software tests. It is a third-party package that is not part of the Python standard library. It is installed as a dependency when you install aeolis. 
 
-- **Tests produce a pass or fail status as the output which indicates whether the target software is working as expected or not.**
+- It currently takes approximately 2.5 minutes for all the test scripts to run. Once the tests finish running, you will see the below output on the console.
 
+
+
+.. code-block:: console
+
+    :~/aeolis-python$ pytest
+    ============================================================================ test session starts ============================================================================
+    platform linux -- Python 3.8.10, pytest-7.2.2, pluggy-1.0.0
+    rootdir: /~/aeolis-python
+    plugins: cov-4.0.0
+    collected 18 items
+
+    aeolis/tests/test_model.py ........                                                                                                                                   [ 44%]
+    aeolis/tests/test_utils.py ........                                                                                                                                   [ 88%]
+    aeolis/tests/functional_tests/test_netCDF_file_content.py .                                                                                                           [ 94%]
+    aeolis/tests/functional_tests/test_netCDF_file_creation.py .                                                                                                          [100%]
+
+    ============================================================================= warnings summary ==============================================================================
+    aeolis/tests/functional_tests/test_netCDF_file_content.py: 4527 warnings
+    aeolis/tests/functional_tests/test_netCDF_file_creation.py: 4527 warnings
+    /~/venvs/aeolis-dev/lib/python3.8/site-packages/numpy/matrixlib/defmatrix.py:69: PendingDeprecationWarning: the matrix subclass is not the recommended way to 
+        represent matrices or deal with linear algebra (see https://docs.scipy.org/doc/numpy/user/numpy-for-matlab-users.html). 
+        Please adjust your code to use regular ndarray.
+        return matrix(data, dtype=dtype, copy=False)
+
+    -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+    =============================================================== 18 passed, 9054 warnings in 118.43s (0:01:58) ===============================================================
+
+
+Takeaways
+^^^^^^^^^
+
+- Software tests are essentially a piece of code, for example, Python scripts, that are run to check whether a target software, for example Aeolis, is working as expected or not.
+
+- Tests produce a pass or fail status as the output which indicates whether the target software is working as expected or not.
 
 
 What's inside a software test? What does it look like?
@@ -63,8 +91,8 @@ If you want to see what the scripts are executing, you can abort the current ope
 ```pytest -s```
 
 
-Key takeaways
-^^^^^^^^^^^^^
+Takeaways
+^^^^^^^^^
 
 - In a nutshell, a test script is a collection of functions that are prefixed with the word `test_`. These functions call the functions in various modules within the aeolis source code with certain inputs and check whether the output is as expected. If the output is as expected, the test passes. If the output is not as expected, the test fails. This is the basic idea behind software tests. For an example, see the section Example formatting log messages in unit testing page to see how the test functions are written.
 
