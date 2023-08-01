@@ -12,7 +12,7 @@ To to define the test cases for a particular scenario, use the `test scenario <h
 
 
 The ``StreamFormatter`` class is used to customize the way log messages are formatted when they are printed to the console, and it is a subclass of the ``Formatter`` class in the ``logging`` package. The code of the ``StreamFormatter`` class is shown below:
-=======
+
 Example: Formatting log messages
 ---------------------------------
 

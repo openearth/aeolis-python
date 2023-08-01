@@ -58,3 +58,14 @@ aeolis currently has two types of tests:
 - Functional tests: treats the software as a black box and tests the functionality of the software as a whole by checking its output against a particular input.
 
 Read the implementation details of the above tests in aeolis on the pages [Unit testing](unit_testing.md) and [Functional testing](functional_testing.md).
+
+
+Opening paragraph: This page is guide for the developers of aeolis on software tests. It explains what software tests are, why they are important and how they are implemented in aeolis. We take the bottom up approach to show you what software tests really are and in which form they exist in aeolis. This is meant to give a more practical feel of how tests look like in practice. 
+
+(To do: It should be clear from the title of the page what is the reading order of this page in the developer documentation. There is a quickstart page as well. To begin with, we can specify the order in index.rst)
+
+Alternate script: An effective way to walk through a newbie to software tests is to let them dive straight into the practical aspects of how they are implemented and and then explain the theory behind it. This is the bottom up approach taken in this page. Top down approach can disconnect the reader as they will see only theory and not connect it with the tests that are implemented in the code. Write this page as an interactive tutorial which tells a story and engages the reader.  
+
+This page provides an overview of the software tests written for aeolis and explains the key concepts behind software testing. It uses a tutorial style hands-on approach to let the reader gain both a conceptual and a practical understanding of software tests. 
+
+Aeolis has a set of software tests already. A good way to understand software tests is to study the existing tests in aeolis. So, we will start with running the existing tests in aeolis. Then, we will examine the output of the tests and see what the tests are doing. We take the software tests in Aeolis as a starting point and then go on to explain the concepts behind software testing.
