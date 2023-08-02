@@ -92,7 +92,7 @@ Software tests can be classified into different types based on the scope of the 
 - Unit tests: Test a single function or a small piece of code. To learn how to write unit tests for aeolis, read the section :doc:`unit testing <unit-testing>`.
 
 
-- Regression tests: Regression testing is a type of black-box testing where the software as a whole is tested by feeding it input and examining the output, and internal program structure is rarely considered. regression testing usually describes what the system does. regression testing does not imply that you are testing a function (method) of a module or class. regression testing tests a slice of regressionity of the whole system. 
+- Regression tests: Regression testing is a type of black-box testing where the software as a whole is tested by feeding it input and examining the output, and internal program structure is rarely considered. 
 
   AeoLiS currently has the following two regression tests:
 
