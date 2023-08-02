@@ -44,9 +44,6 @@ Contents
    developer/quickstart
    developer/testing-introduction 
    developer/unit-testing
-   developer/regression-testing
-   developer/automated-testing 
-   developer/reviewer-guidelines
 
 .. toctree::
    :caption: Current Development
