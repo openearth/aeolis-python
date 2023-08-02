@@ -1,5 +1,5 @@
-Automated testing in AeoLiS
-============================
+Automated testing in aeolis
+===========================
 
 To catch any bugs introduced by new code changes, the test suite in Aeolis (unit tests + functional tests) runs automatically on every push to the main branch. This automated testing is enabled in the aeolis repository using GitHub Actions. If the tests fail, the new changes are not pushed to main. The test outout status is displayed using a green tick (pass) or a red cross (fail) next to the commit message. 
 

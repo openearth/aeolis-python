@@ -44,7 +44,7 @@ Contents
    developer/quickstart
    developer/testing-introduction 
    developer/unit-testing
-   developer/functional-testing
+   developer/regression-testing
    developer/automated-testing 
    developer/reviewer-guidelines
 
