@@ -10,7 +10,7 @@ This document aims to introduce aeolis developers to the fundamental concepts of
 
 Existing tests in aeolis are used as the starting point to answer the above questions.
 
-You will need the aeolis source code and the aeolis development environment set up on your machine to follow this document. If you do not have the development environment set up, please follow the  instructions in the section :doc:`Set up <quickstart>`.
+You will need the aeolis source code and the aeolis development environment set up on your machine to follow this document. If you do not have the development environment set up, please follow the  instructions in the section :doc:`quickstart <quickstart>`.
 
 *In order to know what software tests are and how they work in practice, follow the below steps to run the existing tests in aeolis and observe the results.*
 
