@@ -8,9 +8,9 @@ AeoLiS is a Python package that can be installed from PyPI or from source. For t
 Requirements
 ------------
 
-- Python 3.8 or higher 
-- Setuptools
-- pip 
+- Python 3.8 or newer 
+- pip 22.0 or newer
+- netCDF4
 
 Installing from PyPI
 ---------------------
@@ -19,9 +19,9 @@ On the comand line of your working environment (Bash/Shell, Conda, Mamba, or sim
 
 .. code:: shell
 
-   pip install AeoLiS
+   pip install aeolis
 
-.. note::
+.. attention:: 
 
    For Windows users, the recommend way to install AeoLiS is to use `Anaconda <https://docs.anaconda.com/free/anaconda/install/windows/>`_.
 
@@ -49,4 +49,7 @@ Example from command line:
 .. code:: shell
 
    aeolis params.txt
-   aeolis-wind wind.txt --mean=6 --duration=3600
+
+.. note::
+
+   Model parameters and other configuration is passed in a `params.txt`. See the :ref:`default settings` for more details.  
