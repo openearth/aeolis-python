@@ -1,5 +1,5 @@
-Domain decomposition and Parallel programming
-=============================================
+Domain decomposition
+====================
 
 
 This section describes the Proof of Concept implementation for speeding up code execution in AeoLiS using domain decomposition and parallel programming.
