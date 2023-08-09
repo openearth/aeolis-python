@@ -90,6 +90,12 @@ Vegetation
 .. automodule:: vegetation
                 :members:
 
+Fences
+^^^^^^
+
+.. automodule:: fences
+                :members:
+
 Marine Erosion
 ^^^^^^^^^^^^^^
 
@@ -123,10 +129,14 @@ Command-line tools
 .. automodule:: console
                 :members:
 
+
 Miscellaneous
 ^^^^^^^^^^^^^
 
 .. automodule:: utils
+                :members:
+
+.. automodule:: gridparams
                 :members:
                    
 Sierd's favorite function is:
