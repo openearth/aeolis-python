@@ -408,41 +408,51 @@ def visualize_grid(s, p):
 
 def visualize_timeseries(p, t):
     '''Create figures and tables for the user to check whether the timeseries-input is correctly interpreted'''
+   
+    # Initiate plots
+    fig, axs = plt.subplots(5, 1)
 
     # Start and stop times
     tstart = p['tstart']
     tstop = p['tstop']
-    
+        
     # Read the user input (wind)
     uw_t = p['wind_file'][:,0]
     uw_s = p['wind_file'][:,1]
     uw_d = p['wind_file'][:,2]
-
-    # Read the user input (waves)
-    w_t = p['wave_file'][:,0]
-    w_Hs = p['wave_file'][:,1]
-    w_Tp = p['wave_file'][:,2]
-
-    # Read the user input (tide)
-    T_t = p['tide_file'][:,0]
-    T_zs = p['tide_file'][:,1]
-
-    # Create plots
-    fig, axs = plt.subplots(5, 1)
-
-    # Plotting
     axs[0].plot(uw_t, uw_s, 'k')
     axs[1].plot(uw_t, uw_d, 'k')
-    axs[2].plot(w_t, w_Hs, 'k')
-    axs[3].plot(w_t, w_Tp, 'k')
-    axs[4].plot(T_t, T_zs, 'k')
-
-    # Assiging titles
     axs[0].set_title('Wind velocity at height z, uw (m/s)')
     axs[1].set_title('Wind direction, udir (deg)')
-    axs[2].set_title('Wave height, Hs (m)')
-    axs[3].set_title('Wave period, Tp (sec)')
-    axs[4].set_title('Water level, zs (m)')
+
+    # Read the user input (waves)
+    if p['wave_file']!= None:
+        w_t = p['wave_file'][:,0]
+        w_Hs = p['wave_file'][:,1]
+        w_Tp = p['wave_file'][:,2]
+        axs[2].plot(w_t, w_Hs, 'k')
+        axs[3].plot(w_t, w_Tp, 'k')
+        axs[2].set_title('Wave height, Hs (m)')
+        axs[3].set_title('Wave period, Tp (sec)')
+
+    # Read the user input (tide)
+    if p['wave_file']!= None:
+        T_t = p['tide_file'][:,0]
+        T_zs = p['tide_file'][:,1]
+        axs[4].plot(T_t, T_zs, 'k')
+        axs[4].set_title('Water level, zs (m)')
+
+
+
+
+    # Plotting
+   
+
+   
+
+    # Assiging titles
+    
+    
 
     for ax in axs:
         ax.set_xlim([tstart, tstop])

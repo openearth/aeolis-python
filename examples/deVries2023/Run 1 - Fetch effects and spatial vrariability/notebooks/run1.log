@@ -1,0 +1,311 @@
+2023-08-02 14:52:21,477 aeolis.model INFO     **********************************************************
+2023-08-02 14:52:21,477 aeolis.model INFO                                                               
+2023-08-02 14:52:21,478 aeolis.model INFO              d8888                   888      d8b  .d8888b.   
+2023-08-02 14:52:21,479 aeolis.model INFO             d88888                   888      Y8P d88P  Y88b  
+2023-08-02 14:52:21,479 aeolis.model INFO            d88P888                   888          Y88b.       
+2023-08-02 14:52:21,480 aeolis.model INFO           d88P 888  .d88b.   .d88b.  888      888  "Y888b.    
+2023-08-02 14:52:21,480 aeolis.model INFO          d88P  888 d8P  Y8b d88""88b 888      888     "Y88b.  
+2023-08-02 14:52:21,481 aeolis.model INFO         d88P   888 88888888 888  888 888      888       "888  
+2023-08-02 14:52:21,481 aeolis.model INFO        d8888888888 Y8b.     Y88..88P 888      888 Y88b  d88P  
+2023-08-02 14:52:21,481 aeolis.model INFO       d88P     888  "Y8888   "Y88P"  88888888 888  "Y8888P"   
+2023-08-02 14:52:21,482 aeolis.model INFO                                                               
+2023-08-02 14:52:21,482 aeolis.model INFO       Version:  2.1.2                                        
+2023-08-02 14:52:21,483 aeolis.model INFO                                                               
+2023-08-02 14:52:21,484 aeolis.model INFO     **********************************************************
+2023-08-02 14:52:21,485 aeolis.model INFO     PARAMETER SETTINGS                                        
+2023-08-02 14:52:21,487 aeolis.model INFO     **********************************************************
+2023-08-02 14:52:21,488 aeolis.model INFO       Aa                     = 0.085000
+2023-08-02 14:52:21,488 aeolis.model INFO       CFL                    = 1.00
+2023-08-02 14:52:21,489 aeolis.model INFO       Cb                     = 1.50
+2023-08-02 14:52:21,489 aeolis.model INFO       Cdk                    = 5.00
+2023-08-02 14:52:21,490 aeolis.model INFO       Ck                     = 2.78
+2023-08-02 14:52:21,498 aeolis.model INFO       Cl                     = 6.70
+2023-08-02 14:52:21,500 aeolis.model INFO       Cl_gw                  = 0.700000
+2023-08-02 14:52:21,500 aeolis.model INFO       D_gw                   = 12
+2023-08-02 14:52:21,504 aeolis.model INFO       GW_stat                = 1
+2023-08-02 14:52:21,505 aeolis.model INFO       K_gw                   = 0.000780
+2023-08-02 14:52:21,506 aeolis.model INFO       L                      = 100.00
+2023-08-02 14:52:21,506 aeolis.model INFO       T                      = 1.00
+2023-08-02 14:52:21,508 aeolis.model INFO       Tbedreset              = 86400.00
+2023-08-02 14:52:21,509 aeolis.model INFO       Tdry                   = 7200.00
+2023-08-02 14:52:21,510 aeolis.model INFO       Tsalt                  = 2592000.00
+2023-08-02 14:52:21,510 aeolis.model INFO       V_lat                  = 0.000000
+2023-08-02 14:52:21,511 aeolis.model INFO       V_ver                  = 5.00
+2023-08-02 14:52:21,512 aeolis.model INFO       accfac                 = 1.00
+2023-08-02 14:52:21,512 aeolis.model INFO       alfa                   = 0
+2023-08-02 14:52:21,513 aeolis.model INFO       alfad_moist            = -0.035000
+2023-08-02 14:52:21,513 aeolis.model INFO       alfaw_moist            = -0.070000
+2023-08-02 14:52:21,513 aeolis.model INFO       avg_time               = 86400.00
+2023-08-02 14:52:21,514 aeolis.model INFO       beach_slope            = 0.100000
+2023-08-02 14:52:21,514 aeolis.model INFO       bed_file               = z_grid.txt
+2023-08-02 14:52:21,514 aeolis.model INFO       bedcomp_file           = <novalue>
+2023-08-02 14:52:21,515 aeolis.model INFO       beta                   = 130.00
+2023-08-02 14:52:21,516 aeolis.model INFO       bi                     = 0.500000
+2023-08-02 14:52:21,517 aeolis.model INFO       boundary_gw            = no_flow
+2023-08-02 14:52:21,517 aeolis.model INFO       boundary_lateral       = constant
+2023-08-02 14:52:21,518 aeolis.model INFO       boundary_offshore      = flux
+2023-08-02 14:52:21,519 aeolis.model INFO       boundary_onshore       = constant
+2023-08-02 14:52:21,519 aeolis.model INFO       buffer_width           = 20.00
+2023-08-02 14:52:21,520 aeolis.model INFO       c_b                    = 0.200000
+2023-08-02 14:52:21,520 aeolis.model INFO       callback               = <novalue>
+2023-08-02 14:52:21,521 aeolis.model INFO       constant_offshore_flux = 0.000000
+2023-08-02 14:52:21,540 aeolis.model INFO       constant_onshore_flux  = 0.000000
+2023-08-02 14:52:21,541 aeolis.model INFO       cpair                  = 0.001004
+2023-08-02 14:52:21,541 aeolis.model INFO       csalt                  = 0.003500
+2023-08-02 14:52:21,541 aeolis.model INFO       dt                     = 1.00
+2023-08-02 14:52:21,542 aeolis.model INFO       dune_toe_elevation     = 3
+2023-08-02 14:52:21,542 aeolis.model INFO       dx                     = 1.00
+2023-08-02 14:52:21,543 aeolis.model INFO       dy                     = 1.00
+2023-08-02 14:52:21,543 aeolis.model INFO       dzb_interval           = 86400.00
+2023-08-02 14:52:21,543 aeolis.model INFO       dzb_opt                = 0.000000
+2023-08-02 14:52:21,544 aeolis.model INFO       eps                    = 0.001000
+2023-08-02 14:52:21,544 aeolis.model INFO       external_vars          = 
+2023-08-02 14:52:21,545 aeolis.model INFO       facDOD                 = 0.100000
+2023-08-02 14:52:21,545 aeolis.model INFO       fc                     = 0.110000
+2023-08-02 14:52:21,545 aeolis.model INFO       fence_file             = <novalue>
+2023-08-02 14:52:21,546 aeolis.model INFO       g                      = 9.81
+2023-08-02 14:52:21,546 aeolis.model INFO       gamma                  = 0.500000
+2023-08-02 14:52:21,547 aeolis.model INFO       gamma_vegshear         = 16.00
+2023-08-02 14:52:21,547 aeolis.model INFO       germinate              = 1.00
+2023-08-02 14:52:21,547 aeolis.model INFO       grain_dist             = 1.00
+2023-08-02 14:52:21,548 aeolis.model INFO       grain_size             = 0.000250
+2023-08-02 14:52:21,548 aeolis.model INFO       gw_mask                = <novalue>
+2023-08-02 14:52:21,549 aeolis.model INFO       h                      = 10.00
+2023-08-02 14:52:21,550 aeolis.model INFO       hveg_max               = 1.00
+2023-08-02 14:52:21,550 aeolis.model INFO       in_gw                  = 0
+2023-08-02 14:52:21,551 aeolis.model INFO       k                      = 0.001000
+2023-08-02 14:52:21,552 aeolis.model INFO       kappa                  = 0.410000
+2023-08-02 14:52:21,557 aeolis.model INFO       l                      = 1.00
+2023-08-02 14:52:21,558 aeolis.model INFO       lateral                = 0.000000
+2023-08-02 14:52:21,558 aeolis.model INFO       lateral_flux           = 0.000000
+2023-08-02 14:52:21,558 aeolis.model INFO       layer_thickness        = 0.050000
+2023-08-02 14:52:21,559 aeolis.model INFO       m                      = 0.500000
+2023-08-02 14:52:21,560 aeolis.model INFO       max_bedlevel_change    = 999.00
+2023-08-02 14:52:21,560 aeolis.model INFO       max_error              = 0.000001
+2023-08-02 14:52:21,561 aeolis.model INFO       max_iter               = 1000
+2023-08-02 14:52:21,561 aeolis.model INFO       max_iter_ava           = 1000
+2023-08-02 14:52:21,561 aeolis.model INFO       md_moist               = 0.420000
+2023-08-02 14:52:21,562 aeolis.model INFO       meteo_file             = <novalue>
+2023-08-02 14:52:21,562 aeolis.model INFO       method_grainspeed      = duran
+2023-08-02 14:52:21,562 aeolis.model INFO       method_moist           = belly_johnson
+2023-08-02 14:52:21,565 aeolis.model INFO       method_moist_process   = infiltration
+2023-08-02 14:52:21,566 aeolis.model INFO       method_moist_threshold = belly_johnson
+2023-08-02 14:52:21,567 aeolis.model INFO       method_roughness       = constant
+2023-08-02 14:52:21,567 aeolis.model INFO       method_transport       = bagnold
+2023-08-02 14:52:21,574 aeolis.model INFO       mu_b                   = 20.00
+2023-08-02 14:52:21,574 aeolis.model INFO       mw_moist               = 0.570000
+2023-08-02 14:52:21,577 aeolis.model INFO       nd_moist               = 4.50
+2023-08-02 14:52:21,577 aeolis.model INFO       ne_file                = <novalue>
+2023-08-02 14:52:21,577 aeolis.model INFO       ne_gw                  = 0.300000
+2023-08-02 14:52:21,578 aeolis.model INFO       nfractions             = 1
+2023-08-02 14:52:21,578 aeolis.model INFO       nlayers                = 1
+2023-08-02 14:52:21,578 aeolis.model INFO       nw_moist               = 2.30
+2023-08-02 14:52:21,579 aeolis.model INFO       nx                     = 0
+2023-08-02 14:52:21,579 aeolis.model INFO       ny                     = 0
+2023-08-02 14:52:21,579 aeolis.model INFO       offshore_flux          = 0.000000
+2023-08-02 14:52:21,579 aeolis.model INFO       okin_c1_fence          = 0.480000
+2023-08-02 14:52:21,580 aeolis.model INFO       okin_c1_veg            = 0.480000
+2023-08-02 14:52:21,580 aeolis.model INFO       okin_initialred_fence  = 0.320000
+2023-08-02 14:52:21,580 aeolis.model INFO       okin_initialred_veg    = 0.320000
+2023-08-02 14:52:21,581 aeolis.model INFO       onshore_flux           = 0.000000
+2023-08-02 14:52:21,581 aeolis.model INFO       output_file            = Run1.nc
+2023-08-02 14:52:21,581 aeolis.model INFO       output_times           = 60.00
+2023-08-02 14:52:21,582 aeolis.model INFO       output_types           = 
+2023-08-02 14:52:21,589 aeolis.model INFO       output_vars            = zb
+2023-08-02 14:52:21,589 aeolis.model INFO                                uw
+2023-08-02 14:52:21,589 aeolis.model INFO                                udir
+2023-08-02 14:52:21,590 aeolis.model INFO                                Cu
+2023-08-02 14:52:21,590 aeolis.model INFO                                Ct
+2023-08-02 14:52:21,591 aeolis.model INFO       porosity               = 0.400000
+2023-08-02 14:52:21,591 aeolis.model INFO       process_avalanche      = F
+2023-08-02 14:52:21,591 aeolis.model INFO       process_bedupdate      = T
+2023-08-02 14:52:21,592 aeolis.model INFO       process_dune_erosion   = F
+2023-08-02 14:52:21,592 aeolis.model INFO       process_fences         = F
+2023-08-02 14:52:21,592 aeolis.model INFO       process_groundwater    = F
+2023-08-02 14:52:21,592 aeolis.model INFO       process_humidity       = F
+2023-08-02 14:52:21,593 aeolis.model INFO       process_inertia        = F
+2023-08-02 14:52:21,593 aeolis.model INFO       process_meteo          = F
+2023-08-02 14:52:21,593 aeolis.model INFO       process_mixtoplayer    = F
+2023-08-02 14:52:21,594 aeolis.model INFO       process_moist          = F
+2023-08-02 14:52:21,594 aeolis.model INFO       process_runup          = F
+2023-08-02 14:52:21,595 aeolis.model INFO       process_salt           = F
+2023-08-02 14:52:21,595 aeolis.model INFO       process_scanning       = F
+2023-08-02 14:52:21,595 aeolis.model INFO       process_seepage_face   = F
+2023-08-02 14:52:21,596 aeolis.model INFO       process_separation     = F
+2023-08-02 14:52:21,596 aeolis.model INFO       process_shear          = F
+2023-08-02 14:52:21,596 aeolis.model INFO       process_threshold      = T
+2023-08-02 14:52:21,597 aeolis.model INFO       process_tide           = F
+2023-08-02 14:52:21,597 aeolis.model INFO       process_transport      = T
+2023-08-02 14:52:21,598 aeolis.model INFO       process_vegetation     = F
+2023-08-02 14:52:21,598 aeolis.model INFO       process_wave           = F
+2023-08-02 14:52:21,598 aeolis.model INFO       process_wet_bed_reset  = F
+2023-08-02 14:52:21,602 aeolis.model INFO       process_wind           = T
+2023-08-02 14:52:21,606 aeolis.model INFO       refdate                = 2020-01-01
+2023-08-02 14:52:21,606 aeolis.model INFO                                00:00
+2023-08-02 14:52:21,607 aeolis.model INFO       resd_moist             = 0.010000
+2023-08-02 14:52:21,607 aeolis.model INFO       restart                = <novalue>
+2023-08-02 14:52:21,608 aeolis.model INFO       resw_moist             = 0.010000
+2023-08-02 14:52:21,608 aeolis.model INFO       rhoa                   = 1.23
+2023-08-02 14:52:21,608 aeolis.model INFO       rhog                   = 2650.00
+2023-08-02 14:52:21,608 aeolis.model INFO       rhoveg_max             = 0.500000
+2023-08-02 14:52:21,608 aeolis.model INFO       rhow                   = 1025.00
+2023-08-02 14:52:21,609 aeolis.model INFO       runup_mask             = <novalue>
+2023-08-02 14:52:21,609 aeolis.model INFO       satd_moist             = 0.500000
+2023-08-02 14:52:21,609 aeolis.model INFO       satw_moist             = 0.350000
+2023-08-02 14:52:21,610 aeolis.model INFO       scheme                 = euler_backward
+2023-08-02 14:52:21,610 aeolis.model INFO       sedimentinput          = 0.000000
+2023-08-02 14:52:21,611 aeolis.model INFO       sep_filter_iterations  = 0
+2023-08-02 14:52:21,611 aeolis.model INFO       sigma                  = 4.20
+2023-08-02 14:52:21,611 aeolis.model INFO       solver                 = pieter
+2023-08-02 14:52:21,612 aeolis.model INFO       t_veg                  = 3
+2023-08-02 14:52:21,612 aeolis.model INFO       tfac_gw                = 10
+2023-08-02 14:52:21,612 aeolis.model INFO       th_bedslope            = F
+2023-08-02 14:52:21,613 aeolis.model INFO       th_drylayer            = F
+2023-08-02 14:52:21,613 aeolis.model INFO       th_grainsize           = T
+2023-08-02 14:52:21,613 aeolis.model INFO       th_humidity            = F
+2023-08-02 14:52:21,619 aeolis.model INFO       th_moisture            = F
+2023-08-02 14:52:21,621 aeolis.model INFO       th_nelayer             = F
+2023-08-02 14:52:21,622 aeolis.model INFO       th_roughness           = F
+2023-08-02 14:52:21,622 aeolis.model INFO       th_salt                = F
+2023-08-02 14:52:21,623 aeolis.model INFO       th_sheltering          = F
+2023-08-02 14:52:21,623 aeolis.model INFO       theta_dyn              = 33.00
+2023-08-02 14:52:21,623 aeolis.model INFO       theta_stat             = 34.00
+2023-08-02 14:52:21,624 aeolis.model INFO       thick_moist            = 0.002000
+2023-08-02 14:52:21,624 aeolis.model INFO       threshold_file         = <novalue>
+2023-08-02 14:52:21,625 aeolis.model INFO       threshold_mask         = <novalue>
+2023-08-02 14:52:21,625 aeolis.model INFO       tide_file              = <novalue>
+2023-08-02 14:52:21,626 aeolis.model INFO       tide_mask              = <novalue>
+2023-08-02 14:52:21,626 aeolis.model INFO       tstart                 = 0
+2023-08-02 14:52:21,626 aeolis.model INFO       tstop                  = 3600.00
+2023-08-02 14:52:21,627 aeolis.model INFO       v                      = 0.000015
+2023-08-02 14:52:21,627 aeolis.model INFO       v_gam                  = 1
+2023-08-02 14:52:21,628 aeolis.model INFO       veg_file               = <novalue>
+2023-08-02 14:52:21,628 aeolis.model INFO       veg_gamma              = 1.00
+2023-08-02 14:52:21,628 aeolis.model INFO       veg_min_elevation      = -10.000000
+2023-08-02 14:52:21,628 aeolis.model INFO       veg_sigma              = 0.800000
+2023-08-02 14:52:21,628 aeolis.model INFO       veggrowth_type         = orig
+2023-08-02 14:52:21,629 aeolis.model INFO       vegshear_type          = raupach
+2023-08-02 14:52:21,629 aeolis.model INFO       visualization          = T
+2023-08-02 14:52:21,629 aeolis.model INFO       w1_5                   = 0.020000
+2023-08-02 14:52:21,634 aeolis.model INFO       wave_file              = <novalue>
+2023-08-02 14:52:21,635 aeolis.model INFO       wave_mask              = <novalue>
+2023-08-02 14:52:21,638 aeolis.model INFO       wind_convention        = cartesian
+2023-08-02 14:52:21,639 aeolis.model INFO       wind_file              = wind.txt
+2023-08-02 14:52:21,639 aeolis.model INFO       xgrid_file             = x_grid.txt
+2023-08-02 14:52:21,643 aeolis.model INFO       xi                     = 0.300000
+2023-08-02 14:52:21,643 aeolis.model INFO       ygrid_file             = y_grid.txt
+2023-08-02 14:52:21,644 aeolis.model INFO       z                      = 10.00
+2023-08-02 14:52:21,645 aeolis.model INFO       zsep_y_filter          = F
+2023-08-02 14:52:21,646 aeolis.model INFO     **********************************************************
+2023-08-02 14:52:21,654 aeolis.model INFO     
+2023-08-02 14:52:33,283 aeolis.model INFO             Time elapsed / Total time / Time remaining / Average Timestep
+2023-08-02 14:52:33,283 aeolis.model INFO     000.0%       0:00:10 /    9:51:31 /        9:51:21 / 1.0
+2023-08-02 14:52:34,360 aeolis.model INFO     001.0%       0:00:11 /    0:17:44 /        0:17:33 / 1.0
+2023-08-02 14:52:35,843 aeolis.model INFO     002.0%       0:00:12 /    0:10:12 /        0:10:00 / 1.0
+2023-08-02 14:52:36,884 aeolis.model INFO     003.0%       0:00:13 /    0:07:25 /        0:07:11 / 1.0
+2023-08-02 14:52:37,934 aeolis.model INFO     004.0%       0:00:15 /    0:06:00 /        0:05:46 / 1.0
+2023-08-02 14:52:38,954 aeolis.model INFO     005.0%       0:00:16 /    0:05:09 /        0:04:53 / 1.0
+2023-08-02 14:52:39,926 aeolis.model INFO     006.0%       0:00:17 /    0:04:34 /        0:04:17 / 1.0
+2023-08-02 14:52:40,878 aeolis.model INFO     007.0%       0:00:17 /    0:04:09 /        0:03:52 / 1.0
+2023-08-02 14:52:41,898 aeolis.model INFO     008.0%       0:00:18 /    0:03:50 /        0:03:32 / 1.0
+2023-08-02 14:52:42,939 aeolis.model INFO     009.0%       0:00:20 /    0:03:36 /        0:03:17 / 1.0
+2023-08-02 14:52:43,901 aeolis.model INFO     010.0%       0:00:20 /    0:03:24 /        0:03:04 / 1.0
+2023-08-02 14:52:44,951 aeolis.model INFO     011.0%       0:00:22 /    0:03:15 /        0:02:54 / 1.0
+2023-08-02 14:52:45,934 aeolis.model INFO     012.0%       0:00:23 /    0:03:07 /        0:02:45 / 1.0
+2023-08-02 14:52:47,226 aeolis.model INFO     013.0%       0:00:24 /    0:03:03 /        0:02:39 / 1.0
+2023-08-02 14:52:48,284 aeolis.model INFO     014.0%       0:00:25 /    0:02:58 /        0:02:33 / 1.0
+2023-08-02 14:52:49,337 aeolis.model INFO     015.0%       0:00:26 /    0:02:52 /        0:02:27 / 1.0
+2023-08-02 14:52:50,426 aeolis.model INFO     016.0%       0:00:27 /    0:02:48 /        0:02:21 / 1.0
+2023-08-02 14:52:51,609 aeolis.model INFO     017.0%       0:00:28 /    0:02:46 /        0:02:17 / 1.0
+2023-08-02 14:52:53,009 aeolis.model INFO     018.0%       0:00:30 /    0:02:44 /        0:02:15 / 1.0
+2023-08-02 14:52:54,041 aeolis.model INFO     019.0%       0:00:31 /    0:02:41 /        0:02:10 / 1.0
+2023-08-02 14:52:55,064 aeolis.model INFO     020.0%       0:00:32 /    0:02:38 /        0:02:06 / 1.0
+2023-08-02 14:52:56,038 aeolis.model INFO     021.0%       0:00:33 /    0:02:35 /        0:02:02 / 1.0
+2023-08-02 14:52:57,051 aeolis.model INFO     022.0%       0:00:34 /    0:02:33 /        0:01:59 / 1.0
+2023-08-02 14:52:58,044 aeolis.model INFO     023.0%       0:00:35 /    0:02:30 /        0:01:56 / 1.0
+2023-08-02 14:52:59,020 aeolis.model INFO     024.0%       0:00:36 /    0:02:28 /        0:01:53 / 1.0
+2023-08-02 14:53:00,027 aeolis.model INFO     025.0%       0:00:37 /    0:02:26 /        0:01:50 / 1.0
+2023-08-02 14:53:01,090 aeolis.model INFO     026.0%       0:00:38 /    0:02:25 /        0:01:47 / 1.0
+2023-08-02 14:53:02,110 aeolis.model INFO     027.0%       0:00:39 /    0:02:23 /        0:01:44 / 1.0
+2023-08-02 14:53:03,057 aeolis.model INFO     028.0%       0:00:40 /    0:02:22 /        0:01:42 / 1.0
+2023-08-02 14:53:04,066 aeolis.model INFO     029.0%       0:00:41 /    0:02:20 /        0:01:39 / 1.0
+2023-08-02 14:53:05,089 aeolis.model INFO     030.0%       0:00:42 /    0:02:19 /        0:01:37 / 1.0
+2023-08-02 14:53:06,117 aeolis.model INFO     031.0%       0:00:43 /    0:02:18 /        0:01:35 / 1.0
+2023-08-02 14:53:07,131 aeolis.model INFO     032.0%       0:00:44 /    0:02:16 /        0:01:33 / 1.0
+2023-08-02 14:53:08,216 aeolis.model INFO     033.0%       0:00:45 /    0:02:16 /        0:01:31 / 1.0
+2023-08-02 14:53:09,218 aeolis.model INFO     034.0%       0:00:46 /    0:02:15 /        0:01:29 / 1.0
+2023-08-02 14:53:10,208 aeolis.model INFO     035.0%       0:00:47 /    0:02:14 /        0:01:27 / 1.0
+2023-08-02 14:53:11,201 aeolis.model INFO     036.0%       0:00:48 /    0:02:13 /        0:01:25 / 1.0
+2023-08-02 14:53:12,358 aeolis.model INFO     037.0%       0:00:49 /    0:02:12 /        0:01:23 / 1.0
+2023-08-02 14:53:13,848 aeolis.model INFO     038.0%       0:00:50 /    0:02:13 /        0:01:22 / 1.0
+2023-08-02 14:53:15,346 aeolis.model INFO     039.0%       0:00:52 /    0:02:13 /        0:01:21 / 1.0
+2023-08-02 14:53:16,446 aeolis.model INFO     040.0%       0:00:53 /    0:02:12 /        0:01:19 / 1.0
+2023-08-02 14:53:17,432 aeolis.model INFO     041.0%       0:00:54 /    0:02:12 /        0:01:18 / 1.0
+2023-08-02 14:53:18,507 aeolis.model INFO     042.0%       0:00:55 /    0:02:11 /        0:01:16 / 1.0
+2023-08-02 14:53:19,540 aeolis.model INFO     043.0%       0:00:56 /    0:02:10 /        0:01:14 / 1.0
+2023-08-02 14:53:20,455 aeolis.model INFO     044.0%       0:00:57 /    0:02:10 /        0:01:13 / 1.0
+2023-08-02 14:53:21,377 aeolis.model INFO     045.0%       0:00:58 /    0:02:09 /        0:01:11 / 1.0
+2023-08-02 14:53:22,303 aeolis.model INFO     046.0%       0:00:59 /    0:02:08 /        0:01:09 / 1.0
+2023-08-02 14:53:23,212 aeolis.model INFO     047.0%       0:01:00 /    0:02:07 /        0:01:07 / 1.0
+2023-08-02 14:53:24,110 aeolis.model INFO     048.0%       0:01:01 /    0:02:06 /        0:01:06 / 1.0
+2023-08-02 14:53:25,035 aeolis.model INFO     049.0%       0:01:02 /    0:02:06 /        0:01:04 / 1.0
+2023-08-02 14:53:25,971 aeolis.model INFO     050.0%       0:01:03 /    0:02:05 /        0:01:02 / 1.0
+2023-08-02 14:53:26,874 aeolis.model INFO     051.0%       0:01:03 /    0:02:04 /        0:01:01 / 1.0
+2023-08-02 14:53:27,808 aeolis.model INFO     052.0%       0:01:04 /    0:02:04 /        0:00:59 / 1.0
+2023-08-02 14:53:28,727 aeolis.model INFO     053.0%       0:01:05 /    0:02:03 /        0:00:58 / 1.0
+2023-08-02 14:53:29,659 aeolis.model INFO     054.0%       0:01:06 /    0:02:03 /        0:00:56 / 1.0
+2023-08-02 14:53:30,597 aeolis.model INFO     055.0%       0:01:07 /    0:02:02 /        0:00:55 / 1.0
+2023-08-02 14:53:31,512 aeolis.model INFO     056.0%       0:01:08 /    0:02:02 /        0:00:53 / 1.0
+2023-08-02 14:53:32,479 aeolis.model INFO     057.0%       0:01:09 /    0:02:01 /        0:00:52 / 1.0
+2023-08-02 14:53:33,378 aeolis.model INFO     058.0%       0:01:10 /    0:02:01 /        0:00:51 / 1.0
+2023-08-02 14:53:34,325 aeolis.model INFO     059.0%       0:01:11 /    0:02:00 /        0:00:49 / 1.0
+2023-08-02 14:53:35,286 aeolis.model INFO     060.0%       0:01:12 /    0:02:00 /        0:00:48 / 1.0
+2023-08-02 14:53:36,256 aeolis.model INFO     061.0%       0:01:13 /    0:01:59 /        0:00:47 / 1.0
+2023-08-02 14:53:37,215 aeolis.model INFO     062.0%       0:01:14 /    0:01:59 /        0:00:45 / 1.0
+2023-08-02 14:53:38,163 aeolis.model INFO     063.0%       0:01:15 /    0:01:59 /        0:00:44 / 1.0
+2023-08-02 14:53:39,152 aeolis.model INFO     064.0%       0:01:16 /    0:01:58 /        0:00:43 / 1.0
+2023-08-02 14:53:40,135 aeolis.model INFO     065.0%       0:01:17 /    0:01:58 /        0:00:41 / 1.0
+2023-08-02 14:53:41,048 aeolis.model INFO     066.0%       0:01:18 /    0:01:58 /        0:00:40 / 1.0
+2023-08-02 14:53:42,017 aeolis.model INFO     067.0%       0:01:19 /    0:01:57 /        0:00:39 / 1.0
+2023-08-02 14:53:42,993 aeolis.model INFO     068.0%       0:01:20 /    0:01:57 /        0:00:37 / 1.0
+2023-08-02 14:53:43,967 aeolis.model INFO     069.0%       0:01:21 /    0:01:57 /        0:00:36 / 1.0
+2023-08-02 14:53:44,912 aeolis.model INFO     070.0%       0:01:21 /    0:01:56 /        0:00:35 / 1.0
+2023-08-02 14:53:45,838 aeolis.model INFO     071.0%       0:01:22 /    0:01:56 /        0:00:34 / 1.0
+2023-08-02 14:53:46,831 aeolis.model INFO     072.0%       0:01:23 /    0:01:56 /        0:00:32 / 1.0
+2023-08-02 14:53:47,766 aeolis.model INFO     073.0%       0:01:24 /    0:01:55 /        0:00:31 / 1.0
+2023-08-02 14:53:48,716 aeolis.model INFO     074.0%       0:01:25 /    0:01:55 /        0:00:30 / 1.0
+2023-08-02 14:53:49,689 aeolis.model INFO     075.0%       0:01:26 /    0:01:55 /        0:00:29 / 1.0
+2023-08-02 14:53:50,605 aeolis.model INFO     076.0%       0:01:27 /    0:01:55 /        0:00:27 / 1.0
+2023-08-02 14:53:51,540 aeolis.model INFO     077.0%       0:01:28 /    0:01:54 /        0:00:26 / 1.0
+2023-08-02 14:53:52,459 aeolis.model INFO     078.0%       0:01:29 /    0:01:54 /        0:00:25 / 1.0
+2023-08-02 14:53:53,396 aeolis.model INFO     079.0%       0:01:30 /    0:01:54 /        0:00:24 / 1.0
+2023-08-02 14:53:54,340 aeolis.model INFO     080.0%       0:01:31 /    0:01:54 /        0:00:23 / 1.0
+2023-08-02 14:53:55,279 aeolis.model INFO     081.0%       0:01:32 /    0:01:53 /        0:00:22 / 1.0
+2023-08-02 14:53:56,235 aeolis.model INFO     082.0%       0:01:33 /    0:01:53 /        0:00:20 / 1.0
+2023-08-02 14:53:57,169 aeolis.model INFO     083.0%       0:01:34 /    0:01:53 /        0:00:19 / 1.0
+2023-08-02 14:53:58,125 aeolis.model INFO     084.0%       0:01:35 /    0:01:53 /        0:00:18 / 1.0
+2023-08-02 14:53:59,069 aeolis.model INFO     085.0%       0:01:36 /    0:01:52 /        0:00:17 / 1.0
+2023-08-02 14:54:00,008 aeolis.model INFO     086.0%       0:01:37 /    0:01:52 /        0:00:16 / 1.0
+2023-08-02 14:54:01,006 aeolis.model INFO     087.0%       0:01:38 /    0:01:52 /        0:00:15 / 1.0
+2023-08-02 14:54:01,972 aeolis.model INFO     088.0%       0:01:39 /    0:01:52 /        0:00:13 / 1.0
+2023-08-02 14:54:02,917 aeolis.model INFO     089.0%       0:01:39 /    0:01:52 /        0:00:12 / 1.0
+2023-08-02 14:54:03,901 aeolis.model INFO     090.0%       0:01:40 /    0:01:52 /        0:00:11 / 1.0
+2023-08-02 14:54:04,921 aeolis.model INFO     091.0%       0:01:41 /    0:01:52 /        0:00:10 / 1.0
+2023-08-02 14:54:05,965 aeolis.model INFO     092.0%       0:01:43 /    0:01:51 /        0:00:09 / 1.0
+2023-08-02 14:54:06,913 aeolis.model INFO     093.0%       0:01:43 /    0:01:51 /        0:00:08 / 1.0
+2023-08-02 14:54:07,935 aeolis.model INFO     094.0%       0:01:45 /    0:01:51 /        0:00:07 / 1.0
+2023-08-02 14:54:08,999 aeolis.model INFO     095.0%       0:01:46 /    0:01:51 /        0:00:06 / 1.0
+2023-08-02 14:54:09,903 aeolis.model INFO     096.0%       0:01:46 /    0:01:51 /        0:00:04 / 1.0
+2023-08-02 14:54:10,906 aeolis.model INFO     097.0%       0:01:47 /    0:01:51 /        0:00:03 / 1.0
+2023-08-02 14:54:11,839 aeolis.model INFO     098.0%       0:01:48 /    0:01:51 /        0:00:02 / 1.0
+2023-08-02 14:54:12,802 aeolis.model INFO     099.0%       0:01:49 /    0:01:50 /        0:00:01 / 1.0
+2023-08-02 14:54:13,763 aeolis.model INFO     100.0%       0:01:50 /    0:01:50 /        0:00:00 / 1.0
+2023-08-02 14:54:13,763 aeolis.model INFO     
+2023-08-02 14:54:13,764 aeolis.model INFO     **********************************************************
+2023-08-02 14:54:13,765 aeolis.model INFO     # time steps         : 3601
+2023-08-02 14:54:13,766 aeolis.model INFO     # matrix solves      : 3600
+2023-08-02 14:54:13,766 aeolis.model INFO     # supply lim         : 0
+2023-08-02 14:54:13,767 aeolis.model INFO     avg. solves per step : 0.999722
+2023-08-02 14:54:13,767 aeolis.model INFO     avg. time step       : 0.999722
+2023-08-02 14:54:13,768 aeolis.model INFO     **********************************************************
+2023-08-02 14:54:13,768 aeolis.model INFO     

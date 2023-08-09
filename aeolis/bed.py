@@ -83,7 +83,12 @@ def initialize(s, p):
     if isinstance(p['grain_dist'], str):
             logger.log_and_raise('Grain size file not recognized as array, check file path and whether all values have been filled in.', exc=ValueError) 
 
-    if p['bedcomp_file'] is None and p['grain_dist'].ndim == 1 and p['grain_dist'].dtype == 'float64' or p['grain_dist'].dtype == 'int': 
+    if p['bedcomp_file'] is not None and p['supply_file'] is not None :
+            logger.log_and_raise('Conflict in input definition, cannot define supply_file and bedcomp_file simultaneously', exc=ValueError) 
+
+    if p['supply_file'] is not None:
+        s['mass'][:,:,:,:] = 0 #p['supply_file'].reshape(s['mass'].shape)                
+    elif p['bedcomp_file'] is None and p['grain_dist'].ndim == 1 and p['grain_dist'].dtype == 'float64' or p['grain_dist'].dtype == 'int': 
         # Both float and int are included as options for the grain dist to make sure there is no error when grain_dist is filled in as 1 instead of 1.0. 
         for i in range(nl):
             gs = makeiterable(p['grain_dist'])
@@ -266,6 +271,17 @@ def update(s, p):
     
     # reshape mass matrix
     m = s['mass'].reshape((-1,nl,nf))
+
+    if type(p['supply_file']) == np.ndarray:
+        #in descrete supply limited conditions the bed bed layer operations are not valid. 
+        m[:,0,:] -= pickup
+        m += p['supply_file'].reshape((-1,nl,nf))*p['dt_opt']
+        # reset supply under water if process tide is active
+        if p['process_tide']:
+            m[(s['zb']< s['zs']).flatten()]=0
+        # broadcast to mass parameter
+        s['mass'] = m.reshape((ny+1,nx+1,nl,nf))#[:,:,0,0]
+        return s
 
     # negative mass may occur in case of deposition due to numerics,
     # which should be prevented

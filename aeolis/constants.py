@@ -174,15 +174,15 @@ DEFAULT_CONFIG = {
     'process_meteo'                 : False,              # Enable the process of meteo
     'process_salt'                  : False,              # Enable the process of salt
     'process_humidity'              : False,              # Enable the process of humidity
-    'process_groundwater'           : False,        #NEWCH      # Enable the process of groundwater
-    'process_scanning'              : False,         #NEWCH      # Enable the process of scanning curves
+    'process_groundwater'           : False,              #NEWCH      # Enable the process of groundwater
+    'process_scanning'              : False,              #NEWCH      # Enable the process of scanning curves
     'process_inertia'               : False,              # NEW
     'process_separation'            : False,               # Enable the including of separation bubble
     'process_vegetation'            : False,              # Enable the process of vegetation
     'process_fences'                : False,              # Enable the process of sand fencing
     'process_dune_erosion'          : False,              # Enable the process of wave-driven dune erosion
     'process_seepage_face'          : False,              # Enable the process of groundwater seepage (NB. only applicable to positive beach slopes)
-    'visualization'                 : False,               # Boolean for visualization of model interpretation before and just after initialization
+    'visualization'                 : False,              # Boolean for visualization of model interpretation before and just after initialization
     'xgrid_file'                    : None,               # Filename of ASCII file with x-coordinates of grid cells
     'ygrid_file'                    : None,               # Filename of ASCII file with y-coordinates of grid cells
     'bed_file'                      : None,               # Filename of ASCII file with bed level heights of grid cells
@@ -195,6 +195,7 @@ DEFAULT_CONFIG = {
     'fence_file'                    : None,               # Filename of ASCII file with sand fence location/height (above the bed)
     'ne_file'                       : None,               # Filename of ASCII file with non-erodible layer
     'veg_file'                      : None,               # Filename of ASCII file with initial vegetation density
+    'supply_file'                   : None,               # Filename of ASCII file with a manual definition of sediment supply (mainly used in academic cases)
     'wave_mask'                     : None,               # Filename of ASCII file with mask for wave height
     'tide_mask'                     : None,               # Filename of ASCII file with mask for tidal elevation
     'runup_mask'                    : None,               # Filename of ASCII file with mask for run-up
