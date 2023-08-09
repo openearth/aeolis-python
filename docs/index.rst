@@ -49,8 +49,8 @@ Contents
    :maxdepth: 2
 
    developer/quickstart
+   developer/testing-introduction 
    developer/unit-testing
-   ci-tests   
 
 .. toctree::
    :caption: Current Development
@@ -58,7 +58,7 @@ Contents
 
    modularity
    test-coverage 
-   domain_decomposition
+   domain-decomposition
 
 
 Acknowledgements
