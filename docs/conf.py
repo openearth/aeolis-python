@@ -44,6 +44,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx_copybutton',
     'sphinxcontrib.bibtex',
+    'nbsphinx',
 ]
 
 bibtex_bibfiles = ['aeolis.bib']
