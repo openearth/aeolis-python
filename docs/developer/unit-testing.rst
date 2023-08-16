@@ -24,7 +24,7 @@ Example: Formatting log messages
 
 The ``StreamFormatter`` has one method ``format()`` (line 4) which takes a ``record`` object as input and returns a formatted string. If the *level* of the record is ``INFO``, the method will return only the log message (lines 7-8) . In all other cases, the method returns the level of the messages and the message (line 10), in that order.
 
-We can write unit test for the ``StreamFormatter`` class to ensure that the ``format()`` method behaves as expected (i.e., it works as expected). To this end, we can  describe the unit test to be implemented for this code using test scenarios and test cases. 
+We can write unit tests for the ``StreamFormatter`` class to ensure that the ``format()`` method behaves as expected (i.e., it works as expected). To this end, we can  describe the unit test to be implemented for this code using test scenarios and test cases. 
 
 Test scenario
 ''''''''''''''''
@@ -53,13 +53,11 @@ Test Cases:
    * **Expected Result:** check returns `True`.
    * **Postcondition:** None
 
-
 2. Case: change the formatting of log messages other than INFO level.
 
    .. note:: 
       As we have described avobe, the ``format()`` method shall return the log level and the log message when the log level is not ``INFO``. We can test this by creating a log record with a log level other than ``INFO`` and checking whether the ``format()`` method returns a string contraining the log level and the log message.
-  
-
+   
    * **Preconditions:** log record of type `INFO` is created.
    * **Test Steps:** 
      1. Create an instance of `StreamFormatter` class.

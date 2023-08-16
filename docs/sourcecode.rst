@@ -90,6 +90,12 @@ Vegetation
 .. automodule:: vegetation
                 :members:
 
+Fences
+^^^^^^
+
+.. automodule:: fences
+                :members:
+
 Marine Erosion
 ^^^^^^^^^^^^^^
 
@@ -123,11 +129,26 @@ Command-line tools
 .. automodule:: console
                 :members:
 
+Debugging
+^^^^^^^^^^
+
+.. automodule:: console_debug
+                :members:
+
+.. automodule:: run_console
+                :members:
+
 Miscellaneous
 ^^^^^^^^^^^^^
 
 .. automodule:: utils
                 :members:
-                   
-Sierd's favorite function is:
-:py:mod:`aeolis.bed.prevent_tiny_negatives`
+
+.. automodule:: gridparams
+                :members:
+
+
+.. note::
+
+    Sierd's favorite function is:
+    :py:mod:`aeolis.bed.prevent_tiny_negatives`

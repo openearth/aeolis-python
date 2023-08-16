@@ -36,7 +36,14 @@ Contents
    output
    sourcecode
    bibliography
-   
+
+.. toctree:: 
+   :caption: Tutorials
+   :maxdepth: 2
+
+   tutorials/sandmotor
+   tutorials/2D-parabolic
+
 .. toctree::
    :caption: Developer Documentation
    :maxdepth: 2

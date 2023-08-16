@@ -5,7 +5,7 @@ This section is for developers and contributors of AeoLiS. It describes how to g
 If you are a user, please see the :ref:`user documentation <installation>` instead.
 
 
-Workflow
+Development workflow
 -----------------------
 
 AeoLiS is developed in a collaborative way. Therefore, it is important to follow the workflow described below as closely as possibble to ensure that the code is always in a working state and that the changes are properly documented. 
