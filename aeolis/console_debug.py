@@ -33,8 +33,7 @@ from aeolis.model import AeoLiSRunner
 
 
 def aeolis_debug(configfile: str) -> None:
-    '''Convening function to run AeoLiS modules for debugging using
-    a Python interpreter.
+    '''Convenience function to run the AeoLiSRunner in the Python interpreter.
 
     Parameters
     ----------
@@ -61,7 +60,6 @@ def aeolis_debug(configfile: str) -> None:
     # start model
     model = AeoLiSRunner(configfile=configfile)
     model.run()
-
 
 
 # if __name__ == '__main__':
