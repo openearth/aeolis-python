@@ -129,6 +129,14 @@ Command-line tools
 .. automodule:: console
                 :members:
 
+Debugging
+^^^^^^^^^^
+
+.. automodule:: console_debug
+                :members:
+
+.. automodule:: run_console
+                :members:
 
 Miscellaneous
 ^^^^^^^^^^^^^
@@ -138,6 +146,8 @@ Miscellaneous
 
 .. automodule:: gridparams
                 :members:
+
+
                    
 Sierd's favorite function is:
 :py:mod:`aeolis.bed.prevent_tiny_negatives`
