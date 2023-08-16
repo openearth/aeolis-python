@@ -27,15 +27,15 @@ Contents
    :caption: User Documentation
    :maxdepth: 2
 
-   installation
-   whatsnew
-   model
-   implementation
-   defaults
-   inputfiles
-   output
-   sourcecode
-   bibliography
+   user/installation
+   user/whatsnew
+   user/model
+   user/implementation
+   user/defaults
+   user/inputfiles
+   user/output
+   user/sourcecode
+   user/bibliography
 
 .. toctree:: 
    :caption: Tutorials
@@ -56,9 +56,9 @@ Contents
    :caption: Current Development
    :maxdepth: 2
 
-   modularity
-   test-coverage 
-   domain-decomposition
+   developer/modularity
+   developer/test-coverage 
+   developer/domain-decomposition
 
 
 Acknowledgements
