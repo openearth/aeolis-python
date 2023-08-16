@@ -32,9 +32,28 @@ import numpy as np
 from aeolis.model import AeoLiSRunner
 
 
-def aeolis_debug(configfile):
-    '''aeolis : a process-based model for simulating supply-limited aeolian sediment transport
+def aeolis_debug(configfile: str) -> None:
+    '''Convening function to run AeoLiS modules for debugging using
+    a Python interpreter.
+
+    Parameters
+    ----------
+    configfile : str
+        Path to the AeoLiS configuration file.
+    
+    Returns
+    -------
+    None
     '''
+
+    def print_license()-> None:
+        '''Print the AeoLiS license to the console.'''
+
+        print('AeoLiS  Copyright (C) 2015  Bas Hoonhout')
+        print('This program comes with ABSOLUTELY NO WARRANTY.')
+        print('This is free software, and you are welcome to redistribute it')
+        print('under certain conditions; See LICENSE.txt for details.')
+        print('')
 
     print_license()
     logger = logging.getLogger('aeolis')
@@ -43,13 +62,6 @@ def aeolis_debug(configfile):
     model = AeoLiSRunner(configfile=configfile)
     model.run()
 
-
-def print_license():
-    print('AeoLiS  Copyright (C) 2015  Bas Hoonhout')
-    print('This program comes with ABSOLUTELY NO WARRANTY.')
-    print('This is free software, and you are welcome to redistribute it')
-    print('under certain conditions; See LICENSE.txt for details.')
-    print('')
 
 
 # if __name__ == '__main__':
