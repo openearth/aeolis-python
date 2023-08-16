@@ -12,6 +12,17 @@ Requirements
 - Setuptools
 - pip 
 
+Dependencies
+""""""""""""
+
+- docopt==0.6.1
+- bmi-python
+- netCDF4
+- scipy
+- numpy<1.24,>=1.18
+- matplotlib
+- numba
+
 Installing from PyPI
 ---------------------
 
