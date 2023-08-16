@@ -148,6 +148,7 @@ Miscellaneous
                 :members:
 
 
-                   
-Sierd's favorite function is:
-:py:mod:`aeolis.bed.prevent_tiny_negatives`
+.. note::
+
+    Sierd's favorite function is:
+    :py:mod:`aeolis.bed.prevent_tiny_negatives`
