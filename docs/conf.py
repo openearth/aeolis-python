@@ -44,11 +44,12 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx_copybutton',
     'sphinxcontrib.bibtex',
-    'nbsphinx',
+    # 'nbsphinx',
 ]
 
 bibtex_bibfiles = ['aeolis.bib']
 bibtex_reference_style = 'author_year'
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

@@ -41,9 +41,9 @@ Contents
    :caption: Tutorials
    :maxdepth: 2
 
-   tutorials/sandmotor 
+   tutorials/sandmotor
    tutorials/2D-parabolic
-   
+
 .. toctree::
    :caption: Developer Documentation
    :maxdepth: 2
