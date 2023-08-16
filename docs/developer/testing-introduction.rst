@@ -2,72 +2,80 @@
 Getting started with Software Testing 
 =====================================
 
-This document aims to introduce aeolis developers to the fundamental concepts of software testing. By the end of this document, you will be able to answer the following questions: 
+This document introduces AeoLiS developers to the fundamental concepts of software testing using `Pytest <https://docs.pytest.org/en/7.1.x/getting-started.html>`_. The following topics are included: 
 
 - What are software tests?
 - What do software tests do?
-- How do software tests work?
+- How software tests work?
 
-Existing tests in aeolis are used as the starting point to answer the above questions.
+We show some examples using existing tests in AeoLiS. You will need the AeoLiS source code and the development environment if you want to reproduce the examples. Follow the instruction in the :doc:`quick start <quickstart>` to set up a development environment.
 
-You will need the aeolis source code and the aeolis development environment set up on your machine to follow this document. If you do not have the development environment set up, please follow the  instructions in the section :doc:`quickstart <quickstart>`.
 
-*In order to know what software tests are and how they work in practice, follow the below steps to run the existing tests in aeolis and observe the results.*
+What are software tests?
+------------------------
 
-1. Clone the aeolis-python GitHub repository on your local machine and execute ```pytest``` from the root of the repsoitory. This produces the below output on the console. 
+To show what software tests are and how they work, you will follow some examples using Pytest.
+
+1. Clone the aeolis-python GitHub repository to your machine and execute `pytest` from the root of the repsoitory using the terminal. This produces following output: 
 
 .. code-block:: console
 
     :~/aeolis-python$ pytest
-    ============================================================================ test session starts ============================================================================
+    ==================================== test session starts ==================================== 
     platform linux -- Python 3.8.10, pytest-7.2.2, pluggy-1.0.0
     rootdir: /~/aeolis-python
     plugins: cov-4.0.0
     collected 18 items
 
-    aeolis/tests/test_model.py ........                                                                                                                                   [ 44%]
-    aeolis/tests/test_utils.py ........                                                                                                                                   [ 88%]
+    aeolis/tests/test_model.py ........                                                    [ 44%]
+    aeolis/tests/test_utils.py ........                                                    [ 88%]
     aeolis/tests/regression_tests/test_netCDF_file_content.py
 
+.. note:: 
 
-- Executing `pytest` on the command line starts the execution of a set of Python scripts that start with the word ```test_``` and are located in the aeolis/tests/ folder. These scripts are the software tests that are used to test the aeolis source code.
+   It takes approximately 2.5 minutes for all the test files to run. Once the tests finish running
 
-- Pytest is a Python package and testing framework that is used to run software tests. It is a third-party package that is not part of the Python standard library. It is installed as a dependency when you install aeolis. It provides a command line interface to run the tests. Executing `pytest` on the command line runs all the tests in the aeolis/tests/ folder.
 
-- It currently takes approximately 2.5 minutes for all the test scripts to run. Once the tests finish running, you will see the below output on the console.
+- Executing `pytest` on the command line starts the execution of a set of Python files which names start with *test_* and are located in the `aeolis/tests/`` folder. These files contain code that it is used to test the aeolis source code.
 
+- Pytest is a Python package and testing framework that is used to test software. It is a third-party package that it is installed when you install aeolis using the development depencies. 
+
+- Once the tests finish running, you will see the below output on the console.
 
 
 .. code-block:: console
 
     :~/aeolis-python$ pytest
-    ============================================================================ test session starts ============================================================================
+    ==================================== test session starts ===================================
     platform linux -- Python 3.8.10, pytest-7.2.2, pluggy-1.0.0
     rootdir: /~/aeolis-python
     plugins: cov-4.0.0
     collected 18 items
 
-    aeolis/tests/test_model.py ........                                                                                                                                   [ 44%]
-    aeolis/tests/test_utils.py ........                                                                                                                                   [ 88%]
-    aeolis/tests/regression_tests/test_netCDF_file_content.py .                                                                                                           [ 94%]
-    aeolis/tests/regression_tests/test_netCDF_file_creation.py .                                                                                                          [100%]
+    aeolis/tests/test_model.py ........                                                   [ 44%]
+    aeolis/tests/test_utils.py ........                                                   [ 88%]
+    aeolis/tests/regression_tests/test_netCDF_file_content.py .                           [ 94%]
+    aeolis/tests/regression_tests/test_netCDF_file_creation.py .                          [100%]
 
-    ============================================================================= warnings summary ==============================================================================
+    ====================================== warnings summary ==================================== 
     aeolis/tests/regression_tests/test_netCDF_file_content.py: 4527 warnings
     aeolis/tests/regression_tests/test_netCDF_file_creation.py: 4527 warnings
-    /~/venvs/aeolis-dev/lib/python3.8/site-packages/numpy/matrixlib/defmatrix.py:69: PendingDeprecationWarning: the matrix subclass is not the recommended way to 
-        represent matrices or deal with linear algebra (see https://docs.scipy.org/doc/numpy/user/numpy-for-matlab-users.html). 
+    /~/venvs/aeolis-dev/lib/python3.8/site-packages/numpy/matrixlib/defmatrix.py:69: 
+        PendingDeprecationWarning: the matrix subclass is not the recommended way to 
+        represent matrices or deal with linear algebra 
+        (see https://docs.scipy.org/doc/numpy/user/numpy-for-matlab-users.html). 
         Please adjust your code to use regular ndarray.
         return matrix(data, dtype=dtype, copy=False)
 
     -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-    =============================================================== 18 passed, 9054 warnings in 118.43s (0:01:58) ===============================================================
+   ======================= 18 passed, 9054 warnings in 118.43s (0:01:58) ======================
 
 
-- The test session section displays the status of the tests. It shows the number of tests that passed and the number of tests that failed. In the above example, all the tests passed.
+- The test **session section** displays the status of the tests. It shows the number of tests that passed and the number of tests that failed. In this example, all the tests passed. The **warnings summary** section displays the number of warnings that were generated during the execution of the tests. Warnings are a feature of Pytest that checks for any potential issues in the code, but do not affect the result of the tests.
 
+[Continue here]
 
-2. To know what a software test exactly is and what it contains, open one of the test scripts in aeolis/tests/ folder and browse through its contents. For example, open aeolis/tests/regression_tests/test_aeolis.py.
+1. To know what a software test exactly is and what it contains, open one of the test files in aeolis/tests/ folder and browse through its contents. For example, open aeolis/tests/regression_tests/test_aeolis.py.
 
    The test script is similar to a normal Python module with a collection of functions, classes, etc. The only difference is that the functions in the test script are prefixed with the word `test_`. This enables them to be discovered and run by pytest upon the execution of the command pytests on the command line. 
 
@@ -75,9 +83,9 @@ You will need the aeolis source code and the aeolis development environment set 
 Software tests in a nutshell
 ----------------------------
 
-Based on the observations after running the tests in aeolis and examining the test scripts, below are the key points to remember about software tests:
+Based on the observations after running the tests in aeolis and examining the test files, below are the key points to remember about software tests:
 
-- A software test is essentially a piece of code, such as Python scripts, that is executed to verify whether a target software, for example, aeolis, is functioning as expected or not.
+- A software test is essentially a piece of code, such as Python files, that is executed to verify whether a target software, for example, aeolis, is functioning as expected or not.
 
 - Tests produce a pass or fail status as the output to indicate whether the target software is working as expected or not.
 
