@@ -108,3 +108,4 @@ cython_debug/
 dev-notes/
 *.nc
 *.mat
+*.log

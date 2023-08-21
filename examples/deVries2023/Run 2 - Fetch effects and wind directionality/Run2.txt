@@ -26,7 +26,7 @@ threshold_mask          = None               					% Filename of ASCII file with 
 %% -------------------- [Time series *.txt] ------------------ %%
 tide_file 				= None  								% Filename of ASCII file with time series of water levels
 wave_file 				= None  								% Filename of ASCII file with time series of wave heights (and periods)
-wind_file 				= wind.txt								% Filename of ASCII file with time series of wind velocity and direction
+wind_file 				= wind0.txt								% Filename of ASCII file with time series of wind velocity and direction
 bedcomp_file 			= None                 					% Filename of ASCII file with initial bed composition
 supply_file             = supply_file.txt                                  % Filename of ASCII file with a manual definition of sediment supply (mainly used in academic cases)
 meteo_file              = None               					% Filename of ASCII file with time series of meteorlogical conditions

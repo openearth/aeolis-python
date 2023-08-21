@@ -2172,8 +2172,12 @@ class AeoLiS(IBmi):
 #                                           iteration=n,
 #                                           minvalue=Ct_i.min(),
 #                                           **logprops))
-
-                    Ct_i[~ix] *= 1. + Ct_i[ix].sum() / Ct_i[~ix].sum()
+                    
+                    if 0: #Ct_i[~ix].sum()>0.:
+                        # compensate the negative concentrations by distributing them over the positives.
+                        # I guess the idea is to conserve mass but it is not sure if this is needed, 
+                        # mass continuity in the system is guaranteed by exchange with bed.
+                        Ct_i[~ix] *= 1. + Ct_i[ix].sum() / Ct_i[~ix].sum()
                     Ct_i[ix] = 0.
 
                 # determine pickup and deficit for current fraction
@@ -2208,25 +2212,27 @@ class AeoLiS(IBmi):
 
             # throw warning if the maximum number of iterations was
             # reached
+            
             if np.any(ix):
                 logger.warn(format_log('Iteration not converged',
                                        nrcells=np.sum(ix),
                                        fraction=i,
                                        **logprops))
             
-            # check for unexpected negative values
-            if Ct_i.min() < 0:
-                logger.warn(format_log('Negative concentrations',
-                                       nrcells=np.sum(Ct_i<0.),
-                                       fraction=i,
-                                       minvalue=Ct_i.min(),
-                                       **logprops))
-            if w_i.min() < 0:
-                logger.warn(format_log('Negative weights',
-                                       nrcells=np.sum(w_i<0),
-                                       fraction=i,
-                                       minvalue=w_i.min(),
-                                       **logprops))
+            if 0: #let's disable these warnings
+                # check for unexpected negative values
+                if Ct_i.min() < 0:
+                    logger.warn(format_log('Negative concentrations',
+                                        nrcells=np.sum(Ct_i<0.),
+                                        fraction=i,
+                                        minvalue=Ct_i.min(),
+                                        **logprops))
+                if w_i.min() < 0:
+                    logger.warn(format_log('Negative weights',
+                                        nrcells=np.sum(w_i<0),
+                                        fraction=i,
+                                        minvalue=w_i.min(),
+                                        **logprops))
         # end loop over frations
 
         # check if there are any cells where the sum of all weights is

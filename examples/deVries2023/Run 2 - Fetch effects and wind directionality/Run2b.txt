@@ -7,7 +7,7 @@ visualization           = F
 %% -------------------- [Timing] ----------------------------- %%
 dt 						= 0.05   								% [s] Timeinterval between timesteps
 tstart 					= 0										% [s] Starting time of the simulation
-tstop 					= 360.000	    						% [s] End time of the simulation
+tstop 					= 180.000	    						% [s] End time of the simulation
 restart                 = None               					% [s] Interval for which to write restart files
 refdate               	= 2020-01-01 00:00 						% [-] Reference datetime in netCDF output
 
@@ -26,15 +26,15 @@ threshold_mask          = None               					% Filename of ASCII file with 
 %% -------------------- [Time series *.txt] ------------------ %%
 tide_file 				= None  								% Filename of ASCII file with time series of water levels
 wave_file 				= None  								% Filename of ASCII file with time series of wave heights (and periods)
-wind_file 				= wind_var.txt								% Filename of ASCII file with time series of wind velocity and direction
+wind_file 				= wind45.txt								% Filename of ASCII file with time series of wind velocity and direction
 bedcomp_file 			= None                 					% Filename of ASCII file with initial bed composition
 supply_file             = supply_file.txt                                  % Filename of ASCII file with a manual definition of sediment supply (mainly used in academic cases)
 meteo_file              = None               					% Filename of ASCII file with time series of meteorlogical conditions
 
 %% -------------------- [Output] ----------------------------- %%	
 output_times 			= 1.000 								% [s] Timeinterval [s] between *.nc output file
-output_file 			= None   		    					% [-] Name of the *.nc output file
-output_vars 			= zb uw u udir Cu Ct mass pickup uth q  % [-] List of output variables for in *.nc output file
+output_file 			= None      	    					% [-] Name of the *.nc output file
+output_vars 			= uw udir Cu Ct mass pickup uth q qs qn % [-] List of output variables for in *.nc output file
 
 %% -------------------- [Flags Processes] -------------------- %%
 process_wind           	= T               						% [T/F] Enable the process of wind 
