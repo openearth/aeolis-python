@@ -7,7 +7,7 @@ configuration file, or in case the model configuration file is absent,
 the default model configuration is used. The default model
 configuration is listed below.
 
-.. literalinclude:: ../aeolis/constants.py
+.. literalinclude::   ../../aeolis/constants.py
    :language: python
    :start-after: #: AeoLiS model default configuration
    :end-before: #: Merge initial and model state

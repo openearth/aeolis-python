@@ -1,8 +1,6 @@
 Source code 
 =========================
 
-Use of documentation
---------------------
 Here you can find the documentation with direct links to the actual AeoLiS code. You can click on the green [source] button next to the classes and modules below to access the specific source code. You can use ctr-f to look for a specific functionality or variable. It still may be a bit difficult to browse through, in addition you can find an overview of all module code `here <https://aeolis.readthedocs.io/en/latest/_modules/index.html>`_ 
 
 

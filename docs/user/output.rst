@@ -8,7 +8,7 @@ layers and/or grain size fractions.  All model state variables can be
 part of the model netCDF4 output. The current model state variables
 are listed below.
 
-.. literalinclude:: ../aeolis/constants.py
+.. literalinclude:: ../../aeolis/constants.py
    :language: python
    :start-after: #: Aeolis model state variables
    :end-before: #: AeoLiS model default configuration

@@ -219,7 +219,7 @@ without interaction with the bed.
 
 .. _fig-bed-interaction-parameter:
 
-.. figure:: images/bed_interaction_parameter.png
+.. figure:: /images/bed_interaction_parameter.png
    :width: 600px
    :align: center
 
@@ -289,7 +289,7 @@ sediment to the other layers.
 
 .. _fig-bedcomposition:
 
-.. figure:: images/bed_composition.png
+.. figure:: /images/bed_composition.png
    :align: center
 
    Schematic of bed composition discretisation and advection
@@ -407,7 +407,7 @@ evaporation subsequently dry the beach.
 
 .. _fig-moisture-processes:
 
-.. figure:: images/moisture_processes.jpg
+.. figure:: /images/moisture_processes.jpg
    :align: center
 
    Illustration of processes influencing the volumetric moisture content :math:`\theta` at the beach surface.
@@ -422,7 +422,7 @@ in the right column of :numref:`fig-moisture-scheme` and the groundwater dynamic
 
 .. _fig-moisture-scheme:
 
-.. figure:: images/moisture_scheme.jpg
+.. figure:: /images/moisture_scheme.jpg
    :width: 600px
    :align: center
 
