@@ -106,10 +106,10 @@ Cdk                     = 5.                 					% [-] Constant in DK formulati
 
 %% -------------------- [Solver] ----------------------------- %%
 T 						= 0.05									% [s] Adaptation time scale in advection equation
-solver 					= pieter								% [-] Numerical solver of advection scheme
+solver 					= trunk								% [-] Numerical solver of advection scheme
 CFL                     = 1.                 					% [-] CFL number to determine time step in explicit scheme
 accfac 					= 1.									% [-] Numerical acceleration factor
-scheme 					= euler_backward 						% [-] Name of numerical scheme (euler_forward, euler_backward or crank_nicolson)
+scheme 					= euler_forward 						% [-] Name of numerical scheme (euler_forward, euler_backward or crank_nicolson)
 max_error               = 0.000001               				% [-] Maximum error at which to quit iterative solution in implicit numerical schemes
 max_iter                = 1000               					% [-] Maximum number of iterations at which to quit iterative solution in implicit numerical schemes
 max_bedlevel_change 	= 999.									% [m] Maximum bedlevel change after one timestep. Next timestep dt will be modified (use 999. if not used)

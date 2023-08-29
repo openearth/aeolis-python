@@ -34,7 +34,7 @@ meteo_file              = None               					% Filename of ASCII file with 
 %% -------------------- [Output] ----------------------------- %%	
 output_times 			= 86400  								% [s] Timeinterval [s] between *.nc output file
 output_file 			= None   		    					% [-] Name of the *.nc output file
-output_vars 			= uw u udir Cu Ct mass q qs qn          % [-] List of output variables for in *.nc output file
+output_vars 			= uw u udir Cu Ct mass q qs qn q_sum q_avg          % [-] List of output variables for in *.nc output file
 
 %% -------------------- [Flags Processes] -------------------- %%
 process_wind           	= T               						% [T/F] Enable the process of wind 

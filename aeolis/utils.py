@@ -31,6 +31,7 @@ import numpy as np
 #import numba_scipy
 import scipy
 from numpy import ndarray
+from numba import njit
 
 
 def isiterable(x):
@@ -140,6 +141,46 @@ def interp_circular(x: ndarray, xp: ndarray, fp: ndarray, **kwargs) -> ndarray:
     x = xmin + np.mod(x - xmax - 1., xrng + 1.)
     return np.interp(x, xp, fp, **kwargs)
 
+
+def interp_circular_nearest(x: ndarray, xp: ndarray, fp: ndarray) -> ndarray:
+    '''One-dimensional linear interpolation to nearest neighbor.
+
+    Returns the one-dimensional piecewise linear interpolant to a
+    function with given values at discrete data-points. Values beyond
+    the limits of ``x`` are interpolated in circular manner. For
+    example, a value of ``x > x.max()`` evaluates as ``f(x-x.max())``
+    assuming that ``x.max() - x < x.max()``.
+
+    Parameters
+    ----------
+    x : array_like
+        The x-coordinates of the interpolated values.
+    xp : 1-D sequence of floats
+        The x-coordinates of the data points, must be increasing.
+    fp : 1-D sequence of floats
+        The y-coordinates of the data points, same length as ``xp``.
+    kwargs : dict
+        Keyword options to the :func:`numpy.interp` function
+
+    Returns
+    -------
+    y : {float, ndarray}
+        The interpolated values, same shape as ``x``.
+
+    Raises
+    ------
+    ValueError
+        If ``xp`` and ``fp`` have different length
+
+    '''
+    
+    xmin = xp.min()
+    xmax = xp.max()
+    xrng = xmax - xmin
+    
+    x = xmin + np.mod(x - xmax - 1., xrng + 1.)
+    
+    return fp[xp>=x][0]
 
 def normalize(x: ndarray, ref:ndarray = None, axis: int =0, fill: float =0.):
     '''Normalize array
@@ -374,6 +415,138 @@ def calc_grain_size(p, s, percent):
                 # Retrieve grain size characteristics based on interpolation
                 D[yi, xi] = f_linear(percent)
     return D
+
+@njit
+def sweep(Cu, mass, dt, Ts, ds, dn, us, un):
+
+    Ct = np.zeros(Cu.shape)
+    pickup = np.zeros(Cu.shape)
+    i=0
+    k=0
+
+
+   
+    # determine quadrants this code is currently only compatible with spacially non-varying winds
+    # in future code the 4 loops could be made paralell and wind domains spatially varying.    
+
+    if  np.all(un[:,:,0]>=0) & np.all(us[:,:,0]>=0): 
+        q=1   
+    elif np.all(un[:,:,0]>=0) & np.all(us[:,:,0]<0): 
+        q=2
+    elif np.all(un[:,:,0]<0) & np.all(us[:,:,0]<0): 
+        q=3
+    elif np.all(un[:,:,0]<0) & np.all(us[:,:,0]>=0): 
+        q=4
+    
+
+    # The while loop accounts for the circular boundary.
+    # The zero difference on the circular boundary will likely only work in theoretical cases.
+    # It works for now, it could be replaced by a max_error value instead.  
+    # This first loop is valid for the first quadrant
+    if q==1:
+        while k==0 or np.any(np.abs(Ct[0,:]-Ct[-1,:])!=0):
+            #circular boundary this loop stops if lateral boundaries are equal.
+            Ct[0,:]=Ct[-1,:]  
+            for n in range(1,Ct.shape[0]):
+                for s in range(1,Ct.shape[1]):
+                    # sweep from [0,0] corner through domain in positive direction. 
+                    Ct[n,s,i] = (+ Ct[n-1,s,i] * un[n,s,0] * ds[n,s] \
+                                    + Ct[n,s-1,i] * us[n,s,0] * dn[n,s] \
+                                    + Cu[n,s,i] * ds[n,s] * dn [n,s] / Ts  ) \
+                                    / ((us[n,s,0] * dn[n,s]) + (un[n,s,0] * ds[n,s]) + (ds[n,s] * dn [n,s] / Ts) )
+                    #calculate pickup                
+                    pickup[n,s,i] = (Cu[n,s,i]-Ct[n,s,i]) * dt/Ts
+                    #check for supply limitations and re-iterate concentration to account for supply limitations
+                    if pickup[n,s,i]>mass[n,s,0,i]:
+                        pickup[n,s,i] = mass[n,s,0,i]              
+                        Ct[n,s,i] = (+ Ct[n-1,s,i] * un[n,s,0] * ds[n,s] \
+                                        + Ct[n,s-1,i] * us[n,s,0] * dn[n,s] \
+                                        + pickup[n,s,i] * ds[n,s] * dn [n,s] / dt ) \
+                                        / ((us[n,s,0] * dn[n,s]) + (un[n,s,0] * ds[n,s]))
+            #count the amount of iterations
+            k+=1
+            #print(k)        
+        
+    if q==2:
+        while k==0 or np.any(np.abs(Ct[0,:]-Ct[-1,:])!=0):
+            #circular boundary this loop stops if lateral boundaries are equal.
+            Ct[0,:]=Ct[-1,:] 
+            for n in range(1,Ct.shape[0]):
+                #print(n)
+                for s in range(Ct.shape[1]-2,-1,-1):
+                    # sweep from [-1,0] corner through domain in positive direction. 
+                    Ct[n,s,i] = (+ Ct[n-1,s,i] * un[n,s,0] * ds[n,s] \
+                                    - Ct[n,s+1,i] * us[n,s,0] * dn[n,s] \
+                                    + Cu[n,s,i] * ds[n,s] * dn [n,s] / Ts  ) \
+                                    / (( - us[n,s,0] * dn[n,s]) + (un[n,s,0] * ds[n,s]) + (ds[n,s] * dn [n,s] / Ts) )
+                    #calculate pickup                
+                    pickup[n,s,i] = (Cu[n,s,i]-Ct[n,s,i]) * dt/Ts
+                    #check for supply limitations and re-iterate concentration to account for supply limitations
+                    if pickup[n,s,i]>mass[n,s,0,i]:
+                        pickup[n,s,i] = mass[n,s,0,i]              
+                        Ct[n,s,i] = (+ Ct[n-1,s,i] * un[n,s,0] * ds[n,s] \
+                                        - Ct[n,s+1,i] * us[n,s,0] * dn[n,s] \
+                                        + pickup[n,s,i] * ds[n,s] * dn [n,s] / dt ) \
+                                        / (( - us[n,s,0] * dn[n,s]) + (un[n,s,0] * ds[n,s]))
+            #count the amount of iterations
+            k+=1
+            #print(k)
+
+        
+    if q==3:
+        while k==0 or np.any(np.abs(Ct[0,:]-Ct[-1,:])!=0):
+            #circular boundary this loop stops if lateral boundaries are equal.
+            Ct[-1,:]=Ct[0,:] 
+            for n in range(Ct.shape[0]-2,-1,-1):
+                #print(n)
+                for s in range(Ct.shape[1]-2,-1,-1):
+                    # sweep from [-1,0] corner through domain in positive direction. 
+                    Ct[n,s,i] = (- Ct[n+1,s,i] * un[n,s,0] * ds[n,s] \
+                                    - Ct[n,s+1,i] * us[n,s,0] * dn[n,s] \
+                                    + Cu[n,s,i] * ds[n,s] * dn [n,s] / Ts  ) \
+                                    / (( - us[n,s,0] * dn[n,s]) + ( - un[n,s,0] * ds[n,s]) + (ds[n,s] * dn [n,s] / Ts) )
+                    #calculate pickup                
+                    pickup[n,s,i] = (Cu[n,s,i]-Ct[n,s,i]) * dt/Ts
+                    #check for supply limitations and re-iterate concentration to account for supply limitations
+                    if pickup[n,s,i]>mass[n,s,0,i]:
+                        pickup[n,s,i] = mass[n,s,0,i]              
+                        Ct[n,s,i] = (- Ct[n+1,s,i] * un[n,s,0] * ds[n,s] \
+                                        - Ct[n,s+1,i] * us[n,s,0] * dn[n,s] \
+                                        + pickup[n,s,i] * ds[n,s] * dn [n,s] / dt ) \
+                                        / (( - us[n,s,0] * dn[n,s]) + ( - un[n,s,0] * ds[n,s]))
+            #count the amount of iterations
+            k+=1
+            #print(k)
+
+        
+    if q==4:
+        while k==0 or np.any(np.abs(Ct[0,:]-Ct[-1,:])!=0):
+            #circular boundary this loop stops if lateral boundaries are equal.
+            Ct[-1,:]=Ct[0,:] 
+            for n in range(Ct.shape[0]-2,-1,-1):
+                #print(n)
+                for s in range(1,Ct.shape[1]):
+                    # sweep from [-1,0] corner through domain in positive direction. 
+                    Ct[n,s,i] = (- Ct[n+1,s,i] * un[n,s,0] * ds[n,s] \
+                                    + Ct[n,s-1,i] * us[n,s,0] * dn[n,s] \
+                                    + Cu[n,s,i] * ds[n,s] * dn [n,s] / Ts  ) \
+                                    / ((us[n,s,0] * dn[n,s]) + ( - un[n,s,0] * ds[n,s]) + (ds[n,s] * dn [n,s] / Ts) )
+                    #calculate pickup                
+                    pickup[n,s,i] = (Cu[n,s,i]-Ct[n,s,i]) * dt/Ts
+                    #check for supply limitations and re-iterate concentration to account for supply limitations
+                    if pickup[n,s,i]>mass[n,s,0,i]:
+                        pickup[n,s,i] = mass[n,s,0,i]              
+                        Ct[n,s,i] = (- Ct[n+1,s,i] * un[n,s,0] * ds[n,s] \
+                                        + Ct[n,s-1,i] * us[n,s,0] * dn[n,s] \
+                                        + pickup[n,s,i] * ds[n,s] * dn [n,s] / dt ) \
+                                        / ((us[n,s,0] * dn[n,s]) + (- un[n,s,0] * ds[n,s]))
+            #count the amount of iterations
+            k+=1
+            #print(k)
+
+
+    return Ct, pickup
+
 
 def calc_mean_grain_size(p, s):
     '''Calculate mean grain size based on mass in each fraction

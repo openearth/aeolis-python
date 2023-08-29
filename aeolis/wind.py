@@ -81,7 +81,7 @@ def initialize(s, p):
             s['shear'] = np.zeros(s['x'].shape)
 
     return s
-    
+
 def interpolate(s, p, t):
     '''Interpolate wind velocity and direction to current time step
 
@@ -114,9 +114,10 @@ def interpolate(s, p, t):
         uw_s = p['wind_file'][:,1]
         uw_d = p['wind_file'][:,2] / 180. * np.pi
 
-        s['uw'][:,:] = interp_circular(t, uw_t, uw_s)
-        s['udir'][:,:] = np.arctan2(interp_circular(t, uw_t, np.sin(uw_d)),
-                                    interp_circular(t, uw_t, np.cos(uw_d))) * 180. / np.pi
+        s['uw'][:,:] = interp_circular_nearest(t, uw_t, uw_s)
+        
+        s['udir'][:,:] = np.arctan2(interp_circular_nearest(t, uw_t, np.sin(uw_d)),
+                                    interp_circular_nearest(t, uw_t, np.cos(uw_d))) * 180. / np.pi
 
     s['uws'] = - s['uw'] * np.sin((-p['alfa'] + s['udir']) / 180. * np.pi)        # alfa [deg] is real world grid cell orientation (clockwise)
     s['uwn'] = - s['uw'] * np.cos((-p['alfa'] + s['udir']) / 180. * np.pi)
