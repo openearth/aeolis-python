@@ -15,6 +15,8 @@ like in coastal environments. Supply-limitations currently supported
 are soil moisture contents, sediment sorting and armouring, bed slope
 effects, air humidity and roughness elements.
 
+https://github.com/openearth/aeolis-python/assets/14054272/128684d6-73ac-4a5f-a186-51559679bd66
+
 ## Installation
 
 **Requirements:**
