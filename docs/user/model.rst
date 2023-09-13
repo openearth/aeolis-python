@@ -54,7 +54,7 @@ maximized by the available sediment in the bed :math:`m_{\mathrm{a}}`
 
 :math:`T` [s] represents an adaptation time scale that is assumed
 to be equal for both erosion and deposition. A time scale of 1 second
-is commonly used (:cite:`deVries2014a`).
+is commonly used :cite:`deVries2014a`.
 
 The saturated sediment concentration :math:`c_{\mathrm{sat}}` is computed using an
 empirical sediment transport formulation (e.g. :cite:`Bagnold1937a`):
@@ -110,7 +110,7 @@ The formulation for the equilibrium or saturated sediment
 concentration :math:`c_{\mathrm{sat}}` (Equation
 :eq:`equilibrium-conc`) is capable of dealing with variations in
 grain size through the variables :math:`u_{\mathrm{th}}`,
-:math:`d_{\mathrm{n}}` and :math:`C` (:cite:`Bagnold1937a`). However,
+:math:`d_{\mathrm{n}}` and :math:`C` :cite:`Bagnold1937a`. However,
 the transport formulation only describes the saturated sediment
 concentration assuming a fixed grain size distribution, but does not
 define how multiple fractions coexist in transport. If the saturated
@@ -219,7 +219,7 @@ without interaction with the bed.
 
 .. _fig-bed-interaction-parameter:
 
-.. figure:: images/bed_interaction_parameter.pdf
+.. figure:: /images/bed_interaction_parameter.png
    :width: 600px
    :align: center
 
@@ -289,8 +289,7 @@ sediment to the other layers.
 
 .. _fig-bedcomposition:
 
-.. figure:: images/bedcomposition.pdf
-   :width: 600px
+.. figure:: /images/bed_composition.png
    :align: center
 
    Schematic of bed composition discretisation and advection
@@ -332,7 +331,7 @@ Simulation of the Emergence of Non-erodible Roughness Elements
 Sediment sorting may lead to the emergence of non-erodible elements
 from the bed. Non-erodible roughness elements may shelter the erodible
 bed from wind erosion due to shear partitioning, resulting in a
-reduced sediment availability (:cite:`Raupach1993`). Therefore the
+reduced sediment availability :cite:`Raupach1993`. Therefore the
 equation of :cite:`Raupach1993` is implemented according to:
 
 .. math::
@@ -408,8 +407,7 @@ evaporation subsequently dry the beach.
 
 .. _fig-moisture-processes:
 
-.. figure:: images/moisture_processes.jpg
-   :width: 600px
+.. figure:: /images/moisture_processes.jpg
    :align: center
 
    Illustration of processes influencing the volumetric moisture content :math:`\theta` at the beach surface.
@@ -419,12 +417,12 @@ The resulting surface moisture is obtained by selecting the largest of the moist
 with the water balance approach (right column) and due to capillary rise from the groundwater table (left column). 
 The method is based on the assumption that the flow of soil water is small compared to the flow of groundwater 
 and that the beach groundwater dynamics primarily is controlled by the water level and wave action at 
-the seaward boundary (:cite:`Raubenheimer1999`, :cite:`Schmutz2014`). Thus, there is no feedback between the processes 
+the seaward boundary :cite:`Raubenheimer1999`, :cite:`Schmutz2014`. Thus, there is no feedback between the processes 
 in the right column of :numref:`fig-moisture-scheme` and the groundwater dynamics described in the left column.
 
 .. _fig-moisture-scheme:
 
-.. figure:: images/moisture_scheme.jpg
+.. figure:: /images/moisture_scheme.jpg
    :width: 600px
    :align: center
 
@@ -433,7 +431,7 @@ in the right column of :numref:`fig-moisture-scheme` and the groundwater dynamic
 
 Runup and wave setup
 ^^^^^^^^^^^^^^^^^^^^
-The runup height and wave setup are computed using the Stockdon formulas (:cite:`Stockdon2006`). 
+The runup height and wave setup are computed using the Stockdon formulas :cite:`Stockdon2006`. 
 Their parameterization differs depending on the dynamic beach steepness expressed through the Irribaren number:
 
 .. math::
@@ -474,9 +472,10 @@ and wave setup:
 
 Tide- and wave-induced groundwater variations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 Groundwater under sandy beaches can be considered as shallow aquifers, with only horizontal groundwater
-flow so that the pressure distribution is hydrostatic (:cite:`Baird1998`, :cite:`Brakenhoff2019`, :cite:`Nielsen1990`, :cite:`Raubenheimer1999`).
-The cross-shore flow dominates temporal variations of groundwater levels. Alongshore, groundwater table variations are typically small (:cite:`Schmutz2014`).
+flow so that the pressure distribution is hydrostatic :cite:`Baird1998,Brakenhoff2019,Nielsen1990,Raubenheimer1999`.
+The cross-shore flow dominates temporal variations of groundwater levels. Alongshore, groundwater table variations are typically small :cite:`Schmutz2014`.
 Although the surface moisture model can be extended over a two-dimensional grid, the groundwater simulations are performed for 1D transects cross-shore
 to avoid numerical instabilities at the seaward boundary and reduce computational time.
 
@@ -502,7 +501,7 @@ and the continuity equation (see e.g., :cite:`Nielsen2009`),
 
 where :math:`t` is time. 
 
-The groundwater overheight due to runup, :math:`{U_l}`, is computed by (:cite:`Kang1994`, :cite:`Nielsen1988`),
+The groundwater overheight due to runup, :math:`{U_l}`, is computed by :cite:`Kang1994,Nielsen1988`,
 
 .. math::
    :label: gw-runup
@@ -531,7 +530,7 @@ Substitution of :math:`u` (Equation :eq:`gw-discharge`) in the continuity equati
 Capillary rise
 ^^^^^^^^^^^^^^
 Soil water retention (SWR) functions describe the surface moisture due to capillary transport 
-of water from the groundwater table (:cite:`VanGenuchten1980`):
+of water from the groundwater table :cite:`VanGenuchten1980`:
 
 .. math::
    :label: vangenuchten
@@ -548,7 +547,7 @@ wetting conditions, i.e., including the
 effect of hysteresis. The moisture contents computed with drying and wetting SWR functions are denoted :math:`{\theta ^d}(h)` and :math:`{\theta ^w}(h)`, respectively. 
 When moving between wetting and drying conditions, the soil moisture content follows an intermediate 
 retention curve called a scanning curve. The drying scanning curves are scaled from the main 
-drying curve and wetting scanning curves from the main wetting curve. The drying scanning curve is then obtained from (:cite:`Mualem1974`):
+drying curve and wetting scanning curves from the main wetting curve. The drying scanning curve is then obtained from :cite:`Mualem1974`:
 
 .. math::
    :label: mualem-drying
@@ -557,7 +556,7 @@ drying curve and wetting scanning curves from the main wetting curve. The drying
 
 where :math:`{h_\Delta}` is the groundwater table depth at the reversal on the wetting curve. 
 
-The wetting scanning curve is obtained from (:cite:`Mualem1974`):
+The wetting scanning curve is obtained from :cite:`Mualem1974`:
 
 .. math::
    :label: mualem-wetting
@@ -578,7 +577,7 @@ table is about 100 cm below the soil surface, :math:`{\theta _{fc}} = {\theta ^d
 Infiltration is represented by an
 exponential decay function that is governed by a drying time scale
 :math:`T_{\mathrm{dry}}`. Exploratory model runs of the unsaturated soil with the HYDRUS1D
-(:cite:`Simunek1998`) hydrology model show that the increase of the
+:cite:`Simunek1998` hydrology model show that the increase of the
 volumetric water content to saturation is almost instantaneous with
 rising tide. The drying of the beach surface through infiltration
 shows an exponential decay. In order to capture this behavior the
@@ -621,13 +620,13 @@ A water balance approach accounts for the effect of precipitation and evaporatio
 where :math:`P` is the precipitation, :math:`E` is the evaporation, and :math:`\Delta z` is the thickness of the surface layer.
 
 Evaporation is simulated using an adapted version
-of the Penman-Monteith equation (:cite:`Shuttleworth1993`) that is
+of the Penman-Monteith equation :cite:`Shuttleworth1993` that is
 governed by meteorological time series of solar radiation, temperature
 and humidity.
 
 :math:`E_{\mathrm{v}}` [m/s] is the evaporation rate that is
 implemented through an adapted version of the Penman equation
-(:cite:`Shuttleworth1993`):
+:cite:`Shuttleworth1993`:
 
 .. math::
   :label: apx-penman
@@ -704,8 +703,8 @@ where :math:`\rho_{\mathrm{w}}` [:math:`\mathrm{kg/m^3}`] and
 :math:`\rho_{\mathrm{p}}` [:math:`\mathrm{kg/m^3}`] are the water and particle
 density respectively and :math:`p` [-] is the porosity. Values for
 :math:`p_{\mathrm{g}}` smaller than 0.005 do not affect the shear velocity
-threshold (:cite:`Pye1990`). Values larger than 0.064 (or 10\%
-volumetric content) cease transport (:cite:`DelgadoFernandez2010`),
+threshold :cite:`Pye1990`. Values larger than 0.064 (or 10\%
+volumetric content) cease transport :cite:`DelgadoFernandez2010`,
 which is implemented as an infinite shear velocity threshold.
 
 

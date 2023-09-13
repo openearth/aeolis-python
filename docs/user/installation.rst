@@ -12,6 +12,17 @@ Requirements
 - pip 22.0 or newer
 - netCDF4
 
+Dependencies
+""""""""""""
+
+- docopt==0.6.1
+- bmi-python
+- netCDF4
+- scipy
+- numpy<1.24,>=1.18
+- matplotlib
+- numba
+
 Installing from PyPI
 ---------------------
 

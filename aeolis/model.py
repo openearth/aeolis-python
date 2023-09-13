@@ -69,7 +69,7 @@ class StreamFormatter(logging.Formatter):
     """A formater for log messages"""
 
     def format(self, record) -> str:
-        """Formats log messages for consult standard output"""
+        """Formats log messages for console standard output"""
 
         if record.levelname == 'INFO':
             return record.getMessage()

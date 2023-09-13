@@ -27,31 +27,38 @@ Contents
    :caption: User Documentation
    :maxdepth: 2
 
-   installation
-   whatsnew
-   model
-   implementation
-   defaults
-   inputfiles
-   output
-   sourcecode
-   bibliography
-   
+   user/installation
+   user/whatsnew
+   user/model
+   user/implementation
+   user/defaults
+   user/inputfiles
+   user/output
+   user/sourcecode
+   user/bibliography
+
+.. toctree:: 
+   :caption: Tutorials
+   :maxdepth: 2
+
+   tutorials/sandmotor
+   tutorials/2D-parabolic
+
 .. toctree::
    :caption: Developer Documentation
    :maxdepth: 2
 
    developer/quickstart
+   developer/testing-introduction 
    developer/unit-testing
-   ci-tests   
 
 .. toctree::
    :caption: Current Development
    :maxdepth: 2
 
-   modularity
-   test-coverage 
-   domain_decomposition
+   developer/modularity
+   developer/test-coverage 
+   developer/domain-decomposition
 
 
 Acknowledgements

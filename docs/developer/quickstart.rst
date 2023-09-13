@@ -2,14 +2,14 @@ Quick start
 =============
 
 This section is for developers and contributors of AeoLiS. It describes how to get started as a developer with the intention to improve or extend the source code of AeoLiS. 
-If you are a user, please see the :ref:`user documentation <installation>` installed.
+If you are a user, please see the :ref:`user documentation <installation>` instead.
 
 
-Workflow
+Development workflow
 -----------------------
 
 AeoLiS is developed in a collaborative way. Therefore, it is important to follow the workflow described below as closely as possibble to ensure that the code is always in a working state and that the changes are properly documented. 
-Details on how to propose and psuh changes to the source code are documented in our `contributing guidelines <https://github.com/openearth/aeolis-python/blob/main/CONTRIBUTING.md>`_. This section provides a quick reference.
+Details on how to propose and push changes to the source code are documented in our `contributing guidelines <https://github.com/openearth/aeolis-python/blob/main/CONTRIBUTING.md>`_. This section provides a quick reference.
 
 .. figure:: ../images/aeolis-workflow.png
    :align: center
