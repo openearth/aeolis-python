@@ -9,6 +9,37 @@
 What's New
 ==========
 
+v2.1.2 (July 2023)
+------------------
+
+Improvements
+^^^^^^^^^^^^
+* New unit test and integration tests procedures (Nike Agrawal, Manuel Garcia)
+
+Bug fixes
+^^^^^^^^^
+*  Updated DOI for referencing (Sierd de Vries)
+
+Documentation
+^^^^^^^^^^^^^
+* Updated citation file (Manuel Garcia)
+* Advanced description on steps to create release (Manuel Garcia)
+
+What's Changed
+^^^^^^^^^^^^^^
+* Add Github action for running tests automatically by @niketagrawal in https://github.com/openearth/aeolis-python/pull/111
+* Integration test to verify the model's expected result for 1D and 2D base cases by @niketagrawal in https://github.com/openearth/aeolis-python/pull/105
+* add release guidelines by @manuGil in https://github.com/openearth/aeolis-python/pull/109
+* Unit-Tests for Model.py by @manuGil in https://github.com/openearth/aeolis-python/pull/112
+* Update citation by @manuGil in https://github.com/openearth/aeolis-python/pull/117
+* Moisture bug fix by @CarolineHalllin in https://github.com/openearth/aeolis-python/pull/116
+* Implementation grain size dependent Bagnold equation by @christavanijzendoorn in https://github.com/openearth/aeolis-python/pull/122
+* Implementing TOML file for packaging by @manuGil in https://github.com/openearth/aeolis-python/pull/125
+* Patch/deprications by @manuGil in https://github.com/openearth/aeolis-python/pull/128
+* loop over fractions replaced by numba enhanced function by @Sierd in https://github.com/openearth/aeolis-python/pull/119
+* Docs: Add developer documentation and fix bugs by @niketagrawal in https://github.com/openearth/aeolis-python/pull/134
+
+**Full Changelog**: https://github.com/openearth/aeolis-python/compare/v2.1.1...v2.1.2
 
 v2.1.1 (March 2023)
 -------------------
