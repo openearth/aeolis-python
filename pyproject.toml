@@ -10,7 +10,7 @@ exclude = [
 
 [project]
 name = "AeoLiS"
-version = "2.1.1"
+version = "2.1.2"
 authors = [
   { name="Sierd de Vries", email="sierd.devries@tudelft.nl" },
 ]
@@ -52,7 +52,7 @@ classifiers = [
   dev = [ 
     "pytest",
     "pytest-cov",
-    "Sphinx",
+    "Sphinx<7",
     "sphinx-rtd-theme",
     "sphinxcontrib-bibtex>=2.5.0",
     "sphinx-copybutton==0.5.2",
