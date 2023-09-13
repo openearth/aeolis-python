@@ -27,6 +27,7 @@ from __future__ import absolute_import, division
 
 import logging
 import numpy as np
+from typing import Tuple, Dict, List
 
 # package modules
 from aeolis.utils import *
@@ -34,7 +35,7 @@ from aeolis.utils import *
 # initialize logger
 logger = logging.getLogger(__name__)
 
-def initialize(s:dict, p:dict) -> tuple[dict, dict]:
+def initialize(s:Dict, p:Dict) -> Tuple[Dict, Dict]:
     '''
     Initializes a grid and a checks if the grid is properly defined based on the x and y input files.
     Grid distance and grid surface are also initialized, and then broadcasted to the s-dictionary for 
