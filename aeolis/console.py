@@ -13,94 +13,88 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with AeoLiS.  If not, see <http://www.gnu.org/licenses/>.
 
-AeoLiS  Copyright (C) 2015 Bas Hoonhout
+AeoLiS  Copyright (C) 2023 AeoLiS Development Team
 
-bas.hoonhout@deltares.nl         b.m.hoonhout@tudelft.nl
-Deltares                         Delft University of Technology
-Unit of Hydraulic Engineering    Faculty of Civil Engineering and Geosciences
-Boussinesqweg 1                  Stevinweg 1
-2629 HVDelft                     2628CN Delft
-The Netherlands                  The Netherlands
+Delft University of Technology
+Faculty of Civil Engineering and Geosciences
+Stevinweg 1
+2628CN Delft
+The Netherlands
 
 '''
-
 
 from __future__ import absolute_import, division
 
 import os
-import docopt
 import logging
 import numpy as np
 from aeolis.model import AeoLiSRunner, WindGenerator
 
+import typer
+from typing import Annotated, Optional
 
-#class StreamFormatter(logging.Formatter):
-#
-#    def format(self, record):
-#        if record.levelname == 'INFO':
-#            return record.getMessage()
-#        else:
-#            return '%s: %s' % (record.levelname, record.getMessage())
+app = typer.Typer(add_completion=False, pretty_exceptions_enable=True)
 
 
-def aeolis():
-    '''aeolis : a process-based model for simulating supply-limited aeolian sediment transport
+@app.command(help='A process-based model for simulating supply-limited aeolian sediment transport.')
+def aeolis(
+    config: Annotated[str, typer.Argument(
+        help= 'configuration file'
+    )], 
+    callback: Annotated[Optional[str], typer.Option(
+        help='reference to callback function (e.g. example/callback.py:callback)'
+    )]=None,
 
-    Usage:
-        aeolis <config> [options]
+    restart: Annotated[Optional[str], typer.Option(
+         help="model restart file"
+    )]=None,
 
-    Positional arguments:
-        config             configuration file
-
-    Options:
-        -h, --help         show this help message and exit
-        --callback=FUNC    reference to callback function (e.g. example/callback.py:callback)
-        --restart=FILE     model restart file
-        --verbose=LEVEL    logging verbosity [default: 20]
-        --debug            write debug logs
-
-    '''
+    verbose: Annotated[Optional[int], typer.Option(
+         help="logging verbosity"
+    )]=20,
+    debug: Annotated[bool, typer.Option("--debug",
+         help="write debug logs",
+    )]=False
+):
 
     print_license()
-
-    arguments = docopt.docopt(aeolis.__doc__)
 
     logger = logging.getLogger('aeolis')
 
     # start model
-    model = AeoLiSRunner(configfile=arguments['<config>'])
-    model.run(callback=arguments['--callback'],
-              restartfile=arguments['--restart'])
+    model = AeoLiSRunner(configfile=config)
+    model.run(callback=callback,
+              restartfile=restart)
 
 
-def wind():
-    '''aeolis-wind : a wind time series generation tool for the aeolis model
-
-    Usage:
-        aeolis-wind <file> [--mean=MEAN] [--max=MAX] [--duration=DURATION] [--timestep=TIMESTEP]
-
-    Positional arguments:
-        file               output file
-
-    Options:
-        -h, --help           show this help message and exit
-        --mean=MEAN          mean wind speed [default: 10]
-        --max=MAX            maximum wind speed [default: 30]
-        --duration=DURATION  duration of time series [default: 3600]
-        --timestep=TIMESTEP  timestep of time series [default: 60]
-
-    '''
+@app.command(name="aeolis-wind",
+             help="A wind time series generation tool for the aeolis model.")
+def wind(
+    file: Annotated[str, typer.Argument(
+        help="output file"
+    )],
+    mean: Annotated[float, typer.Option(
+        help="mean wind speed"
+    )]=10,
+    max: Annotated[float, typer.Option(
+        help="maximum wind speed"
+    )]=30,
+    duration: Annotated[int, typer.Option(
+        help="duration of time series"
+    )]=3600,
+    timestep: Annotated[int, typer.Option(
+        help="timestep of time series"
+    )]=60
+):
 
     print_license()
 
-    arguments = docopt.docopt(wind.__doc__)
-
     # create random wind time series
-    generator = WindGenerator(mean_speed=float(arguments['--mean']),
-                              max_speed=float(arguments['--max']),
-                              dt=float(arguments['--timestep']))
-    generator.generate(duration=float(arguments['--duration']))
-    generator.write_time_series(arguments['<file>'])
+    generator = WindGenerator(mean_speed=mean,
+                              max_speed=max,
+                              dt=timestep)
+    generator.generate(duration=duration)
+    generator.write_time_series(file)
 
     u = generator.get_time_series()[1]
 
@@ -110,8 +104,30 @@ def wind():
     print(fmt % ('max', np.max(u)))
 
 
+@app.command(name="aeolis-examples",
+             help="Sets up data for some examples of aeolis model.")
+def examples(
+    dir: Annotated[str, typer.Option(
+        help="path to directory for the examples' data. Defaults to current directory."
+    )]='./'
+):
+
+    print_license()
+
+    current_path = os.getcwd()
+    destination_path = os.path.join(current_path, dir)
+
+    try:
+        os.makedirs(destination_path, exist_ok=False)
+    except OSError:
+        print("Directory %s already exists." % destination_path)
+
+    # TODO: copy example files to destination_path
+
+    
+
 def print_license():
-    print('AeoLiS  Copyright (C) 2015  Bas Hoonhout')
+    print('AeoLiS  Copyright (c) 2023  AeoLiS Development Team')
     print('This program comes with ABSOLUTELY NO WARRANTY.')
     print('This is free software, and you are welcome to redistribute it')
     print('under certain conditions; See LICENSE.txt for details.')
@@ -119,4 +135,4 @@ def print_license():
 
 
 if __name__ == '__main__':
-    aeolis()
+    app()
