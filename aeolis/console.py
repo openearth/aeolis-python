@@ -94,9 +94,19 @@ def examples():
     destination_path = os.path.join(arguments["<directory>"], 'aeolis-examples')
     # Path to examples in installed aeolis package directory
     source_path = os.path.join(os.path.dirname(aeolis_pkg.__file__), 'examples')
+    
+    # Examples that will be included copied to destination path
+    _examples = [
+        '2D/Parabolic_dune',
+        'sandengine_small_grids'
+    ]
     # Copy examples to destination path. Creates destination path if it does not exist.
-    shutil.copytree(source_path, destination_path)
-
+    for _example in _examples:
+        example_path = os.path.join(source_path, _example)
+        target_path = os.path.join(destination_path, _example)
+        shutil.copytree(example_path, target_path)
+    
+    
     print("Done. Examples copied to: \n %s" % destination_path)
 
 
