@@ -31,6 +31,7 @@ requires-python = ">=3.8, <4"
 license = {file = "LICENSE.txt"}
 keywords = ["aeolian sediment", "transport", "model", "deltares", "tudelft"]
 dependencies = [
+  "docopt",
   "typer",
   "bmi-python",
   "netCDF4",
@@ -71,6 +72,7 @@ classifiers = [
 aeolis = "aeolis.console:aeolis"
 aeolis-wind = "aeolis.console:wind"
 aeolis-examples = "aeolis.console:examples"
+new-cli = "aeolis.console_typer:app"
 
 [project.urls]
 Homepage = "https://github.com/openearth/aeolis-python"
