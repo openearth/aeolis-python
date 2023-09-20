@@ -115,16 +115,22 @@ def examples(
     print_license()
 
     current_path = os.getcwd()
-    destination_path = os.path.join(current_path, dir)
+
+    if dir == './':
+        destination_path = current_path
+    else:    
+        destination_path = os.path.join(current_path, dir)
 
     try:
         os.makedirs(destination_path, exist_ok=False)
     except OSError:
         print("Directory %s already exists." % destination_path)
 
+    with open(os.path.join(destination_path, '.txt'), 'w') as f:
+        f.write('it works')
+
     # TODO: copy example files to destination_path
 
-    
 
 def print_license():
     print('AeoLiS  Copyright (c) 2023  AeoLiS Development Team')
@@ -132,7 +138,6 @@ def print_license():
     print('This is free software, and you are welcome to redistribute it')
     print('under certain conditions; See LICENSE.txt for details.')
     print('')
-
-
 if __name__ == '__main__':
+    
     app()
