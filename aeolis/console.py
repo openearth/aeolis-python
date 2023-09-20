@@ -30,9 +30,10 @@ from __future__ import absolute_import, division
 import os
 import docopt
 import logging
+import shutil
+import aeolis as aeolis_pkg
 import numpy as np
 from aeolis.model import AeoLiSRunner, WindGenerator
-
 
 #class StreamFormatter(logging.Formatter):
 #
@@ -73,6 +74,42 @@ def aeolis():
               restartfile=arguments['--restart'])
 
 
+def examples():
+    '''aeolis-examples : Sets up data examples for aeolis model.
+
+    Usage:
+        aeolis-examples <directory> 
+
+    Positional arguments:
+        directory           directory for the examples' data. It will be 
+                            created if it does not exist.
+
+    Options:
+        -h, --help          show this help message and exit
+    '''
+
+    print_license()
+    arguments = docopt.docopt(examples.__doc__)
+
+    destination_path = os.path.join(arguments["<directory>"], 'aeolis-examples')
+    # Path to examples in installed aeolis package directory
+    source_path = os.path.join(os.path.dirname(aeolis_pkg.__file__), 'examples')
+    
+    # Examples that will be included copied to destination path
+    _examples = [
+        '2D/Parabolic_dune',
+        'sandengine_small_grids'
+    ]
+    # Copy examples to destination path. Creates destination path if it does not exist.
+    for _example in _examples:
+        example_path = os.path.join(source_path, _example)
+        target_path = os.path.join(destination_path, _example)
+        shutil.copytree(example_path, target_path)
+    
+    
+    print("Done. Examples copied to: \n %s" % destination_path)
+
+
 def wind():
     '''aeolis-wind : a wind time series generation tool for the aeolis model
 
@@ -109,14 +146,12 @@ def wind():
     print(fmt % ('mean', np.mean(u)))
     print(fmt % ('max', np.max(u)))
 
-
 def print_license():
-    print('AeoLiS  Copyright (C) 2015  Bas Hoonhout')
+    print('AeoLiS  Copyright (C) AeoLiS Development Team')
     print('This program comes with ABSOLUTELY NO WARRANTY.')
     print('This is free software, and you are welcome to redistribute it')
     print('under certain conditions; See LICENSE.txt for details.')
     print('')
-
 
 if __name__ == '__main__':
     aeolis()
