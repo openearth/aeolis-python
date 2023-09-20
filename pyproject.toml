@@ -2,13 +2,18 @@
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 [tool.hatch.build]
-include =[
-]
 exclude = [
   "/docs", 
   "/notebooks",
   "/aeolis/tests",
 ]
+
+[tool.hatch.build.targets.wheel]
+only-include = ["aeolis", "examples"]
+
+[tool.hatch.build.targets.wheel.sources]
+"aeolis" = "aeolis"
+"examples" = "aeolis/examples"
 
 [project]
 name = "aeolis"
@@ -26,7 +31,7 @@ requires-python = ">=3.8, <4"
 license = {file = "LICENSE.txt"}
 keywords = ["aeolian sediment", "transport", "model", "deltares", "tudelft"]
 dependencies = [
-  "docopt==0.6.1",
+  "typer",
   "bmi-python",
   "netCDF4",
   "scipy",
