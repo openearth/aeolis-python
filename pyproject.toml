@@ -2,6 +2,8 @@
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 [tool.hatch.build]
+include =[
+]
 exclude = [
   "/docs", 
   "/notebooks",
@@ -63,6 +65,7 @@ classifiers = [
 [project.scripts]
 aeolis = "aeolis.console:aeolis"
 aeolis-wind = "aeolis.console:wind"
+aeolis-examples = "aeolis.console:examples"
 
 [project.urls]
 Homepage = "https://github.com/openearth/aeolis-python"
