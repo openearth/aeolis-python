@@ -56,7 +56,6 @@ process_vegetation      = T              						% [T/F] Enable the process of veg
 process_fences          = F              						% [T/F] Enable the process of sand fencing
 process_dune_erosion    = F              						% [T/F] Enable the process of wave-driven dune erosion
 process_foredune		= T              						% [T/F] Enable the process of vegetation foredune
-parallell               = T
 
 %% -------------------- [Flags Threshold] -------------------- %%
 th_grainsize            = T               						% [T/F] Enable wind velocity threshold based on grainsize
