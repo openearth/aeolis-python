@@ -7,11 +7,12 @@ exclude = [
   "/notebooks",
   "/aeolis/tests",
   "/aeolis/examples/1D",
+  "/aeolis/examples/grainsizevariations", 
 ]
 
 [project]
 name = "aeolis"
-version = "2.1.3"
+version = "2.2.0"
 authors = [
   { name="Sierd de Vries", email="sierd.devries@tudelft.nl" },
 ]
@@ -26,7 +27,6 @@ license = {file = "LICENSE.txt"}
 keywords = ["aeolian sediment", "transport", "model", "deltares", "tudelft"]
 dependencies = [
   "docopt",
-  "typer",
   "bmi-python",
   "netCDF4",
   "scipy",
