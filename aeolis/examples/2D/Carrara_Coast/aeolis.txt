@@ -1,0 +1,45 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% AeoLiS model configuration                                       %%
+%% Date: 2020-03-20 14:11:09                                        %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%% File names
+       xgrid_file = x.txt
+       ygrid_file = y.txt
+         bed_file = z.txt
+  	      ne_file = street.txt
+        wind_file = wind.txt
+        tide_file = tide.txt
+
+%%% Time variables	  
+               dt = 600
+           tstart = 0
+            tstop = 2588400
+
+%%% Grain size distribution and layers			 
+       grain_dist = 0.05 0.05 0.05 0.05 0.10 0.2 0.36 0.14
+       grain_size = grain_sample1.txt 
+  layer_thickness = 0.01
+          nlayers = 10
+
+ method_grainspeed= windspeed
+
+%%% Numerical variables
+           scheme = euler_backward
+	solver = trunk
+process_avalanche = 0
+  wind_convention = nautical
+ boundary_onshore = noflux
+boundary_offshore = noflux
+process_shear = F
+process_runup = F
+ k = 0.001
+th_moisture     = F
+th_roughness = F
+wind_convention = cartesian
+
+
+%%% Output variables
+     output_times = 3600
+     output_types = avg
+      output_vars = zb w w_bed uw uws mass pickup q qs uth Cu tau 
