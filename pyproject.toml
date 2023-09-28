@@ -27,6 +27,7 @@ license = {file = "LICENSE.txt"}
 keywords = ["aeolian sediment", "transport", "model", "deltares", "tudelft"]
 dependencies = [
   "docopt",
+  "typer",
   "bmi-python",
   "netCDF4",
   "scipy",
