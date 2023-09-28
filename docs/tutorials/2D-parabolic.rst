@@ -1,4 +1,4 @@
-2D parabolic dune model
+Parabolic dune model
 ========================
 
 
