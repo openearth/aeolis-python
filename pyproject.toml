@@ -6,14 +6,8 @@ exclude = [
   "/docs", 
   "/notebooks",
   "/aeolis/tests",
+  "/aeolis/examples/1D",
 ]
-
-[tool.hatch.build.targets.wheel]
-only-include = ["aeolis", "examples"]
-
-[tool.hatch.build.targets.wheel.sources]
-"aeolis" = "aeolis"
-"examples" = "aeolis/examples"
 
 [project]
 name = "aeolis"
