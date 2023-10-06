@@ -115,7 +115,7 @@ class TestAeolisCommandLineInterface(unittest.TestCase):
                 self.assertIn(
                     (
                         "Error: You entered an incorrect command.\n To run a"
-                        " model, type: aeolis run <path_to_configfile>\n From"
+                        " model, type: `aeolis run <path_to_configfile>`\n From"
                         " aeolis v2.2.0 onwards, the command run needs to be"
                         " passed to run a model.\n"
                     ),

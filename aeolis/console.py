@@ -160,8 +160,8 @@ def start_aeolis_app():
     if len(sys.argv) == 2 and os.path.isfile(sys.argv[1]):
         print(
             "Error: You entered an incorrect command.\n To run a model, type:"
-            " aeolis run <path_to_configfile>\n From aeolis v2.2.0 onwards, the"
-            " command run needs to be passed to run a model.\n"
+            " `aeolis run <path_to_configfile>`\n From aeolis v2.2.0 onwards,"
+            " the command run needs to be passed to run a model.\n"
         )
         sys.exit(1)
     else:
