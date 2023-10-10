@@ -29,12 +29,13 @@ import os
 import sys
 import logging
 import shutil
-import numpy as np
-import aeolis as aeolis_pkg
-from aeolis.model import AeoLiSRunner, WindGenerator
 
+import numpy as np
 import typer
 from typing import Annotated, Optional
+
+import aeolis as aeolis_pkg
+from aeolis.model import AeoLiSRunner, WindGenerator
 
 
 aeolis_app = typer.Typer(
