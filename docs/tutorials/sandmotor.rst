@@ -1,4 +1,4 @@
-SandMotor model
+SandMotor model (Tutorial under construction)
 ================
 
 
