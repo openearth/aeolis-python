@@ -27,21 +27,21 @@ import filecmp
 
 from typer.testing import CliRunner
 
-from aeolis.console import aeolis_app, start_aeolis_app
+from aeolis.console import aeolis_app, start_aeolis_app, start_aeolis_wind_app
 
 runner = CliRunner()
 
 
 class TestAeolisCommandLineInterface(unittest.TestCase):
-    def test_help_command(self):
+    def test_aeolis_help(self):
         result = runner.invoke(aeolis_app, ["--help"])
         self.assertEqual(result.exit_code, 0)
 
-    def test_run_help_command(self):
+    def test_aeolis_run_help(self):
         result = runner.invoke(aeolis_app, ["run", "--help"])
         self.assertEqual(result.exit_code, 0)
 
-    def test_run_command(self):
+    def test_aeolis_run(self):
         """
         Test if executing `aeolis run <path_to_configfile>` on the command line runs the simulaition successfully.
 
@@ -75,7 +75,7 @@ class TestAeolisCommandLineInterface(unittest.TestCase):
         os.remove(path_model_dir + "/aeolis.log")
         os.remove(path_model_dir + "/aeolis.nc")
 
-    def test_examples_command(self):
+    def test_aeolis_examples(self):
         """
         Test if executing `aeolis examples <path_to_directory>` on the command line creates a directory named 'aeolis-examples' in <path_to_directory> and copies aeolis/examples/sandengine_small_grids and aeolis/examples/2D/Parabolic_dune directories into it.
         """
@@ -143,7 +143,7 @@ class TestAeolisCommandLineInterface(unittest.TestCase):
         # Do cleanup: delete the aeolis-examples directory
         shutil.rmtree("aeolis-examples")
 
-    def test_missing_run_command(self):
+    def test_deprecation_message_aeolis_run(self):
         """
         Test if executing `aeolis <path_to_configfile>` on the command line produces an error message telling the user to use `aeolis run <path_to_configfile>` instead.
         """
@@ -168,6 +168,37 @@ class TestAeolisCommandLineInterface(unittest.TestCase):
             "Usage of the command line syntax `aeolis <path_to_aeolis.txt>` has"
             " been deprecated from v3.0.0 onwards.\n\n"
             "To run a model, use the syntax `aeolis run <path_to_aeolis.txt>`"
+        )
+
+        self.assertIn(expected_error_text, output_error_text)
+
+        mock_exit.assert_called_with(1)
+
+    def test_deprecation_message_aeolis_wind(self):
+        """
+        Test if executing `aeolis-wind <path_to_wind.txt>` on the command line produces an error message telling the user to use `aeolis wind <path_to_wind.txt>` instead.
+        """
+        path_model_dir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "regression_tests",
+            "inputs",
+            "1D",
+            "case1_small_waves",
+        )
+
+        path_wind_config_file = os.path.join(path_model_dir, "wind.txt")
+
+        # Testcase: Create two dummy command line arguments with the first argument as 'aeolis' and second as the path to the model configuration file. Invoking the aeolis CLI with these two arguments is expected to fail and produce an error message instructing the user to use `aeolis run <path_to_configfile>` instead.
+        with patch("sys.argv", ["aeolis-wind", path_wind_config_file]):
+            with patch("sys.exit") as mock_exit:
+                with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+                    start_aeolis_wind_app()
+                    output_error_text = mock_stdout.getvalue().strip()
+
+        expected_error_text = (
+            "Usage of the command line syntax `aeolis-wind <path_to_wind.txt>`"
+            " has been deprecated from v3.0.0 onwards.\n\nTo run the wind"
+            " module, use the syntax `aeolis wind <path_to_wind.txt>`"
         )
 
         self.assertIn(expected_error_text, output_error_text)

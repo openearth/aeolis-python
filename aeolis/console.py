@@ -164,11 +164,23 @@ def start_aeolis_app():
             " been deprecated from v3.0.0 onwards.\n\n"
             "To run a model, use the syntax `aeolis run <path_to_aeolis.txt>`\n"
         )
-
         sys.exit(1)
     else:
         aeolis_app()
 
 
+def start_aeolis_wind_app():
+    """
+    This function serves the purpose of catching the deprecated command line syntx `aeolis-wind <path_to_wind.txt>` and pritning a message on the console instructing the user to use `aeolis wind <path_to_wind.txt>` instead.
+    """
+    print(
+        "Usage of the command line syntax `aeolis-wind <path_to_wind.txt>` has"
+        " been deprecated from v3.0.0 onwards.\n\nTo run the wind module, use"
+        " the syntax `aeolis wind <path_to_wind.txt>`\n"
+    )
+    sys.exit(1)
+
+
 if __name__ == "__main__":
     start_aeolis_app()
+    start_aeolis_wind_app()

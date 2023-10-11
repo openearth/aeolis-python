@@ -65,6 +65,7 @@ classifiers = [
 
 [project.scripts]
 aeolis = "aeolis.console:start_aeolis_app"
+aeolis-wind = "aeolis.console:start_aeolis_wind_app"
 
 [project.urls]
 Homepage = "https://github.com/openearth/aeolis-python"
