@@ -1,0 +1,105 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% AeoLiS model configuration                                       %%
+%% Date: 2022-01-04 16:30:00                                        %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+           output_types = avg
+
+%% -------------------- [Timing] ----------------------------- %%
+dt 			= 1.000000						% [s] Timeinterval between timesteps
+tstart 			= 0							% [s] Starting time of the simulation
+tstop 			= 600							% [s] End time of the simulation
+restart                 = None               					% [s] Interval for which to write restart files
+refdate               	= 2020-01-01 00:00 					% [-] Reference datetime in netCDF output
+
+%% -------------------- [Grid files *.grd] ------------------- %%
+xgrid_file 		= data/x1d_100m.txt						% Filename of ASCII file with x-coordinates of grid cells
+ygrid_file 		= data/y1d_100m.txt						% Filename of ASCII file with y-coordinates of grid cells
+bed_file 		= data/z1d_100m.txt						% Filename of ASCII file with bed level heights of grid cells
+
+%% -------------------- [Time series *.txt] ------------------ %%
+tide_file 		= data/tide_none.txt						% Filename of ASCII file with time series of water levels
+wave_file 		= data/waves_none.txt					% Filename of ASCII file with time series of wave heights (and periods)
+wind_file 		= data/wind_constant.txt					% Filename of ASCII file with time series of wind velocity and direction
+meteo_file              = None              	 				% Filename of ASCII file with time series of meteorlogical conditions
+
+%% -------------------- [Output] ----------------------------- %%	
+output_times 		= 10.00000						% [s] Timeinterval [s] between *.nc output file
+output_file 		= aeolis_verticallayering2.nc				% [-] Name of the *.nc output file
+output_vars 		= zb zs Ct Cu uw udir uth mass pickup qs		% [-] List of output variables for in *.nc output file
+
+%% -------------------- [Flags Processes] -------------------- %%
+process_wind           	= T               					% [T/F] Enable the process of wind 
+process_shear        	= T               					% [T/F] Enable the process of wind shear
+process_tide            = F               					% [T/F] Enable the process of tides
+process_wave            = F               					% [T/F] Enable the process of waves
+process_runup           = F               					% [T/F] Enable the process of wave runup
+process_moist           = F               					% [T/F] Enable the process of moist
+process_mixtoplayer     = F               					% [T/F] Enable the process of mixing
+process_threshold       = T               					% [T/F] Enable the process of threshold
+process_transport       = T               					% [T/F] Enable the process of transport
+process_bedupdate       = T            						% [T/F] Enable the process of bed updating
+
+%% -------------------- [Flags Threshold] -------------------- %%
+th_grainsize            = T               					% [T/F] Enable wind velocity threshold based on grainsize
+th_bedslope             = F              					% [T/F] Enable wind velocity threshold based on bedslope
+th_moisture             = F               					% [T/F] Enable wind velocity threshold based on moisture
+th_drylayer             = F              					% [T/F] Enable wind velocity threshold based on drying of layer
+
+%% -------------------- [General physics] -------------------- %%
+g                       = 9.81               					% [m/s^2] Gravitational constant
+v                       = 0.000015           					% [m^2/s] Air viscosity  
+rhoa                    = 1.225              					% [kg/m^3] Air density
+rhog                    = 2650.0              					% [kg/m^3] Grain density
+rhow                    = 1025.0              					% [kg/m^3] Water density
+porosity                = 0.4                 					% [-] Sediment porosity
+cpair                  	= 0.0010035          					% [MJ/kg/oC] Specific heat capacity air
+
+%% -------------------- [Sediment] --------------------------- %%
+bedcomp_file 		= None							% Filename of ASCII file with initial bed composition
+nlayers 		= 5							% [-] Number of bed layers
+layer_thickness 	= 0.00005000						% [m] Thickness of bed layers
+nfractions 		= 2							% [-] Number of sediment fractions
+grain_dist 		= data/grain_dist_vert2.txt					% [-] Initial distribution of sediment fractions
+grain_size 		= data/gs_fractions.txt					% [m] Average grain size of each sediment fraction
+
+%% -------------------- [Wind and shear] --------------------- %%
+wind_convention         = cartesian						% [-] Convention used for the wind direction in the input files (cartesian or nautical)
+alfa                    = 0                  					% [deg] Real-world grid cell orientation wrt the North (clockwise)
+k 			= 0.0100						% [m] Bed roughness
+z                       = 10.                					% [m] Measurement height of wind velocity
+kappa                   = 0.41               					% [-] Von Kármán constant
+h                       = None               					% [m] Representative height of saltation layer
+L                       = 100.               					% [m] Typical length scale of dune feature (perturbation)
+l                       = 10.                					% [m] Inner layer height (perturbation)
+m                       = 0.5                					% [-] Factor to account for difference between average and maximum shear stress
+	
+%% -------------------- [Transport] -------------------------- %%
+bi 			= 0.050000						% [-] Bed interaction factor
+method_transport 	= bagnold						% [-] Name of method to compute equilibrium sediment transport rate
+method_grainspeed       = windspeed                             			% [-] Name of method to assume/compute grainspeed
+Aa                      = 0.085               					% [-] Constant in formulation for wind velocity threshold based on grain size
+Cb                     	= 1.5                					% [-] Constant in bagnold formulation for equilibrium sediment concentration
+Ck                      = 2.78              					% [-] Constant in kawamura formulation for equilibrium sediment concentration
+Cl                     	= 6.7               					% [-] Constant in lettau formulation for equilibrium sediment concentration
+Cdk                     = 5.                 					% [-] Constant in DK formulation for equilibrium sediment concentration
+
+%% -------------------- [Solver] ----------------------------- %%
+T 			= 1.							% [s] Adaptation time scale in advection equation
+solver 			= trunk							% [-] Numerical solver of advection scheme
+CFL                     = 1.                 					% [-] CFL number to determine time step in explicit scheme
+accfac 			= 1.							% [-] Numerical acceleration factor
+scheme 			= euler_backward 					% [-] Name of numerical scheme (euler_forward, euler_backward or crank_nicolson)
+max_error               = 0.000001               				% [-] Maximum error at which to quit iterative solution in implicit numerical schemes
+max_iter                = 1000               					% [-] Maximum number of iterations at which to quit iterative solution in implicit numerical schemes
+
+%% -------------------- [Boundary conditions] ---------------- %%
+boundary_onshore 	= noflux						% [-] Name of onshore boundary conditions (flux, constant, uniform, gradient)
+boundary_lateral 	= circular						% [-] Name of lateral boundary conditions (circular, constant ==noflux)
+boundary_offshore 	= noflux						% [-] Name of offshore boundary conditions (flux, constant, uniform, gradient)
+offshore_flux           = 0.                 					% [-] Factor to determine offshore boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
+constant_offshore_flux  = 0.                 					% [kg/m/s] Constant input flux at offshore boundary
+onshore_flux            = 0.                 					% [-] Factor to determine onshore boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
+constant_onshore_flux   = 0.                 					% [kg/m/s] Constant input flux at offshore boundary
+lateral_flux            = 0.                 					% [-] Factor to determine lateral boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
+sedimentinput           = 0.                 					% [-] Constant boundary sediment influx (only used in solve_pieter)

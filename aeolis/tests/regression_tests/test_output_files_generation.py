@@ -1,17 +1,17 @@
 """
 This is a blackbox (regression) test for the AeoLiS model. It tests whether the
-model produces a netCDF file and a log file upon the completion of the 
-simulation.   
+model produces a netCDF file and a log file upon the completion of the
+simulation.
 
-The test inputs used by the test are stored in the inputs/ directory. The test 
-inputs are organized in subdirectories based on the dimension of the model. 
-Each dimension has a list of test cases, each of which is a directory that 
+The test inputs used by the test are stored in the inputs/ directory. The test
+inputs are organized in subdirectories based on the dimension of the model.
+Each dimension has a list of test cases, each of which is a directory that
 contains an input model configuration file.
 
-test_netCDF_file_creation() is the main test function that contains the test logic. 
+test_netCDF_file_creation() is the main test function that contains the test logic.
 
-path_test_input() is a helper function that does the preparation work needed 
-by test_netCDF_file_creation(). 
+path_test_input() is a helper function that does the preparation work needed
+by test_netCDF_file_creation().
 
 """
 
@@ -31,8 +31,8 @@ def path_test_input():
     test_netCDF_file_content().
 
     """
-    path_integration_test_dir = os.path.dirname(os.path.abspath(__file__))
-    path_test_input = path_integration_test_dir + "/inputs/"
+    path_regression_test_dir = os.path.dirname(os.path.abspath(__file__))
+    path_test_input = path_regression_test_dir + "/inputs/"
     return path_test_input
 
 

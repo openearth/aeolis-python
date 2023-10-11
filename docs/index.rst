@@ -37,7 +37,7 @@ Contents
    user/sourcecode
    user/bibliography
 
-.. toctree:: 
+.. toctree::
    :caption: Tutorials
    :maxdepth: 2
 
@@ -49,7 +49,7 @@ Contents
    :maxdepth: 2
 
    developer/quickstart
-   developer/testing-introduction 
+   developer/testing-introduction
    developer/unit-testing
 
 .. toctree::
@@ -57,14 +57,13 @@ Contents
    :maxdepth: 2
 
    developer/modularity
-   developer/test-coverage 
    developer/domain-decomposition
 
 
 Acknowledgements
 ================
 
-* AeoLiS was initially developed at Delft University of Technology with support from the ERC-Advanced Grant 291206 Nearshore Monitoring and Modeling (`NEMO <http://nemo.citg.tudelft.nl>`_) and `Deltares <http://www.deltares.nl>`_. 
+* AeoLiS was initially developed at Delft University of Technology with support from the ERC-Advanced Grant 291206 Nearshore Monitoring and Modeling (`NEMO <http://nemo.citg.tudelft.nl>`_) and `Deltares <http://www.deltares.nl>`_.
 * AeoLiS is currently maintained by `Bart van Westen <Bart.vanWesten@deltares.nl>`_ at Deltares, `Nick Cohn <nick.cohn@usace.army.mil>`_ at U.S. Army Engineer Research and Development Center (ERDC) and `Sierd de Vries <Sierd.deVries@tudelft.nl>`_ at Delft University of Technology.
 * Further developement of AeoLiS is supported by the `Digital Competence Centre <https://dcc.tudelft.nl>`_, Delft University of Technology.
 
