@@ -157,7 +157,7 @@ class TestAeolisCommandLineInterface(unittest.TestCase):
 
         path_model_config_file = os.path.join(path_model_dir, "aeolis.txt")
 
-        # Testcase: Create two dummy command line arguments with the first argument as 'aeolis' and second as the path to the model configuration file. Invoking the aeolis CLI with these two arguments is expected to fail and produce an error message instructing the user to use `aeolis run <path_to_configfile>` instead.
+        # Testcase: Create two dummy command line arguments with the first argument as 'aeolis' and second as the path to the model configuration file. Invoking the aeolis CLI with these two arguments is expected to fail and produce an error message instructing the user to use `aeolis run <path_to_aeolis.txt>` instead.
         with patch("sys.argv", ["aeolis", path_model_config_file]):
             with patch("sys.exit") as mock_exit:
                 with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
@@ -188,7 +188,7 @@ class TestAeolisCommandLineInterface(unittest.TestCase):
 
         path_wind_config_file = os.path.join(path_model_dir, "wind.txt")
 
-        # Testcase: Create two dummy command line arguments with the first argument as 'aeolis' and second as the path to the model configuration file. Invoking the aeolis CLI with these two arguments is expected to fail and produce an error message instructing the user to use `aeolis run <path_to_configfile>` instead.
+        # Testcase: Create two dummy command line arguments with the first argument as 'aeolis-wind' and second as the path to the wind configuration file. Invoking aeolis-wind from the command line should print a message on the console reporting the deprecated usage of the syntax `aeolis-wind` instructing the user to use `aeolis wind <path_to_wind.txt>` instead.
         with patch("sys.argv", ["aeolis-wind", path_wind_config_file]):
             with patch("sys.exit") as mock_exit:
                 with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
