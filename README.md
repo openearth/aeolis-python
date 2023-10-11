@@ -57,9 +57,9 @@ pip install aeolis
 Examples from command line:
 
 ```shell
-aeolis run aeolis.txt
+aeolis run <path/to/aeolis.txt/>
 # or wind module
-aeolis wind wind.txt --mean=6 --duration=3600
+aeolis wind <path/to/wind.txt> --mean=6 --duration=3600
 ```
 
 ## Documentation
