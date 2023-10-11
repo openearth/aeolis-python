@@ -160,10 +160,11 @@ def print_license():
 def start_aeolis_app():
     if len(sys.argv) == 2 and os.path.isfile(sys.argv[1]):
         print(
-            "Error: You entered an incorrect command.\n To run a model, type:"
-            " `aeolis run <path_to_configfile>`\n From aeolis v2.2.0 onwards,"
-            " the command run needs to be passed to run a model.\n"
+            "Usage of the command line syntax `aeolis <path_to_aeolis.txt>` has"
+            " been deprecated from v3.0.0 onwards.\n\n"
+            "To run a model, use the syntax `aeolis run <path_to_aeolis.txt>`\n"
         )
+
         sys.exit(1)
     else:
         aeolis_app()

@@ -72,11 +72,8 @@ class TestAeolisCommandLineInterface(unittest.TestCase):
         self.assertTrue(os.path.isfile(path_model_dir + "/aeolis.nc"))
 
         # delete the generated aeolis.log and aeolis.nc files
-        try:
-            os.remove(path_model_dir + "/aeolis.log")
-            os.remove(path_model_dir + "/aeolis.nc")
-        except Exception as exception:
-            print(f"Failed to delete files: {exception}")
+        os.remove(path_model_dir + "/aeolis.log")
+        os.remove(path_model_dir + "/aeolis.nc")
 
     def test_examples_command(self):
         """
@@ -168,9 +165,9 @@ class TestAeolisCommandLineInterface(unittest.TestCase):
                     output_error_text = mock_stdout.getvalue().strip()
 
         expected_error_text = (
-            "Error: You entered an incorrect command.\n To run a model, type:"
-            " `aeolis run <path_to_configfile>`\n From aeolis v2.2.0 onwards,"
-            " the command run needs to be passed to run a model."
+            "Usage of the command line syntax `aeolis <path_to_aeolis.txt>` has"
+            " been deprecated from v3.0.0 onwards.\n\n"
+            "To run a model, use the syntax `aeolis run <path_to_aeolis.txt>`"
         )
 
         self.assertIn(expected_error_text, output_error_text)

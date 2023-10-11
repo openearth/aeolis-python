@@ -29,14 +29,14 @@ wave_file 				= wave_0.txt							% Filename of ASCII file with time series of wa
 wind_file 				= wind_euro_filtered_2011_2022.txt		% Filename of ASCII file with time series of wind velocity and direction
 meteo_file              = None               					% Filename of ASCII file with time series of meteorlogical conditions
 
-%% -------------------- [Output] ----------------------------- %%	
+%% -------------------- [Output] ----------------------------- %%
 output_times 			= 604800.000							% [s] Timeinterval [s] between *.nc output file
 output_file 			= 000_ZM_ref.nc 						% [-] Name of the *.nc output file
 output_vars 			= zb zs zne ustar ustarn ustars uth % [-] List of output variables for in *.nc output file
-visualization 			= T
+visualization 			= F
 
 %% -------------------- [Flags Processes] -------------------- %%
-process_wind           	= T               						% [T/F] Enable the process of wind 
+process_wind           	= T               						% [T/F] Enable the process of wind
 process_shear        	= F               						% [T/F] Enable the process of wind shear
 process_tide            = T               						% [T/F] Enable the process of tides
 process_wave            = T               						% [T/F] Enable the process of waves
@@ -69,7 +69,7 @@ th_nelayer              = F              						% [T/F] Enable wind velocity thre
 
 %% -------------------- [General physics] -------------------- %%
 g                       = 9.81               					% [m/s^2] Gravitational constant
-v                       = 0.000015           					% [m^2/s] Air viscosity  
+v                       = 0.000015           					% [m^2/s] Air viscosity
 rhoa                    = 1.225              					% [kg/m^3] Air density
 rhog                    = 2650.0              					% [kg/m^3] Grain density
 rhow                    = 1025.0              					% [kg/m^3] Water density
@@ -81,7 +81,7 @@ nlayers 				= 20									% [-] Number of bed layers
 layer_thickness 		= 0.025000								% [m] Thickness of bed layers
 nfractions 				= 6									% [-] Number of sediment fractions
 grain_dist 				=  0.234708 0.608887 0.099666 0.010486 0.028503 0.010486					% [-] Initial distribution of sediment fractions
-grain_size 				=  0.000250 0.000354 0.000500 0.002000 0.004000 0.008000					% [m] Average grain size of each sediment fraction						
+grain_size 				=  0.000250 0.000354 0.000500 0.002000 0.004000 0.008000					% [m] Average grain size of each sediment fraction
 
 %% -------------------- [Wind and shear] --------------------- %%
 wind_convention         = nautical         						% [-] Convention used for the wind direction in the input files (cartesian or nautical)
@@ -93,7 +93,7 @@ h                       = None               					% [m] Representative height of
 L                       = 100.               					% [m] Typical length scale of dune feature (perturbation)
 l                       = 1.                					% [m] Inner layer height (perturbation)
 m                       = 0.5                					% [-] Factor to account for difference between average and maximum shear stress
-	
+
 %% -------------------- [Transport] -------------------------- %%
 bi 						= 0.050000								% [-] Bed interaction factor
 method_transport 		= bagnold								% [-] Name of method to compute equilibrium sediment transport rate
@@ -128,9 +128,9 @@ sedimentinput           = 0.                 					% [-] Constant boundary sedime
 %% -------------------- [Rotating shear-grid] ---------------- %%
 dx 						= 5.0									% [m] Size of dimension of the computational grid that is generated for a rotating shear computation in x-direction
 dy 						= 5.0       							% [m] Size of dimension of the computational grid that is generated for a rotating shear computation in x-direction
-buffer_width			= 20.0									% [m] Width of the bufferzone around the rotational grid for wind perturbation	
+buffer_width			= 20.0									% [m] Width of the bufferzone around the rotational grid for wind perturbation
 
-%% -------------------- [Vegetation] ------------------------- %%	
+%% -------------------- [Vegetation] ------------------------- %%
 sigma                   = 11.9                					% [-] Ratio between basal area and frontal area of roughness elements
 beta 					= 130.000000							% [-] Ratio between drag coefficient of roughness elements and bare surface
 gamma_vegshear          = 50.                					% [-] Roughness factor for the shear stress reduction by vegetation
@@ -151,26 +151,26 @@ okin_initialred_veg     = 0.32               					% [-] initial shear reduction 
 %% -------------------- [Fences] ----------------------------- %%
 okin_c1_fence           = 0.48               					% [-] x/h spatial reduction factor in Okin model for use with sand fence module
 okin_initialred_fence   = 0.32               					% [-] initial shear reduction factor in Okin model for use with sand fence module
-	
-%% -------------------- [Seperation] ------------------------- %%	
+
+%% -------------------- [Seperation] ------------------------- %%
 c_b 					= 0.2									% [-] Slope at the leeside of the separation bubble # c = 0.2 according to Durán 2010 (Sauermann 2001: c = 0.25 for 14 degrees)
 mu_b 					= 20.									% [deg] Minimum required slope for the start of flow separation
 sep_filter_iterations 	= 0										% [-] Number of filter iterations on the separation bubble (0 = no filtering)
 zsep_y_filter			= F										% [T/F] Boolean for turning on/off the filtering of the separation bubble height in y-direction
 
-%% -------------------- [Soil moisture] ---------------------- %%		   
+%% -------------------- [Soil moisture] ---------------------- %%
 Tdry 					= 5400.000								% [s] Adaptation time scale for soil drying
 eps                     = 0.2              						% [m] Minimum water depth to consider a cell "flooded"
 method_moist            = belly_johnson    						% [-] Name of method to compute wind velocity threshold based on soil moisture content
 
-%% -------------------- [Salt] ------------------------------- %%	
+%% -------------------- [Salt] ------------------------------- %%
 Tsalt                   = 2592000.000      						% [s] Adaptation time scale for salinitation
 csalt                   = 0.0035              					% [-] Maximum salt concentration in bed surface layer
 
 %% -------------------- [Waves] ------------------------------ %%
 Tbedreset               = 86400.                				% [s] Adaptation time for resetting morphology in the Swash-zone
 xi                      = 0.3                 					% [-] Surf similarity parameter
-facDOD                  = 0.5                 					% [-] Ratio between depth of disturbance and local wave height    
+facDOD                  = 0.5                 					% [-] Ratio between depth of disturbance and local wave height
 
 %% -------------------- [Avalanching] ------------------------ %%
 theta_dyn               = 33.                					% [degrees] Initial Dynamic angle of repose, critical dynamic slope for avalanching
