@@ -1,23 +1,23 @@
 """
-This is a blackbox (regression) test for the AeoLiS model. It tests if the 
-output produced by the model for a given input is identical to the expected 
-output for the same input across code changes.  
+This is a blackbox (regression) test for the AeoLiS model. It tests if the
+output produced by the model for a given input is identical to the expected
+output for the same input across code changes.
 
-The test checks if the dimension, shape, and the array values of all the 
-variables in the generated output netCDF file for a given input model 
-configuration file is identical to the expected values in the reference 
+The test checks if the dimension, shape, and the array values of all the
+variables in the generated output netCDF file for a given input model
+configuration file is identical to the expected values in the reference
 output netCDF file for the same input.
 
-The test inputs and reference outputs used by the test are stored in the 
-inputs/ directory. The test inputs are organized in subdirectories based on 
-the dimension of the model. Each dimension has a list of test cases, each of 
+The test inputs and reference outputs used by the test are stored in the
+inputs/ directory. The test inputs are organized in subdirectories based on
+the dimension of the model. Each dimension has a list of test cases, each of
 which is a directory that contains an input model configuration file and its
 corresponding reference output netCDF file.
 
-test_netCDF_file_content() is the main test function that contains the test logic. 
+test_netCDF_file_content() is the main test function that contains the test logic.
 
-path_test_input() is a helper function that does the preparation work needed 
-by test_netCDF_file_content(). 
+path_test_input() is a helper function that does the preparation work needed
+by test_netCDF_file_content().
 
 """
 
@@ -39,8 +39,8 @@ def path_test_input():
     test_netCDF_file_content().
 
     """
-    path_integration_test_dir = os.path.dirname(os.path.abspath(__file__))
-    path_test_input = path_integration_test_dir + "/inputs/"
+    path_regression_test_dir = os.path.dirname(os.path.abspath(__file__))
+    path_test_input = path_regression_test_dir + "/inputs/"
     return path_test_input
 
 
