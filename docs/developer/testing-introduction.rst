@@ -142,7 +142,7 @@ Automated testing in AeoLiS
 
 To catch any bugs introduced by new code changes, the test suite in Aeolis (unit tests + regression tests) runs automatically on every push to the main branch of the remote repository. This automated testing is enabled by `GitHub Actions <https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python>`_. Tests are run whenever code is pushed to the main branch (usually through a pull request), if any of the tests fail, merging changes are disabled until all tests are satisfied. The status of the test is displayed on GitHub using a green tick (pass) or a red cross (fail) next to the commit message. 
 
-The file `.github/workflows/python-app.yml <https://github.com/openearth/aeolis-python/blob/main/.github/workflows/run-tests.yml>`_ contains the instructions for automated testing. The tests run using the Pytest framework on a virtual machine (Ubuntu 20.04) using the GitHub-hosted runner and on Python versions 3.9-3.11. If you want to learn more about automated testing in GitHub, check `their documentation <https://docs.github.com/en/actions/automating-builds-and-tests>`_.
+The file `.github/workflows/run-tests.yml <https://github.com/openearth/aeolis-python/blob/main/.github/workflows/run-tests.yml>`_ contains the instructions for automated testing. The tests run using the Pytest framework on a virtual machine (Ubuntu 20.04) using the GitHub-hosted runner and on Python versions 3.9-3.11. If you want to learn more about automated testing in GitHub, check `their documentation <https://docs.github.com/en/actions/automating-builds-and-tests>`_.
 
 .. important:: 
 
