@@ -1,9 +1,8 @@
 Quick start
 =============
 
-This section is for developers and contributors of AeoLiS. It describes how to get started as a developer with the intention to improve or extend the source code of AeoLiS. 
+This section is for developers and contributors of AeoLiS. It describes how to get started as a developer with the intention of improving or extending the source code. 
 If you are a user, please see the :ref:`user documentation <installation>` instead.
-
 
 Development workflow
 -----------------------
@@ -17,11 +16,12 @@ Details on how to propose and push changes to the source code are documented in 
 
    AeoLiS collaborative development workflow.
 
+.. _test set up:
 
 Set up
 -------
 
-AeoLiS is developed in Python 3.10.x and tested for versions 3.8, 3.9, and 3.11. It is recommended to use a virtual environment to install the required dependencies.
+AeoLiS is developed in Python 3.10.x and tested for versions 3.9, and 3.11. It is recommended to use a virtual environment to install the dependencies.
 
 .. code-block:: bash
     
@@ -49,7 +49,7 @@ To run the tests, run the following command from the root directory of the repos
 Code Style
 '''''''''''
 
-AeoLiS strive to comply with the  `PEP8 <https://www.python.org/dev/peps/pep-0008/>`_ code style guide. We recommend `flake8 <https://flake8.pycqa.org/en/latest/>`_ to check the code style. To run flake8, run the following command from the root directory of the source code:
+AeoLiS strive to comply with the  `PEP8 <https://www.python.org/dev/peps/pep-0008/>`_ code style guide. We recommend `flake8 <https://flake8.pycqa.org/en/latest/>`_ to check the code style. To run flake8, use the following command from the `src/` directory of the source code:
 
 .. code-block:: bash
 
@@ -58,14 +58,15 @@ AeoLiS strive to comply with the  `PEP8 <https://www.python.org/dev/peps/pep-000
 Docstrings
 ''''''''''''
  
-AeoLiS uses `napoleon <https://sphinxcontrib-napoleon.readthedocs.io/en/latest/>`_ to parse the docstrings in the source code and automatically generate this documentation. We recommend to follow the `Numpy style <https://numpydoc.readthedocs.io/en/latest/format.html#docstring-standard>`_ for docstrings. The use of `type hints <https://peps.python.org/pep-0484/>`_ is encouraged. For example:
+AeoLiS uses `napoleon <https://sphinxcontrib-napoleon.readthedocs.io/en/latest/>`_ to parse the docstrings in the source code and automatically generate documentation. We recommend to follow the `Numpy style <https://numpydoc.readthedocs.io/en/latest/format.html#docstring-standard>`_ for docstrings. The use of `type hints <https://peps.python.org/pep-0484/>`_ is encouraged. For example:
 
 .. code-block:: python
 
     def my_function(arg1:int, arg2:str) -> bool:
         """Summary line.
 
-        Extended summary about the fuctionality of the function, using the Numpy style.
+        Extended summary about the fuctionality of the function, u
+        sing the Numpy style.
 
         Parameters:
         -----------
@@ -83,7 +84,7 @@ AeoLiS uses `napoleon <https://sphinxcontrib-napoleon.readthedocs.io/en/latest/>
 
         return True
 
-To check the docstrings, intall `flake8-docstrings` and run the following command from the root directory of the source code:
+To check the docstrings in a module, intall `flake8-docstrings` and run the following command from the `src/` directory:
 
 
 .. code-block:: bash
