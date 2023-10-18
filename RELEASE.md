@@ -8,6 +8,7 @@ All packaging instructions are in the [pyproject.toml](pyproject.toml)
 A. Before generating a new release, make sure that all  relevant code changes have been merge to the **main** branch.
 
 B. Bump the version by updating the `pyproject.toml`. For consistency, you also have to update the version on `CITATION.cff` and `README.md` (citation section).
+(For pre-release versioning [see](https://packaging.python.org/en/latest/guides/distributing-packages-using-setuptools/#pre-release-versioning))
 
 C. To test if the Python source package (`.tar.gz`) and the binary package (`.whl`) can be built without problem in the `dist/` directory, install `build` and build the package:
 
