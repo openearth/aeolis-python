@@ -53,6 +53,9 @@ Usage examples:
 
         aeolis examples <path_examples>
 
+        A directory named `aeolis-examples` will be created in <path_examples>
+        containing two examples: Parabolic_dune and sandengine_small_grids.
+
 > To get help on a command
 
             aeolis COMMAND --help
