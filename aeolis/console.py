@@ -1,4 +1,5 @@
-"""This file is part of AeoLiS.
+"""
+This file is part of AeoLiS.
 
 AeoLiS is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -13,30 +14,84 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with AeoLiS.  If not, see <http://www.gnu.org/licenses/>.
 
-AeoLiS  Copyright (C) 2023 AeoLiS Development Team
+AeoLiS  Copyright (C) 2015 Bas Hoonhout
 
-Delft University of Technology
-Faculty of Civil Engineering and Geosciences
-Stevinweg 1
-2628CN Delft
-The Netherlands
+bas.hoonhout@deltares.nl         b.m.hoonhout@tudelft.nl
+Deltares                         Delft University of Technology
+Unit of Hydraulic Engineering    Faculty of Civil Engineering and Geosciences
+Boussinesqweg 1                  Stevinweg 1
+2629 HVDelft                     2628CN Delft
+The Netherlands                  The Netherlands
+
+
+***************************************************************************
+
+This module implements the command line interface for the AeoLiS model.
+It is based on the typer package (https://typer.tiangolo.com/).
+
+Usage: aeolis [OPTIONS] COMMAND [ARGS]...
+
+Options:
+    --help  Show this message and exit.
+
+Commands:
+    examples  sets up some examples for AeoLiS.
+    run       runs model for simulating supply-limited aeolian sediment...
+    wind      A wind time series generation tool for the aeolis model.
+
+Usage examples:
+
+> Run a model
+
+        aeolis run <path_to_model_configuration_file.txt>
+
+> To generate a wind time series
+
+        aeolis wind <path_to_wind.txt>
+
+> Set up examples
+
+        aeolis examples <path_examples>
+
+> To get help on a command
+
+            aeolis COMMAND --help
+
+
+***************************************************************************
+
+Extending the command line interface:
+
+To create a new command, add a function with a aeolis_app.command decorator.
+For example:
+
+        @aeolis_app.command(name="mycommand", help="My command help")
+        def mycommand():
+            <add code here...>
+
+You can then run the command from the command line as follows:
+
+        aeolis mycommand <args>
+
+
+***************************************************************************
 
 """
 
+
 from __future__ import absolute_import, division
 
-import os
-import sys
 import logging
+import os
 import shutil
+import sys
+from typing import Annotated, Optional
 
 import numpy as np
 import typer
-from typing import Annotated, Optional
 
 import aeolis as aeolis_pkg
 from aeolis.model import AeoLiSRunner, WindGenerator
-
 
 aeolis_app = typer.Typer(
     add_completion=False,
@@ -49,7 +104,8 @@ aeolis_app = typer.Typer(
 
 
 @aeolis_app.command(
-    help="runs model for simulating supply-limited aeolian sediment transport."
+    name="run",
+    help="runs model for simulating supply-limited aeolian sediment transport.",
 )
 def run(
     config: Annotated[str, typer.Argument(help="configuration file")],
@@ -171,7 +227,7 @@ def start_aeolis_app():
 
 def start_aeolis_wind_app():
     """
-    This function serves the purpose of catching the deprecated command line syntx `aeolis-wind <path_to_wind.txt>` and pritning a message on the console instructing the user to use `aeolis wind <path_to_wind.txt>` instead.
+    This function serves the purpose of catching the deprecated command line syntax `aeolis-wind <path_to_wind.txt>` and pritning a message on the console instructing the user to use `aeolis wind <path_to_wind.txt>` instead.
     """
     print(
         "\nUsage of the command line syntax `aeolis-wind <path_to_wind.txt>`"
