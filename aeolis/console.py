@@ -230,7 +230,7 @@ def start_aeolis_app():
 
 def start_aeolis_wind_app():
     """
-    This function serves the purpose of catching the deprecated command line syntax `aeolis-wind <path_to_wind.txt>` and pritning a message on the console instructing the user to use `aeolis wind <path_to_wind.txt>` instead.
+    This function serves the purpose of catching the deprecated command line syntax `aeolis-wind <path_to_wind.txt>` and printing a message on the console instructing the user to use `aeolis wind <path_to_wind.txt>` instead.
     """
     print(
         "\nUsage of the command line syntax `aeolis-wind <path_to_wind.txt>`"
