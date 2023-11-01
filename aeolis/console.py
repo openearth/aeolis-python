@@ -14,7 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with AeoLiS.  If not, see <http://www.gnu.org/licenses/>.
 
-AeoLiS  Copyright (C) 2015 Bas Hoonhout
+AeoLiS  Copyright (C) 2023 AeoLiS Development Team
 
 bas.hoonhout@deltares.nl         b.m.hoonhout@tudelft.nl
 Deltares                         Delft University of Technology
