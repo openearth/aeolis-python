@@ -1672,7 +1672,7 @@ class AeoLiS(IBmi):
                     # print(s['ds'][:,k] / s['us'][:,k,0])
 
             if 1:
-                Ct, pickup = sweep(s['Cu'].copy(), s['mass'].copy(), self.dt, p['T'], s['ds'], s['dn'], s['us'], s['un'] )
+                Ct, pickup = sweep2(s['Cu'].copy(), s['mass'].copy(), self.dt, p['T'], s['ds'], s['dn'], s['us'], s['un'] )
 
             if 0:
                 #define 4 quadrants based on wind directions
