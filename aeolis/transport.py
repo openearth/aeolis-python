@@ -151,7 +151,8 @@ def duran_grainspeed(s, p):
        
     ets = uws / uw
     etn = uwn / uw
-    ix = (ustar >= 0.05) #(ustar >= uth) 
+    # ix = (ustar >= 0.05) #(ustar >= uth) 
+    ix = (ustar > 0.) #(ustar >= uth) 
     ets[ix] = ustars[ix] / ustar[ix]
     etn[ix] = ustarn[ix] / ustar[ix]
 
@@ -167,7 +168,8 @@ def duran_grainspeed(s, p):
 
     for i in range(nf):  
         # determine ueff for different grainsizes
-        ix = (ustar[:,:,i] >= uth[:,:,i])#*(ustar[:,:,i] > 0.)
+        # ix = (ustar[:,:,i] >= uth[:,:,i])#*(ustar[:,:,i] > 0.)
+        ix = (ustar[:,:,i] != np.inf)
         
         # ueff[ix,i] = (uth[ix,i] / kappa) * (np.log(z1[i] / z0[i]) + 2*(np.sqrt(1+z1[i]/zm[ix,i]*(ustar[ix,i]**2/uth[ix,i]**2-1))-1)) #???
         # ueff0[:,:,i] = (uth0[:,:,i] / kappa) * (np.log(z1[i] / z0[i]) + 2*(np.sqrt(1+z1[i]/zm[:,:,i]*(ustar0[:,:,i]**2/uth0[:,:,i]**2-1))-1))
@@ -186,16 +188,19 @@ def duran_grainspeed(s, p):
                         - (np.sqrt(2*alpha[i]) * uf[i] / Ax[:,:,i]) * dhn[:,:,i] 
         
         
+        ix = (ustar[:,:,i] < uth[:,:,i])
+        us[ix,i] *= 0.
+        un[ix,i] *= 0.
         u[:,:,i] = np.hypot(us[:,:,i], un[:,:,i])                
         
         
-        # set the grain velocity to zero inside the separation bubble
-        ix = (s['zsep'] > s['zb'] + 0.01)
+        # # set the grain velocity to zero inside the separation bubble
+        # ix = (s['zsep'] > s['zb'] + 0.01)
         
-        sepspeed = 0.1
-        us[ix,i] = sepspeed * ets[ix, i]
-        un[ix,i] = sepspeed * etn[ix, i]
-        u[:,:,i] = np.hypot(us[:,:,i], un[:,:,i]) 
+        # no_transport_speed = 1. # [-]
+        # us[~ix,i] = no_transport_speed * u0[~ix, i] * ets[~ix, i]
+        # un[~ix,i] = no_transport_speed * u0[~ix, i] * etn[~ix, i]
+        # u[:,:,i] = np.hypot(us[:,:,i], un[:,:,i]) 
         
     return u0, us, un, u
 
