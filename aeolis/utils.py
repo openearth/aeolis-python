@@ -564,7 +564,21 @@ def sweep2(Cu, mass, dt, Ts, ds, dn, us, un):
     pickup = np.zeros(Cu.shape)
     i=0
     k=0
+
+    ufs = np.zeros((np.shape(us)[0], np.shape(us)[1]+1, np.shape(us)[2]))
+    ufn = np.zeros((np.shape(un)[0]+1, np.shape(un)[1], np.shape(un)[2]))
+    
+    # define fluxes
+    ufs[:,1:-1, :] = 0.5*us[:,:-1, :] + 0.5*us[:,1:, :]
+    ufn[1:-1,:, :] = 0.5*un[:-1,:, :] + 0.5*un[1:,:, :]
+    
+    #boundary values
+    ufs[:,0, :]  = us[:,0, :]
+    ufs[:,-1, :] = us[:,-1, :]
    
+    ufn[0,:, :]  = un[0,:, :]
+    ufn[-1,:, :] = un[-1,:, :]
+
     # this is an attempt to make the code compatible with spatially varying wind
 
     q1 =  (un[:,:,0]>=0) & (us[:,:,0]>=0)
@@ -576,6 +590,7 @@ def sweep2(Cu, mass, dt, Ts, ds, dn, us, un):
         
     while k==0 or np.any(np.abs(Ct[:,:,i]-Ct_last[:,:,i])>1e-10):
         Ct_last = Ct.copy()
+
         # Lets start with the First quadrant  
         for n in range(1,Ct.shape[0]):
             for s in range(1,Ct.shape[1]):
@@ -583,19 +598,19 @@ def sweep2(Cu, mass, dt, Ts, ds, dn, us, un):
                 # keep zeros on positions where winds are from other qudrants
                 if q1[n,s]:
                     # print('q1')
-                    Ct[n,s,i] =    (+ Ct[n-1,s,i] * un[n,s,0] * ds[n,s] \
-                                    + Ct[n,s-1,i] * us[n,s,0] * dn[n,s] \
+                    Ct[n,s,i] =    (+ Ct[n-1,s,i] * ufn[n-1,s,0] * ds[n,s] \
+                                    + Ct[n,s-1,i] * ufs[n,s-1,0] * dn[n,s] \
                                     + Cu[n,s,i] * ds[n,s] * dn [n,s] / Ts  ) \
-                                    / ((us[n,s,0] * dn[n,s]) + (un[n,s,0] * ds[n,s]) + (ds[n,s] * dn [n,s] / Ts) )
+                                    / ((ufs[n,s,0] * dn[n,s]) + (ufn[n,s,0] * ds[n,s]) + (ds[n,s] * dn [n,s] / Ts) )
                     #calculate pickup                
                     pickup[n,s,i] = (Cu[n,s,i]-Ct[n,s,i]) * dt/Ts
                     #check for supply limitations and re-iterate concentration to account for supply limitations
                     if pickup[n,s,i]>mass[n,s,0,i]:
                         pickup[n,s,i] = mass[n,s,0,i]              
-                        Ct[n,s,i] = (+ Ct[n-1,s,i] * un[n,s,0] * ds[n,s] \
-                                        + Ct[n,s-1,i] * us[n,s,0] * dn[n,s] \
+                        Ct[n,s,i] = (+ Ct[n-1,s,i] * ufn[n-1,s,0] * ds[n,s] \
+                                        + Ct[n,s-1,i] * ufs[n,s-1,0] * dn[n,s] \
                                         + pickup[n,s,i] * ds[n,s] * dn [n,s] / dt ) \
-                                        / ((us[n,s,0] * dn[n,s]) + (un[n,s,0] * ds[n,s]))
+                                        / ((ufs[n,s,0] * dn[n,s]) + (ufn[n,s,0] * ds[n,s]))
 
         # Now for the second quadrant    
         for n in range(1,Ct.shape[0]):
@@ -604,19 +619,19 @@ def sweep2(Cu, mass, dt, Ts, ds, dn, us, un):
                 # sweep from [-1,0] corner through domain in positive direction. 
                 if q2[n,s]:
                     # print('q2')
-                    Ct[n,s,i] =    (+ Ct[n-1,s,i] * un[n,s,0] * ds[n,s] \
-                                    - Ct[n,s+1,i] * us[n,s,0] * dn[n,s] \
+                    Ct[n,s,i] =    (+ Ct[n-1,s,i] * ufn[n-1,s,0] * ds[n,s] \
+                                    - Ct[n,s+1,i] * ufs[n,s+1,0] * dn[n,s] \
                                     + Cu[n,s,i] * ds[n,s] * dn [n,s] / Ts  ) \
-                                    / (( - us[n,s,0] * dn[n,s]) + (un[n,s,0] * ds[n,s]) + (ds[n,s] * dn [n,s] / Ts) )
+                                    / (( - ufs[n,s,0] * dn[n,s]) + (ufn[n,s,0] * ds[n,s]) + (ds[n,s] * dn [n,s] / Ts) )
                     #calculate pickup                
                     pickup[n,s,i] = (Cu[n,s,i]-Ct[n,s,i]) * dt/Ts
                     #check for supply limitations and re-iterate concentration to account for supply limitations
                     if pickup[n,s,i]>mass[n,s,0,i]:
                         pickup[n,s,i] = mass[n,s,0,i]              
-                        Ct[n,s,i] = (+ Ct[n-1,s,i] * un[n,s,0] * ds[n,s] \
-                                        - Ct[n,s+1,i] * us[n,s,0] * dn[n,s] \
+                        Ct[n,s,i] = (+ Ct[n-1,s,i] * ufn[n-1,s,0] * ds[n,s] \
+                                        - Ct[n,s+1,i] * ufs[n,s+1,0] * dn[n,s] \
                                         + pickup[n,s,i] * ds[n,s] * dn [n,s] / dt ) \
-                                        / (( - us[n,s,0] * dn[n,s]) + (un[n,s,0] * ds[n,s]))
+                                        / (( - ufs[n,s,0] * dn[n,s]) + (ufn[n,s,0] * ds[n,s]))
         # now for the third quadrant
         for n in range(Ct.shape[0]-2,-1,-1):
             #print(n)
@@ -624,19 +639,19 @@ def sweep2(Cu, mass, dt, Ts, ds, dn, us, un):
                 # sweep from [-1,0] corner through domain in positive direction. 
                 if q3[n,s]:
                     # print('q3')
-                    Ct[n,s,i] = (- Ct[n+1,s,i] * un[n,s,0] * ds[n,s] \
-                                    - Ct[n,s+1,i] * us[n,s,0] * dn[n,s] \
+                    Ct[n,s,i] = (- Ct[n+1,s,i] * ufn[n+1,s,0] * ds[n,s] \
+                                    - Ct[n,s+1,i] * ufs[n,s+1,0] * dn[n,s] \
                                     + Cu[n,s,i] * ds[n,s] * dn [n,s] / Ts  ) \
-                                    / (( - us[n,s,0] * dn[n,s]) + ( - un[n,s,0] * ds[n,s]) + (ds[n,s] * dn [n,s] / Ts) )
+                                    / (( - ufs[n,s,0] * dn[n,s]) + ( - ufn[n,s,0] * ds[n,s]) + (ds[n,s] * dn [n,s] / Ts) )
                     #calculate pickup                
                     pickup[n,s,i] = (Cu[n,s,i]-Ct[n,s,i]) * dt/Ts
                     #check for supply limitations and re-iterate concentration to account for supply limitations
                     if pickup[n,s,i]>mass[n,s,0,i]:
                         pickup[n,s,i] = mass[n,s,0,i]              
-                        Ct[n,s,i] = (- Ct[n+1,s,i] * un[n,s,0] * ds[n,s] \
-                                        - Ct[n,s+1,i] * us[n,s,0] * dn[n,s] \
+                        Ct[n,s,i] = (- Ct[n+1,s,i] * ufn[n+1,s,0] * ds[n,s] \
+                                        - Ct[n,s+1,i] * ufs[n,s+1,0] * dn[n,s] \
                                         + pickup[n,s,i] * ds[n,s] * dn [n,s] / dt ) \
-                                        / (( - us[n,s,0] * dn[n,s]) + ( - un[n,s,0] * ds[n,s]))
+                                        / (( - ufs[n,s,0] * dn[n,s]) + ( - ufn[n,s,0] * ds[n,s]))
 
         # now fo the fourth quadrant        
         for n in range(Ct.shape[0]-2,-1,-1):
@@ -645,19 +660,19 @@ def sweep2(Cu, mass, dt, Ts, ds, dn, us, un):
                 # sweep from [-1,0] corner through domain in positive direction. 
                 if q4[n,s]:
                     # print('q4')
-                    Ct[n,s,i] = (- Ct[n+1,s,i] * un[n,s,0] * ds[n,s] \
-                                    + Ct[n,s-1,i] * us[n,s,0] * dn[n,s] \
+                    Ct[n,s,i] = (- Ct[n+1,s,i] * ufn[n+1,s,0] * ds[n,s] \
+                                    + Ct[n,s-1,i] * ufs[n,s-1,0] * dn[n,s] \
                                     + Cu[n,s,i] * ds[n,s] * dn [n,s] / Ts  ) \
-                                    / ((us[n,s,0] * dn[n,s]) + ( - un[n,s,0] * ds[n,s]) + (ds[n,s] * dn [n,s] / Ts) )
+                                    / ((ufs[n,s,0] * dn[n,s]) + ( - ufn[n,s,0] * ds[n,s]) + (ds[n,s] * dn [n,s] / Ts) )
                     #calculate pickup                
                     pickup[n,s,i] = (Cu[n,s,i]-Ct[n,s,i]) * dt/Ts
                     #check for supply limitations and re-iterate concentration to account for supply limitations
                     if pickup[n,s,i]>mass[n,s,0,i]:
                         pickup[n,s,i] = mass[n,s,0,i]              
-                        Ct[n,s,i] = (- Ct[n+1,s,i] * un[n,s,0] * ds[n,s] \
-                                        + Ct[n,s-1,i] * us[n,s,0] * dn[n,s] \
+                        Ct[n,s,i] = (- Ct[n+1,s,i] * ufn[n+1,s,0] * ds[n,s] \
+                                        + Ct[n,s-1,i] * ufs[n,s-1,0] * dn[n,s] \
                                         + pickup[n,s,i] * ds[n,s] * dn [n,s] / dt ) \
-                                        / ((us[n,s,0] * dn[n,s]) + (- un[n,s,0] * ds[n,s]))
+                                        / ((ufs[n,s,0] * dn[n,s]) + (- ufn[n,s,0] * ds[n,s]))
         #count the amount of iterations
         
         k+=1
@@ -666,6 +681,7 @@ def sweep2(Cu, mass, dt, Ts, ds, dn, us, un):
 
 
     return Ct, pickup
+
 
 
 def calc_mean_grain_size(p, s):
