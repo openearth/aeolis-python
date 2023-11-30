@@ -201,6 +201,7 @@ DEFAULT_CONFIG = {
     'runup_mask'                    : None,               # Filename of ASCII file with mask for run-up
     'threshold_mask'                : None,               # Filename of ASCII file with mask for the shear velocity threshold
     'gw_mask'                       : None,         #NEWCH      # Filename of ASCII file with mask for the groundwater level
+    'vver_mask'                     : None,         #NEWBvW      # Filename of ASCII file with mask for the vertical vegetation growth    
     'nx'                            : 0,                  # [-] Number of grid cells in x-dimension
     'ny'                            : 0,                  # [-] Number of grid cells in y-dimension
     'dt'                            : 60.,                # [s] Time step size

@@ -136,7 +136,11 @@ def grow (s, p): #DURAN 2006
     ix = np.logical_or(s['germinate'] != 0., s['lateral'] != 0.) * ( p['V_ver'] > 0.)
                                                     
     # Reduction of vegetation growth due to sediment burial
-    s['dhveg'][ix] = p['V_ver'] * (1 - s['hveg'][ix] / p['hveg_max']) - np.abs(s['dzbveg'][ix]-p['dzb_opt']) * p['veg_gamma']  # m/year
+    vertical_growth = np.zeros(np.shape(s['hveg']))
+    vertical_growth[ix] = p['V_ver'] * (1 - s['hveg'][ix] / p['hveg_max'])
+    vertical_growth = apply_mask(vertical_growth, s['vver_mask'])
+
+    s['dhveg'][ix] = vertical_growth[ix] - np.abs(s['dzbveg'][ix]-p['dzb_opt']) * p['veg_gamma']  # m/year
 
     # Adding growth
     if p['veggrowth_type'] == 'orig': #based primarily on vegetation height
