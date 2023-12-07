@@ -1646,33 +1646,35 @@ class AeoLiS(IBmi):
         for i in range(nf):
             
 
-            #calculate pickup using the result of the previous timestep.
-            #pickup[:,:,i] = np.minimum(s['Cu'][:,:,i]*self.dt*s['us'][:,:,i]-,s['mass'][:,:,0,i]*s['ds'][:,:])/Ts
-            #print(s['us'][:,:,i])
-            
-            # initiate emmpty solution matrix, this will effectively kill time dependence and create steady state.
-            Ct = np.zeros(Ct.shape)
-
-            if 0:
-
-                for k in range(Ct.shape[1]-1):
-                    # print(k)
-                    # print(Ct[:,k,i])
-                    # print(pickup[:,k,i])
-                    # print(s['mass'][:,k,0,i])
-                    # print((s['Cu'][:,k,i]*self.dt-Ct[:,k,i]))
-                    #print((s['Cu'][:,k,i]-Ct[:,k,i])*self.dt)
-                    # print(s['ds'][:,k] / s['us'][:,k,0])
-                    #print(Ct.shape)
-                    #pickup[:,k+1,i] = self.dt*(np.minimum(s['Cu'][:,k+1,i],s['mass'][:,k+1,0,i]))/Ts
-                    pickup[:,k,i] = np.minimum((s['Cu'][:,k,i]-Ct[:,k,i])/Ts,s['mass'][:,k,0,i]/self.dt*s['ds'][:,k])*self.dt
-                    Ct[:,k+1,i] = Ct[:,k,i] + s['ds'][:,k] / s['us'][:,k,0] * pickup[:,k,i]/self.dt
-                    #print(s['us'][0,k,0])
-                    # print(pickup[:,k,i])
-                    # print(s['ds'][:,k] / s['us'][:,k,0])
-
             if 1:
-                Ct, pickup = sweep2(s['Cu'].copy(), s['mass'].copy(), self.dt, p['T'], s['ds'], s['dn'], s['us'], s['un'] )
+                #print('sweep')
+
+                # initiate emmpty solution matrix, this will effectively kill time dependence and create steady state.
+                Ct = np.zeros(Ct.shape)
+                
+                if p['boundary_offshore'] == 'flux':
+                    Ct[:,0,0] =  s['Cu0'][:,0,0]                
+                if p['boundary_onshore'] == 'flux':
+                    Ct[:,-1,0] =  s['Cu0'][:,-1,0] 
+
+                if p['boundary_offshore'] == 'circular':
+                    Ct[:,0,0] =  -1                
+                    Ct[:,-1,0] =  -1                  
+                
+                if p['boundary_offshore'] == 're_circular':
+                    Ct[:,0,0] =  -2                
+                    Ct[:,-1,0] =  -2         
+                
+                if p['boundary_lateral'] == 'circular':
+                    Ct[0,:,0] =  -1                
+                    Ct[-1,:,0] =  -1
+                
+                if p['boundary_lateral'] == 're_circular':
+                    Ct[0,:,0] =  -2                
+                    Ct[-1,:,0] =  -2
+
+                # Ct, pickup = sweep6(s['Cu'].copy(), s['mass'].copy(), self.dt, p['T'], s['ds'], s['dn'], s['us'], s['un'] )
+                Ct, pickup = sweep2(Ct, s['Cu'].copy(), s['mass'].copy(), self.dt, p['T'], s['ds'], s['dn'], s['us'], s['un'] )
 
             if 0:
                 #define 4 quadrants based on wind directions

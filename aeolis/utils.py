@@ -416,6 +416,40 @@ def calc_grain_size(p, s, percent):
                 D[yi, xi] = f_linear(percent)
     return D
 
+def calc_mean_grain_size(p, s):
+    '''Calculate mean grain size based on mass in each fraction
+
+    Calculate mean grain size for each cell based on weight distribution 
+    over the fractions. Calculation is only executed for the top layer.
+
+
+    Parameters
+    ----------
+    s : dict
+        Spatial grids
+    p : dict
+        Model configuration parameters
+    percent : float
+        Requested percentage in grain size dsitribution
+
+    Returns
+    -------
+    array
+        mean grain size per grid cell
+
+    '''
+    mass = s['mass'][:,:,0,:] # only select upper, surface layer because that is the relevant layer for transport
+    D_mean = np.zeros((mass.shape[0], mass.shape[1]))
+    for yi in range(mass.shape[0]):
+        for xi in range(mass.shape[1]):
+                diameters = p['grain_size']
+                weights = mass[yi, xi,:]/ np.sum(mass[yi, xi,:])
+                
+                # Retrieve mean grain size based on weight of mass
+                D_mean[yi, xi] = np.sum(diameters*weights)
+    return D_mean
+
+
 @njit
 def sweep(Cu, mass, dt, Ts, ds, dn, us, un):
 
@@ -557,14 +591,32 @@ def sweep(Cu, mass, dt, Ts, ds, dn, us, un):
     return Ct, pickup
 
 @njit
-def sweep2(Cu, mass, dt, Ts, ds, dn, us, un):
+def sweep2(Ct, Cu, mass, dt, Ts, ds, dn, us, un):
 
-    Ct = np.zeros(Cu.shape)
-    Ct_last = Ct.copy()
     pickup = np.zeros(Cu.shape)
     i=0
     k=0
 
+    # Are the lateral boundary conditions circular?
+    circ_lateral = False
+    if Ct[0,1,0]==-1:
+        circ_lateral = True
+        Ct[0,:,0] = 0                
+        Ct[-1,:,0] = 0
+
+    circ_offshore = False
+    if Ct[1,0,0]==-1:
+        circ_offshore = True
+        Ct[:,0,0] = 0                
+        Ct[:,-1,0] = 0
+
+    recirc_offshore = False
+    if Ct[1,0,0]==-2:
+        recirc_offshore = True
+        Ct[:,0,0] = 0                
+        Ct[:,-1,0] = 0
+    
+    
     ufs = np.zeros((np.shape(us)[0], np.shape(us)[1]+1, np.shape(us)[2]))
     ufn = np.zeros((np.shape(un)[0]+1, np.shape(un)[1], np.shape(un)[2]))
     
@@ -579,140 +631,90 @@ def sweep2(Cu, mass, dt, Ts, ds, dn, us, un):
     ufn[0,:, :]  = un[0,:, :]
     ufn[-1,:, :] = un[-1,:, :]
 
-    # this is an attempt to make the code compatible with spatially varying wind
-
-    q1 =  (un[:,:,0]>=0) & (us[:,:,0]>=0)
-    q2 =  (un[:,:,0]>=0) & (us[:,:,0]<0)
-    q3 =  (un[:,:,0]<0) & (us[:,:,0]<0)
-    q4 =  (un[:,:,0]<0) & (us[:,:,0]>=0)
-
-   # print(q4.sum())
-        
+    Ct_last = Ct.copy()
     while k==0 or np.any(np.abs(Ct[:,:,i]-Ct_last[:,:,i])>1e-10):
         Ct_last = Ct.copy()
 
-        # Lets start with the First quadrant  
-        for n in range(1,Ct.shape[0]):
-            for s in range(1,Ct.shape[1]):
-                # sweep from [0,0] corner through domain in positive direction and 
-                # keep zeros on positions where winds are from other qudrants
-                if q1[n,s]:
-                    # print('q1')
-                    Ct[n,s,i] =    (+ Ct[n-1,s,i] * ufn[n-1,s,0] * ds[n,s] \
-                                    + Ct[n,s-1,i] * ufs[n,s-1,0] * dn[n,s] \
-                                    + Cu[n,s,i] * ds[n,s] * dn [n,s] / Ts  ) \
-                                    / ((ufs[n,s,0] * dn[n,s]) + (ufn[n,s,0] * ds[n,s]) + (ds[n,s] * dn [n,s] / Ts) )
-                    #calculate pickup                
-                    pickup[n,s,i] = (Cu[n,s,i]-Ct[n,s,i]) * dt/Ts
-                    #check for supply limitations and re-iterate concentration to account for supply limitations
-                    if pickup[n,s,i]>mass[n,s,0,i]:
-                        pickup[n,s,i] = mass[n,s,0,i]              
-                        Ct[n,s,i] = (+ Ct[n-1,s,i] * ufn[n-1,s,0] * ds[n,s] \
-                                        + Ct[n,s-1,i] * ufs[n,s-1,0] * dn[n,s] \
-                                        + pickup[n,s,i] * ds[n,s] * dn [n,s] / dt ) \
-                                        / ((ufs[n,s,0] * dn[n,s]) + (ufn[n,s,0] * ds[n,s]))
+        # lateral boundaries circular
+        if circ_lateral:
+            Ct[0,:,0],Ct[-1,:,0] = Ct[-1,:,0],Ct[0,:,0]
 
-        # Now for the second quadrant    
-        for n in range(1,Ct.shape[0]):
-            #print(n)
-            for s in range(Ct.shape[1]-2,-1,-1):
-                # sweep from [-1,0] corner through domain in positive direction. 
-                if q2[n,s]:
-                    # print('q2')
-                    Ct[n,s,i] =    (+ Ct[n-1,s,i] * ufn[n-1,s,0] * ds[n,s] \
-                                    - Ct[n,s+1,i] * ufs[n,s+1,0] * dn[n,s] \
-                                    + Cu[n,s,i] * ds[n,s] * dn [n,s] / Ts  ) \
-                                    / (( - ufs[n,s,0] * dn[n,s]) + (ufn[n,s,0] * ds[n,s]) + (ds[n,s] * dn [n,s] / Ts) )
-                    #calculate pickup                
-                    pickup[n,s,i] = (Cu[n,s,i]-Ct[n,s,i]) * dt/Ts
-                    #check for supply limitations and re-iterate concentration to account for supply limitations
-                    if pickup[n,s,i]>mass[n,s,0,i]:
-                        pickup[n,s,i] = mass[n,s,0,i]              
-                        Ct[n,s,i] = (+ Ct[n-1,s,i] * ufn[n-1,s,0] * ds[n,s] \
-                                        - Ct[n,s+1,i] * ufs[n,s+1,0] * dn[n,s] \
-                                        + pickup[n,s,i] * ds[n,s] * dn [n,s] / dt ) \
-                                        / (( - ufs[n,s,0] * dn[n,s]) + (ufn[n,s,0] * ds[n,s]))
-        # now for the third quadrant
-        for n in range(Ct.shape[0]-2,-1,-1):
-            #print(n)
-            for s in range(Ct.shape[1]-2,-1,-1):
-                # sweep from [-1,0] corner through domain in positive direction. 
-                if q3[n,s]:
-                    # print('q3')
-                    Ct[n,s,i] = (- Ct[n+1,s,i] * ufn[n+1,s,0] * ds[n,s] \
-                                    - Ct[n,s+1,i] * ufs[n,s+1,0] * dn[n,s] \
-                                    + Cu[n,s,i] * ds[n,s] * dn [n,s] / Ts  ) \
-                                    / (( - ufs[n,s,0] * dn[n,s]) + ( - ufn[n,s,0] * ds[n,s]) + (ds[n,s] * dn [n,s] / Ts) )
-                    #calculate pickup                
-                    pickup[n,s,i] = (Cu[n,s,i]-Ct[n,s,i]) * dt/Ts
-                    #check for supply limitations and re-iterate concentration to account for supply limitations
-                    if pickup[n,s,i]>mass[n,s,0,i]:
-                        pickup[n,s,i] = mass[n,s,0,i]              
-                        Ct[n,s,i] = (- Ct[n+1,s,i] * ufn[n+1,s,0] * ds[n,s] \
-                                        - Ct[n,s+1,i] * ufs[n,s+1,0] * dn[n,s] \
-                                        + pickup[n,s,i] * ds[n,s] * dn [n,s] / dt ) \
-                                        / (( - ufs[n,s,0] * dn[n,s]) + ( - ufn[n,s,0] * ds[n,s]))
+        if circ_offshore:
+            Ct[:,0,0],Ct[:,-1,0] = Ct[:,-1,0],Ct[:,0,0]
 
-        # now fo the fourth quadrant        
+        if recirc_offshore:
+            # print(Ct[:,1,0])
+            # print(Ct[:,-2,0]) 
+            Ct[:,0,0],Ct[:,-1,0] = np.average(Ct[:,-2,0]),np.average(Ct[:,1,0])
+            # print(Ct[:,0,0])
+            # print(Ct[:,-1,0]) 
+
+        # make an array with a bolean operator. This keeps track of considerd cells. We start with all False (not considered)
+        q = np.zeros(Cu.shape[:2]) 
+
+    ########################################################################################
+        # # Lets start with the First quadrant  
+        # identify cells in quadrant.
+        for n in range(1,Ct.shape[0]-1):
+            for s in range(1,Ct.shape[1]-1):
+                if (not q[n,s]) and (ufn[n,s,0]>=0) & (ufs[n,s,0]>=0):
+                    Ct, pickup = calc_concentration(Cu, Ct, mass, dt, Ts, ds, dn, ufs, ufn,s,n,i,pickup)
+                    q[n,s]=1
+        for n in range(1,Ct.shape[0]):
+            for s in range(Ct.shape[1]-2,-1,-1):  
+                if (not q[n,s]) and (ufn[n,s,0]>=0) & (ufs[n,s+1,0]<=0):
+                    Ct, pickup = calc_concentration(Cu, Ct, mass, dt, Ts, ds, dn, ufs, ufn,s,n,i,pickup)
+                    q[n,s]=2
         for n in range(Ct.shape[0]-2,-1,-1):
-            #print(n)
-            for s in range(1,Ct.shape[1]):
-                # sweep from [-1,0] corner through domain in positive direction. 
-                if q4[n,s]:
-                    # print('q4')
-                    Ct[n,s,i] = (- Ct[n+1,s,i] * ufn[n+1,s,0] * ds[n,s] \
-                                    + Ct[n,s-1,i] * ufs[n,s-1,0] * dn[n,s] \
-                                    + Cu[n,s,i] * ds[n,s] * dn [n,s] / Ts  ) \
-                                    / ((ufs[n,s,0] * dn[n,s]) + ( - ufn[n,s,0] * ds[n,s]) + (ds[n,s] * dn [n,s] / Ts) )
-                    #calculate pickup                
-                    pickup[n,s,i] = (Cu[n,s,i]-Ct[n,s,i]) * dt/Ts
-                    #check for supply limitations and re-iterate concentration to account for supply limitations
-                    if pickup[n,s,i]>mass[n,s,0,i]:
-                        pickup[n,s,i] = mass[n,s,0,i]              
-                        Ct[n,s,i] = (- Ct[n+1,s,i] * ufn[n+1,s,0] * ds[n,s] \
-                                        + Ct[n,s-1,i] * ufs[n,s-1,0] * dn[n,s] \
-                                        + pickup[n,s,i] * ds[n,s] * dn [n,s] / dt ) \
-                                        / ((ufs[n,s,0] * dn[n,s]) + (- ufn[n,s,0] * ds[n,s]))
-        #count the amount of iterations
-        
+            for s in range(Ct.shape[1]-2,-1,-1):
+                if (not q[n,s]) and (ufn[n+1,s,0]<=0) & (ufs[n,s+1,0]<=0):
+                    Ct, pickup = calc_concentration(Cu, Ct, mass, dt, Ts, ds, dn, ufs, ufn,s,n,i,pickup)
+                    q[n,s]=3     
+        for n in range(Ct.shape[0]-2,-1,-1):
+            for s in range(1,Ct.shape[1]-1): 
+                if (not q[n,s]) and (ufn[n+1,s,0]<=0) & (ufs[n,s,0]>=0):
+                    Ct, pickup = calc_concentration(Cu, Ct, mass, dt, Ts, ds, dn, ufs, ufn,s,n,i,pickup)
+                    q[n,s]=4
+        for n in range(1,Ct.shape[0]-1):
+            for s in range(1,Ct.shape[1]-1):
+                if (not q[n,s]) and (ufs[n,s+1,0]>=0) & (ufs[n,s,0]<=0):
+                    Ct, pickup = calc_concentration(Cu, Ct, mass, dt, Ts, ds, dn, ufs, ufn,s,n,i,pickup)
+                    q[n,s]=9
+                if (not q[n,s]) and (ufn[n+1,s,0]>=0) & (ufn[n,s,0]<=0):
+                    Ct, pickup = calc_concentration(Cu, Ct, mass, dt, Ts, ds, dn, ufs, ufn,s,n,i,pickup)
+                    q[n,s]=10   
+
         k+=1
-   #     print(k)
-#        print(np.max(np.abs(Ct[:,:,i]-Ct_last[:,:,i])))
-
+        # print(k)
 
     return Ct, pickup
 
+@njit
+def calc_concentration(Cu, Ct, mass, dt, Ts, ds, dn, ufs, ufn, s, n, i, pickup):
+    Ct[n,s,i] =    (+ (ufn[n,s,0]>0) * (Ct[n-1,s,i] * ufn[n,s,0] * ds[n,s]) \
+                    + (ufs[n,s,0]>0) * (Ct[n,s-1,i] * ufs[n,s,0] * dn[n,s]) \
+                    + (ufn[n+1,s,0]<0) * ( -Ct[n+1,s,i] * ufn[n+1,s,0] * dn[n,s]) \
+                    + (ufs[n,s+1,0]<0) * ( -Ct[n,s+1,i] * ufs[n,s+1,0] * dn[n,s]) \
+                    + Cu[n,s,i] * ds[n,s] * dn [n,s] / Ts  ) \
+                    / ( + (ufn[n+1,s,0]>0) * (ufn[n+1,s,0] * ds[n,s]) \
+                        + (ufs[n,s+1,0]>0) * (ufs[n,s+1,0] * dn[n,s]) \
+                        + (ufn[n,s,0]<0) * (-ufn[n,s,0] * dn[n,s]) \
+                        + (ufs[n,s,0]<0) * (-ufs[n,s,0] * dn[n,s]) \
+                        + (ds[n,s] * dn [n,s] / Ts) )
+    #calculate pickup                
+    pickup[n,s,i] = (Cu[n,s,i]-Ct[n,s,i]) * dt/Ts
+    #check for supply limitations and re-iterate concentration to account for supply limitations
+    if pickup[n,s,i]>mass[n,s,0,i]:
+        pickup[n,s,i] = mass[n,s,0,i]              
+        Ct[n,s,i] = (+ (ufn[n,s,0]>0) * (Ct[n-1,s,i] * ufn[n,s,0] * ds[n,s]) \
+                    + (ufs[n,s,0]>0) * (Ct[n,s-1,i] * ufs[n,s,0] * dn[n,s]) \
+                    + (ufn[n+1,s,0]<0) * ( -Ct[n+1,s,i] * ufn[n+1,s,0] * dn[n,s]) \
+                    + (ufs[n,s+1,0]<0) * ( -Ct[n,s+1,i] * ufs[n,s+1,0] * dn[n,s]) \
+                        + pickup[n,s,i] * ds[n,s] * dn [n,s] / dt ) \
+                    / ( + (ufn[n+1,s,0]>0) * (ufn[n+1,s,0] * ds[n,s]) \
+                        + (ufs[n,s+1,0]>0) * (ufs[n,s+1,0] * dn[n,s]) \
+                        + (ufn[n,s,0]<0) * (-ufn[n,s,0] * dn[n,s]) \
+                        + (ufs[n,s,0]<0) * (-ufs[n,s,0] * dn[n,s]) \
+                        + (ds[n,s] * dn [n,s] / Ts) )        
+    return Ct, pickup 
 
-
-def calc_mean_grain_size(p, s):
-    '''Calculate mean grain size based on mass in each fraction
-
-    Calculate mean grain size for each cell based on weight distribution 
-    over the fractions. Calculation is only executed for the top layer.
-
-
-    Parameters
-    ----------
-    s : dict
-        Spatial grids
-    p : dict
-        Model configuration parameters
-    percent : float
-        Requested percentage in grain size dsitribution
-
-    Returns
-    -------
-    array
-        mean grain size per grid cell
-
-    '''
-    mass = s['mass'][:,:,0,:] # only select upper, surface layer because that is the relevant layer for transport
-    D_mean = np.zeros((mass.shape[0], mass.shape[1]))
-    for yi in range(mass.shape[0]):
-        for xi in range(mass.shape[1]):
-                diameters = p['grain_size']
-                weights = mass[yi, xi,:]/ np.sum(mass[yi, xi,:])
-                
-                # Retrieve mean grain size based on weight of mass
-                D_mean[yi, xi] = np.sum(diameters*weights)
-    return D_mean
