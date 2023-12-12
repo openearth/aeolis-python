@@ -1673,7 +1673,7 @@ class AeoLiS(IBmi):
                     Ct[0,:,0] =  -2                
                     Ct[-1,:,0] =  -2
 
-                # Ct, pickup = sweep6(s['Cu'].copy(), s['mass'].copy(), self.dt, p['T'], s['ds'], s['dn'], s['us'], s['un'] )
+                # Ct, pickup = sweep_dirty(s['Cu'].copy(), s['mass'].copy(), self.dt, p['T'], s['ds'], s['dn'], s['us'], s['un'] )
                 Ct, pickup = sweep2(Ct, s['Cu'].copy(), s['mass'].copy(), self.dt, p['T'], s['ds'], s['dn'], s['us'], s['un'] )
 
             if 0:
