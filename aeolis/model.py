@@ -320,18 +320,18 @@ class AeoLiS(IBmi):
             else:
                 logger.log_and_raise('Unknown scheme [%s]' % self.p['scheme'], exc=ValueError)
 
-            # update bed
-            self.s = aeolis.bed.update(self.s, self.p)
+        # update bed
+        self.s = aeolis.bed.update(self.s, self.p)
 
-            # avalanching
-            self.s = aeolis.avalanching.angele_of_repose(self.s, self.p)
-            self.s = aeolis.avalanching.avalanche(self.s, self.p)
-            
-            # reset original bed in marine zone (wet)
-            self.s = aeolis.bed.wet_bed_reset(self.s, self.p)
+        # avalanching
+        self.s = aeolis.avalanching.angele_of_repose(self.s, self.p)
+        self.s = aeolis.avalanching.avalanche(self.s, self.p)
+        
+        # reset original bed in marine zone (wet)
+        self.s = aeolis.bed.wet_bed_reset(self.s, self.p)
 
-            # calculate average bed level change over time
-            self.s = aeolis.bed.average_change(self.l, self.s, self.p)
+        # calculate average bed level change over time
+        self.s = aeolis.bed.average_change(self.l, self.s, self.p)
 
         # compute dune erosion
         if self.p['process_dune_erosion']:
@@ -1653,7 +1653,8 @@ class AeoLiS(IBmi):
                 Ct = np.zeros(Ct.shape)
                 
                 if p['boundary_offshore'] == 'flux':
-                    Ct[:,0,0] =  s['Cu0'][:,0,0]                
+                    Ct[:,0,0] =  s['Cu0'][:,0,0] 
+
                 if p['boundary_onshore'] == 'flux':
                     Ct[:,-1,0] =  s['Cu0'][:,-1,0] 
 
@@ -1673,9 +1674,9 @@ class AeoLiS(IBmi):
                     Ct[0,:,0] =  -2                
                     Ct[-1,:,0] =  -2
 
-                # Ct, pickup = sweep_dirty(s['Cu'].copy(), s['mass'].copy(), self.dt, p['T'], s['ds'], s['dn'], s['us'], s['un'] )
-                Ct, pickup = sweep2(Ct, s['Cu'].copy(), s['mass'].copy(), self.dt, p['T'], s['ds'], s['dn'], s['us'], s['un'] )
-
+                # Ct, pickup = sweep(s['Cu'].copy(), s['mass'].copy(), self.dt, p['T'], s['ds'], s['dn'], s['us'], s['un'] )
+                Ct, pickup = sweep3(Ct, s['Cu'].copy(), s['mass'].copy(), self.dt, p['T'], s['ds'], s['dn'], s['us'], s['un'] )
+                # print('yes')
             if 0:
                 #define 4 quadrants based on wind directions
                 ix1 = ((s['us'][:,:,0]>=0) & (s['un'][:,:,0]>=0))
@@ -1712,8 +1713,11 @@ class AeoLiS(IBmi):
                 # define Ct as a subset of Ct_s (eliminating the boundaries)
                 Ct[:,:,i] = Ct_s[1:-1,1:-1] 
          
+    
         qs = Ct * s['us'] 
         qn = Ct * s['un'] 
+        q = np.hypot(qs, qn)
+
 
         return dict(Ct=Ct,
                     qs=qs,
@@ -1722,7 +1726,8 @@ class AeoLiS(IBmi):
                     w=w,
                     w_init=w_init,
                     w_air=w_air,
-                    w_bed=w_bed)
+                    w_bed=w_bed,
+                    q=q)
         
         
     def solve_steadystatepieter(self) -> dict:
@@ -3048,7 +3053,7 @@ class AeoLiSRunner(AeoLiS):
                 self.o[k]['var'] = self.o[k]['var'] + v**2
 
         #also update the q variable here
-        self.s['q'] = np.hypot(self.s['qs'], self.s['qn'])
+        # self.s['q'] = np.hypot(self.s['qs'], self.s['qn'])
 
         self.n += 1
 
