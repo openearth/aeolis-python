@@ -95,10 +95,10 @@ def germinate(s,p):
     # Germination
     p_germinate_year = p['germinate']                                
     p_germinate_dt = 1-(1-p_germinate_year)**(1./n)
-    germination = np.random.random((s['germinate'].shape))
+    random_prob = np.random.random((s['germinate'].shape))
     
     # Germinate new cells
-    germinate_new = (s['dzbveg'] >= 0.) * (germination <= p_germinate_dt)
+    germinate_new = (s['dzbveg'] >= 0.) * (random_prob <= p_germinate_dt)
     s['germinate'] += germinate_new.astype(float)
     s['germinate'] = np.minimum(s['germinate'], 1.)
 
@@ -125,7 +125,7 @@ def germinate(s,p):
     
     p_lateral = p_lateral_cell * s['drhoveg']
     
-    s['lateral'] += (germination <= p_lateral)
+    s['lateral'] += (random_prob <= p_lateral)
     s['lateral'] = np.minimum(s['lateral'], 1.)
 
     return s
