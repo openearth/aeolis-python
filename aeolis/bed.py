@@ -218,7 +218,7 @@ def wet_bed_reset(s, p):
         
         Tbedreset = p['dt_opt'] / p['Tbedreset']
         
-        ix = s['zs'] > (s['zb'] + 0.01)
+        ix = s['TWL'] > (s['zb'])
         s['zb'][ix] += (s['zb0'][ix] - s['zb'][ix]) * Tbedreset
             
     return s
