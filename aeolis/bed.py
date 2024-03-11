@@ -478,8 +478,11 @@ def average_change(l, s, p):
     s['dzbavg'] = n*s['dzbyear']+(1-n)*l['dzbavg']
     
     # Calculate average bed level change as input for vegetation growth [m/year]
-    # s['dzbveg'] = s['dzbavg'].copy()
-    s['dzbveg'] = s['dzbyear'].copy()
+    s['dzbveg'] = s['dzbavg'].copy()
+    # s['dzbveg'] = s['dzbyear'].copy()
+
+    if p['_time'] < p['avg_time']:
+        s['dzbveg'] *= 0.
     
     
     return s
