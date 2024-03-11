@@ -659,6 +659,7 @@ class AeoLiS(IBmi):
     
         for i in range(p['nfractions']):
             s['qs'][:,:,i], s['qn'][:,:,i] = rotate(s['qs'][:,:,i], s['qn'][:,:,i], angle, origin=(0, 0))
+            s['us'][:,:,i], s['un'][:,:,i] = rotate(s['us'][:,:,i], s['un'][:,:,i], angle, origin=(0, 0))
         
         self.s['udir'] += angle
         
