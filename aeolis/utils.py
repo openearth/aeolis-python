@@ -177,10 +177,10 @@ def interp_circular_nearest(x: ndarray, xp: ndarray, fp: ndarray) -> ndarray:
     xmin = xp.min()
     xmax = xp.max()
     xrng = xmax - xmin
-    
-    x = xmin + np.mod(x - xmax - 1., xrng + 1.)
-    
-    return fp[xp>=x][0]
+
+    x = xmin + np.mod(x - xmin, xrng)
+  
+    return fp[xp<=x][-1]
 
 def normalize(x: ndarray, ref:ndarray = None, axis: int =0, fill: float =0.):
     '''Normalize array
