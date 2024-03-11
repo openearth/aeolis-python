@@ -500,7 +500,8 @@ def visualize_spatial(s, p):
         pcs[0][2] = axs[0,2].pcolormesh(x, y, s['rhoveg'], cmap='Greens', clim= [0, 1])
         pcs[1][0] = axs[1,0].pcolormesh(x, y, s['uw'], cmap='plasma')
         pcs[1][1] = axs[1,1].pcolormesh(x, y, s['ustar'], cmap='plasma')
-        pcs[1][2] = axs[1,2].pcolormesh(x, y, s['tau'], cmap='plasma')
+        # pcs[1][2] = axs[1,2].pcolormesh(x, y, s['tau'], cmap='plasma')
+        pcs[1][2] = axs[1,2].pcolormesh(x, y, s['u'][:, :, 0], cmap='plasma')
         pcs[2][0] = axs[2,0].pcolormesh(x, y, s['moist'], cmap='Blues', clim= [0, 0.4])
         pcs[2][1] = axs[2,1].pcolormesh(x, y, s['gw'], cmap='viridis')
         pcs[2][2] = axs[2,2].pcolormesh(x, y, s['uth'][:,:,0], cmap='plasma')
@@ -531,7 +532,8 @@ def visualize_spatial(s, p):
     skip = 10
     axs[1,0].quiver(x[::skip, ::skip], y[::skip, ::skip], s['uws'][::skip, ::skip], s['uwn'][::skip, ::skip])
     axs[1,1].quiver(x[::skip, ::skip], y[::skip, ::skip], s['ustars'][::skip, ::skip], s['ustarn'][::skip, ::skip])
-    axs[1,2].quiver(x[::skip, ::skip], y[::skip, ::skip], s['taus'][::skip, ::skip], s['taun'][::skip, ::skip])
+    # axs[1,2].quiver(x[::skip, ::skip], y[::skip, ::skip], s['taus'][::skip, ::skip], s['taun'][::skip, ::skip])
+    axs[1,2].quiver(x[::skip, ::skip], y[::skip, ::skip], s['us'][::skip, ::skip, 0], s['un'][::skip, ::skip, 0])
 
     # Adding titles to the plots
     axs[0,0].set_title('Bed level, zb (m)')
@@ -539,7 +541,8 @@ def visualize_spatial(s, p):
     axs[0,2].set_title('Vegetation density, rhoveg (-)')
     axs[1,0].set_title('Wind velocity, uw (m/s)')
     axs[1,1].set_title('Shear velocity, ustar (m/s)')
-    axs[1,2].set_title('Shear stress, tau (N/m2)')
+    # axs[1,2].set_title('Shear stress, tau (N/m2)')
+    axs[1,2].set_title('Grain velocity, u (m/s)')
     axs[2,0].set_title('Soil moisture content, (-)')
     axs[2,1].set_title('Ground water level, gw (m)')
     axs[2,2].set_title('Velocity threshold (0th fraction), uth (m/s)')
