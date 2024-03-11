@@ -63,7 +63,6 @@ import aeolis.gridparams
 
 # type hints
 from typing import Any, Union, Tuple
-from numpy import ndarray
 
 from aeolis.utils import *
 
@@ -72,7 +71,7 @@ class StreamFormatter(logging.Formatter):
     """A formater for log messages"""
 
     def format(self, record) -> str:
-        """Formats log messages for consult standard output"""
+        """Formats log messages for console standard output"""
 
         if record.levelname == 'INFO':
             return record.getMessage()
@@ -390,7 +389,7 @@ class AeoLiS(IBmi):
 
         return self.p['tstart']
 
-    def get_var(self, var:str) -> Union[ndarray, int, float, str, list]:
+    def get_var(self, var:str) -> Union[np.ndarray, int, float, str, list]:
         '''Returns spatial grid or model configuration parameter
 
         If the given variable name matches with a spatial grid, the
@@ -526,7 +525,7 @@ class AeoLiS(IBmi):
         logger.log_and_raise('Method not yet implemented [inq_compound_field]', exc=NotImplementedError)
 
 
-    def set_var(self, var:str, val:Union[ndarray, int, float, str, list]) -> None:
+    def set_var(self, var:str, val:Union[np.ndarray, int, float, str, list]) -> None:
         '''Sets spatial grid or model configuration parameter
 
         If the given variable name matches with a spatial grid, the
@@ -560,7 +559,7 @@ class AeoLiS(IBmi):
             self.p[var] = val
 
 
-    def set_var_index(self, i:int, val:ndarray) -> None:
+    def set_var_index(self, i:int, val:np.ndarray) -> None:
         '''Set spatial grid by index (in alphabetical order)
 
         Parameters
@@ -2838,7 +2837,7 @@ class AeoLiSRunner(AeoLiS):
             self.p.update(kwargs)
 
 
-    def get_statistic(self, var:str, stat:str='avg') -> Union[ndarray, None]:
+    def get_statistic(self, var:str, stat:str='avg') -> Union[np.ndarray, None]:
         '''Return statistic of spatial grid
 
         Parameters
@@ -2872,7 +2871,7 @@ class AeoLiSRunner(AeoLiS):
             return None
 
 
-    def get_var(self, var:str, clear:bool=True) -> Union[ndarray, int, float, str, list]:
+    def get_var(self, var:str, clear:bool=True) -> Union[np.ndarray, int, float, str, list]:
         '''Returns spatial grid, statistic or model configuration parameter
 
         Overloads the :func:`~model.AeoLiS.get_var()` function and
@@ -3383,7 +3382,7 @@ class WindGenerator():
         self.MTMcum = np.cumsum(MTM,1)
 
 
-    def __getitem__(self, s:int)-> ndarray:
+    def __getitem__(self, s:int)-> np.ndarray:
         """
         Retrieves item from list of wind speeds as an array 
         

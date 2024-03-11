@@ -36,18 +36,20 @@ class TestStreamFormatter:
         assert isinstance(stream_formatter, logging.Formatter)
     
     def test_stream_formatter_info_level(self):
-        """Test if the stream formatter returns log message for the info level"""
+        """Test if stream formatter change the formatting of log records based on 
+         their level name."""
         logger = logging.getLogger("Test")
+
         info_record = logger.makeRecord("Test", logging.INFO, 
                                         "Test", 1, "This is a message for INFO level",
                                         None, None)
-        stream_formatter = StreamFormatter()
-        info_message = stream_formatter.format(info_record)
         
         warning_record = logger.makeRecord("Test warning", logging.WARNING,
-                                        "Test", 2, "This is a message for WARNING level",
-                                        None, None)
-
+                                    "Test", 2, "This is a message for WARNING level",
+                                    None, None)
+            
+        stream_formatter = StreamFormatter()
+        info_message = stream_formatter.format(info_record)
         warning_message = stream_formatter.format(warning_record)
 
         assert info_message == "This is a message for INFO level"

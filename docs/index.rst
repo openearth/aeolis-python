@@ -27,37 +27,43 @@ Contents
    :caption: User Documentation
    :maxdepth: 2
 
-   installation
-   whatsnew
-   model
-   implementation
-   defaults
-   inputfiles
-   output
-   sourcecode
-   bibliography
-   
+   user/installation
+   user/whatsnew
+   user/model
+   user/implementation
+   user/defaults
+   user/inputfiles
+   user/output
+   user/sourcecode
+   user/bibliography
+
+.. toctree::
+   :caption: Tutorials
+   :maxdepth: 2
+
+   tutorials/sandmotor
+   tutorials/2D-parabolic
+
 .. toctree::
    :caption: Developer Documentation
    :maxdepth: 2
 
    developer/quickstart
+   developer/testing-introduction
    developer/unit-testing
-   ci-tests   
 
 .. toctree::
    :caption: Current Development
    :maxdepth: 2
 
-   modularity
-   test-coverage 
-   domain_decomposition
+   developer/modularity
+   developer/domain-decomposition
 
 
 Acknowledgements
 ================
 
-* AeoLiS was initially developed at Delft University of Technology with support from the ERC-Advanced Grant 291206 Nearshore Monitoring and Modeling (`NEMO <http://nemo.citg.tudelft.nl>`_) and `Deltares <http://www.deltares.nl>`_. 
+* AeoLiS was initially developed at Delft University of Technology with support from the ERC-Advanced Grant 291206 Nearshore Monitoring and Modeling (`NEMO <http://nemo.citg.tudelft.nl>`_) and `Deltares <http://www.deltares.nl>`_.
 * AeoLiS is currently maintained by `Bart van Westen <Bart.vanWesten@deltares.nl>`_ at Deltares, `Nick Cohn <nick.cohn@usace.army.mil>`_ at U.S. Army Engineer Research and Development Center (ERDC) and `Sierd de Vries <Sierd.deVries@tudelft.nl>`_ at Delft University of Technology.
 * Further developement of AeoLiS is supported by the `Digital Competence Centre <https://dcc.tudelft.nl>`_, Delft University of Technology.
 

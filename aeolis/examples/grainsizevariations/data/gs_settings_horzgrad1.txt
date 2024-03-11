@@ -1,0 +1,28 @@
+vertical = T
+x_dir = F
+y_dir = T
+gradient = T
+mid_gradient = F
+patches = F
+data_based = F
+start_grad = 1.0 0
+end_grad = 0 1.0
+
+	uni_vert = T
+	   uni_x = F
+	   uni_y = T
+	gradient = T
+    mid_gradient = F
+	 patches = F
+
+       base_dist = 
+           dist1 = 
+     dist1_layer = 
+
+      start_grad = 1.0 0
+        mid_grad = 
+        end_grad = 0 1.0
+    mid_location = 
+
+      patch_dist = 
+      patch_perc = 
