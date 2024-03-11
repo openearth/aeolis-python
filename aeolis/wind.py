@@ -371,7 +371,7 @@ def separation1d(s, p):
     x = s['x'][0,:]
     #x = s['x']
     z = s['zb'][0,:]
-    dx = p['dx']
+    dx = s['ds'][0,0] # p['dx']
     dy = dx
     c = p['c_b']
     mu_b = p['mu_b']
@@ -383,7 +383,7 @@ def separation1d(s, p):
     #z = np.matlib.repmat(z, ny, 1)
     z = np.tile(z, [ny, 1])
 
-    if udir < 360:
+    if udir < 0:
         udir = udir + 360
 
     if udir > 360:
@@ -395,17 +395,21 @@ def separation1d(s, p):
         dx = dx / np.cos(udir * np.pi / 180)
         dy = dx
         direction = 1
+        idir = 1
     elif udir == 180:
         dx = 0.0001
         direction = 1
+        idir = 1
     elif udir == 360:
         dx = 0.0001
         direction = 1
+        idir = 1
     else:
         udir = np.abs(udir-90)
         dx = dx / np.cos(udir * np.pi / 180)
         dy = dx
         direction = 2
+        idir = -1
 
     x = np.tile(x, [ny, 1])
 
@@ -449,7 +453,7 @@ def separation1d(s, p):
     bubble[:, :-1] = np.logical_and(stall[:, :-1] == 0., stall[:, 1:] > 0.)
 
     # Shift bubble back to x0: start of separation bubble
-    p = 2
+    p = 1
     bubble[:, :-p] = bubble[:, p:]
     bubble[:, :p] = 0
 
@@ -465,50 +469,54 @@ def separation1d(s, p):
         i = bubble_n[k, 1]
         j = bubble_n[k, 0]
 
-        ix_neg = (dzx[j, i + 5:] >= 0)  # i + 5??
+        ix_neg = (dzx[j, i+idir*5:] >= 0) 
 
         if np.sum(ix_neg) == 0:
             zbrink = z[j, i]  # z level of brink at z(x0)
         else:
-            zbrink = z[j, i] - z[j, i + 5 + np.where(ix_neg)[0][0]]
-
+            zbrink = z[j, i] - z[j,i+idir*5+idir*np.where(ix_neg)[0][0]]
+            
         # Zero order polynom
-        dzdx0 = (z[j, i - 1] - z[j, i - 2]) / dx
-
-        # if dzdx0 > 0.1:
-        #    dzdx0 = 0.1
+        dzdx0 = (z[j,i] - z[j,i-3]) / (3.*dx)
 
         a = dzdx0 / c
+        ls = np.minimum(np.maximum((3.*zbrink/(2.*c) * (1. + a/4. + a**2/8.)), 0.1), 200.)
+        
+        a2 = -3 * zbrink/ls**2 - 2 * dzdx0 / ls
+        a3 =  2 * zbrink/ls**3 +     dzdx0 / ls**2
+        
+        i_max = min(i+int(ls/dx)+1,int(nx-1))
 
-        ls = np.minimum(np.maximum((3. * zbrink / (2. * c) * (1. + a / 4. + a ** 2 / 8.)), 0.1), 200.)
-        a2 = -3 * zbrink / ls ** 2 - 2 * dzdx0 / ls
-        a3 = 2 * zbrink / ls ** 3 + dzdx0 / ls ** 2
-        i_max = min(i + int(ls / dx), int(nx - 1))
-        xs = x[j, i:i_max] - x[j, i]
+        if idir == 1:
+            xs = x[j,i:i_max] - x[j,i]
+        else:
+            xs = -(x[j,i:i_max] - x[j,i])
+
         zsep0[j, i:i_max] = (a3 * xs ** 3 + a2 * xs ** 2 + dzdx0 * xs + z[j, i])
 
-        # Zero order filter
-        Cut = 1.5
-        dk = 2.0 * np.pi / (np.max(x))
-        zfft[j, :] = np.fft.fft(zsep0[j, :])
-        zfft[j, :] *= np.exp(-(dk * k * dx) ** 2 / (2. * Cut ** 2))
-        zsep0[j, :] = np.real(np.fft.ifft(zfft[j, :]))
+        # # Zero order filter
+        # Cut = 1.5
+        # dk = 2.0 * np.pi / (np.max(x))
+        # zfft[j, :] = np.fft.fft(zsep0[j, :])
+        # zfft[j, :] *= np.exp(-(dk * k * dx) ** 2 / (2. * Cut ** 2))
+        # zsep0[j, :] = np.real(np.fft.ifft(zfft[j, :]))
 
-        # First order polynom
-        dzdx1 = (zsep0[j, i - 1] - zsep0[j, i - 2]) / dx
-        a = dzdx1 / c
-        ls = np.minimum(np.maximum((3. * z[j, i] / (2. * c) * (1. + a / 4. + a ** 2 / 8.)), 0.1), 200.)
-        a2 = -3 * z[j, i] / ls ** 2 - 2 * dzdx1 / ls
-        a3 = 2 * z[j, i] / ls ** 3 + dzdx1 / ls ** 2
-        i_max1 = min(i + int(ls / dx), int(nx - 1))
-        xs1 = x[j, i:i_max1] - x[j, i]
+        # # First order polynom
+        # dzdx1 = (zsep0[j, i - 1] - zsep0[j, i - 2]) / dx
+        # a = dzdx1 / c
+        # ls = np.minimum(np.maximum((3. * z[j, i] / (2. * c) * (1. + a / 4. + a ** 2 / 8.)), 0.1), 200.)
+        # a2 = -3 * z[j, i] / ls ** 2 - 2 * dzdx1 / ls
+        # a3 = 2 * z[j, i] / ls ** 3 + dzdx1 / ls ** 2
+        # i_max1 = min(i + int(ls / dx), int(nx - 1))
+        # xs1 = x[j, i:i_max1] - x[j, i]
 
-        # Combine Seperation Bubble
-        zsep1[j, i:i_max1] = (a3 * xs1 ** 3 + a2 * xs1 ** 2 + dzdx1 * xs1 + z[j, i])
-        zsep[j, i:i_max] = np.maximum(zsep1[j, i:i_max], z[j, i:i_max])
+        # # Combine Seperation Bubble
+        # zsep1[j, i:i_max1] = (a3 * xs1 ** 3 + a2 * xs1 ** 2 + dzdx1 * xs1 + z[j, i])
+        # zsep[j, i:i_max] = np.maximum(zsep1[j, i:i_max], z[j, i:i_max])
+        zsep[j, i:i_max] = np.maximum(zsep0[j, i:i_max], z[j, i:i_max])
 
     # Smooth surface of separation bubbles over y direction
-    zsep = ndimage.gaussian_filter1d(zsep, sigma=0.2, axis=0)
+    # zsep = ndimage.gaussian_filter1d(zsep, sigma=0.2, axis=0)
     ilow = zsep < z
     zsep[ilow] = z[ilow]
 
