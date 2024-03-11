@@ -109,15 +109,23 @@ def interpolate(s, p, t):
     '''
         
     if p['process_wind'] and p['wind_file'] is not None:
-
-        uw_t = p['wind_file'][:,0]
-        uw_s = p['wind_file'][:,1]
-        uw_d = p['wind_file'][:,2] / 180. * np.pi
-
-        s['uw'][:,:] = interp_circular_nearest(t, uw_t, uw_s)
+        # defining the wind inputs the same as the timestep speeds up the simulation significantly 
+        if (np.any(p['wind_file'][:,0]==t)):
+            s['uw'][:,:] = p['wind_file'][p['wind_file'][:,0]==t,1]
+            s['udir'][:,:] = p['wind_file'][p['wind_file'][:,0]==t,2] 
         
-        s['udir'][:,:] = np.arctan2(interp_circular_nearest(t, uw_t, np.sin(uw_d)),
-                                    interp_circular_nearest(t, uw_t, np.cos(uw_d))) * 180. / np.pi
+        # alternatively, wind inputs are interpolated based on a circular interpolation.
+        # this is more time expensive
+        else:
+            uw_t = p['wind_file'][:,0]
+            uw_s = p['wind_file'][:,1]
+            uw_d = p['wind_file'][:,2] / 180. * np.pi
+
+            s['uw'][:,:] = interp_circular_nearest(t, uw_t, uw_s)
+            
+            s['udir'][:,:] = np.arctan2(interp_circular_nearest(t, uw_t, np.sin(uw_d)),
+                                        interp_circular_nearest(t, uw_t, np.cos(uw_d))) * 180. / np.pi
+
 
     s['uws'] = - s['uw'] * np.sin((-p['alfa'] + s['udir']) / 180. * np.pi)        # alfa [deg] is real world grid cell orientation (clockwise)
     s['uwn'] = - s['uw'] * np.cos((-p['alfa'] + s['udir']) / 180. * np.pi)

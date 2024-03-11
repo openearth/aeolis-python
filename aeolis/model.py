@@ -304,21 +304,21 @@ class AeoLiS(IBmi):
         self.s = aeolis.bed.mixtoplayer(self.s, self.p)
         
         # compute threshold
-        if np.sum(self.s['uw']) != 0:
-            self.s = aeolis.threshold.compute(self.s, self.p)
+        # if np.sum(self.s['uw']) != 0:
+        self.s = aeolis.threshold.compute(self.s, self.p)
 
-            # compute saltation velocity and equilibrium transport
-            self.s = aeolis.transport.equilibrium(self.s, self.p)
+        # compute saltation velocity and equilibrium transport
+        self.s = aeolis.transport.equilibrium(self.s, self.p)
 
-            # compute instantaneous transport
-            if self.p['scheme'] == 'euler_forward':
-                self.s.update(self.euler_forward())
-            elif self.p['scheme'] == 'euler_backward':
-                self.s.update(self.euler_backward())
-            elif self.p['scheme'] == 'crank_nicolson':
-                self.s.update(self.crank_nicolson())
-            else:
-                logger.log_and_raise('Unknown scheme [%s]' % self.p['scheme'], exc=ValueError)
+        # compute instantaneous transport
+        if self.p['scheme'] == 'euler_forward':
+            self.s.update(self.euler_forward())
+        elif self.p['scheme'] == 'euler_backward':
+            self.s.update(self.euler_backward())
+        elif self.p['scheme'] == 'crank_nicolson':
+            self.s.update(self.crank_nicolson())
+        else:
+            logger.log_and_raise('Unknown scheme [%s]' % self.p['scheme'], exc=ValueError)
 
         # update bed
         self.s = aeolis.bed.update(self.s, self.p)
@@ -1676,7 +1676,7 @@ class AeoLiS(IBmi):
 
                 # Ct, pickup = sweep(s['Cu'].copy(), s['mass'].copy(), self.dt, p['T'], s['ds'], s['dn'], s['us'], s['un'] )
                 Ct, pickup = sweep3(Ct, s['Cu'].copy(), s['mass'].copy(), self.dt, p['T'], s['ds'], s['dn'], s['us'], s['un'] )
-                # print('yes')
+
             if 0:
                 #define 4 quadrants based on wind directions
                 ix1 = ((s['us'][:,:,0]>=0) & (s['un'][:,:,0]>=0))

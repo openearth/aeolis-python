@@ -253,6 +253,16 @@ def update(s, p):
         Spatial grids
 
     '''
+    # this is where a supply file is used, this in only for simple cases.
+    if type(p['supply_file']) == np.ndarray:
+        # in descrete supply limited conditions the bed bed layer operations are not valid. 
+        s['mass'][:,:,0,0] -= s['pickup'][:,:,0]
+        s['mass'][:,:,0,0] += p['supply_file']*p['dt_opt']
+        # reset supply under water if process tide is active
+        if p['process_tide']:
+            s['mass'][(s['zb']< s['zs']),0,0]=0
+        return s
+
 
     nx = p['nx']
     ny = p['ny']
@@ -270,18 +280,8 @@ def update(s, p):
     ix_dep = dm[:,0] > 0.
     
     # reshape mass matrix
-    m = s['mass'].reshape((-1,nl,nf))
+    m = s['mass'].reshape((-1,nl,nf)).copy()
 
-    if type(p['supply_file']) == np.ndarray:
-        #in descrete supply limited conditions the bed bed layer operations are not valid. 
-        m[:,0,:] -= pickup
-        m += p['supply_file'].reshape((-1,nl,nf))*p['dt_opt']
-        # reset supply under water if process tide is active
-        if p['process_tide']:
-            m[(s['zb']< s['zs']).flatten()]=0
-        # broadcast to mass parameter
-        s['mass'] = m.reshape((ny+1,nx+1,nl,nf))#[:,:,0,0]
-        return s
 
     # negative mass may occur in case of deposition due to numerics,
     # which should be prevented

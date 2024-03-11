@@ -829,8 +829,8 @@ def sweep3(Ct, Cu, mass, dt, Ts, ds, dn, us, un):
     ufn[-1,:, :] = un[-1,:, :]
 
     Ct_last = Ct.copy()
-    # while k==0 or np.any(np.abs(Ct[:,:,i]-Ct_last[:,:,i])>1e-10):
-    while k==0 or np.any(np.abs(Ct[:,:,i]-Ct_last[:,:,i])!=0):
+    while k==0 or np.any(np.abs(Ct[:,:,i]-Ct_last[:,:,i])>1e-10):
+    # while k==0 or np.any(np.abs(Ct[:,:,i]-Ct_last[:,:,i])!=0):
         Ct_last = Ct.copy()
 
         # lateral boundaries circular
