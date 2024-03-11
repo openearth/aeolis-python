@@ -106,8 +106,9 @@ MODEL_STATE = {
         'hveg',                             # [m] height of vegetation
         'dhveg',                            # [m] Difference in vegetation height per time step
         'dzbveg',                           # [m] Bed level change used for calculation of vegetation growth
-        'germinate',                        # vegetation germination
-        'lateral',                          # vegetation lateral expansion
+        'germinate',                        # [bool] Newly vegetated due to germination (or establishment) 
+        'lateral',                          # [bool] Newly vegetated due to lateral propagation 
+        'vegetated',                        # [bool] Vegetated, determines if vegetation growth or burial is allowed
         'vegfac',                           # Vegetation factor to modify shear stress by according to Raupach 1993
         'fence_height',                     # Fence height
         'R',                                # [m] wave runup
