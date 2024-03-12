@@ -111,8 +111,8 @@ def interpolate(s, p, t):
     if p['process_wind'] and p['wind_file'] is not None:
         # defining the wind inputs the same as the timestep speeds up the simulation significantly 
         if (np.any(p['wind_file'][:,0]==t)):
-            s['uw'][:,:] = p['wind_file'][p['wind_file'][:,0]==t,1]
-            s['udir'][:,:] = p['wind_file'][p['wind_file'][:,0]==t,2] 
+            s['uw'][:,:] = p['wind_file'][p['wind_file'][:,0]==t,1][0]      # this extra bracket is needed to accound for messy input files
+            s['udir'][:,:] = p['wind_file'][p['wind_file'][:,0]==t,2][0] 
         
         # alternatively, wind inputs are interpolated based on a circular interpolation.
         # this is more time expensive
