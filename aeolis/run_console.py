@@ -1,5 +1,6 @@
 
 from aeolis.console_debug import aeolis_debug
+import cProfile
 
 def main()-> None:
     '''Runs AeoLiS model in debugging mode.'''

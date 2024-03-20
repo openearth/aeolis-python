@@ -98,7 +98,10 @@ def compute(s, p):
             s = compute_sheltering(s, p)
                     
         # apply complex mask
-        s['uth'] = apply_mask(s['uth'], s['threshold_mask'])
+        nf = p['nfractions']
+        for i_nf in range(nf):
+            s['uth'][:, :, i_nf] = apply_mask(s['uth'][:, :, i_nf], s['threshold_mask'])
+
         s['uthf'] = s['uth'].copy()
         
     #non-erodible layer (NEW)

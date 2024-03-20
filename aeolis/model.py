@@ -43,6 +43,8 @@ import matplotlib.pyplot as plt
 from datetime import timedelta
 from bmi.api import IBmi
 from functools import reduce
+from numba import njit
+
 
 # package modules
 import aeolis.inout
@@ -301,34 +303,34 @@ class AeoLiS(IBmi):
         self.s = aeolis.bed.mixtoplayer(self.s, self.p)
         
         # compute threshold
-        if np.sum(self.s['uw']) != 0:
-            self.s = aeolis.threshold.compute(self.s, self.p)
+        # if np.sum(self.s['uw']) != 0:
+        self.s = aeolis.threshold.compute(self.s, self.p)
 
-            # compute saltation velocity and equilibrium transport
-            self.s = aeolis.transport.equilibrium(self.s, self.p)
+        # compute saltation velocity and equilibrium transport
+        self.s = aeolis.transport.equilibrium(self.s, self.p)
 
-            # compute instantaneous transport
-            if self.p['scheme'] == 'euler_forward':
-                self.s.update(self.euler_forward())
-            elif self.p['scheme'] == 'euler_backward':
-                self.s.update(self.euler_backward())
-            elif self.p['scheme'] == 'crank_nicolson':
-                self.s.update(self.crank_nicolson())
-            else:
-                logger.log_and_raise('Unknown scheme [%s]' % self.p['scheme'], exc=ValueError)
+        # compute instantaneous transport
+        if self.p['scheme'] == 'euler_forward':
+            self.s.update(self.euler_forward())
+        elif self.p['scheme'] == 'euler_backward':
+            self.s.update(self.euler_backward())
+        elif self.p['scheme'] == 'crank_nicolson':
+            self.s.update(self.crank_nicolson())
+        else:
+            logger.log_and_raise('Unknown scheme [%s]' % self.p['scheme'], exc=ValueError)
 
-            # update bed
-            self.s = aeolis.bed.update(self.s, self.p)
+        # update bed
+        self.s = aeolis.bed.update(self.s, self.p)
 
-            # avalanching
-            self.s = aeolis.avalanching.angele_of_repose(self.s, self.p)
-            self.s = aeolis.avalanching.avalanche(self.s, self.p)
-            
-            # reset original bed in marine zone (wet)
-            self.s = aeolis.bed.wet_bed_reset(self.s, self.p)
+        # avalanching
+        self.s = aeolis.avalanching.angele_of_repose(self.s, self.p)
+        self.s = aeolis.avalanching.avalanche(self.s, self.p)
+        
+        # reset original bed in marine zone (wet)
+        self.s = aeolis.bed.wet_bed_reset(self.s, self.p)
 
-            # calculate average bed level change over time
-            self.s = aeolis.bed.average_change(self.l, self.s, self.p)
+        # calculate average bed level change over time
+        self.s = aeolis.bed.average_change(self.l, self.s, self.p)
 
         # compute dune erosion
         if self.p['process_dune_erosion']:
@@ -624,9 +626,11 @@ class AeoLiS(IBmi):
                         np.max(np.abs(self.s['uwn']) / self.s['dn'])
                 if dtref > 0.:
                     self.dt = np.minimum(self.dt, self.p['CFL'] / dtref)
-                else:
-                    self.dt = np.minimum(self.dt, 1.)
-                    return False
+                # else:
+                #     print(self.dt)
+                    #self.t += self.dt
+                    #self.dt = np.minimum(self.dt, 1.)
+                    #return False
            
         if self.p['max_bedlevel_change'] != 999. and np.max(self.s['dzb']) != 0. and self.dt_prev != 0.:
             
@@ -654,6 +658,7 @@ class AeoLiS(IBmi):
     
         for i in range(p['nfractions']):
             s['qs'][:,:,i], s['qn'][:,:,i] = rotate(s['qs'][:,:,i], s['qn'][:,:,i], angle, origin=(0, 0))
+            s['us'][:,:,i], s['un'][:,:,i] = rotate(s['us'][:,:,i], s['un'][:,:,i], angle, origin=(0, 0))
         
         self.s['udir'] += angle
         
@@ -669,11 +674,12 @@ class AeoLiS(IBmi):
         '''
         
         if self.p['solver'].lower() == 'trunk':
-            solve = self.solve(alpha=0., beta=1)
+            solve = self.solve_EF(alpha=0., beta=1)
+            #solve = self.solve(alpha=0., beta=1)
         elif self.p['solver'].lower() == 'pieter': 
             solve = self.solve_pieter(alpha=0., beta=1)
         elif self.p['solver'].lower() == 'steadystate':
-            solve = self.solve_steadystate()
+            solve = self.solve_SS()
         elif self.p['solver'].lower() == 'steadystatepieter':
             solve = self.solve_steadystatepieter()
 
@@ -694,7 +700,7 @@ class AeoLiS(IBmi):
         elif self.p['solver'].lower() == 'pieter': 
             solve = self.solve_pieter(alpha=1., beta=1)
         elif self.p['solver'].lower() == 'steadystate':
-            solve = self.solve_steadystate()
+            solve = self.solve_SS()
         elif self.p['solver'].lower() == 'steadystatepieter':
             solve = self.solve_steadystatepieter()
             
@@ -1436,10 +1442,10 @@ class AeoLiS(IBmi):
         ix = 1. - np.sum(w, axis=2) > p['max_error']
         if np.any(ix):
             self._count('supplylim')
-            logger.warning(format_log('Ran out of sediment',
-                                      nrcells=np.sum(ix),
-                                      minweight=np.sum(w, axis=-1).min(),
-                                      **logprops))
+            # logger.warning(format_log('Ran out of sediment',
+            #                           nrcells=np.sum(ix),
+            #                           minweight=np.sum(w, axis=-1).min(),
+            #                           **logprops))
            
         qs = Ct * s['us'] 
         qn = Ct * s['un'] 
@@ -1452,6 +1458,276 @@ class AeoLiS(IBmi):
                     w_init=w_init,
                     w_air=w_air,
                     w_bed=w_bed)
+        
+    #@njit
+    def solve_EF(self, alpha:float=0., beta:float=1.) -> dict:
+        '''Implements the explicit Euler forward, implicit Euler backward and semi-implicit Crank-Nicolson numerical schemes
+
+        Determines weights of sediment fractions, sediment pickup and
+        instantaneous sediment concentration. Returns a partial
+        spatial grid dictionary that can be used to update the global
+        spatial grid dictionary.
+
+        Parameters
+        ----------
+        alpha :
+            Implicitness coefficient (0.0 for Euler forward, 1.0 for Euler backward or 0.5 for Crank-Nicolson, default=0.5)
+        beta : 
+            Centralization coefficient (1.0 for upwind or 0.5 for centralized, default=1.0)
+
+        Returns
+        -------
+            Partial spatial grid dictionary
+
+        Examples
+        --------
+        >>> model.s.update(model.solve(alpha=1., beta=1.) # euler backward
+
+        >>> model.s.update(model.solve(alpha=.5, beta=1.) # crank-nicolson
+
+        See Also
+        --------
+        model.AeoLiS.euler_forward
+        model.AeoLiS.euler_backward
+        model.AeoLiS.crank_nicolson
+        transport.compute_weights
+        transport.renormalize_weights
+
+        '''
+
+        l = self.l
+        s = self.s
+        p = self.p
+
+        Ct = s['Ct'].copy()
+        pickup = s['pickup'].copy()
+        Ts = p['T']
+
+        # compute transport weights for all sediment fractions
+        w_init, w_air, w_bed = aeolis.transport.compute_weights(s, p)
+
+        if self.t == 0.:
+            if type(p['bedcomp_file']) == np.ndarray:
+                w = w_init.copy()
+            else:
+                # use initial guess for first time step
+                w = p['grain_dist'].reshape((1,1,-1))
+                w = w.repeat(p['ny']+1, axis=0)
+                w = w.repeat(p['nx']+1, axis=1)
+        else:
+            w = w_init.copy()
+
+        # set model state properties that are added to warnings and errors
+        logprops = dict(minwind=s['uw'].min(),
+                        maxdrop=(l['uw']-s['uw']).max(),
+                        time=self.t,
+                        dt=self.dt)
+            
+        nf = p['nfractions']
+            
+        
+        for i in range(nf):
+
+            if 1:
+                #define 4 quadrants based on wind directions
+                ix1 = ((s['us'][:,:,0]>=0) & (s['un'][:,:,0]>=0))
+                ix2 = ((s['us'][:,:,0]<0) & (s['un'][:,:,0]>=0))
+                ix3 = ((s['us'][:,:,0]<0) & (s['un'][:,:,0]<0))
+                ix4 = ((s['us'][:,:,0]>0) & (s['un'][:,:,0]<0))
+                
+                # initiate solution matrix including ghost cells to accomodate boundaries
+                Ct_s = np.zeros((Ct.shape[0]+2,Ct.shape[1]+2))
+                # populate solution matrix with previous concentration results
+                Ct_s[1:-1,1:-1] = Ct[:,:,i]
+                
+                #set upwind boundary condition
+                Ct_s[:,0:2]=0
+                #circular boundary condition in lateral directions
+                Ct_s[0,:]=Ct_s[-2,:]
+                Ct_s[-1,:]=Ct_s[1,:]
+                # using the Euler forward scheme we can calculate pickup first based on the previous timestep
+                # there is no need for iteration
+                pickup[:,:,i] = self.dt*(np.minimum(s['Cu'][:,:,i],s['mass'][:,:,0,i]+Ct[:,:,i])-Ct[:,:,i])/Ts
+                
+                #solve for all 4 quadrants in one step using logical indexing
+                Ct_s[1:-1,1:-1] = Ct_s[1:-1,1:-1] + \
+                    ix1*(-self.dt*s['us'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[1:-1,:-2])/s['ds'] \
+                         -self.dt*s['un'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[:-2,1:-1])/s['dn']) +\
+                    ix2*(+self.dt*s['us'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[1:-1,2:])/s['ds'] \
+                         -self.dt*s['un'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[:-2,1:-1])/s['dn']) +\
+                    ix3*(+self.dt*s['us'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[1:-1,2:])/s['ds'] \
+                         +self.dt*s['un'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[2:,1:-1])/s['dn']) +\
+                    ix4*(-self.dt*s['us'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[1:-1,:-2])/s['ds'] \
+                         +self.dt*s['un'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[2:,1:-1])/s['dn']) \
+                    + pickup[:,:,i]
+                
+                # define Ct as a subset of Ct_s (eliminating the boundaries)
+                Ct[:,:,i] = Ct_s[1:-1,1:-1] 
+         
+        qs = Ct * s['us'] 
+        qn = Ct * s['un'] 
+
+        return dict(Ct=Ct,
+                    qs=qs,
+                    qn=qn,
+                    pickup=pickup,
+                    w=w,
+                    w_init=w_init,
+                    w_air=w_air,
+                    w_bed=w_bed)
+        
+    #@njit
+    def solve_SS(self, alpha:float=0., beta:float=1.) -> dict:
+        '''Implements the explicit Euler forward, implicit Euler backward and semi-implicit Crank-Nicolson numerical schemes
+
+        Determines weights of sediment fractions, sediment pickup and
+        instantaneous sediment concentration. Returns a partial
+        spatial grid dictionary that can be used to update the global
+        spatial grid dictionary.
+
+        Parameters
+        ----------
+        alpha :
+            Implicitness coefficient (0.0 for Euler forward, 1.0 for Euler backward or 0.5 for Crank-Nicolson, default=0.5)
+        beta : 
+            Centralization coefficient (1.0 for upwind or 0.5 for centralized, default=1.0)
+
+        Returns
+        -------
+            Partial spatial grid dictionary
+
+        Examples
+        --------
+        >>> model.s.update(model.solve(alpha=1., beta=1.) # euler backward
+
+        >>> model.s.update(model.solve(alpha=.5, beta=1.) # crank-nicolson
+
+        See Also
+        --------
+        model.AeoLiS.euler_forward
+        model.AeoLiS.euler_backward
+        model.AeoLiS.crank_nicolson
+        transport.compute_weights
+        transport.renormalize_weights
+
+        '''
+
+        l = self.l
+        s = self.s
+        p = self.p
+
+        Ct = s['Ct'].copy()
+        pickup = s['pickup'].copy()
+        Ts = p['T']
+
+        # compute transport weights for all sediment fractions
+        w_init, w_air, w_bed = aeolis.transport.compute_weights(s, p)
+
+        if self.t == 0.:
+            if type(p['bedcomp_file']) == np.ndarray:
+                w = w_init.copy()
+            else:
+                # use initial guess for first time step
+                w = p['grain_dist'].reshape((1,1,-1))
+                w = w.repeat(p['ny']+1, axis=0)
+                w = w.repeat(p['nx']+1, axis=1)
+        else:
+            w = w_init.copy()
+
+        # set model state properties that are added to warnings and errors
+        logprops = dict(minwind=s['uw'].min(),
+                        maxdrop=(l['uw']-s['uw']).max(),
+                        time=self.t,
+                        dt=self.dt)
+            
+        nf = p['nfractions']
+            
+        
+        for i in range(nf):
+            
+
+            if 1:
+                #print('sweep')
+
+                # initiate emmpty solution matrix, this will effectively kill time dependence and create steady state.
+                Ct = np.zeros(Ct.shape)
+                
+                if p['boundary_offshore'] == 'flux':
+                    Ct[:,0,0] =  s['Cu0'][:,0,0] 
+
+                if p['boundary_onshore'] == 'flux':
+                    Ct[:,-1,0] =  s['Cu0'][:,-1,0] 
+
+                if p['boundary_offshore'] == 'circular':
+                    Ct[:,0,0] =  -1                
+                    Ct[:,-1,0] =  -1                  
+                
+                if p['boundary_offshore'] == 're_circular':
+                    Ct[:,0,0] =  -2                
+                    Ct[:,-1,0] =  -2         
+                
+                if p['boundary_lateral'] == 'circular':
+                    Ct[0,:,0] =  -1                
+                    Ct[-1,:,0] =  -1
+                
+                if p['boundary_lateral'] == 're_circular':
+                    Ct[0,:,0] =  -2                
+                    Ct[-1,:,0] =  -2
+
+                # Ct, pickup = sweep(s['Cu'].copy(), s['mass'].copy(), self.dt, p['T'], s['ds'], s['dn'], s['us'], s['un'] )
+                Ct, pickup = sweep3(Ct, s['Cu'].copy(), s['mass'].copy(), self.dt, p['T'], s['ds'], s['dn'], s['us'], s['un'] )
+
+            if 0:
+                #define 4 quadrants based on wind directions
+                ix1 = ((s['us'][:,:,0]>=0) & (s['un'][:,:,0]>=0))
+                ix2 = ((s['us'][:,:,0]<0) & (s['un'][:,:,0]>=0))
+                ix3 = ((s['us'][:,:,0]<0) & (s['un'][:,:,0]<0))
+                ix4 = ((s['us'][:,:,0]>0) & (s['un'][:,:,0]<0))
+                
+                # initiate solution matrix including ghost cells to accomodate boundaries
+                Ct_s = np.zeros((Ct.shape[0]+2,Ct.shape[1]+2))
+                # populate solution matrix with previous concentration results
+                Ct_s[1:-1,1:-1] = Ct[:,:,i]
+                
+                #set upwind boundary condition
+                Ct_s[:,0:2]=0
+                #circular boundary condition in lateral directions
+                Ct_s[0,:]=Ct_s[-2,:]
+                Ct_s[-1,:]=Ct_s[1,:]
+                # using the Euler forward scheme we can calculate pickup first based on the previous timestep
+                # there is no need for iteration
+                pickup[:,:,i] = self.dt*(np.minimum(s['Cu'][:,:,i],s['mass'][:,:,0,i]+Ct[:,:,i])-Ct[:,:,i])/Ts
+                
+                #solve for all 4 quadrants in one step using logical indexing
+                Ct_s[1:-1,1:-1] = Ct_s[1:-1,1:-1] + \
+                    ix1*(-self.dt*s['us'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[1:-1,:-2])/s['ds'] \
+                         -self.dt*s['un'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[:-2,1:-1])/s['dn']) +\
+                    ix2*(+self.dt*s['us'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[1:-1,2:])/s['ds'] \
+                         -self.dt*s['un'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[:-2,1:-1])/s['dn']) +\
+                    ix3*(+self.dt*s['us'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[1:-1,2:])/s['ds'] \
+                         +self.dt*s['un'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[2:,1:-1])/s['dn']) +\
+                    ix4*(-self.dt*s['us'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[1:-1,:-2])/s['ds'] \
+                         +self.dt*s['un'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[2:,1:-1])/s['dn']) \
+                    + pickup[:,:,i]
+                
+                # define Ct as a subset of Ct_s (eliminating the boundaries)
+                Ct[:,:,i] = Ct_s[1:-1,1:-1] 
+         
+    
+        qs = Ct * s['us'] 
+        qn = Ct * s['un'] 
+        q = np.hypot(qs, qn)
+
+
+        return dict(Ct=Ct,
+                    qs=qs,
+                    qn=qn,
+                    pickup=pickup,
+                    w=w,
+                    w_init=w_init,
+                    w_air=w_air,
+                    w_bed=w_bed,
+                    q=q)
         
         
     def solve_steadystatepieter(self) -> dict:
@@ -2171,8 +2447,12 @@ class AeoLiS(IBmi):
 #                                           iteration=n,
 #                                           minvalue=Ct_i.min(),
 #                                           **logprops))
-
-                    Ct_i[~ix] *= 1. + Ct_i[ix].sum() / Ct_i[~ix].sum()
+                    
+                    if 0: #Ct_i[~ix].sum()>0.:
+                        # compensate the negative concentrations by distributing them over the positives.
+                        # I guess the idea is to conserve mass but it is not sure if this is needed, 
+                        # mass continuity in the system is guaranteed by exchange with bed.
+                        Ct_i[~ix] *= 1. + Ct_i[ix].sum() / Ct_i[~ix].sum()
                     Ct_i[ix] = 0.
 
                 # determine pickup and deficit for current fraction
@@ -2207,25 +2487,27 @@ class AeoLiS(IBmi):
 
             # throw warning if the maximum number of iterations was
             # reached
+            
             if np.any(ix):
                 logger.warn(format_log('Iteration not converged',
                                        nrcells=np.sum(ix),
                                        fraction=i,
                                        **logprops))
             
-            # check for unexpected negative values
-            if Ct_i.min() < 0:
-                logger.warn(format_log('Negative concentrations',
-                                       nrcells=np.sum(Ct_i<0.),
-                                       fraction=i,
-                                       minvalue=Ct_i.min(),
-                                       **logprops))
-            if w_i.min() < 0:
-                logger.warn(format_log('Negative weights',
-                                       nrcells=np.sum(w_i<0),
-                                       fraction=i,
-                                       minvalue=w_i.min(),
-                                       **logprops))
+            if 0: #let's disable these warnings
+                # check for unexpected negative values
+                if Ct_i.min() < 0:
+                    logger.warn(format_log('Negative concentrations',
+                                        nrcells=np.sum(Ct_i<0.),
+                                        fraction=i,
+                                        minvalue=Ct_i.min(),
+                                        **logprops))
+                if w_i.min() < 0:
+                    logger.warn(format_log('Negative weights',
+                                        nrcells=np.sum(w_i<0),
+                                        fraction=i,
+                                        minvalue=w_i.min(),
+                                        **logprops))
         # end loop over frations
 
         # check if there are any cells where the sum of all weights is
@@ -2570,8 +2852,10 @@ class AeoLiSRunner(AeoLiS):
             Statistic of spatial grid
         '''
 
-        if stat in ['min', 'max', 'sum']:
+        if stat in ['min', 'max']:
             return self.o[var][stat]
+        elif stat == 'sum':
+            return self.o[var][stat]*self.dt
         elif stat == 'avg':
             if self.n > 0:
                 return self.o[var]['sum'] / self.n
@@ -2769,7 +3053,7 @@ class AeoLiSRunner(AeoLiS):
                 self.o[k]['var'] = self.o[k]['var'] + v**2
 
         #also update the q variable here
-        self.s['q'] = np.hypot(self.s['qs'], self.s['qn'])
+        # self.s['q'] = np.hypot(self.s['qs'], self.s['qn'])
 
         self.n += 1
 
@@ -2936,12 +3220,13 @@ class AeoLiSRunner(AeoLiS):
         pr = np.ceil(p/fraction)*fraction
         t = time.time()
         interval = t - self.tlog
-        
-
+                
         if self.get_count('time') == 1:
             logger.info('        Time elapsed / Total time / Time remaining / Average Timestep')
             self.dt_array = []
+            
         
+
         self.dt_array.append(self.dt)
 
         if (np.mod(p, fraction) < .01 and self.plog != pr) or interval > max_interval:
