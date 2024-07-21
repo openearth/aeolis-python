@@ -83,7 +83,12 @@ def initialize(s, p):
     if isinstance(p['grain_dist'], str):
             logger.log_and_raise('Grain size file not recognized as array, check file path and whether all values have been filled in.', exc=ValueError) 
 
-    if p['bedcomp_file'] is None and p['grain_dist'].ndim == 1 and p['grain_dist'].dtype == 'float64' or p['grain_dist'].dtype == 'int': 
+    if p['bedcomp_file'] is not None and p['supply_file'] is not None :
+            logger.log_and_raise('Conflict in input definition, cannot define supply_file and bedcomp_file simultaneously', exc=ValueError) 
+
+    if p['supply_file'] is not None:
+        s['mass'][:,:,:,:] = 0 #p['supply_file'].reshape(s['mass'].shape)                
+    elif p['bedcomp_file'] is None and p['grain_dist'].ndim == 1 and p['grain_dist'].dtype == 'float64' or p['grain_dist'].dtype == 'int': 
         # Both float and int are included as options for the grain dist to make sure there is no error when grain_dist is filled in as 1 instead of 1.0. 
         for i in range(nl):
             gs = makeiterable(p['grain_dist'])
@@ -213,7 +218,7 @@ def wet_bed_reset(s, p):
         
         Tbedreset = p['dt_opt'] / p['Tbedreset']
         
-        ix = s['zs'] > (s['zb'] + 0.01)
+        ix = s['TWL'] > (s['zb'])
         s['zb'][ix] += (s['zb0'][ix] - s['zb'][ix]) * Tbedreset
             
     return s
@@ -248,6 +253,16 @@ def update(s, p):
         Spatial grids
 
     '''
+    # this is where a supply file is used, this in only for simple cases.
+    if type(p['supply_file']) == np.ndarray:
+        # in descrete supply limited conditions the bed bed layer operations are not valid. 
+        s['mass'][:,:,0,0] -= s['pickup'][:,:,0]
+        s['mass'][:,:,0,0] += p['supply_file']*p['dt_opt']
+        # reset supply under water if process tide is active
+        if p['process_tide']:
+            s['mass'][(s['zb']< s['zs']),0,0]=0
+        return s
+
 
     nx = p['nx']
     ny = p['ny']
@@ -265,7 +280,8 @@ def update(s, p):
     ix_dep = dm[:,0] > 0.
     
     # reshape mass matrix
-    m = s['mass'].reshape((-1,nl,nf))
+    m = s['mass'].reshape((-1,nl,nf)).copy()
+
 
     # negative mass may occur in case of deposition due to numerics,
     # which should be prevented
@@ -462,8 +478,11 @@ def average_change(l, s, p):
     s['dzbavg'] = n*s['dzbyear']+(1-n)*l['dzbavg']
     
     # Calculate average bed level change as input for vegetation growth [m/year]
-    # s['dzbveg'] = s['dzbavg'].copy()
-    s['dzbveg'] = s['dzbyear'].copy()
+    s['dzbveg'] = s['dzbavg'].copy()
+    # s['dzbveg'] = s['dzbyear'].copy()
+
+    if p['_time'] < p['avg_time']:
+        s['dzbveg'] *= 0.
     
     
     return s

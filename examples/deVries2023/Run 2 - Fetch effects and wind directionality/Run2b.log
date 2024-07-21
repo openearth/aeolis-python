@@ -1,0 +1,667 @@
+2023-08-04 16:40:55,621 aeolis.model INFO     **********************************************************
+2023-08-04 16:40:55,622 aeolis.model INFO                                                               
+2023-08-04 16:40:55,622 aeolis.model INFO              d8888                   888      d8b  .d8888b.   
+2023-08-04 16:40:55,622 aeolis.model INFO             d88888                   888      Y8P d88P  Y88b  
+2023-08-04 16:40:55,623 aeolis.model INFO            d88P888                   888          Y88b.       
+2023-08-04 16:40:55,623 aeolis.model INFO           d88P 888  .d88b.   .d88b.  888      888  "Y888b.    
+2023-08-04 16:40:55,623 aeolis.model INFO          d88P  888 d8P  Y8b d88""88b 888      888     "Y88b.  
+2023-08-04 16:40:55,624 aeolis.model INFO         d88P   888 88888888 888  888 888      888       "888  
+2023-08-04 16:40:55,624 aeolis.model INFO        d8888888888 Y8b.     Y88..88P 888      888 Y88b  d88P  
+2023-08-04 16:40:55,624 aeolis.model INFO       d88P     888  "Y8888   "Y88P"  88888888 888  "Y8888P"   
+2023-08-04 16:40:55,627 aeolis.model INFO                                                               
+2023-08-04 16:40:55,627 aeolis.model INFO       Version:  2.1.2                                        
+2023-08-04 16:40:55,628 aeolis.model INFO                                                               
+2023-08-04 16:40:55,628 aeolis.model INFO     **********************************************************
+2023-08-04 16:40:55,628 aeolis.model INFO     PARAMETER SETTINGS                                        
+2023-08-04 16:40:55,628 aeolis.model INFO     **********************************************************
+2023-08-04 16:40:55,629 aeolis.model INFO       Aa                     = 0.100000
+2023-08-04 16:40:55,629 aeolis.model INFO       CFL                    = 1.00
+2023-08-04 16:40:55,629 aeolis.model INFO       Cb                     = 1.70
+2023-08-04 16:40:55,630 aeolis.model INFO       Cdk                    = 5.00
+2023-08-04 16:40:55,630 aeolis.model INFO       Ck                     = 2.78
+2023-08-04 16:40:55,630 aeolis.model INFO       Cl                     = 6.70
+2023-08-04 16:40:55,630 aeolis.model INFO       Cl_gw                  = 0.700000
+2023-08-04 16:40:55,631 aeolis.model INFO       D_gw                   = 12
+2023-08-04 16:40:55,631 aeolis.model INFO       GW_stat                = 1
+2023-08-04 16:40:55,631 aeolis.model INFO       K_gw                   = 0.000780
+2023-08-04 16:40:55,631 aeolis.model INFO       L                      = 100.00
+2023-08-04 16:40:55,632 aeolis.model INFO       T                      = 0.050000
+2023-08-04 16:40:55,632 aeolis.model INFO       Tbedreset              = 86400.00
+2023-08-04 16:40:55,632 aeolis.model INFO       Tdry                   = 7200.00
+2023-08-04 16:40:55,632 aeolis.model INFO       Tsalt                  = 2592000.00
+2023-08-04 16:40:55,632 aeolis.model INFO       V_lat                  = 0.000000
+2023-08-04 16:40:55,633 aeolis.model INFO       V_ver                  = 5.00
+2023-08-04 16:40:55,633 aeolis.model INFO       accfac                 = 1.00
+2023-08-04 16:40:55,633 aeolis.model INFO       alfa                   = 0
+2023-08-04 16:40:55,633 aeolis.model INFO       alfad_moist            = -0.035000
+2023-08-04 16:40:55,634 aeolis.model INFO       alfaw_moist            = -0.070000
+2023-08-04 16:40:55,634 aeolis.model INFO       avg_time               = 86400.00
+2023-08-04 16:40:55,634 aeolis.model INFO       beach_slope            = 0.100000
+2023-08-04 16:40:55,635 aeolis.model INFO       bed_file               = z_grid.txt
+2023-08-04 16:40:55,635 aeolis.model INFO       bedcomp_file           = <novalue>
+2023-08-04 16:40:55,635 aeolis.model INFO       beta                   = 130.00
+2023-08-04 16:40:55,635 aeolis.model INFO       bi                     = 0.500000
+2023-08-04 16:40:55,635 aeolis.model INFO       boundary_gw            = no_flow
+2023-08-04 16:40:55,636 aeolis.model INFO       boundary_lateral       = circular
+2023-08-04 16:40:55,636 aeolis.model INFO       boundary_offshore      = constant
+2023-08-04 16:40:55,636 aeolis.model INFO       boundary_onshore       = constant
+2023-08-04 16:40:55,636 aeolis.model INFO       buffer_width           = 20.00
+2023-08-04 16:40:55,636 aeolis.model INFO       c_b                    = 0.200000
+2023-08-04 16:40:55,636 aeolis.model INFO       callback               = <novalue>
+2023-08-04 16:40:55,637 aeolis.model INFO       constant_offshore_flux = 0.000000
+2023-08-04 16:40:55,637 aeolis.model INFO       constant_onshore_flux  = 0.000000
+2023-08-04 16:40:55,637 aeolis.model INFO       cpair                  = 0.001004
+2023-08-04 16:40:55,637 aeolis.model INFO       csalt                  = 0.003500
+2023-08-04 16:40:55,637 aeolis.model INFO       dt                     = 0.050000
+2023-08-04 16:40:55,637 aeolis.model INFO       dune_toe_elevation     = 3
+2023-08-04 16:40:55,638 aeolis.model INFO       dx                     = 1.00
+2023-08-04 16:40:55,638 aeolis.model INFO       dy                     = 1.00
+2023-08-04 16:40:55,638 aeolis.model INFO       dzb_interval           = 86400.00
+2023-08-04 16:40:55,638 aeolis.model INFO       dzb_opt                = 0.000000
+2023-08-04 16:40:55,638 aeolis.model INFO       eps                    = 0.001000
+2023-08-04 16:40:55,638 aeolis.model INFO       external_vars          = 
+2023-08-04 16:40:55,639 aeolis.model INFO       facDOD                 = 0.100000
+2023-08-04 16:40:55,639 aeolis.model INFO       fc                     = 0.110000
+2023-08-04 16:40:55,639 aeolis.model INFO       fence_file             = <novalue>
+2023-08-04 16:40:55,639 aeolis.model INFO       g                      = 9.81
+2023-08-04 16:40:55,639 aeolis.model INFO       gamma                  = 0.500000
+2023-08-04 16:40:55,639 aeolis.model INFO       gamma_vegshear         = 16.00
+2023-08-04 16:40:55,640 aeolis.model INFO       germinate              = 1.00
+2023-08-04 16:40:55,640 aeolis.model INFO       grain_dist             = 1.00
+2023-08-04 16:40:55,640 aeolis.model INFO       grain_size             = 0.000600
+2023-08-04 16:40:55,640 aeolis.model INFO       gw_mask                = <novalue>
+2023-08-04 16:40:55,640 aeolis.model INFO       h                      = 1.00
+2023-08-04 16:40:55,641 aeolis.model INFO       hveg_max               = 1.00
+2023-08-04 16:40:55,644 aeolis.model INFO       in_gw                  = 0
+2023-08-04 16:40:55,644 aeolis.model INFO       k                      = 0.010000
+2023-08-04 16:40:55,645 aeolis.model INFO       kappa                  = 0.410000
+2023-08-04 16:40:55,645 aeolis.model INFO       l                      = 1.00
+2023-08-04 16:40:55,645 aeolis.model INFO       lateral                = 0.000000
+2023-08-04 16:40:55,645 aeolis.model INFO       lateral_flux           = 0.000000
+2023-08-04 16:40:55,645 aeolis.model INFO       layer_thickness        = 0.050000
+2023-08-04 16:40:55,645 aeolis.model INFO       m                      = 0.500000
+2023-08-04 16:40:55,645 aeolis.model INFO       max_bedlevel_change    = 999.00
+2023-08-04 16:40:55,646 aeolis.model INFO       max_error              = 0.000001
+2023-08-04 16:40:55,646 aeolis.model INFO       max_iter               = 1000
+2023-08-04 16:40:55,646 aeolis.model INFO       max_iter_ava           = 1000
+2023-08-04 16:40:55,646 aeolis.model INFO       md_moist               = 0.420000
+2023-08-04 16:40:55,646 aeolis.model INFO       meteo_file             = <novalue>
+2023-08-04 16:40:55,646 aeolis.model INFO       method_grainspeed      = windspeed
+2023-08-04 16:40:55,647 aeolis.model INFO       method_moist           = belly_johnson
+2023-08-04 16:40:55,647 aeolis.model INFO       method_moist_process   = infiltration
+2023-08-04 16:40:55,647 aeolis.model INFO       method_moist_threshold = belly_johnson
+2023-08-04 16:40:55,647 aeolis.model INFO       method_roughness       = constant
+2023-08-04 16:40:55,647 aeolis.model INFO       method_transport       = bagnold
+2023-08-04 16:40:55,647 aeolis.model INFO       mu_b                   = 20.00
+2023-08-04 16:40:55,648 aeolis.model INFO       mw_moist               = 0.570000
+2023-08-04 16:40:55,648 aeolis.model INFO       nd_moist               = 4.50
+2023-08-04 16:40:55,648 aeolis.model INFO       ne_file                = <novalue>
+2023-08-04 16:40:55,648 aeolis.model INFO       ne_gw                  = 0.300000
+2023-08-04 16:40:55,648 aeolis.model INFO       nfractions             = 1
+2023-08-04 16:40:55,648 aeolis.model INFO       nlayers                = 1
+2023-08-04 16:40:55,648 aeolis.model INFO       nw_moist               = 2.30
+2023-08-04 16:40:55,649 aeolis.model INFO       nx                     = 0
+2023-08-04 16:40:55,649 aeolis.model INFO       ny                     = 0
+2023-08-04 16:40:55,649 aeolis.model INFO       offshore_flux          = 0.000000
+2023-08-04 16:40:55,649 aeolis.model INFO       okin_c1_fence          = 0.480000
+2023-08-04 16:40:55,649 aeolis.model INFO       okin_c1_veg            = 0.480000
+2023-08-04 16:40:55,649 aeolis.model INFO       okin_initialred_fence  = 0.320000
+2023-08-04 16:40:55,650 aeolis.model INFO       okin_initialred_veg    = 0.320000
+2023-08-04 16:40:55,650 aeolis.model INFO       onshore_flux           = 0.000000
+2023-08-04 16:40:55,650 aeolis.model INFO       output_file            = C:\Users\svries\Documents\GitHub\OE_aeolis-python\examples\deVries2023\Run 2 - Fetch effects and wind directionality\Run2b.nc
+2023-08-04 16:40:55,650 aeolis.model INFO       output_times           = 1.00
+2023-08-04 16:40:55,650 aeolis.model INFO       output_types           = 
+2023-08-04 16:40:55,650 aeolis.model INFO       output_vars            = zb
+2023-08-04 16:40:55,650 aeolis.model INFO                                uw
+2023-08-04 16:40:55,651 aeolis.model INFO                                u
+2023-08-04 16:40:55,651 aeolis.model INFO                                udir
+2023-08-04 16:40:55,651 aeolis.model INFO                                Cu
+2023-08-04 16:40:55,651 aeolis.model INFO                                Ct
+2023-08-04 16:40:55,651 aeolis.model INFO                                mass
+2023-08-04 16:40:55,651 aeolis.model INFO                                pickup
+2023-08-04 16:40:55,651 aeolis.model INFO                                uth
+2023-08-04 16:40:55,651 aeolis.model INFO                                q
+2023-08-04 16:40:55,651 aeolis.model INFO       porosity               = 0.400000
+2023-08-04 16:40:55,651 aeolis.model INFO       process_avalanche      = F
+2023-08-04 16:40:55,652 aeolis.model INFO       process_bedupdate      = F
+2023-08-04 16:40:55,652 aeolis.model INFO       process_dune_erosion   = F
+2023-08-04 16:40:55,652 aeolis.model INFO       process_fences         = F
+2023-08-04 16:40:55,652 aeolis.model INFO       process_groundwater    = F
+2023-08-04 16:40:55,652 aeolis.model INFO       process_humidity       = F
+2023-08-04 16:40:55,652 aeolis.model INFO       process_inertia        = F
+2023-08-04 16:40:55,652 aeolis.model INFO       process_meteo          = F
+2023-08-04 16:40:55,652 aeolis.model INFO       process_mixtoplayer    = F
+2023-08-04 16:40:55,652 aeolis.model INFO       process_moist          = F
+2023-08-04 16:40:55,652 aeolis.model INFO       process_runup          = F
+2023-08-04 16:40:55,652 aeolis.model INFO       process_salt           = F
+2023-08-04 16:40:55,653 aeolis.model INFO       process_scanning       = F
+2023-08-04 16:40:55,653 aeolis.model INFO       process_seepage_face   = F
+2023-08-04 16:40:55,653 aeolis.model INFO       process_separation     = F
+2023-08-04 16:40:55,653 aeolis.model INFO       process_shear          = F
+2023-08-04 16:40:55,653 aeolis.model INFO       process_threshold      = T
+2023-08-04 16:40:55,653 aeolis.model INFO       process_tide           = F
+2023-08-04 16:40:55,653 aeolis.model INFO       process_transport      = T
+2023-08-04 16:40:55,653 aeolis.model INFO       process_vegetation     = F
+2023-08-04 16:40:55,653 aeolis.model INFO       process_wave           = F
+2023-08-04 16:40:55,653 aeolis.model INFO       process_wet_bed_reset  = F
+2023-08-04 16:40:55,654 aeolis.model INFO       process_wind           = T
+2023-08-04 16:40:55,654 aeolis.model INFO       refdate                = 2020-01-01
+2023-08-04 16:40:55,654 aeolis.model INFO                                00:00
+2023-08-04 16:40:55,654 aeolis.model INFO       resd_moist             = 0.010000
+2023-08-04 16:40:55,654 aeolis.model INFO       restart                = <novalue>
+2023-08-04 16:40:55,654 aeolis.model INFO       resw_moist             = 0.010000
+2023-08-04 16:40:55,654 aeolis.model INFO       rhoa                   = 1.23
+2023-08-04 16:40:55,654 aeolis.model INFO       rhog                   = 2650.00
+2023-08-04 16:40:55,654 aeolis.model INFO       rhoveg_max             = 0.500000
+2023-08-04 16:40:55,654 aeolis.model INFO       rhow                   = 1025.00
+2023-08-04 16:40:55,655 aeolis.model INFO       runup_mask             = <novalue>
+2023-08-04 16:40:55,655 aeolis.model INFO       satd_moist             = 0.500000
+2023-08-04 16:40:55,655 aeolis.model INFO       satw_moist             = 0.350000
+2023-08-04 16:40:55,655 aeolis.model INFO       scheme                 = euler_backward
+2023-08-04 16:40:55,655 aeolis.model INFO       sedimentinput          = 0.000000
+2023-08-04 16:40:55,655 aeolis.model INFO       sep_filter_iterations  = 0
+2023-08-04 16:40:55,655 aeolis.model INFO       sigma                  = 4.20
+2023-08-04 16:40:55,655 aeolis.model INFO       solver                 = pieter
+2023-08-04 16:40:55,655 aeolis.model INFO       supply_file            = supply_file.txt
+2023-08-04 16:40:55,655 aeolis.model INFO       t_veg                  = 3
+2023-08-04 16:40:55,656 aeolis.model INFO       tfac_gw                = 10
+2023-08-04 16:40:55,656 aeolis.model INFO       th_bedslope            = F
+2023-08-04 16:40:55,656 aeolis.model INFO       th_drylayer            = F
+2023-08-04 16:40:55,656 aeolis.model INFO       th_grainsize           = T
+2023-08-04 16:40:55,656 aeolis.model INFO       th_humidity            = F
+2023-08-04 16:40:55,656 aeolis.model INFO       th_moisture            = F
+2023-08-04 16:40:55,656 aeolis.model INFO       th_nelayer             = T
+2023-08-04 16:40:55,656 aeolis.model INFO       th_roughness           = F
+2023-08-04 16:40:55,656 aeolis.model INFO       th_salt                = F
+2023-08-04 16:40:55,656 aeolis.model INFO       th_sheltering          = F
+2023-08-04 16:40:55,656 aeolis.model INFO       theta_dyn              = 33.00
+2023-08-04 16:40:55,660 aeolis.model INFO       theta_stat             = 34.00
+2023-08-04 16:40:55,660 aeolis.model INFO       thick_moist            = 0.002000
+2023-08-04 16:40:55,660 aeolis.model INFO       threshold_file         = <novalue>
+2023-08-04 16:40:55,660 aeolis.model INFO       threshold_mask         = <novalue>
+2023-08-04 16:40:55,660 aeolis.model INFO       tide_file              = <novalue>
+2023-08-04 16:40:55,661 aeolis.model INFO       tide_mask              = <novalue>
+2023-08-04 16:40:55,661 aeolis.model INFO       tstart                 = 0
+2023-08-04 16:40:55,661 aeolis.model INFO       tstop                  = 360.00
+2023-08-04 16:40:55,661 aeolis.model INFO       v                      = 0.000015
+2023-08-04 16:40:55,661 aeolis.model INFO       v_gam                  = 1
+2023-08-04 16:40:55,662 aeolis.model INFO       veg_file               = <novalue>
+2023-08-04 16:40:55,662 aeolis.model INFO       veg_gamma              = 1.00
+2023-08-04 16:40:55,662 aeolis.model INFO       veg_min_elevation      = -10.000000
+2023-08-04 16:40:55,662 aeolis.model INFO       veg_sigma              = 0.800000
+2023-08-04 16:40:55,662 aeolis.model INFO       veggrowth_type         = orig
+2023-08-04 16:40:55,662 aeolis.model INFO       vegshear_type          = raupach
+2023-08-04 16:40:55,662 aeolis.model INFO       visualization          = F
+2023-08-04 16:40:55,662 aeolis.model INFO       w1_5                   = 0.020000
+2023-08-04 16:40:55,663 aeolis.model INFO       wave_file              = <novalue>
+2023-08-04 16:40:55,663 aeolis.model INFO       wave_mask              = <novalue>
+2023-08-04 16:40:55,663 aeolis.model INFO       wind_convention        = cartesian
+2023-08-04 16:40:55,663 aeolis.model INFO       wind_file              = wind_var.txt
+2023-08-04 16:40:55,663 aeolis.model INFO       xgrid_file             = x_grid.txt
+2023-08-04 16:40:55,663 aeolis.model INFO       xi                     = 0.300000
+2023-08-04 16:40:55,663 aeolis.model INFO       ygrid_file             = y_grid.txt
+2023-08-04 16:40:55,663 aeolis.model INFO       z                      = 1.00
+2023-08-04 16:40:55,663 aeolis.model INFO       zsep_y_filter          = F
+2023-08-04 16:40:55,663 aeolis.model INFO     **********************************************************
+2023-08-04 16:40:55,664 aeolis.model INFO     
+2023-08-04 16:40:55,754 aeolis.model INFO             Time elapsed / Total time / Time remaining / Average Timestep
+2023-08-04 16:40:55,754 aeolis.model INFO     000.0%       0:00:00 /    0:02:31 /        0:02:31 / 0.1
+2023-08-04 16:40:56,328 aeolis.model INFO     001.0%       0:00:01 /    0:00:59 /        0:00:58 / 0.0
+2023-08-04 16:40:57,012 aeolis.model INFO     002.0%       0:00:01 /    0:01:04 /        0:01:02 / 0.0
+2023-08-04 16:40:57,661 aeolis.model INFO     003.0%       0:00:02 /    0:01:04 /        0:01:02 / 0.0
+2023-08-04 16:40:58,248 aeolis.model INFO     004.0%       0:00:03 /    0:01:03 /        0:01:00 / 0.0
+2023-08-04 16:40:58,803 aeolis.model INFO     005.0%       0:00:03 /    0:01:01 /        0:00:58 / 0.0
+2023-08-04 16:40:59,486 aeolis.model INFO     006.0%       0:00:04 /    0:01:03 /        0:00:59 / 0.0
+2023-08-04 16:41:00,076 aeolis.model INFO     007.0%       0:00:04 /    0:01:02 /        0:00:58 / 0.0
+2023-08-04 16:41:00,677 aeolis.model INFO     008.0%       0:00:05 /    0:01:02 /        0:00:57 / 0.0
+2023-08-04 16:41:01,283 aeolis.model INFO     009.0%       0:00:06 /    0:01:02 /        0:00:56 / 0.0
+2023-08-04 16:41:02,227 aeolis.model INFO     010.0%       0:00:06 /    0:01:05 /        0:00:58 / 0.0
+2023-08-04 16:41:03,212 aeolis.model INFO     011.0%       0:00:07 /    0:01:08 /        0:01:00 / 0.0
+2023-08-04 16:41:04,079 aeolis.model INFO     012.0%       0:00:08 /    0:01:09 /        0:01:01 / 0.0
+2023-08-04 16:41:04,664 aeolis.model INFO     013.0%       0:00:09 /    0:01:09 /        0:01:00 / 0.0
+2023-08-04 16:41:05,259 aeolis.model INFO     014.0%       0:00:10 /    0:01:08 /        0:00:58 / 0.0
+2023-08-04 16:41:05,802 aeolis.model INFO     015.0%       0:00:10 /    0:01:07 /        0:00:57 / 0.0
+2023-08-04 16:41:06,400 aeolis.model INFO     016.0%       0:00:11 /    0:01:07 /        0:00:56 / 0.0
+2023-08-04 16:41:07,154 aeolis.model INFO     017.0%       0:00:11 /    0:01:07 /        0:00:56 / 0.0
+2023-08-04 16:41:08,080 aeolis.model INFO     018.0%       0:00:12 /    0:01:09 /        0:00:56 / 0.0
+2023-08-04 16:41:08,662 aeolis.model INFO     019.0%       0:00:13 /    0:01:08 /        0:00:55 / 0.0
+2023-08-04 16:41:09,206 aeolis.model INFO     020.0%       0:00:13 /    0:01:07 /        0:00:54 / 0.0
+2023-08-04 16:41:09,827 aeolis.model INFO     021.0%       0:00:14 /    0:01:07 /        0:00:53 / 0.0
+2023-08-04 16:41:10,537 aeolis.model INFO     022.0%       0:00:15 /    0:01:07 /        0:00:52 / 0.0
+2023-08-04 16:41:11,130 aeolis.model INFO     023.0%       0:00:15 /    0:01:07 /        0:00:52 / 0.0
+2023-08-04 16:41:11,727 aeolis.model INFO     024.0%       0:00:16 /    0:01:07 /        0:00:51 / 0.0
+2023-08-04 16:41:12,307 aeolis.model INFO     025.0%       0:00:17 /    0:01:06 /        0:00:50 / 0.0
+2023-08-04 16:41:12,889 aeolis.model INFO     026.0%       0:00:17 /    0:01:06 /        0:00:49 / 0.0
+2023-08-04 16:41:13,395 aeolis.model INFO     027.0%       0:00:18 /    0:01:05 /        0:00:48 / 0.0
+2023-08-04 16:41:13,920 aeolis.model INFO     028.0%       0:00:18 /    0:01:05 /        0:00:47 / 0.0
+2023-08-04 16:41:14,422 aeolis.model INFO     029.0%       0:00:19 /    0:01:04 /        0:00:46 / 0.0
+2023-08-04 16:41:15,322 aeolis.model INFO     030.0%       0:00:20 /    0:01:05 /        0:00:46 / 0.0
+2023-08-04 16:41:16,459 aeolis.model INFO     031.0%       0:00:21 /    0:01:07 /        0:00:46 / 0.0
+2023-08-04 16:41:17,140 aeolis.model INFO     032.0%       0:00:21 /    0:01:07 /        0:00:45 / 0.0
+2023-08-04 16:41:17,707 aeolis.model INFO     033.0%       0:00:22 /    0:01:07 /        0:00:45 / 0.0
+2023-08-04 16:41:18,244 aeolis.model INFO     034.0%       0:00:23 /    0:01:06 /        0:00:44 / 0.0
+2023-08-04 16:41:18,804 aeolis.model INFO     035.0%       0:00:23 /    0:01:06 /        0:00:43 / 0.0
+2023-08-04 16:41:19,691 aeolis.model INFO     036.0%       0:00:24 /    0:01:07 /        0:00:43 / 0.0
+2023-08-04 16:41:20,490 aeolis.model INFO     037.0%       0:00:25 /    0:01:07 /        0:00:42 / 0.0
+2023-08-04 16:41:21,205 aeolis.model INFO     038.0%       0:00:25 /    0:01:07 /        0:00:42 / 0.0
+2023-08-04 16:41:21,715 aeolis.model INFO     039.0%       0:00:26 /    0:01:07 /        0:00:41 / 0.0
+2023-08-04 16:41:22,602 aeolis.model INFO     040.0%       0:00:27 /    0:01:07 /        0:00:40 / 0.0
+2023-08-04 16:41:23,461 aeolis.model INFO     041.0%       0:00:28 /    0:01:08 /        0:00:40 / 0.0
+2023-08-04 16:41:24,144 aeolis.model INFO     042.0%       0:00:28 /    0:01:08 /        0:00:39 / 0.0
+2023-08-04 16:41:24,816 aeolis.model INFO     043.0%       0:00:29 /    0:01:08 /        0:00:39 / 0.0
+2023-08-04 16:41:25,492 aeolis.model INFO     044.0%       0:00:30 /    0:01:08 /        0:00:38 / 0.0
+2023-08-04 16:41:26,204 aeolis.model INFO     045.0%       0:00:30 /    0:01:08 /        0:00:37 / 0.0
+2023-08-04 16:41:27,631 aeolis.model INFO     046.0%       0:00:32 /    0:01:09 /        0:00:37 / 0.0
+2023-08-04 16:41:29,108 aeolis.model INFO     047.0%       0:00:33 /    0:01:11 /        0:00:38 / 0.0
+2023-08-04 16:41:30,350 aeolis.model INFO     048.0%       0:00:35 /    0:01:12 /        0:00:38 / 0.0
+2023-08-04 16:41:30,977 aeolis.model INFO     049.0%       0:00:35 /    0:01:12 /        0:00:37 / 0.0
+2023-08-04 16:41:31,756 aeolis.model INFO     050.0%       0:00:36 /    0:01:12 /        0:00:36 / 0.0
+2023-08-04 16:41:32,489 aeolis.model INFO     051.0%       0:00:37 /    0:01:12 /        0:00:35 / 0.0
+2023-08-04 16:41:33,119 aeolis.model INFO     052.0%       0:00:37 /    0:01:12 /        0:00:35 / 0.0
+2023-08-04 16:41:33,742 aeolis.model INFO     053.0%       0:00:38 /    0:01:12 /        0:00:34 / 0.0
+2023-08-04 16:41:34,392 aeolis.model INFO     054.0%       0:00:39 /    0:01:12 /        0:00:33 / 0.0
+2023-08-04 16:41:35,022 aeolis.model INFO     055.0%       0:00:39 /    0:01:11 /        0:00:32 / 0.0
+2023-08-04 16:41:36,142 aeolis.model INFO     056.0%       0:00:40 /    0:01:12 /        0:00:32 / 0.0
+2023-08-04 16:41:37,052 aeolis.model INFO     057.0%       0:00:41 /    0:01:12 /        0:00:31 / 0.0
+2023-08-04 16:41:37,942 aeolis.model INFO     058.0%       0:00:42 /    0:01:13 /        0:00:31 / 0.0
+2023-08-04 16:41:38,792 aeolis.model INFO     059.0%       0:00:43 /    0:01:13 /        0:00:30 / 0.0
+2023-08-04 16:41:39,585 aeolis.model INFO     060.0%       0:00:44 /    0:01:13 /        0:00:29 / 0.0
+2023-08-04 16:41:40,175 aeolis.model INFO     061.0%       0:00:44 /    0:01:13 /        0:00:28 / 0.0
+2023-08-04 16:41:40,806 aeolis.model INFO     062.0%       0:00:45 /    0:01:13 /        0:00:28 / 0.0
+2023-08-04 16:41:41,755 aeolis.model INFO     063.0%       0:00:46 /    0:01:13 /        0:00:27 / 0.0
+2023-08-04 16:41:42,538 aeolis.model INFO     064.0%       0:00:47 /    0:01:13 /        0:00:26 / 0.0
+2023-08-04 16:41:43,206 aeolis.model INFO     065.0%       0:00:47 /    0:01:13 /        0:00:26 / 0.0
+2023-08-04 16:41:43,796 aeolis.model INFO     066.0%       0:00:48 /    0:01:13 /        0:00:25 / 0.0
+2023-08-04 16:41:44,400 aeolis.model INFO     067.0%       0:00:49 /    0:01:13 /        0:00:24 / 0.0
+2023-08-04 16:41:44,971 aeolis.model INFO     068.0%       0:00:49 /    0:01:12 /        0:00:23 / 0.0
+2023-08-04 16:41:45,509 aeolis.model INFO     069.0%       0:00:50 /    0:01:12 /        0:00:22 / 0.0
+2023-08-04 16:41:46,260 aeolis.model INFO     070.0%       0:00:51 /    0:01:12 /        0:00:22 / 0.0
+2023-08-04 16:41:46,852 aeolis.model INFO     071.0%       0:00:51 /    0:01:12 /        0:00:21 / 0.0
+2023-08-04 16:41:47,368 aeolis.model INFO     072.0%       0:00:52 /    0:01:12 /        0:00:20 / 0.0
+2023-08-04 16:41:47,866 aeolis.model INFO     073.0%       0:00:52 /    0:01:11 /        0:00:19 / 0.0
+2023-08-04 16:41:48,433 aeolis.model INFO     074.0%       0:00:53 /    0:01:11 /        0:00:19 / 0.0
+2023-08-04 16:41:49,012 aeolis.model INFO     075.0%       0:00:53 /    0:01:11 /        0:00:18 / 0.0
+2023-08-04 16:41:49,585 aeolis.model INFO     076.0%       0:00:54 /    0:01:11 /        0:00:17 / 0.0
+2023-08-04 16:41:50,273 aeolis.model INFO     077.0%       0:00:55 /    0:01:11 /        0:00:16 / 0.0
+2023-08-04 16:41:50,928 aeolis.model INFO     078.0%       0:00:55 /    0:01:11 /        0:00:16 / 0.0
+2023-08-04 16:41:51,533 aeolis.model INFO     079.0%       0:00:56 /    0:01:11 /        0:00:15 / 0.0
+2023-08-04 16:41:52,235 aeolis.model INFO     080.0%       0:00:57 /    0:01:11 /        0:00:14 / 0.0
+2023-08-04 16:41:52,854 aeolis.model INFO     081.0%       0:00:57 /    0:01:11 /        0:00:13 / 0.0
+2023-08-04 16:41:53,407 aeolis.model INFO     082.0%       0:00:58 /    0:01:10 /        0:00:13 / 0.0
+2023-08-04 16:41:53,916 aeolis.model INFO     083.0%       0:00:58 /    0:01:10 /        0:00:12 / 0.0
+2023-08-04 16:41:54,465 aeolis.model INFO     084.0%       0:00:59 /    0:01:10 /        0:00:11 / 0.0
+2023-08-04 16:41:55,114 aeolis.model INFO     085.0%       0:00:59 /    0:01:10 /        0:00:10 / 0.0
+2023-08-04 16:41:55,738 aeolis.model INFO     086.0%       0:01:00 /    0:01:10 /        0:00:10 / 0.0
+2023-08-04 16:41:56,336 aeolis.model INFO     087.0%       0:01:01 /    0:01:10 /        0:00:09 / 0.0
+2023-08-04 16:41:56,893 aeolis.model INFO     088.0%       0:01:01 /    0:01:10 /        0:00:08 / 0.0
+2023-08-04 16:41:57,615 aeolis.model INFO     089.0%       0:01:02 /    0:01:10 /        0:00:08 / 0.0
+2023-08-04 16:41:58,274 aeolis.model INFO     090.0%       0:01:03 /    0:01:09 /        0:00:07 / 0.0
+2023-08-04 16:41:58,848 aeolis.model INFO     091.0%       0:01:03 /    0:01:09 /        0:00:06 / 0.0
+2023-08-04 16:41:59,462 aeolis.model INFO     092.0%       0:01:04 /    0:01:09 /        0:00:06 / 0.0
+2023-08-04 16:42:00,047 aeolis.model INFO     093.0%       0:01:04 /    0:01:09 /        0:00:05 / 0.0
+2023-08-04 16:42:00,645 aeolis.model INFO     094.0%       0:01:05 /    0:01:09 /        0:00:04 / 0.0
+2023-08-04 16:42:01,220 aeolis.model INFO     095.0%       0:01:05 /    0:01:09 /        0:00:03 / 0.0
+2023-08-04 16:42:01,749 aeolis.model INFO     096.0%       0:01:06 /    0:01:09 /        0:00:03 / 0.0
+2023-08-04 16:42:01,976 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:01,976 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:01,977 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:01,977 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:01,977 aeolis.model WARNING  time...........: 347.00     
+2023-08-04 16:42:01,989 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:01,990 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:01,990 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:01,990 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:01,990 aeolis.model WARNING  time...........: 347.10     
+2023-08-04 16:42:02,005 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,006 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,006 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,006 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,006 aeolis.model WARNING  time...........: 347.20     
+2023-08-04 16:42:02,020 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,021 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,022 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,022 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,022 aeolis.model WARNING  time...........: 347.30     
+2023-08-04 16:42:02,035 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,038 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,038 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,038 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,038 aeolis.model WARNING  time...........: 347.40     
+2023-08-04 16:42:02,053 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,053 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,053 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,054 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,054 aeolis.model WARNING  time...........: 347.50     
+2023-08-04 16:42:02,068 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,068 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,069 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,069 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,069 aeolis.model WARNING  time...........: 347.60     
+2023-08-04 16:42:02,083 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,084 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,084 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,084 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,084 aeolis.model WARNING  time...........: 347.70     
+2023-08-04 16:42:02,099 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,099 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,099 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,099 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,099 aeolis.model WARNING  time...........: 347.80     
+2023-08-04 16:42:02,140 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,140 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,142 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,142 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,142 aeolis.model WARNING  time...........: 347.90     
+2023-08-04 16:42:02,156 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,156 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,157 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,157 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,157 aeolis.model WARNING  time...........: 348.00     
+2023-08-04 16:42:02,172 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,172 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,172 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,172 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,172 aeolis.model WARNING  time...........: 348.10     
+2023-08-04 16:42:02,188 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,188 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,188 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,188 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,189 aeolis.model WARNING  time...........: 348.20     
+2023-08-04 16:42:02,207 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,208 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,208 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,208 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,208 aeolis.model WARNING  time...........: 348.30     
+2023-08-04 16:42:02,223 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,223 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,223 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,224 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,226 aeolis.model WARNING  time...........: 348.40     
+2023-08-04 16:42:02,240 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,242 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,242 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,242 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,243 aeolis.model WARNING  time...........: 348.50     
+2023-08-04 16:42:02,258 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,258 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,259 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,259 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,259 aeolis.model WARNING  time...........: 348.60     
+2023-08-04 16:42:02,272 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,272 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,272 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,272 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,273 aeolis.model WARNING  time...........: 348.70     
+2023-08-04 16:42:02,288 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,288 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,288 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,288 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,289 aeolis.model WARNING  time...........: 348.80     
+2023-08-04 16:42:02,332 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,332 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,333 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,333 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,333 aeolis.model WARNING  time...........: 348.90     
+2023-08-04 16:42:02,347 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,347 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,347 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,347 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,347 aeolis.model WARNING  time...........: 349.00     
+2023-08-04 16:42:02,362 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,362 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,362 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,362 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,363 aeolis.model WARNING  time...........: 349.10     
+2023-08-04 16:42:02,370 aeolis.model INFO     097.0%       0:01:07 /    0:01:09 /        0:00:02 / 0.0
+2023-08-04 16:42:02,377 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,378 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,378 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,378 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,378 aeolis.model WARNING  time...........: 349.20     
+2023-08-04 16:42:02,392 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,392 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,392 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,392 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,393 aeolis.model WARNING  time...........: 349.30     
+2023-08-04 16:42:02,406 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,407 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,407 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,407 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,407 aeolis.model WARNING  time...........: 349.40     
+2023-08-04 16:42:02,422 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,422 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,422 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,423 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,423 aeolis.model WARNING  time...........: 349.50     
+2023-08-04 16:42:02,437 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,437 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,438 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,438 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,438 aeolis.model WARNING  time...........: 349.60     
+2023-08-04 16:42:02,452 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,453 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,453 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,454 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,454 aeolis.model WARNING  time...........: 349.70     
+2023-08-04 16:42:02,468 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,468 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,469 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,469 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,469 aeolis.model WARNING  time...........: 349.80     
+2023-08-04 16:42:02,506 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,507 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,508 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,508 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,508 aeolis.model WARNING  time...........: 349.90     
+2023-08-04 16:42:02,522 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,523 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,523 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,523 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,523 aeolis.model WARNING  time...........: 350.00     
+2023-08-04 16:42:02,537 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,538 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,539 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,540 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,540 aeolis.model WARNING  time...........: 350.10     
+2023-08-04 16:42:02,554 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,554 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,555 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,555 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,556 aeolis.model WARNING  time...........: 350.20     
+2023-08-04 16:42:02,570 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,571 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,571 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,571 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,571 aeolis.model WARNING  time...........: 350.30     
+2023-08-04 16:42:02,586 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,586 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,586 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,587 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,587 aeolis.model WARNING  time...........: 350.40     
+2023-08-04 16:42:02,602 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,602 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,602 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,602 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,603 aeolis.model WARNING  time...........: 350.50     
+2023-08-04 16:42:02,617 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,617 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,617 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,618 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,618 aeolis.model WARNING  time...........: 350.60     
+2023-08-04 16:42:02,634 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,634 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,634 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,634 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,634 aeolis.model WARNING  time...........: 350.70     
+2023-08-04 16:42:02,649 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,649 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,650 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,650 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,650 aeolis.model WARNING  time...........: 350.80     
+2023-08-04 16:42:02,688 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,689 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,689 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,689 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,690 aeolis.model WARNING  time...........: 350.90     
+2023-08-04 16:42:02,705 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,705 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,705 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,705 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,705 aeolis.model WARNING  time...........: 351.00     
+2023-08-04 16:42:02,720 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,720 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,720 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,721 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,721 aeolis.model WARNING  time...........: 351.10     
+2023-08-04 16:42:02,736 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,736 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,736 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,737 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,737 aeolis.model WARNING  time...........: 351.20     
+2023-08-04 16:42:02,751 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,751 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,752 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,752 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,752 aeolis.model WARNING  time...........: 351.30     
+2023-08-04 16:42:02,767 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,767 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,767 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,767 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,767 aeolis.model WARNING  time...........: 351.40     
+2023-08-04 16:42:02,784 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,784 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,784 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,784 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,785 aeolis.model WARNING  time...........: 351.50     
+2023-08-04 16:42:02,800 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,800 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,801 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,801 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,801 aeolis.model WARNING  time...........: 351.60     
+2023-08-04 16:42:02,815 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,816 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,816 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,816 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,817 aeolis.model WARNING  time...........: 351.70     
+2023-08-04 16:42:02,835 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,835 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,836 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,837 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,837 aeolis.model WARNING  time...........: 351.80     
+2023-08-04 16:42:02,881 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,881 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,882 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,882 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,882 aeolis.model WARNING  time...........: 351.90     
+2023-08-04 16:42:02,895 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,896 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,896 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,896 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,896 aeolis.model WARNING  time...........: 352.00     
+2023-08-04 16:42:02,910 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,911 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,912 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,912 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,912 aeolis.model WARNING  time...........: 352.10     
+2023-08-04 16:42:02,925 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,925 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,926 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,926 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,927 aeolis.model WARNING  time...........: 352.20     
+2023-08-04 16:42:02,940 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,941 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,941 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,941 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,941 aeolis.model WARNING  time...........: 352.30     
+2023-08-04 16:42:02,955 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,957 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,957 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,957 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,957 aeolis.model WARNING  time...........: 352.40     
+2023-08-04 16:42:02,971 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,972 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,972 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,972 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,973 aeolis.model WARNING  time...........: 352.50     
+2023-08-04 16:42:02,989 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:02,990 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:02,990 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:02,990 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:02,990 aeolis.model WARNING  time...........: 352.60     
+2023-08-04 16:42:03,005 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:03,006 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:03,006 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:03,006 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:03,006 aeolis.model WARNING  time...........: 352.70     
+2023-08-04 16:42:03,014 aeolis.model INFO     098.0%       0:01:07 /    0:01:09 /        0:00:01 / 0.0
+2023-08-04 16:42:03,021 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:03,022 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:03,022 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:03,022 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:03,022 aeolis.model WARNING  time...........: 352.80     
+2023-08-04 16:42:03,061 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:03,062 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:03,063 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:03,063 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:03,063 aeolis.model WARNING  time...........: 352.90     
+2023-08-04 16:42:03,077 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:03,078 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:03,078 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:03,078 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:03,078 aeolis.model WARNING  time...........: 353.00     
+2023-08-04 16:42:03,092 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:03,092 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:03,092 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:03,092 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:03,094 aeolis.model WARNING  time...........: 353.10     
+2023-08-04 16:42:03,107 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:03,108 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:03,108 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:03,108 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:03,108 aeolis.model WARNING  time...........: 353.20     
+2023-08-04 16:42:03,122 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:03,123 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:03,123 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:03,124 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:03,124 aeolis.model WARNING  time...........: 353.30     
+2023-08-04 16:42:03,138 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:03,139 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:03,139 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:03,139 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:03,140 aeolis.model WARNING  time...........: 353.40     
+2023-08-04 16:42:03,155 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:03,155 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:03,156 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:03,156 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:03,156 aeolis.model WARNING  time...........: 353.50     
+2023-08-04 16:42:03,171 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:03,171 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:03,171 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:03,171 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:03,171 aeolis.model WARNING  time...........: 353.60     
+2023-08-04 16:42:03,188 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:03,188 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:03,189 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:03,189 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:03,189 aeolis.model WARNING  time...........: 353.70     
+2023-08-04 16:42:03,207 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:03,207 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:03,207 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -1.000000  
+2023-08-04 16:42:03,207 aeolis.model WARNING  min. wind......: 4.25       # cells........: 10         
+2023-08-04 16:42:03,207 aeolis.model WARNING  time...........: 353.80     
+2023-08-04 16:42:03,249 aeolis.model WARNING  Negative weights
+2023-08-04 16:42:03,250 aeolis.model WARNING  dt.............: 0.050000   fraction.......: 0          
+2023-08-04 16:42:03,250 aeolis.model WARNING  max. drop......: 0.000000   min. value.....: -0.000384  
+2023-08-04 16:42:03,250 aeolis.model WARNING  min. wind......: 8.22       # cells........: 10         
+2023-08-04 16:42:03,251 aeolis.model WARNING  time...........: 353.90     
+2023-08-04 16:42:03,645 aeolis.model INFO     099.0%       0:01:08 /    0:01:09 /        0:00:01 / 0.0
+2023-08-04 16:42:04,251 aeolis.model INFO     100.0%       0:01:09 /    0:01:09 /        0:00:00 / 0.0
+2023-08-04 16:42:04,252 aeolis.model INFO     
+2023-08-04 16:42:04,252 aeolis.model INFO     **********************************************************
+2023-08-04 16:42:04,252 aeolis.model INFO     # time steps         : 7200
+2023-08-04 16:42:04,253 aeolis.model INFO     # matrix solves      : 22555
+2023-08-04 16:42:04,253 aeolis.model INFO     # supply lim         : 6439
+2023-08-04 16:42:04,253 aeolis.model INFO     avg. solves per step : 3.13
+2023-08-04 16:42:04,253 aeolis.model INFO     avg. time step       : 0.050000
+2023-08-04 16:42:04,254 aeolis.model INFO     **********************************************************
+2023-08-04 16:42:04,254 aeolis.model INFO     

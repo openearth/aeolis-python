@@ -62,12 +62,19 @@ def initialize (s,p):
         if np.isnan(s['rhoveg'][0, 0]):
             s['rhoveg'][:,:] = 0.
 
-        ix = s['rhoveg'] < 0
-        s['rhoveg'][ix] *= 0.
-        s['hveg'][:,:] = p['hveg_max']*np.sqrt(s['rhoveg'])
+    ix = s['rhoveg'] < 0
+    s['rhoveg'][ix] *= 0.
+    s['hveg'][:,:] = p['hveg_max']*np.sqrt(s['rhoveg'])
 
-        s['germinate'][:,:] = (s['rhoveg']>0)
-        s['lateral'][:,:] = 0.
+    # Change dtype of array to bool for germinate and lateral
+    s['vegetated'] = s['vegetated'].astype('bool') 
+    s['germinate'] = s['germinate'].astype('bool') 
+    s['lateral'] = s['lateral'].astype('bool') 
+
+    # Fill these
+    s['vegetated'] = (s['rhoveg']>0)
+    s['germinate'][:,:] = False
+    s['lateral'][:,:] = False
 
     return s
 
@@ -88,28 +95,36 @@ def germinate(s,p):
     
     # time [year]
     n = (365.25*24.*3600. / (p['dt_opt'] * p['accfac']))
-    
+
+    # Compute dhveg_max to determine a minimum threshold of rhoveg to be considered "vegetated"
+    dhveg_max = p['V_ver'] * (p['dt_opt'] * p['accfac']) / (365.25*24.*3600.)
+    drhoveg_max = (dhveg_max/p['hveg_max'])**2
+
     # Determine which cells are already germinated before
-    s['germinate'][:, :] = (s['rhoveg'] > 0.)
-    
-    # Germination
-    p_germinate_year = p['germinate']                                
-    p_germinate_dt = 1-(1-p_germinate_year)**(1./n)
+    # s['germinate'][:, :] = False
+    s['germinate'][:, :] = (s['rhoveg'] > 0.5 * drhoveg_max)
+
+    # Germination (convert from /year to /timestep)
+    # p_germinate_year = p['germinate']                                
+    p_germinate_dt = 1-(1-p['germinate']  )**(1./n)
+
+    # random_prob = np.zeros((s['germinate'].shape))
     random_prob = np.random.random((s['germinate'].shape))
     
-    # Germinate new cells
-    germinate_new = (s['dzbveg'] >= 0.) * (random_prob <= p_germinate_dt)
-    s['germinate'] += germinate_new.astype(float)
-    s['germinate'] = np.minimum(s['germinate'], 1.)
+    # Germinate new cells (only if no erosion, dzb>=0) and add to vegetated
+    s['germinate'] = (s['dzbveg'] >= 0.) * (random_prob <= p_germinate_dt)
+    s['vegetated'] = np.logical_or(s['germinate'], s['vegetated'])
+    # s['germinate'] = np.minimum(s['germinate'], 1.)
 
-    # Lateral expension
+    # Lateral expansion
     if ny > 1:
         dx = s['ds'][2,2]
     else:
         dx = p['dx']
 
-    p_lateral_year = p['lateral']  
-    p_lateral_dt = 1-(1-p_lateral_year)**(1./n)
+    # p_lateral_year = p['lateral']  
+    # Lateral propagation (convert from /year to /timestep)
+    p_lateral_dt = 1-(1-p['lateral'] )**(1./n)
     p_lateral_cell = 1 - (1-p_lateral_dt)**(1./dx)
     
     drhoveg = np.zeros((p['ny']+1, p['nx']+1, 4))
@@ -125,24 +140,35 @@ def germinate(s,p):
     
     p_lateral = p_lateral_cell * s['drhoveg']
     
-    s['lateral'] += (random_prob <= p_lateral)
-    s['lateral'] = np.minimum(s['lateral'], 1.)
+    s['vegetated'] = np.logical_or((random_prob <= p_lateral), s['vegetated'])
+    # s['lateral'] = np.minimum(s['lateral'], 1.)
 
     return s
 
 
 def grow (s, p): #DURAN 2006
     
-    ix = np.logical_or(s['germinate'] != 0., s['lateral'] != 0.) * ( p['V_ver'] > 0.)
-                                                    
-    # Reduction of vegetation growth due to sediment burial
-    s['dhveg'][ix] = p['V_ver'] * (1 - s['hveg'][ix] / p['hveg_max']) - np.abs(s['dzbveg'][ix]-p['dzb_opt']) * p['veg_gamma']  # m/year
+    # ix = np.logical_or(s['germinate'] != 0., s['lateral'] != 0.) * ( p['V_ver'] > 0.)
+    # ix = np.logical_or(s['germinate'], s['lateral']) * ( p['V_ver'] > 0.)
+    ix = s['vegetated'] * ( p['V_ver'] > 0.)
 
-    # Adding growth
+    # Vegetation growth
+    vertical_growth = np.zeros(np.shape(s['hveg']))
+    vertical_growth[ix] = p['V_ver'] * (1 - s['hveg'][ix] / p['hveg_max'])
+    vertical_growth = apply_mask(vertical_growth, s['vver_mask'])
+
+    # Reduction of vegetation growth due to sediment burial
+    dhveg_burial = np.abs(s['dzbveg']-p['dzb_opt']) * p['veg_gamma']
+
+    # Compute change in vegetation height
+    s['dhveg'][ix] = vertical_growth[ix] - dhveg_burial[ix]  # m/year
+
+    # Adding height and convert to vegetation density (rhoveg)
     if p['veggrowth_type'] == 'orig': #based primarily on vegetation height
         s['hveg'] += s['dhveg']*(p['dt_opt'] * p['accfac']) / (365.25*24.*3600.)
         s['hveg'] = np.maximum(np.minimum(s['hveg'], p['hveg_max']), 0.)
         s['rhoveg'] = (s['hveg']/p['hveg_max'])**2
+
     else:
         t_veg = p['t_veg']/365
         v_gam = p['v_gam']
@@ -162,21 +188,31 @@ def grow (s, p): #DURAN 2006
         s['hveg'][:,:] = p['hveg_max']*np.sqrt(s['rhoveg'])
 
     # Plot has to vegetate again after dying
-    s['germinate'] *= (s['rhoveg']!=0.)
-    s['lateral'] *= (s['rhoveg']!=0.)
+    dhveg_max = p['V_ver'] * (p['dt_opt'] * p['accfac']) / (365.25*24.*3600.)
+    drhoveg_max = (dhveg_max/p['hveg_max'])**2
+    s['vegetated'] *= (s['rhoveg'] >= 0.5 * drhoveg_max)
+    # s['germinate'] *= (s['rhoveg']!=0.)
+    # s['lateral'] *= (s['rhoveg']!=0.)
 
     # Dying of vegetation due to hydrodynamics (Dynamic Vegetation Limit)
+    # if p['process_tide']:
+    #     s['rhoveg']     *= (s['zb'] +0.01 >= s['zs'])
+    #     s['hveg']       *= (s['zb'] +0.01 >= s['zs'])
+    #     s['germinate']  *= (s['zb'] +0.01 >= s['zs'])
+    #     s['lateral']    *= (s['zb'] +0.01 >= s['zs'])
+
     if p['process_tide']:
-        s['rhoveg']     *= (s['zb'] +0.01 >= s['zs'])
-        s['hveg']       *= (s['zb'] +0.01 >= s['zs'])
-        s['germinate']  *= (s['zb'] +0.01 >= s['zs'])
-        s['lateral']    *= (s['zb'] +0.01 >= s['zs'])
+        ix_flooded = (s['zb'] < s['TWL'])
+        s['rhoveg'][ix_flooded]     = 0. 
+        s['hveg'][ix_flooded]       = 0.
+        s['vegetated'][ix_flooded]  = False
+        # s['lateral'][ix_flooded]    = False
 
     ix = s['zb'] < p['veg_min_elevation']
     s['rhoveg'][ix] = 0
     s['hveg'][ix] = 0
-    s['germinate'][ix] = 0
-    s['lateral'][ix] = 0
+    s['vegetated'][ix] = False
+    # s['lateral'][ix] = False
 
     return s
 
