@@ -199,18 +199,16 @@ class AeoLiS(IBmi):
             
         else:
             # this is where we make the 1D grid into a 2D grid
-            self.p['xgrid_file'] = np.stack((self.p['xgrid_file'], self.p['xgrid_file'], self.p['xgrid_file']),axis=1)
+            self.p['xgrid_file'] = np.transpose(np.stack((self.p['xgrid_file'], self.p['xgrid_file'], self.p['xgrid_file']),axis=1))
             self.p['ny'], self.p['nx'] = self.p['xgrid_file'].shape
 
-            dy = self.p['xgrid_file'][2,1]-self.p['xgrid_file'][1,1]
+            dy = self.p['xgrid_file'][1,2]-self.p['xgrid_file'][1,1]
 
             # repeat the above for ygrid_file
-            self.p['ygrid_file'] = np.stack((self.p['ygrid_file'], self.p['ygrid_file']+dy, self.p['ygrid_file']+2*dy),axis=1)
+            self.p['ygrid_file'] = np.transpose(np.stack((self.p['ygrid_file'], self.p['ygrid_file']+dy, self.p['ygrid_file']+2*dy),axis=1))
             
             # repeat the above for bed_file
-            self.p['bed_file'] = np.stack((self.p['bed_file'], self.p['bed_file'], self.p['bed_file']),axis=1)
-
-
+            self.p['bed_file'] = np.transpose(np.stack((self.p['bed_file'], self.p['bed_file'], self.p['bed_file']),axis=1))
 
             # change from number of points to number of cells
             self.p['nx'] -= 1  
