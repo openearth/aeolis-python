@@ -266,7 +266,10 @@ class AeoLiS(IBmi):
 
         '''
 
-        self.p['_time'] = self.t        
+        self.p['_time'] = self.t    
+
+        # here are going to make a change
+        #     
         
         # store previous state
         self.l = self.s.copy()
