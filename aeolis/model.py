@@ -189,7 +189,7 @@ class AeoLiS(IBmi):
         self.p = aeolis.inout.read_configfile(self.configfile)
         aeolis.inout.check_configuration(self.p)
 
-        # set nx, ny and nfractions
+        # set nx, ny and nfractions and make 1D into quasi 2D
         if self.p['xgrid_file'].ndim == 2:
             self.p['ny'], self.p['nx'] = self.p['xgrid_file'].shape
             
@@ -198,9 +198,23 @@ class AeoLiS(IBmi):
             self.p['ny'] -= 1
             
         else:
-            self.p['nx'] = len(self.p['xgrid_file'])
-            self.p['nx'] -= 1 
-            self.p['ny'] = 0
+            # this is where we make the 1D grid into a 2D grid
+            self.p['xgrid_file'] = np.stack((self.p['xgrid_file'], self.p['xgrid_file'], self.p['xgrid_file']),axis=1)
+            self.p['ny'], self.p['nx'] = self.p['xgrid_file'].shape
+
+            dy = self.p['xgrid_file'][2,1]-self.p['xgrid_file'][1,1]
+
+            # repeat the above for ygrid_file
+            self.p['ygrid_file'] = np.stack((self.p['ygrid_file'], self.p['ygrid_file']+dy, self.p['ygrid_file']+2*dy),axis=1)
+            
+            # repeat the above for bed_file
+            self.p['bed_file'] = np.stack((self.p['bed_file'], self.p['bed_file'], self.p['bed_file']),axis=1)
+
+
+
+            # change from number of points to number of cells
+            self.p['nx'] -= 1  
+            self.p['ny'] -= 1
 
         #self.p['nfractions'] = len(self.p['grain_dist'])
         self.p['nfractions'] = len(self.p['grain_size'])
@@ -266,10 +280,8 @@ class AeoLiS(IBmi):
 
         '''
 
-        self.p['_time'] = self.t    
-
-        # here are going to make a change
-        #     
+        self.p['_time'] = self.t 
+  
         
         # store previous state
         self.l = self.s.copy()

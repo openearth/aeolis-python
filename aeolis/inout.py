@@ -116,7 +116,7 @@ def read_configfile(configfile, parse_files=True, load_defaults=True):
     # set default for nsavetimes, if not given
     if 'nsavetimes' in p and not p['nsavetimes']:
         p['nsavetimes'] = int(p['dzb_interval']/p['dt'])
-
+    
     return p
 
 
