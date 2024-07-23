@@ -1,4 +1,4 @@
-Bibliography
+References
 =============
 
 .. rubric:: References in this documentation
