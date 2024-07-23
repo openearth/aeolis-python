@@ -35,6 +35,7 @@ import logging
 from webbrowser import UnixBrowser
 import numpy as np
 from matplotlib import pyplot as plt
+from scipy.io import savemat
 
 # package modules
 from aeolis.utils import *
@@ -578,3 +579,28 @@ def visualize_spatial(s, p):
     plt.close()
 
     return 
+
+def output_sedtrails(s, p):
+    '''Create additional output for SedTRAILS and save as mat-files.
+    Chosen for seperate files, such that only relevant (Ct > 0) cells 
+    are exported for memory and speed efficiency''' 
+
+    nf = p['nfraction_sedtrails']
+
+    # Speed and concetration: Only for the first fraction now
+    x = s['x'].flatten()
+    y = s['y'].flatten()
+    us = s['usST'][:,:,nf].flatten()
+    un = s['unST'][:,:,nf].flatten()
+    pickup = s['pickup'][:,:,nf].flatten()
+    dzb = s['dzb'].flatten() # Store the bed level change (AEOLIAN ONLY) for every timestep
+
+    os.makedirs('sedtrails_output', exist_ok=True) 
+    
+    time = p['_time']
+    if time == 0: # Save the x and y coordinates only once to save memory
+        mdic = {'x': x, 'y': y, 'us': us, 'un': un, 'dzb': dzb, 'pickup': pickup}
+        savemat(os.path.join('sedtrails_output', str(int(time)).zfill(12) + '.mat'), mdic)
+    else:
+        mdic = {'us': us, 'un': un, 'dzb': dzb, 'pickup': pickup}
+        savemat(os.path.join('sedtrails_output', str(int(time)).zfill(12) + '.mat'), mdic)
