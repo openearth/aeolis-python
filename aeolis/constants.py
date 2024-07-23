@@ -139,6 +139,7 @@ MODEL_STATE = {
         'us',                               # [m/s] Component of the saltation velocity in x-direction
         'un',                               # [m/s] Component of the saltation velocity in y-direction
         'u0',
+        'masstop',                          # [kg/m^2] Sediment mass in bed toplayer, only stored for output
     ),
     ('ny','nx','nlayers') : (
         'thlyr',                            # [m] Bed composition layer thickness
