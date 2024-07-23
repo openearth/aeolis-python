@@ -257,6 +257,10 @@ grain size dependency is implemented through
 :math:`u_{\mathrm{th}}`. :math:`u_{\mathrm{th}}` typically varies between 1 and 6
 m/s for sand.
 
+Vegetation
+-------------------------------------
+
+
 Simulation of Sediment Sorting and Beach Armoring
 -------------------------------------------------
 
