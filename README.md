@@ -79,13 +79,13 @@ Read our [Contribution Guidelines](CONTRIBUTING.md) to know how you can help to 
 - [Christa van IJzendoorn](mailto:C.O.vanIJzendoorn@tudelft.nl) at Delft University of Technology
 - [Caroline Hallin](mailto:E.C.Hallin@tudelft.nl) at Delft University of Technology
 - [Glenn Strypsteen](mailto:glenn.strypsteen@kuleuven.be) at Katholieke Universiteit Leuven
-- [Janelle Skaden](mailto:Janelle.E.Skaden@usace.army.mil) at U.S. Army Engineer Research and Development Center (ERDC)
 
 **Previous Members & Contributors:**
 - [Bas Hoonhout](mailto:bas@hoonhout.com) (founder)
 - Tom Pak
 - Pieter Rauwoens
 - Lisa Meijer
+- Janelle Skaden
 
 ## Citation
 
