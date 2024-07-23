@@ -1,4 +1,4 @@
-Input files
+Model setup
 =================
 
 The computational grid and boundary conditions for AeoLiS are specified through external
