@@ -27,22 +27,13 @@ Contents
    :caption: User Documentation
    :maxdepth: 2
 
+   user/introduction
    user/installation
-   user/whatsnew
-   user/model
-   user/implementation
-   user/defaults
-   user/inputfiles
-   user/output
+   user/model_description
+   user/model_setup
+   user/tutorials_and_examples
    user/sourcecode
-   user/bibliography
-
-.. toctree::
-   :caption: Tutorials
-   :maxdepth: 2
-
-   tutorials/sandmotor
-   tutorials/2D-parabolic
+   user/references
 
 .. toctree::
    :caption: Developer Documentation
