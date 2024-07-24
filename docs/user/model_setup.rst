@@ -39,7 +39,7 @@ files can be found in the table below.  Each file is further defined below.
      - File containing meteorological time series data
 
 aeolis.txt
-----------
+^^^^^^^^^^
 
 This is the parameter file for AeoLiS that defines the model processes and boundary conditions.
 Parameters in the file are specified by various keywords; each keyword has a pre-defined
@@ -52,7 +52,7 @@ process keywords in aeolis.txt to T (True) and F (False).  Example aeolis.txt pa
 found in the examples folder on the AeoLiS GitHub.
 
 x.grd
------
+^^^^^
 
 The x.grd file defines the computational grid in the cross-shore direction defined in meters.  
 In a 1-dimensional (1D) case, the file contains a single column of cross-shore locations 
@@ -62,7 +62,7 @@ where each value corresponds to a specific location in the 2D grid.  The file ca
 and is referenced from the parameters file with the xgrid_file keyword.
 
 y.grd
------
+^^^^^
 
 This file defines the computational grid in the alongshore direction.  In a 1D case,
 y.grd will contain a single column of zeros.  In a 2D case, similar to the x.grd file, 
@@ -73,7 +73,7 @@ As with the x.grd file, this file can be renamed and is referenced from the para
 keyword: ygrid_file.    
 
 z.grd
------
+^^^^^
 
 The z.grd file provides the model with the elevation information for the computational 
 grid defined in x.grd and y.grd.  Similar to x.grd and y.grd, when running 
@@ -84,7 +84,7 @@ positive is up and negative is down.  The file can be renamed and is referenced 
 parameters file with the keyword: bed_file.
 
 veg.grd
--------
+^^^^^^^
 
 The veg.grd file is an optional grid providing initial vegetation coverage (density) at each position in the 
 model domain defined in x.grd and y.grd.  Similar to the grid files, if simulations are in 
@@ -102,7 +102,7 @@ where each red dots represent vegetation cover at each cross-shore position.
    File format for a 1D AeoLis vegetation grid.  Each red dot is the vegetation density at a specific location in the computational grid.
 
 mass.txt
---------
+^^^^^^^^
 
 The mass.txt file allows users to specify variations in grain size distribution in both 
 horizontal and vertical directions.  If the grain size distribution is constant throughout
@@ -147,7 +147,7 @@ file for AeoLis can be seen below.
    at each location in the computational grid (x, y, bed layer).
 
 wind.txt
---------
+^^^^^^^^
 
 The wind.txt file provides the model with wind boundary conditions and is formatted similar to 
 the tide.txt and wave.txt files.  The first column is time in seconds from 
@@ -167,7 +167,7 @@ importance.
    File format for wind boundary conditions file for AeoLis input.
 
 tide.txt
---------
+^^^^^^^^
 
 The tide.txt file contains the water elevation data for the duration of the 
 simulation.  It is formatted such that the first column is time in seconds and 
@@ -185,7 +185,7 @@ time or water elevation.
    File format for the water elevation conditions file for AeoLis input.
    
 wave.txt
---------
+^^^^^^^^
 
 The wave.txt file provides the model with wave data used in AeoLiS for runup calculations.  
 The file is formatted similar to tide.txt but has three columns instead of two.  
@@ -204,7 +204,7 @@ a data value.
    File format for the wave conditions file for AeoLis input.
 
 meteo.txt
----------
+^^^^^^^^^
 
 The meteo.txt file contains meteorological data used to simulate surface moisture in the model domain (see Simulation of surface moisture 
 in Model description on for surface moisture implementation in AeoLiS).  This file is formatted similar to the other environmental boundary
@@ -223,3 +223,13 @@ column is air pressure (kPa).
    :align: center
    
    File format for meteorological data used to simulate surface moisture in AeoLiS where each red dot represents a time series value. 
+
+
+Model state/output
+------------------
+
+Activate/deactivate processes
+-----------------------------
+
+Solver selection
+----------------
