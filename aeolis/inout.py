@@ -35,6 +35,7 @@ import logging
 from webbrowser import UnixBrowser
 import numpy as np
 from matplotlib import pyplot as plt
+from scipy.io import savemat
 
 # package modules
 from aeolis.utils import *
@@ -493,6 +494,10 @@ def visualize_spatial(s, p):
     fig, axs = plt.subplots(5, 3)
     pcs = [[None for _ in range(3)] for _ in range(5)]
 
+    # In the plotting below, prevent the UserWarning: The input coordinates to pcolormesh are interpreted as cell centers, but are not monotonically increasing or decreasing (...)
+    import warnings 
+    warnings.filterwarnings("ignore", category=UserWarning)
+
     # Plotting colormeshes
     if p['ny'] > 0:
         pcs[0][0] = axs[0,0].pcolormesh(x, y, s['zb'], cmap='viridis')
@@ -500,7 +505,6 @@ def visualize_spatial(s, p):
         pcs[0][2] = axs[0,2].pcolormesh(x, y, s['rhoveg'], cmap='Greens', clim= [0, 1])
         pcs[1][0] = axs[1,0].pcolormesh(x, y, s['uw'], cmap='plasma')
         pcs[1][1] = axs[1,1].pcolormesh(x, y, s['ustar'], cmap='plasma')
-        # pcs[1][2] = axs[1,2].pcolormesh(x, y, s['tau'], cmap='plasma')
         pcs[1][2] = axs[1,2].pcolormesh(x, y, s['u'][:, :, 0], cmap='plasma')
         pcs[2][0] = axs[2,0].pcolormesh(x, y, s['moist'], cmap='Blues', clim= [0, 0.4])
         pcs[2][1] = axs[2,1].pcolormesh(x, y, s['gw'], cmap='viridis')
@@ -528,11 +532,13 @@ def visualize_spatial(s, p):
         pcs[4][1] = axs[4,1].scatter(x, y, c=tide_mask_add, cmap='binary', clim= [0, 1])
         pcs[4][2] = axs[4,2].scatter(x, y, c=wave_mask_add, cmap='binary', clim= [0, 1])
 
+    # Re-allow the UserWarning
+    warnings.filterwarnings("default", category=UserWarning)
+
     # Quiver for vectors
     skip = 10
     axs[1,0].quiver(x[::skip, ::skip], y[::skip, ::skip], s['uws'][::skip, ::skip], s['uwn'][::skip, ::skip])
     axs[1,1].quiver(x[::skip, ::skip], y[::skip, ::skip], s['ustars'][::skip, ::skip], s['ustarn'][::skip, ::skip])
-    # axs[1,2].quiver(x[::skip, ::skip], y[::skip, ::skip], s['taus'][::skip, ::skip], s['taun'][::skip, ::skip])
     axs[1,2].quiver(x[::skip, ::skip], y[::skip, ::skip], s['us'][::skip, ::skip, 0], s['un'][::skip, ::skip, 0])
 
     # Adding titles to the plots
@@ -541,7 +547,6 @@ def visualize_spatial(s, p):
     axs[0,2].set_title('Vegetation density, rhoveg (-)')
     axs[1,0].set_title('Wind velocity, uw (m/s)')
     axs[1,1].set_title('Shear velocity, ustar (m/s)')
-    # axs[1,2].set_title('Shear stress, tau (N/m2)')
     axs[1,2].set_title('Grain velocity, u (m/s)')
     axs[2,0].set_title('Soil moisture content, (-)')
     axs[2,1].set_title('Ground water level, gw (m)')
@@ -574,3 +579,28 @@ def visualize_spatial(s, p):
     plt.close()
 
     return 
+
+def output_sedtrails(s, p):
+    '''Create additional output for SedTRAILS and save as mat-files.
+    Chosen for seperate files, such that only relevant (Ct > 0) cells 
+    are exported for memory and speed efficiency''' 
+
+    nf = p['nfraction_sedtrails']
+
+    # Speed and concetration: Only for the first fraction now
+    x = s['x'].flatten()
+    y = s['y'].flatten()
+    us = s['usST'][:,:,nf].flatten()
+    un = s['unST'][:,:,nf].flatten()
+    pickup = s['pickup'][:,:,nf].flatten()
+    dzb = s['dzb'].flatten() # Store the bed level change (AEOLIAN ONLY) for every timestep
+
+    os.makedirs('sedtrails_output', exist_ok=True) 
+    
+    time = p['_time']
+    if time == 0: # Save the x and y coordinates only once to save memory
+        mdic = {'x': x, 'y': y, 'us': us, 'un': un, 'dzb': dzb, 'pickup': pickup}
+        savemat(os.path.join('sedtrails_output', str(int(time)).zfill(12) + '.mat'), mdic)
+    else:
+        mdic = {'us': us, 'un': un, 'dzb': dzb, 'pickup': pickup}
+        savemat(os.path.join('sedtrails_output', str(int(time)).zfill(12) + '.mat'), mdic)

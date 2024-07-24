@@ -138,7 +138,10 @@ MODEL_STATE = {
         'u',                                # [m/s] Mean horizontal saltation velocity in saturated state
         'us',                               # [m/s] Component of the saltation velocity in x-direction
         'un',                               # [m/s] Component of the saltation velocity in y-direction
+        'usST',                            # [NEW] [m/s] Component of the saltation velocity in x-direction for SedTRAILS
+        'unST',                            # [NEW] [m/s] Component of the saltation velocity in y-direction for SedTRAILS
         'u0',
+        'masstop',                          # [kg/m^2] Sediment mass in bed toplayer, only stored for output
     ),
     ('ny','nx','nlayers') : (
         'thlyr',                            # [m] Bed composition layer thickness
@@ -184,6 +187,8 @@ DEFAULT_CONFIG = {
     'process_dune_erosion'          : False,              # Enable the process of wave-driven dune erosion
     'process_seepage_face'          : False,              # Enable the process of groundwater seepage (NB. only applicable to positive beach slopes)
     'visualization'                 : False,              # Boolean for visualization of model interpretation before and just after initialization
+    'output_sedtrails'              : False,              # NEW! [T/F] Boolean to see whether additional output for SedTRAILS should be generated
+    'nfraction_sedtrails'           : 0,                  # [-] Index of selected fraction for SedTRAILS (0 if only one fraction)
     'xgrid_file'                    : None,               # Filename of ASCII file with x-coordinates of grid cells
     'ygrid_file'                    : None,               # Filename of ASCII file with y-coordinates of grid cells
     'bed_file'                      : None,               # Filename of ASCII file with bed level heights of grid cells
