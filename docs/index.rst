@@ -43,6 +43,7 @@ Contents
    developer/quickstart
    developer/testing-introduction
    developer/unit-testing
+   developer/whatsnew
 
 .. toctree::
    :caption: Current Development
