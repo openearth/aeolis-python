@@ -11,7 +11,7 @@ Model overview
 Applicability and limitations
 -----------------------------
 
-AeoLiS in publications
+AeoLiS publications
 ----------------------
 
 2024
