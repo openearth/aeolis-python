@@ -80,6 +80,22 @@ def initialize (s,p):
 
 
 def vegshear(s, p):
+    '''Calculate the shear reduction due to vegetation.
+
+    Parameters
+    ----------
+    s : dict
+        Spatial grids
+    p : dict
+        Model configuration parameters
+
+    Returns
+    -------
+    dict
+        Spatial grids
+
+    '''
+
     if p['vegshear_type'] == 'okin' and p['ny'] == 0:
         s = vegshear_okin(s, p)
     else:
@@ -91,9 +107,25 @@ def vegshear(s, p):
 
 
 def germinate(s,p):
+    '''Germinate new vegetation cells and expand laterally.
+
+    Parameters
+    ----------
+    s : dict
+        Spatial grids
+    p : dict
+        Model configuration parameters
+
+    Returns
+    -------
+    dict
+        Spatial grids
+
+    '''
+
     ny = p['ny']
     
-    # time [year]
+    # time [year] to germinate
     n = (365.25*24.*3600. / (p['dt_opt'] * p['accfac']))
 
     # Compute dhveg_max to determine a minimum threshold of rhoveg to be considered "vegetated"
@@ -126,14 +158,14 @@ def germinate(s,p):
     # Lateral propagation (convert from /year to /timestep)
     p_lateral_dt = 1-(1-p['lateral'] )**(1./n)
     p_lateral_cell = 1 - (1-p_lateral_dt)**(1./dx)
-    
-    drhoveg = np.zeros((p['ny']+1, p['nx']+1, 4))
+
+    drhoveg = np.zeros((p['ny']+1, p['nx']+1, 4))   
     
     drhoveg[:,1:,0] = np.maximum((s['rhoveg'][:,:-1]-s['rhoveg'][:,1:]) / s['ds'][:,1:], 0.)    # positive x-direction
     drhoveg[:,:-1,1] = np.maximum((s['rhoveg'][:,1:]-s['rhoveg'][:,:-1]) / s['ds'][:,:-1], 0.)  # negative x-direction
     drhoveg[1:,:,2] = np.maximum((s['rhoveg'][:-1,:]-s['rhoveg'][1:,:]) / s['dn'][1:,:], 0.)    # positive y-direction
     drhoveg[:-1,:,3] = np.maximum((s['rhoveg'][1:,:]-s['rhoveg'][:-1,:]) / s['dn'][:-1,:], 0.)  # negative y-direction
-    
+        
     lat_veg = drhoveg > 0.
     
     s['drhoveg'] = np.sum(lat_veg[:,:,:], 2)
@@ -146,11 +178,11 @@ def germinate(s,p):
     return s
 
 
-def grow (s, p): #DURAN 2006
+def grow (s, p): #DURAN 2006    
     
     # ix = np.logical_or(s['germinate'] != 0., s['lateral'] != 0.) * ( p['V_ver'] > 0.)
     # ix = np.logical_or(s['germinate'], s['lateral']) * ( p['V_ver'] > 0.)
-    ix = s['vegetated'] * ( p['V_ver'] > 0.)
+    ix = s['vegetated'] * ( p['V_ver'] > 0.)        
 
     # Vegetation growth
     vertical_growth = np.zeros(np.shape(s['hveg']))
@@ -164,12 +196,12 @@ def grow (s, p): #DURAN 2006
     s['dhveg'][ix] = vertical_growth[ix] - dhveg_burial[ix]  # m/year
 
     # Adding height and convert to vegetation density (rhoveg)
-    if p['veggrowth_type'] == 'orig': #based primarily on vegetation height
-        s['hveg'] += s['dhveg']*(p['dt_opt'] * p['accfac']) / (365.25*24.*3600.)
-        s['hveg'] = np.maximum(np.minimum(s['hveg'], p['hveg_max']), 0.)
+    if p['veggrowth_type'] == 'orig': #based primarily on vegetation height (Duran 2006)
+        s['hveg'] += s['dhveg']*(p['dt_opt'] * p['accfac']) / (365.25*24.*3600.)    
+        s['hveg'] = np.maximum(np.minimum(s['hveg'], p['hveg_max']), 0.)    
         s['rhoveg'] = (s['hveg']/p['hveg_max'])**2
 
-    else:
+    else:           
         t_veg = p['t_veg']/365
         v_gam = p['v_gam']
         rhoveg_max = p['rhoveg_max']
@@ -201,7 +233,7 @@ def grow (s, p): #DURAN 2006
     #     s['germinate']  *= (s['zb'] +0.01 >= s['zs'])
     #     s['lateral']    *= (s['zb'] +0.01 >= s['zs'])
 
-    if p['process_tide']:
+    if p['process_tide']:       
         ix_flooded = (s['zb'] < s['TWL'])
         s['rhoveg'][ix_flooded]     = 0. 
         s['hveg'][ix_flooded]       = 0.
@@ -296,7 +328,7 @@ def vegshear_okin(s, p):
     return s
 
 
-def vegshear_raupach(s, p):
+def vegshear_raupach(s, p): 
     ustar = s['ustar'].copy()
     ustars = s['ustars'].copy()
     ustarn = s['ustarn'].copy()
