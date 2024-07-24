@@ -1,5 +1,9 @@
 Model setup
 =================
+INTRODUCTORY TEXT
+
+Model input
+-----------
 
 The computational grid and boundary conditions for AeoLiS are specified through external
 input files called by the model parameter file aeolis.txt.  The computational grid is defined
