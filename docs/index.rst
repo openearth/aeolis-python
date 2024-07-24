@@ -23,7 +23,6 @@ Contents
 .. toctree::
    :caption: User Documentation
    :maxdepth: 3
-   :hidden:
 
    user/introduction
    user/installation
