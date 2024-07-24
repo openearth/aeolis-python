@@ -31,6 +31,7 @@ Contents
    user/installation
    user/model_description
    user/model_setup
+   user/model_interaction
    user/tutorials_and_examples
    user/sourcecode
    user/references
