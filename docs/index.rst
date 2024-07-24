@@ -14,9 +14,6 @@ Welcome to AeoLiS's Documentation
 
 -------
 
-AeoLiS is a process-based model for simulating aeolian sediment transport in situations where supply-limiting factors are important,
-like in coastal environments. Supply-limitations currently supported are soil moisture contents, sediment sorting and armouring, bed slope effects, air humidity and roughness elements.
-
 This documentation describes the Python implementation of the AeoLiS
 model. The source code of the Python implementation can be found in `GitHub <https://github.com/openearth/aeolis-python>`_.
 
