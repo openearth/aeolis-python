@@ -21,7 +21,9 @@ van Westen, B., Luijendijk, A.P., de Vries, S., Cohn, N., Leijnse, T.W., de Schi
 2023
 ^^^^
 Hallin, C., van IJzendoorn, C., Homberger, J.M., de Vries, S., 2023. Simulating surface soil moisture on sandy beaches. Coast. Eng. 185, 104376.
+
 Hallin, C., van IJzendoorn, C., Skaden, J., de Vries, S., 2023. Evaluation of threshold-based models to account for surface moisture in meso-scale aeolian sediment transport simulations. In: The Proceedings of the Coastal Sediments Conference. pp. 670–683.
+
 van IJzendoorn, C.O., Hallin, C., Reniers, A.J.H.M., de Vries, S., 2023. Modeling multi-fraction coastal aeolian sediment transport with horizontal and vertical grain-size variability. J. Geophys. Res: Earth Surf. 128 (7), e2023JF007155.
 
 2022
