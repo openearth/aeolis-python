@@ -13,7 +13,7 @@ Requirements
 - netCDF4
 
 Dependencies
-""""""""""""
+------------
 
 - docopt==0.6.1
 - bmi-python
