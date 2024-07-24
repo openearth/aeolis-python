@@ -224,6 +224,24 @@ column is air pressure (kPa).
    
    File format for meteorological data used to simulate surface moisture in AeoLiS where each red dot represents a time series value. 
 
+Default settings
+----------------
+
+The AeoLiS model can be configured using a model configuration
+file. For any configuration parameters not defined in the model
+configuration file, or in case the model configuration file is absent,
+the default model configuration is used. The default model
+configuration is listed below.
+
+.. literalinclude::   ../../aeolis/constants.py
+   :language: python
+   :start-after: #: AeoLiS model default configuration
+   :end-before: #: Merge initial and model state
+
+
+Activate/deactivate processes
+-----------------------------
+
 
 Model state/output
 ------------------
@@ -240,10 +258,6 @@ are listed below.
    :start-after: #: Aeolis model state variables
    :end-before: #: AeoLiS model default configuration
 
-
-
-Activate/deactivate processes
------------------------------
 
 Solver selection
 ----------------
