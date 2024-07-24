@@ -153,9 +153,16 @@ def duran_grainspeed(s, p):
     dhn = np.repeat(dzn[:,:,np.newaxis], nf, axis = 2)
     
     # Compute ets/etn (wind direction)
+    ets = np.ones(ustar.shape)
+    etn = np.zeros(ustar.shape)
+
+    # First, if uw is not zero, compute ets/etn based on uw
+    ix = (uw > 0.)
+    ets[ix] = uws[ix] / uw[ix]                        # s-component of ustar
+    etn[ix] = uwn[ix] / uw[ix]                        # n-component of ustar
+
+    # Second, if ustar is not zero, compute ets/etn based on ustar
     ix = (ustar > 0.)
-    ets = uws / uw                                          # s-component of wind (where ustar == 0)
-    etn = uwn / uw                                          # n-component of wind (where ustar == 0)
     ets[ix] = ustars[ix] / ustar[ix]                        # s-component of ustar
     etn[ix] = ustarn[ix] / ustar[ix]                        # n-component of ustar
 
