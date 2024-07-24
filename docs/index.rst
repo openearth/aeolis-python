@@ -25,7 +25,7 @@ Contents
 
 .. toctree::
    :caption: User Documentation
-   :maxdepth: 2
+   :maxdepth: 3
 
    user/introduction
    user/installation
@@ -38,7 +38,7 @@ Contents
 
 .. toctree::
    :caption: Developer Documentation
-   :maxdepth: 2
+   :maxdepth: 3
 
    developer/quickstart
    developer/testing-introduction
@@ -46,7 +46,7 @@ Contents
 
 .. toctree::
    :caption: Current Development
-   :maxdepth: 2
+   :maxdepth: 3
 
    developer/modularity
    developer/domain-decomposition
