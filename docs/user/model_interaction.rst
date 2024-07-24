@@ -1,7 +1,7 @@
 Model interaction
 =================
 
-ADD INTRODUCTION TO MODEL INTRODUCTION - WHY, HOW
+AeoLiS includes several features that enable user-model interaction during runtime. These interactions can be used to modify model parameters over time, integrate with other models, or perform model-data assimilation.
 
 Callback function
 -----------------
