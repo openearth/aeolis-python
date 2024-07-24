@@ -59,7 +59,7 @@ Example from command line:
 
 .. code:: shell
 
-   aeolis params.txt
+   aeolis run params.txt
 
 .. note::
 
