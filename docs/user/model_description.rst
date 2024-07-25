@@ -910,9 +910,38 @@ grain size dependency is implemented through
 :math:`u_{\mathrm{th}}`. :math:`u_{\mathrm{th}}` typically varies between 1 and 6
 m/s for sand.
 
-Vegetation
+Vegetation (from Strypsteen et al., 2024)
 -------------------------------------
 
+In AeoLiS, the influence of vegetation on dune evolution is comprehensively 
+addressed. This includes modelling the intrinsic growth of vegetation, 
+accounting for factors such as growth and decay due to burial (Durán and Moore, 2013), 
+lateral expansion and establishment (Keijsers et al., 2016), as well as simulating 
+the destruction of vegetation caused by hydrodynamic processes. In the event of 
+cell inundation, vegetation density is reduced as a result. Inspired by the 
+Coastal Dune Model (CDM) proposed by Durán and Moore (2013), AeoLiS incorporates 
+vegetation-wind interaction using the expression established by Durán and Herrmann (2006):
+
+:math:`\frac{u_{\text{veg}}}{u_*} = \frac{1}{\sqrt{1 + \Gamma \rho_{\text{veg}}}}`
+
+where the ratio of shear velocity in the presence of vegetation (u∗,veg) to the unobstructed 
+shear velocity (u∗) is determined by a vegetation-related roughness parameter (Γ) and the 
+vegetation density within a unit area of the grid cell (\rho_{\text{veg}}). In the model, Γ = 16 is derived 
+from plant form drag and geometry values documented for creosote communities (Durán and Herrmann, 2006). 
+This implementation calculates the expression on each model grid cell, with higher vegetation density 
+(expressed by \rho_{\text{veg}}) leading to a more substantial reduction in shear velocity compared to sparse 
+vegetation. By integrating these physical and ecological processes, AeoLiS simulates spatial patterns and temporal 
+variations in sediment transport and morphological changes resulting from aeolian processes in coastal 
+environments.
+
+\rho_{\text{veg}} can vary in space and time and is determined by the ratio of the actual vegetation height (hveg) to the
+maximum vegetation height (hveg,max), and can vary between 0 and 1 (Durán and Herrmann, 2006):
+
+.. _fig-bed-interaction-parameter:
+
+.. figure:: /images/bed_interaction_parameter.png
+   :width: 600px
+   :align: center
 
 Simulation of Sediment Sorting and Beach Armoring
 -------------------------------------------------
