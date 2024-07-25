@@ -241,6 +241,47 @@ configuration is listed below.
 
 Activate/deactivate processes
 -----------------------------
+After creating the input files that are necessary to run an AeoLiS model, the next step is often to decide which processes and methods to use. Several processes are defined in the configuration file that can be turned on and off. Apart from turning processes on and off, there are also several user-defined thresholds and methods that affect the way in which processes are calculated. For example, there are different sediment transport equations available within 'process_transport'. The default is Bagnold, but by defining 'method_transport' in the configuration file a different equation can be used. Here, we provide a description of the processes and methods that are defined in configuration file. More detailed descriptions of the processes and their implementation can be found in :ref:model_description
+
+An easy way to look up where these process, threshold and method flags are used is by going to the main page of the AeoLiS github and using the search bar at the top. For instance, searching 'process_tide' shows that it is used in :py:mod:`aeolis.threshold.compute`, :py:mod:`aeolis.vegetation.grow`, :py:mod:`aeolis.bed.update`.
+
+Process_wind
+^^^^^^^^^^^^^
+'Process_wind' makes sure the wind file is loaded, and interpolates values of the wind speed and direction to each time step. The model does not work without this flag. Used in :py:mod:`aeolis.wind.interpolate`
+
+Process_threshold
+^^^^^^^^^^^^^^^^^
+'Process_threshold' allows for the alterations of the threshold velocity by processes like grain, moisture and vegetation. This process does not occur if a threshold file is provided as input since this file is used to define the threshold shear velocity. Used in :py:mod:`aeolis.threshold.compute`
+
+Process_transport
+^^^^^^^^^^^^^^^^^^
+'Process_transport' allows the calculation of the equilibrium transport rate based on a user-defined transport method. 
+
+'Method_transport' defines the sediment transport equation used in the calculation of the equilibrium transport rate. Options are: bagnold, bagnold_gs, kawamura, lettau, dk, sauermann, vanrijn_strypsteen.
+
+'Method_grainspeed' defines at which speed the sediment transport in the air is occurring. Options are: 'duran'/'duran_full', 'windspeed', and 'constant'
+
+Used in :py:mod:`aeolis.transport.equilibrium`
+
+Process_bedupdate
+^^^^^^^^^^^^^^^^^
+Process_bedupdate allows the bed level to change based on calculated erosion/deposition. Used in :py:mod:`aeolis.bed.update`
+
+Process_shear
+^^^^^^^^^^^^^
+Process_shear calls the shear module in shear.py to calculate the shear stress perturbation caused by topography. Used in :py:mod:`aeolis.wind.initialize`
+
+Process_tide
+^^^^^^^^^^^^
+Process_tide changes the threshold velocity to infinity (no aeolian transport) if the bed level is below the water level. This process is not used if th_moist is used. Used in :py:mod:`aeolis.threshold.compute`, :py:mod:`aeolis.vegetation.grow`, :py:mod:`aeolis.bed.update`.
+
+Process_wave
+^^^^^^^^^^^^
+Process_wave allows calculation of the water depth based on the input tide file and interpolates the input wave data to the timesteps of the model run. If the wave file is not available, the wave height and peak period are set to 0. Turning this process flag on also results in the calculation of Hsmix, which is needed for the calculation of the Depth of Disturbance (process_mixtoplayer). The initialization/calculation is skipped if external variables are imported from another model.
+
+Process_runup
+^^^^^^^^^^^^
+Process_runup allows calculation of the runup extent based on the wave height, peak period and water level. Process_wave and Process_tide need to be on for this to work. The runup is calculated with the Stockdon equation using a user-defined, static beach slope. The initialization/calculation is skipped if external variables are imported from another model.
 
 
 Model state/output
