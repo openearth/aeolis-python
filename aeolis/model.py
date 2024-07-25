@@ -198,21 +198,29 @@ class AeoLiS(IBmi):
             self.p['ny'] -= 1
             
         else:
-            # this is where we make the 1D grid into a 2D grid
-            self.p['xgrid_file'] = np.transpose(np.stack((self.p['xgrid_file'], self.p['xgrid_file'], self.p['xgrid_file']),axis=1))
-            self.p['ny'], self.p['nx'] = self.p['xgrid_file'].shape
+            if 0:
+                #this is the old 1D stuff
+                self.p['nx'] = len(self.p['xgrid_file'])
+                self.p['nx'] -= 1 
+                self.p['ny'] = 0
 
-            dy = self.p['xgrid_file'][1,2]-self.p['xgrid_file'][1,1]
+            if 1:
+                # this is the new quasi 2D stuff
+                # this is where we make the 1D grid into a 2D grid to ensure process compatibility
+                self.p['xgrid_file'] = np.transpose(np.stack((self.p['xgrid_file'], self.p['xgrid_file'], self.p['xgrid_file']),axis=1))
+                self.p['ny'], self.p['nx'] = self.p['xgrid_file'].shape
 
-            # repeat the above for ygrid_file
-            self.p['ygrid_file'] = np.transpose(np.stack((self.p['ygrid_file'], self.p['ygrid_file']+dy, self.p['ygrid_file']+2*dy),axis=1))
-            
-            # repeat the above for bed_file
-            self.p['bed_file'] = np.transpose(np.stack((self.p['bed_file'], self.p['bed_file'], self.p['bed_file']),axis=1))
+                dy = self.p['xgrid_file'][1,2]-self.p['xgrid_file'][1,1]
 
-            # change from number of points to number of cells
-            self.p['nx'] -= 1  
-            self.p['ny'] -= 1
+                # repeat the above for ygrid_file
+                self.p['ygrid_file'] = np.transpose(np.stack((self.p['ygrid_file'], self.p['ygrid_file']+dy, self.p['ygrid_file']+2*dy),axis=1))
+                
+                # repeat the above for bed_file
+                self.p['bed_file'] = np.transpose(np.stack((self.p['bed_file'], self.p['bed_file'], self.p['bed_file']),axis=1))
+
+                # change from number of points to number of cells
+                self.p['nx'] -= 1  
+                self.p['ny'] -= 1
 
         #self.p['nfractions'] = len(self.p['grain_dist'])
         self.p['nfractions'] = len(self.p['grain_size'])
@@ -1641,7 +1649,12 @@ class AeoLiS(IBmi):
                 w = w_init.copy()
             else:
                 # use initial guess for first time step
-                w = p['grain_dist'].reshape((1,1,-1))
+                # when p['grain_dist'] has 2 dimensions take the first row otherwise take the only row
+                if len(p['grain_dist'].shape) == 2:
+                    w = p['grain_dist'][0,:].reshape((1,1,-1))
+                else:
+                    w = p['grain_dist'].reshape((1,1,-1))
+                    
                 w = w.repeat(p['ny']+1, axis=0)
                 w = w.repeat(p['nx']+1, axis=1)
         else:
@@ -1688,7 +1701,7 @@ class AeoLiS(IBmi):
                     Ct[-1,:,0] =  -2
 
                 # Ct, pickup = sweep(s['Cu'].copy(), s['mass'].copy(), self.dt, p['T'], s['ds'], s['dn'], s['us'], s['un'] )
-                Ct, pickup = sweep3(Ct, s['Cu'].copy(), s['mass'].copy(), self.dt, p['T'], s['ds'], s['dn'], s['us'], s['un'] )
+                Ct, pickup = sweep3(Ct, s['Cu'].copy(), s['mass'].copy(), self.dt, p['T'], s['ds'], s['dn'], s['us'], s['un'],w)
 
             if 0:
                 #define 4 quadrants based on wind directions
