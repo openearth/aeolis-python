@@ -292,6 +292,7 @@ DEFAULT_CONFIG = {
     'in_gw'                         : 0,                  # [m] Initial groundwater level
     'GW_stat'                       : 1,                  # [m] Landward static groundwater boundary (if static boundary is defined)
     'max_moist'                     : 10.,           # NEWCH      # [%] Moisture content (volumetric in percent) above which the threshold shear velocity is set to infinity (no transport, default value Delgado-Fernandez, 2010)
+    'max_moist'                     : 10.,                # [%] Moisture content (volumetric in percent) above which the threshold shear velocity is set to infinity (no transport, default value Delgado-Fernandez, 2010)
     'theta_dyn'                     : 33.,                # [degrees] Initial Dynamic angle of repose, critical dynamic slope for avalanching
     'theta_stat'                    : 34.,                # [degrees] Initial Static angle of repose, critical static slope for avalanching
     'avg_time'                      : 86400.,             # [s] Indication of the time period over which the bed level change is averaged for vegetation growth
