@@ -947,7 +947,7 @@ sedimentation or a growth rate equal to the rate of sediment burial within the c
 follow the model proposed by :cite:`DuranHerrmann2006`, modified to include :math:`\delta z_{\text{b,opt}}`
 (m/year), representing sediment burial for optimal growth that shifts the peak of optimal growth:
 
-:math:`\frac{\delta h_{\text{veg}}}{\delta t} = V_{\text{ver}} \left(1 - \frac{h_{\text{veg}}}{h_{\text{veg,max}}}\right) - \gamma_{\text{veg}} \left| \frac{\delta z_{\text{b,veg}}}{\delta t} - \delta z_{\
+:math:`\frac{\delta h_{\text{veg}}}{\delta t} = V_{\text{ver}} \left(1 - \frac{h_{\text{veg}}}{h_{\text{veg,max}}}\right) - \gamma_{\text{veg}} \left| \frac{\delta z_{\text{b,veg}}}{\delta t} - \delta z_{\text{b,opt}} \right|`
 
 Here, :math:`\gamma_{\text{veg}}` (default = 1) is a sediment burial factor that accounts for the impact of 
 sediment burial on vegetation. The height of the vegetation (:math:`h_{\text{veg}}` in m) cannot be less than zero. 
