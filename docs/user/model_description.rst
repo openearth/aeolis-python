@@ -942,7 +942,7 @@ environments.
 to the maximum vegetation height (hveg,max), and can vary between 0 and 1 (:cite:`DuranHerrmann2006`):
 
 .. math::
-   :label: changes_vegetation_height
+   :label: Vegetation_density
    :align: center
 
    \rho_{\text{veg}} = \left( \frac{h_{\text{veg}}}{h_{\text{veg,max}}} \right)^2
@@ -983,6 +983,8 @@ conditions that enhance or inhibit vegetation growth process :cite:`Danin1991`, 
 .. figure:: /images/Veg_growth.png
    :width: 600px
    :align: center
+
+    A) The vegetation growth response varies with different vertical growth rates (example for Vver = 1 and 2 m/year). Optimal vegetation growth is determined by a burial rate of 0.31 m/year, with a maximum vegetation height set at 1 m and a plant height of 0.5 m. Additionally, the growth response for varying burial factors is depicted (λveg = 1 and 2). B) Shear stress reduction for two different vegetation-related roughness parameters and vegetation densities (Γ = 16 and 32)..
 
 Vegetation can begin to grow through lateral propagation or random germination. Once established, it can continue 
 to grow and spread laterally. The uncertainties associated with random germination are handled on a cell-by-cell 
