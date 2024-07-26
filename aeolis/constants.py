@@ -297,12 +297,12 @@ DEFAULT_CONFIG = {
     'gamma_vegshear'                : 16.,                # [-] Roughness factor for the shear stress reduction by vegetation
     'hveg_max'                      : 1.,                 # [m] Max height of vegetation
     'dzb_opt'                       : 0.,                 # [m/year] Sediment burial for optimal growth
-    'V_ver'                         : 0.,                 # [m/year] Vertical growth
+    'V_ver'                         : 0.,                 # [m/year] Vertical growth potential
     'V_lat'                         : 0.,                 # [m/year] Lateral growth
     'germinate'                     : 0.,                 # [1/year] Possibility of germination per year
     'lateral'                       : 0.,                 # [1/year] Posibility of lateral expension per year
     'veg_gamma'                     : 1.,                 # [-] Constant on influence of sediment burial
-    'veg_sigma'                     : 0.8,                # [-] Sigma in gaussian distrubtion of vegetation cover filter
+    'veg_sigma'                     : 0.,                   # [-] Sigma in gaussian distrubtion of vegetation cover filter
     'sedimentinput'                 : 0.,                 # [-] Constant boundary sediment influx (only used in solve_pieter)
     'scheme'                        : 'euler_backward',   # Name of numerical scheme (euler_forward, euler_backward or crank_nicolson)
     'solver'                        : 'trunk',             # Name of the solver (trunk, pieter, steadystate,steadystatepieter)
