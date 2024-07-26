@@ -1266,7 +1266,7 @@ Substitution of :math:`u` (Equation :eq:`gw-discharge`) in the continuity equati
    \frac{{\partial \eta }}{{\partial t}} = \frac{K}{{{n_e}}}\frac{\partial }{{\partial x}}\left( {(D + \eta )\frac{{\partial \eta }}{{\partial x}}} \right) + \frac{{{U_l}}}{{{n_e}}}
 
 Numerical solution of the Boussinesq groundwater equation
----------------------------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The Boussinesq equation is solved numerically with a central finite difference 
 method in space and a fourth-order Runge-Kutta integration technique in time:
 
