@@ -1,6 +1,6 @@
 Demonstration cases
 ===================
-In the `example folder  ... you find a collection of input files needed to run example models.
+In the `example folder  .examples.. you find a collection of input files needed to run example models.
 
 
 1. Install aeolis
