@@ -8,6 +8,15 @@ like in coastal environments. Supply-limitations currently supported are soil mo
 Model overview
 --------------
 
+.. _fig-model-overview:
+
+.. figure:: images/model_overview.png
+   :alt: Model overview
+   :width: 550px
+   :align: center
+   
+   Overview of the AeoLiS model - forcing conditions and processes.
+
 Applicability and limitations
 -----------------------------
 
