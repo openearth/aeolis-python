@@ -84,8 +84,14 @@ def initialize(outputfile, outputvars, s, p, dimensions):
     with netCDF4.Dataset(outputfile, 'w') as nc:
 
         # add dimensions
-        nc.createDimension('s', p['nx']+1)
-        nc.createDimension('n', p['ny']+1)
+        nc.createDimension('s', p['nx']+1)  
+
+        # this is where a quasi 2D model is stored in 1D    
+        if p['ny']+1 == 3:
+            nc.createDimension('n', 1)
+        else:
+            nc.createDimension('n', p['ny']+1)
+        
         nc.createDimension('time', 0)
         nc.createDimension('nv', 2)
         nc.createDimension('nv2', 4)
@@ -287,9 +293,18 @@ def initialize(outputfile, outputvars, s, p, dimensions):
 
         # store static data
         nc.variables['s'][:] = np.arange(p['nx']+1)
-        nc.variables['n'][:] = np.arange(p['ny']+1)
-        nc.variables['x'][:,:] = s['x']
-        nc.variables['y'][:,:] = s['y']
+
+        # this is where a quasi 2D model is stored in 1D
+        if p['ny']+1 == 3:
+            nc.variables['n'][:] = np.arange(1)
+            print(s['x'])
+            nc.variables['x'][:,:] = s['x'][0,:]
+            nc.variables['y'][:,:] = s['y'][0,:]
+        else:
+            nc.variables['n'][:] = np.arange(p['ny']+1)
+            nc.variables['x'][:,:] = s['x']
+            nc.variables['y'][:,:] = s['y']
+
         nc.variables['layers'][:] = np.arange(p['nlayers'])
         nc.variables['fractions'][:] = p['grain_size']
 
@@ -344,14 +359,22 @@ def append(outputfile, variables):
     # abort if netCDF4 is not available
     if not HAVE_NETCDF:
         return
-
+    
     with netCDF4.Dataset(outputfile, 'a') as nc:
         i = nc.variables['time'].shape[0]
         nc.variables['time'][i] = variables['time']
         for k, v in variables.items():
             if k == 'time':
                 continue
-            nc.variables[k][i,...] = v
+            # this is where a quasi 2D model is stored in 1D
+            if v.shape[0]==3: 
+                nc.variables[k][i,...] = v[1,:]
+                print(v[0,:].shape)
+            # this is where a 2D model is stored in 2D
+            else: 
+                nc.variables[k][i,...] = v
+            
+            
 
     set_bounds(outputfile)
 
