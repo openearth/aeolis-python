@@ -245,15 +245,22 @@ After creating the input files that are necessary to run an AeoLiS model, the ne
 
 An easy way to look up where these process, threshold and method flags are used is by going to the main page of the AeoLiS github and using the search bar at the top. For instance, searching 'process_tide' shows that it is used in :py:mod:`aeolis.threshold.compute`, :py:mod:`aeolis.vegetation.grow`, :py:mod:`aeolis.bed.update`.
 
-Process_wind
+process_wind
 ^^^^^^^^^^^^^
 'Process_wind' makes sure the wind file is loaded, and interpolates values of the wind speed and direction to each time step. The model does not work without this flag. Used in :py:mod:`aeolis.wind.interpolate`
 
-Process_threshold
+process_threshold
 ^^^^^^^^^^^^^^^^^
-'Process_threshold' allows for the alterations of the threshold velocity by processes like grain, moisture and vegetation. This process does not occur if a threshold file is provided as input since this file is used to define the threshold shear velocity. Used in :py:mod:`aeolis.threshold.compute`
+'Process_threshold' allows for the alterations of the threshold velocity by processes like grain, moisture and vegetation. This process does not occur if a threshold file is provided as input since this file is used to define the threshold shear velocity. Used in :py:mod:`aeolis.threshold.compute`, documentation of threshold alterations can be found in :ref:model_description
 
-Process_transport
+th_grainsize: calculates the threshold velocity based on the grain size following Bagnold (:py:mod:`aeolis.threshold.compute_grain_size`)
+th_bedslope: currently not implemented, but theoretically would include an alteration of the velocity threshold based on the slope of the bed. (:py:mod:`aeolis.threshold.compute_bedslope`)
+th_moisture: alters the threshold velocity based on the moisture content, many different methods are available (:py:mod:`aeolis.threshold.compute_moisture`). Only works if moisture content is defined, which is calculated when process_moisture is on. 
+th_salt: alters the wind velocity threshold based on salt content following Nickling and Ecclestone (1981) (:py:mod:`aeolis.threshold.compute_salt`) 
+th_sheltering: modify the wind velocity threshold based on the presence of roughness elements in the grain size fractions following Raupach (1993) (:py:mod:`aeolis.threshold.compute_sheltering`) 
+th_humidity and th_drylayer: are currently not implemented
+
+process_transport
 ^^^^^^^^^^^^^^^^^^
 'Process_transport' allows the calculation of the equilibrium transport rate based on a user-defined transport method. 
 
@@ -263,27 +270,27 @@ Process_transport
 
 Used in :py:mod:`aeolis.transport.equilibrium`
 
-Process_bedupdate
+process_bedupdate
 ^^^^^^^^^^^^^^^^^
 Process_bedupdate allows the bed level to change based on calculated erosion/deposition. Used in :py:mod:`aeolis.bed.update`
 
-Process_shear
+process_shear
 ^^^^^^^^^^^^^
 Process_shear calls the shear module in shear.py to calculate the shear stress perturbation caused by topography. Used in :py:mod:`aeolis.wind.initialize`
 
-Process_tide
+process_tide
 ^^^^^^^^^^^^
 Process_tide changes the threshold velocity to infinity (no aeolian transport) if the bed level is below the water level. This process is not used if th_moist is used. Used in :py:mod:`aeolis.threshold.compute`, :py:mod:`aeolis.vegetation.grow`, :py:mod:`aeolis.bed.update`.
 
-Process_wave
+process_wave
 ^^^^^^^^^^^^
 Process_wave allows calculation of the water depth based on the input tide file and interpolates the input wave data to the timesteps of the model run. If the wave file is not available, the wave height and peak period are set to 0. Turning this process flag on also results in the calculation of Hsmix, which is needed for the calculation of the Depth of Disturbance (process_mixtoplayer). The initialization/calculation is skipped if external variables are imported from another model.
 
-Process_runup
+process_runup
 ^^^^^^^^^^^^
 Process_runup allows calculation of the runup extent based on the wave height, peak period and water level. Process_wave and Process_tide need to be on for this to work. The runup is calculated with the Stockdon equation using a user-defined, static beach slope. The initialization/calculation is skipped if external variables are imported from another model.
 
-Process_moist
+process_moist
 ^^^^^^^^^^^^^
 Process_moist allows calculation of the soil moisture content, based on different methods, infiltration or surface_moist
 
@@ -293,35 +300,35 @@ method_moist_threshold defines the equation used to calculate teh threshold shea
 
 Process_groundwater, Process_seepage_face and Process_scanning are all related to the calculation of the moisture content.
 
-Process_mixtoplayer
+process_mixtoplayer
 ^^^^^^^^^^^^^^^^^^^
 This process flag allows mixing in the layers that are present down to the depth of disturbance. For the calculation of the DoD the process_wave need to be on.
 
-Process_wet_bed_reset
+process_wet_bed_reset
 ^^^^^^^^^^^^^^^^^^^^^
 Resets the bed to the original bathymetry if the bed is under water (zs). Used in :py:mod:`aeolis.bed.wet_bed_reset`. The execution of the wet bed reset is dependent on the TWL calculation, which can be turned on process_runup, process_waves and process_tide.
 
-Process_meteo
+process_meteo
 ^^^^^^^^^^^^^
 This is a place holder and currently has no functionality
 
-Process_avalanche
+process_avalanche
 ^^^^^^^^^^^^^^^^^^
 Simulates the process of avalanching when slopes of the bed become too steep to be realistic (i.e. > a critical static slope).
 
-Process_separation
+process_separation
 ^^^^^^^^^^^^^^^^^^
 This enables the calculation of the separation bubble within the shear perturbation module. Before executing the calculation is checks whether steep slopes are present that might lead to a separation bubble. Process_separation will only be used if process_shear is on.
 
-Process_vegetation
+process_vegetation
 ^^^^^^^^^^^^^^^^^^^
 This process flag allows application of shear stress reduction due to vegetation based on Raupach or Okin. It also allows for germination and lateral growth of vegetation if those values are set to larger than 0. This process is actively being developed.
 
-Process_fences
+process_fences
 ^^^^^^^^^^^^^^
 This process enables alteration of the shear velocity if fence characteristics are provided as user input. Calculations happen in 1D or 2D depending on grid size following the Okin model. 
 
-Process_dune_erosion
+process_dune_erosion
 ^^^^^^^^^^^^^^^^^^^^
 This flag turns on dune erosion calculation (:py:mod:`aeolis.erosion`.) based on the Palmsten and Holman (2012) method. After calculating the erosion, the avalanching routine is run in :py:mod:`aeolis.model.update`. This is needed because these modules only get called for aeolian transport in case of winds above threshold.
 
