@@ -910,25 +910,24 @@ grain size dependency is implemented through
 :math:`u_{\mathrm{th}}`. :math:`u_{\mathrm{th}}` typically varies between 1 and 6
 m/s for sand.
 
-Vegetation (from Strypsteen et al., 2024. Vertical Growth Rate of Planted Vegetation Controls Dune Growth on a 
-Sandy Beach. Coastal Engineering. doi:10.2139/ssrn.4872614)
+Vegetation (from :cite:`Strypsteen2024`)
 -------------------------------------
 
 In AeoLiS, the influence of vegetation on dune evolution is comprehensively 
 addressed. This includes modelling the intrinsic growth of vegetation, 
-accounting for factors such as growth and decay due to burial (Durán and Moore, 2013), 
-lateral expansion and establishment (Keijsers et al., 2016), as well as simulating 
+accounting for factors such as growth and decay due to burial :cite:`DuranMoore2013`, 
+lateral expansion and establishment :cite:`Keijsers20106`, as well as simulating 
 the destruction of vegetation caused by hydrodynamic processes. In the event of 
 cell inundation, vegetation density is reduced as a result. Inspired by the 
-Coastal Dune Model (CDM) proposed by Durán and Moore (2013), AeoLiS incorporates 
-vegetation-wind interaction using the expression established by Durán and Herrmann (2006):
+Coastal Dune Model (CDM) proposed by :cite:`DuranMoore2013`, AeoLiS incorporates 
+vegetation-wind interaction using the expression established by :cite:`DuranHerrmann2006`:
 
 :math:`\frac{u_{\text{veg}}}{u_*} = \frac{1}{\sqrt{1 + \Gamma \rho_{\text{veg}}}}`
 
-where the ratio of shear velocity in the presence of vegetation (u∗,veg) to the unobstructed 
+where the ratio of shear velocity in the presence of vegetation (:math:`u_{*,\text{veg}}`) to the unobstructed 
 shear velocity (u∗) is determined by a vegetation-related roughness parameter (Γ) and the 
 vegetation density within a unit area of the grid cell (\rho_{\text{veg}}). In the model, Γ = 16 is derived 
-from plant form drag and geometry values documented for creosote communities (Durán and Herrmann, 2006). 
+from plant form drag and geometry values documented for creosote communities :cite:`DuranHerrmann2006`. 
 This implementation calculates the expression on each model grid cell, with higher vegetation density 
 (expressed by \rho_{\text{veg}}) leading to a more substantial reduction in shear velocity compared to sparse 
 vegetation. By integrating these physical and ecological processes, AeoLiS simulates spatial patterns and temporal 
@@ -936,7 +935,7 @@ variations in sediment transport and morphological changes resulting from aeolia
 environments.
 
 \rho_{\text{veg}} can vary in space and time and is determined by the ratio of the actual vegetation height (hveg) 
-to the maximum vegetation height (hveg,max), and can vary between 0 and 1 (Durán and Herrmann, 2006):
+to the maximum vegetation height (hveg,max), and can vary between 0 and 1 (:cite:`DuranHerrmann2006`):
 
 :math:`\rho_{\text{veg}} = \left( \frac{h_{\text{veg}}}{h_{\text{veg,max}}} \right)^2`
 
@@ -945,7 +944,7 @@ actual cover. The change in vegetation density per grid cell is directly linked 
 height within that specific cell. This height variation is influenced by both the growth rate of the vegetation and 
 the rate of sediment burial. If the vegetation density remains constant over time, it suggests either no 
 sedimentation or a growth rate equal to the rate of sediment burial within the cell. Vegetation growth and decay 
-follow the model proposed by Durán and Herrmann (2006), modified to include :math:`\delta z_{\text{b,opt}}`
+follow the model proposed by :cite:`DuranHerrmann2006`, modified to include :math:`\delta z_{\text{b,opt}}`
 (m/year), representing sediment burial for optimal growth that shifts the peak of optimal growth:
 
 :math:`\frac{\delta h_{\text{veg}}}{\delta t} = V_{\text{ver}} \left(1 - \frac{h_{\text{veg}}}{h_{\text{veg,max}}}\right) - \gamma_{\text{veg}} \left| \frac{\delta z_{\text{b,veg}}}{\delta t} - \delta z_{\
@@ -961,11 +960,11 @@ day). This average is then extrapolated to an annual rate. This method ensures t
 change over one time step are not used as an estimate of the total bed level change in one year, which would be far 
 too high.
 
-The optimal growth rate for certain vegetation species in dune environments is depending upon sediment burial 
-(Maun, 1998). The optimal burial rate for maximum vegetation growth for marram grass for the neighbouring Dutch 
-coast is around 0.31 m/year with a burying tolerance of 0.78 to 0.96 m burial/year (Nolet et al., 2018). This 
+The optimal growth rate for certain vegetation species in dune environments is depending upon sediment burial :cite:`Maun1998`. 
+The optimal burial rate for maximum vegetation growth for marram grass for the neighbouring Dutch 
+coast is around 0.31 m/year with a burying tolerance of 0.78 to 0.96 m burial/year :cite:`Nolet2018`. This 
 optimal value is used in the model. :math:`V_{\text{ver}}` contains information of meteorological and local 
-conditions that enhance or inhibit vegetation growth process (Danin, 1991; Hesp, 1991). 
+conditions that enhance or inhibit vegetation growth process :cite:`Danin1991`, :cite:`Hesp1991`. 
 
 .. _fig-Veg_growth:
 
