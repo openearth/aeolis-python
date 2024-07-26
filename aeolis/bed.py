@@ -196,7 +196,7 @@ def mixtoplayer(s, p):
 
 
 def wet_bed_reset(s, p):
-    ''' Text
+    ''' Reset wet bed to initial bed level if the total water level is above the bed level.
 
 
 
