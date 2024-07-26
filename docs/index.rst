@@ -63,7 +63,7 @@ Contents
 
 Contact
 =======
-- [Bart van Westen](mailto:Bart.vanWesten@deltares.nl) at Deltares
+- Bart van Westen (Bart.vanWesten@deltares.nl) at Deltares
 - [Nick Cohn](mailto:nick.cohn@usace.army.mil) at U.S. Army Engineer Research and Development Center (ERDC)
 - [Sierd de Vries](mailto:Sierd.deVries@tudelft.nl) (founder) at Delft University of Technology
 - [Christa van IJzendoorn](mailto:vanijzec@oregonstate.edu) at Oregon State University
