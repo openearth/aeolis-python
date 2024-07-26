@@ -939,7 +939,7 @@ variations in sediment transport and morphological changes resulting from aeolia
 environments.
 
 \rho_{\text{veg}} can vary in space and time and is determined by the ratio of the actual vegetation height (hveg) 
-to the maximum vegetation height (hveg,max), and can vary between 0 and 1 (:cite:`DuranHerrmann2006`):
+to the maximum vegetation height (:math:`h_{\text{veg,max}}`), and can vary between 0 and 1 (:cite:`DuranHerrmann2006`):
 
 .. math::
    :label: Vegetation_density
