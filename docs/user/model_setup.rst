@@ -283,6 +283,48 @@ Process_runup
 ^^^^^^^^^^^^
 Process_runup allows calculation of the runup extent based on the wave height, peak period and water level. Process_wave and Process_tide need to be on for this to work. The runup is calculated with the Stockdon equation using a user-defined, static beach slope. The initialization/calculation is skipped if external variables are imported from another model.
 
+Process_moist
+^^^^^^^^^^^^^
+Process_moist allows calculation of the soil moisture content, based on different methods, infiltration or surface_moist
+
+method_moist_process
+
+method_moist_threshold defines the equation used to calculate teh threshold shear veolcity based on the moisture content. Used in :py:mod:`aeolis.threshold.compute_moisture`.
+
+Process_groundwater, Process_seepage_face and Process_scanning are all related to the calculation of the moisture content.
+
+Process_mixtoplayer
+^^^^^^^^^^^^^^^^^^^
+This process flag allows mixing in the layers that are present down to the depth of disturbance. For the calculation of the DoD the process_wave need to be on.
+
+Process_wet_bed_reset
+^^^^^^^^^^^^^^^^^^^^^
+Resets the bed to the original bathymetry if the bed is under water (zs). Used in :py:mod:`aeolis.bed.wet_bed_reset`. The execution of the wet bed reset is dependent on the TWL calculation, which can be turned on process_runup, process_waves and process_tide.
+
+Process_meteo
+^^^^^^^^^^^^^
+This is a place holder and currently has no functionality
+
+Process_avalanche
+^^^^^^^^^^^^^^^^^^
+Simulates the process of avalanching when slopes of the bed become too steep to be realistic (i.e. > a critical static slope).
+
+Process_separation
+^^^^^^^^^^^^^^^^^^
+This enables the calculation of the separation bubble within the shear perturbation module. Before executing the calculation is checks whether steep slopes are present that might lead to a separation bubble. Process_separation will only be used if process_shear is on.
+
+Process_vegetation
+^^^^^^^^^^^^^^^^^^^
+This process flag allows application of shear stress reduction due to vegetation based on Raupach or Okin. It also allows for germination and lateral growth of vegetation if those values are set to larger than 0. This process is actively being developed.
+
+Process_fences
+^^^^^^^^^^^^^^
+This process enables alteration of the shear velocity if fence characteristics are provided as user input. Calculations happen in 1D or 2D depending on grid size following the Okin model. 
+
+Process_dune_erosion
+^^^^^^^^^^^^^^^^^^^^
+This flag turns on dune erosion calculation (:py:mod:`aeolis.erosion`.) based on the Palmsten and Holman (2012) method. After calculating the erosion, the avalanching routine is run in :py:mod:`aeolis.model.update`. This is needed because these modules only get called for aeolian transport in case of winds above threshold.
+
 
 Model state/output
 ------------------
