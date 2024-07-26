@@ -21,8 +21,8 @@ The code is developed and maintained by a developer group that conist of members
 
 .. _fig-developer-group:
 
-.. figure:: /images/aeolis_developer_group.jpeg
-   :alt: Aeolis developer group8
+.. figure:: images/aeolis_developer_group.jpeg
+   :alt: Aeolis developer group
    :width: 550px
    :align: center
    
