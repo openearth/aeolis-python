@@ -22,7 +22,7 @@ The code is developed and maintained by a developer group that conist of members
 .. _fig-developer-group:
 
 .. figure:: /images/aeolis_developer_group.jpeg
-   :alt: mass file format 1D
+   :alt: Aeolis developer group8
    :width: 550px
    :align: center
    
