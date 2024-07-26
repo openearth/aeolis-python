@@ -922,7 +922,10 @@ cell inundation, vegetation density is reduced as a result. Inspired by the
 Coastal Dune Model (CDM) proposed by :cite:`DuranMoore2013`, AeoLiS incorporates 
 vegetation-wind interaction using the expression established by :cite:`DuranHerrmann2006`:
 
-:math:`\frac{u_{\text{veg}}}{u_*} = \frac{1}{\sqrt{1 + \Gamma \rho_{\text{veg}}}}`
+.. math::
+   :label: shear_reduction_vegetation
+
+   \frac{u_{\text{veg}}}{u_*} = \frac{1}{\sqrt{1 + \Gamma \rho_{\text{veg}}}}
 
 where the ratio of shear velocity in the presence of vegetation (:math:`u_{*,\text{veg}}`) to the unobstructed 
 shear velocity (u∗) is determined by a vegetation-related roughness parameter (Γ) and the 
