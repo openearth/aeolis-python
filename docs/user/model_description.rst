@@ -929,8 +929,8 @@ vegetation-wind interaction using the expression established by :cite:`DuranHerr
    \frac{u_{\text{veg}}}{u_*} = \frac{1}{\sqrt{1 + \Gamma \rho_{\text{veg}}}}
 
 where the ratio of shear velocity in the presence of vegetation (:math:`u_{*,\text{veg}}`) to the unobstructed 
-shear velocity (u∗) is determined by a vegetation-related roughness parameter (Γ) and the 
-vegetation density within a unit area of the grid cell (\rho_{\text{veg}}). In the model, Γ = 16 is derived 
+shear velocity (:math:`u_*`) is determined by a vegetation-related roughness parameter (:math:`\Gamma`) and the 
+vegetation density within a unit area of the grid cell (\rho_{\text{veg}}). In the model, :math:`\Gamma` = 16 is derived 
 from plant form drag and geometry values documented for creosote communities :cite:`DuranHerrmann2006`. 
 This implementation calculates the expression on each model grid cell, with higher vegetation density 
 (expressed by \rho_{\text{veg}}) leading to a more substantial reduction in shear velocity compared to sparse 
@@ -984,7 +984,9 @@ conditions that enhance or inhibit vegetation growth process :cite:`Danin1991`, 
    :width: 600px
    :align: center
 
-    A) The vegetation growth response varies with different vertical growth rates (example for Vver = 1 and 2 m/year). Optimal vegetation growth is determined by a burial rate of 0.31 m/year, with a maximum vegetation height set at 1 m and a plant height of 0.5 m. Additionally, the growth response for varying burial factors is depicted (λveg = 1 and 2). B) Shear stress reduction for two different vegetation-related roughness parameters and vegetation densities (Γ = 16 and 32)..
+    A) The vegetation growth response varies with different vertical growth rates (example for Vver = 1 and 2 m/year). Optimal vegetation growth is determined by a burial rate of 0.31 
+   m/year, with a maximum vegetation height set at 1 m and a plant height of 0.5 m. Additionally, the growth response for varying burial factors is depicted (:math:`\lambda_{\text{veg}}`
+    = 1 and 2). B) Shear stress reduction for two different vegetation-related roughness parameters and vegetation densities (:math:`\Gamma` = 16 and 32).
 
 Vegetation can begin to grow through lateral propagation or random germination. Once established, it can continue 
 to grow and spread laterally. The uncertainties associated with random germination are handled on a cell-by-cell 
