@@ -1,4 +1,4 @@
-.. _model:
+.. _model_description:
 
 Model description
 =================
