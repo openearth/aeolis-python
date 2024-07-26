@@ -74,7 +74,7 @@ Read our [Contribution Guidelines](CONTRIBUTING.md) to know how you can help to 
 **Current Members:**
 
 - [Bart van Westen](mailto:Bart.vanWesten@deltares.nl) at Deltares
-- [Nick Cohn](mailto:nick.cohn@usace.army.mil) at U.S. Army Engineer Research and Development Center (ERDC)
+- [Nick Cohn](mailto:nicholas.t.cohn@usace.army.mil) at U.S. Army Engineer Research and Development Center (ERDC)
 - [Sierd de Vries](mailto:Sierd.deVries@tudelft.nl) (founder) at Delft University of Technology
 - [Christa van IJzendoorn](mailto:vanijzec@oregonstate.edu) at Oregon State University
 - [Caroline Hallin](mailto:caroline.hallin@tvrl.lth.se) at Lund University
