@@ -64,11 +64,11 @@ Contents
 Contact
 =======
 - Bart van Westen (Bart.vanWesten@deltares.nl) at Deltares
-- [Nick Cohn](mailto:nick.cohn@usace.army.mil) at U.S. Army Engineer Research and Development Center (ERDC)
-- [Sierd de Vries](mailto:Sierd.deVries@tudelft.nl) (founder) at Delft University of Technology
-- [Christa van IJzendoorn](mailto:vanijzec@oregonstate.edu) at Oregon State University
-- [Caroline Hallin](mailto:caroline.hallin@tvrl.lth.se) at Lund University
-- [Glenn Strypsteen](mailto:glenn.strypsteen@kuleuven.be) at Katholieke Universiteit Leuven
+- Nick Cohn (nick.cohn@usace.army.mil) at U.S. Army Engineer Research and Development Center (ERDC)
+- Sierd de Vries (Sierd.deVries@tudelft.nl) (founder) at Delft University of Technology
+- Christa van IJzendoorn (vanijzec@oregonstate.edu) at Oregon State University
+- Caroline Hallin (caroline.hallin@tvrl.lth.se) at Lund University
+- Glenn Strypsteen (glenn.strypsteen@kuleuven.be) at Katholieke Universiteit Leuven
 
 
 Acknowledgements
@@ -76,7 +76,7 @@ Acknowledgements
 
 * AeoLiS was initially developed at Delft University of Technology with support from the ERC-Advanced Grant 291206 Nearshore Monitoring and Modeling (`NEMO <http://nemo.citg.tudelft.nl>`_) and `Deltares <http://www.deltares.nl>`_.
 * AeoLiS is currently maintained by `Bart van Westen <Bart.vanWesten@deltares.nl>`_ at Deltares, `Nick Cohn <nick.cohn@usace.army.mil>`_ at U.S. Army Engineer Research and Development Center (ERDC) and `Sierd de Vries <Sierd.deVries@tudelft.nl>`_ at Delft University of Technology.
-* Further developement of AeoLiS is supported by the `Digital Competence Centre <https://dcc.tudelft.nl>`_, Delft University of Technology.
+* Further development of AeoLiS is supported by the `Digital Competence Centre <https://dcc.tudelft.nl>`_, Delft University of Technology.
 
 
 Indices and tables
