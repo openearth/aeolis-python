@@ -785,7 +785,7 @@ def sweep2(Ct, Cu, mass, dt, Ts, ds, dn, us, un):
     #         + "     q5 = " + str(np.sum(q==5)))
     return Ct, pickup
 
-@njit
+@njit(cache=True)
 def sweep3(Ct, Cu, mass, dt, Ts, ds, dn, us, un, w):
 
 
