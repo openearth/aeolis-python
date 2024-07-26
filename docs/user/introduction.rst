@@ -25,6 +25,8 @@ AeoLiS publications
 
 2024
 ^^^^
+Strypsteen, G., de Vries, S., Bonte, D., Homberger, J.M., Hallin, C., Rauwoens, P. (2024). Planted vegetation on a sandy beach regulates maximum size of corresponding dune evolution. Coastal Engineering (preprint under review). Doi: http://dx.doi.org/10.2139/ssrn.4872614
+
 Heminway, S.S., Cohn, N., Davis, E.H., White, A., Hein, C.J., Zinnert, J.C., 2024. Exploring Ecological, Morphological, and Environmental Controls on Coastal Foredune Evolution at Annual Scales Using a Process-Based Model. Sustainability, 16, 3460. https://doi.org/10.3390/su16083460
 
 Orie, C., Cohn, N., Farthing, M., Dutta, S., Trautz, A., 2024. Examination of Analytical Shear Stress Predictions for Coastal Dune Evolution. EGUsphere, https://doi.org/10.5194/egusphere-2024-855. Preprint under review for ESurf
