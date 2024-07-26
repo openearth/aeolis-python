@@ -17,6 +17,17 @@ Welcome to AeoLiS's Documentation
 This documentation describes the Python implementation of the AeoLiS
 model. The source code of the Python implementation can be found in `GitHub <https://github.com/openearth/aeolis-python>`_.
 
+The code is developed and maintained by a developer group that conist of members from Deltares, U.S. Army Engineer Research and Development Center (ERDC), Delft University of Technology, Oregon State University, and Lund University. We encourage contributions from the community. If you are interested in contributing to the code, please read the `developer documentation <developer/quickstart>`_.
+
+.. _fig-developer-group:
+
+.. figure:: /images/aeolis_developer_group.jpeg
+   :alt: mass file format 1D
+   :width: 550px
+   :align: center
+   
+   AeoLiS developer group
+
 Contents
 --------
 
@@ -48,6 +59,17 @@ Contents
 
    developer/modularity
    developer/domain-decomposition
+
+
+
+Contact
+=======
+- [Bart van Westen](mailto:Bart.vanWesten@deltares.nl) at Deltares
+- [Nick Cohn](mailto:nick.cohn@usace.army.mil) at U.S. Army Engineer Research and Development Center (ERDC)
+- [Sierd de Vries](mailto:Sierd.deVries@tudelft.nl) (founder) at Delft University of Technology
+- [Christa van IJzendoorn](mailto:vanijzec@oregonstate.edu) at Oregon State University
+- [Caroline Hallin](mailto:caroline.hallin@tvrl.lth.se) at Lund University
+- [Glenn Strypsteen](mailto:glenn.strypsteen@kuleuven.be) at Katholieke Universiteit Leuven
 
 
 Acknowledgements
