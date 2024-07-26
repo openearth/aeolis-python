@@ -28,7 +28,7 @@ The code is developed and maintained by a developer group that consists of membe
    AeoLiS developer group
 
 Contents
---------
+========
 
 .. toctree::
    :caption: User Documentation
@@ -42,6 +42,13 @@ Contents
    user/tutorials_and_examples
    user/sourcecode
    user/references
+
+.. toctree::
+   :caption: Tutorials and examples
+   :maxdepth: 3
+
+   tutorials/shortcourses
+   tutorials/demonstration_cases
 
 .. toctree::
    :caption: Developer Documentation
