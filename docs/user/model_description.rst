@@ -910,7 +910,8 @@ grain size dependency is implemented through
 :math:`u_{\mathrm{th}}`. :math:`u_{\mathrm{th}}` typically varies between 1 and 6
 m/s for sand.
 
-Vegetation (from Strypsteen et al., 2024)
+Vegetation (from Strypsteen et al., 2024. Vertical Growth Rate of Planted Vegetation Controls Dune Growth on a 
+Sandy Beach. Coastal Engineering. doi:10.2139/ssrn.4872614)
 -------------------------------------
 
 In AeoLiS, the influence of vegetation on dune evolution is comprehensively 
@@ -934,14 +935,51 @@ vegetation. By integrating these physical and ecological processes, AeoLiS simul
 variations in sediment transport and morphological changes resulting from aeolian processes in coastal 
 environments.
 
-\rho_{\text{veg}} can vary in space and time and is determined by the ratio of the actual vegetation height (hveg) to the
-maximum vegetation height (hveg,max), and can vary between 0 and 1 (Durán and Herrmann, 2006):
+\rho_{\text{veg}} can vary in space and time and is determined by the ratio of the actual vegetation height (hveg) 
+to the maximum vegetation height (hveg,max), and can vary between 0 and 1 (Durán and Herrmann, 2006):
 
-.. _fig-bed-interaction-parameter:
+:math:`\rho_{\text{veg}} = \left( \frac{h_{\text{veg}}}{h_{\text{veg,max}}} \right)^2`
 
-.. figure:: /images/bed_interaction_parameter.png
+This assumption is based on the idea that burying vegetation reduces its height, which indicates a decrease in 
+actual cover. The change in vegetation density per grid cell is directly linked to the alteration in vegetation 
+height within that specific cell. This height variation is influenced by both the growth rate of the vegetation and 
+the rate of sediment burial. If the vegetation density remains constant over time, it suggests either no 
+sedimentation or a growth rate equal to the rate of sediment burial within the cell. Vegetation growth and decay 
+follow the model proposed by Durán and Herrmann (2006), modified to include :math:`\delta z_{\text{b,opt}}`
+(m/year), representing sediment burial for optimal growth that shifts the peak of optimal growth:
+
+:math:`\frac{\delta h_{\text{veg}}}{\delta t} = V_{\text{ver}} \left(1 - \frac{h_{\text{veg}}}{h_{\text{veg,max}}}\right) - \gamma_{\text{veg}} \left| \frac{\delta z_{\text{b,veg}}}{\delta t} - \delta z_{\
+
+Here, :math:`\gamma_{\text{veg}}` (default = 1) is a sediment burial factor that accounts for the impact of 
+sediment burial on vegetation. The height of the vegetation (:math:`h_{\text{veg}}` in m) cannot be less than zero. 
+Vver represents the maximum vertical growth rate of vegetation given in m/year, while the sediment burial rate 
+:math:`\delta z_{\text{b,veg}}` [m] is determined as the bed level change per time step. By simply converting this 
+value to a bed level change per year multiple errors are induced, as the time scale over which the bed level change 
+actually occurs is much shorter than this one year. To compare the bed level change per time step with the 
+vegetation growth rate per year, an average bed level change is estimated over a specified time (default is one 
+day). This average is then extrapolated to an annual rate. This method ensures that sudden changes in the bed level 
+change over one time step are not used as an estimate of the total bed level change in one year, which would be far 
+too high.
+
+The optimal growth rate for certain vegetation species in dune environments is depending upon sediment burial 
+(Maun, 1998). The optimal burial rate for maximum vegetation growth for marram grass for the neighbouring Dutch 
+coast is around 0.31 m/year with a burying tolerance of 0.78 to 0.96 m burial/year (Nolet et al., 2018). This 
+optimal value is used in the model. :math:`V_{\text{ver}}` contains information of meteorological and local 
+conditions that enhance or inhibit vegetation growth process (Danin, 1991; Hesp, 1991). 
+
+.. _fig-Veg_growth:
+
+.. figure:: /images/Veg_growth.png
    :width: 600px
    :align: center
+
+Vegetation can begin to grow through lateral propagation or random germination. Once established, it can continue 
+to grow and spread laterally. The uncertainties associated with random germination are handled on a cell-by-cell 
+basis using a probabilistic approach, similar to the cellular automata method described by Keijsers et al. (2016). 
+AeoLiS incorporates a germination probability, denoted as ρ_{ger}, for each grid cell. This probability is constant 
+across the domain, except in eroding grid cells (where bed elevation decreases), where ρ_{ger} is set to 0. Lateral 
+propagation is determined by identifying the boundaries between vegetated and non-vegetated cells, with the 
+parameter ρ_{lat} adjusting the likelihood of lateral propagation at these boundaries.
 
 Simulation of Sediment Sorting and Beach Armoring
 -------------------------------------------------
