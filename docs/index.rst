@@ -16,7 +16,7 @@ Welcome to AeoLiS's Documentation
 
 This documentation describes the Python implementation of the AeoLiS. AeoLiS is an aeolian sediment transport and landform evolution model that is designed to account for sediment-supply-limiting factors in coastal environments. The source code of the Python implementation can be found in `GitHub <https://github.com/openearth/aeolis-python>`_.
 
-The code is developed and maintained by a developer group that consists of members from Deltares, U.S. Army Engineer Research and Development Center (ERDC), Delft University of Technology, Oregon State University, and Lund University. We encourage contributions from the community. If you are interested in contributing to the code, please read the `developer documentation </developer/quickstart>`_.
+The code is developed and maintained by a developer group that consists of members from Deltares, U.S. Army Engineer Research and Development Center (ERDC), Delft University of Technology, Oregon State University, and Lund University. We encourage contributions from the community. If you are interested in contributing to the code, please read the :ref:quickstart . `developer documentation </developer/quickstart>`_.
 
 .. _fig-developer-group:
 
