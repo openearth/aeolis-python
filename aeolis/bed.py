@@ -202,7 +202,7 @@ def mixtoplayer(s, p):
 
 
 def wet_bed_reset(s, p):
-    ''' Text
+    ''' Reset wet bed to initial bed level if the total water level is above the bed level.
 
 
 
@@ -331,6 +331,9 @@ def update(s, p):
     
     # reshape mass matrix
     s['mass'] = m.reshape((ny+1,nx+1,nl,nf))
+
+    # Store toplayer of 'mass' variable (ilayer = 0)
+    s['masstop'][:,:,:] = s['mass'][:,:,0,:].copy()
 
     # update bathy
     if p['process_bedupdate']:

@@ -73,6 +73,7 @@ def duran_grainspeed(s, p):
     ustar0 = s['ustar0']
     uth = s['uth0'] # uth0 or uth???
     uth0 = s['uth0'] 
+    uthST = s['uth'] 
 
     # Wind input for filling up ets/ets (udir), where ustar == 0
     uw = s['uw']
@@ -97,6 +98,8 @@ def duran_grainspeed(s, p):
     u0 = np.zeros(uth.shape)
     us = np.zeros(uth.shape)
     un = np.zeros(uth.shape)
+    usST = np.zeros(uth.shape)
+    unST = np.zeros(uth.shape)
     u_approx = np.zeros(uth.shape)
     us_approx = np.zeros(uth.shape)
     un_approx = np.zeros(uth.shape)
@@ -150,9 +153,16 @@ def duran_grainspeed(s, p):
     dhn = np.repeat(dzn[:,:,np.newaxis], nf, axis = 2)
     
     # Compute ets/etn (wind direction)
+    ets = np.ones(ustar.shape)
+    etn = np.zeros(ustar.shape)
+
+    # First, if uw is not zero, compute ets/etn based on uw
+    ix = (uw > 0.)
+    ets[ix] = uws[ix] / uw[ix]                        # s-component of ustar
+    etn[ix] = uwn[ix] / uw[ix]                        # n-component of ustar
+
+    # Second, if ustar is not zero, compute ets/etn based on ustar
     ix = (ustar > 0.)
-    ets = uws / uw                                          # s-component of wind (where ustar == 0)
-    etn = uwn / uw                                          # n-component of wind (where ustar == 0)
     ets[ix] = ustars[ix] / ustar[ix]                        # s-component of ustar
     etn[ix] = ustarn[ix] / ustar[ix]                        # n-component of ustar
 
@@ -209,7 +219,15 @@ def duran_grainspeed(s, p):
         else:
             logger.error('Grainspeed method not found!')
         
-    return u0, us, un, u
+        # For SedTRAILS: Set grainspeed to 0 whenever uth > ustar
+        usST[:,:,i] = us[:,:,i]
+        unST[:,:,i] = un[:,:,i]
+        
+        ix_no_speed = (uthST[:,:,i] > ustar[:,:,i])
+        usST[ix_no_speed, i] *= 0.
+        unST[ix_no_speed, i] *= 0.
+        
+    return u0, us, un, u, usST, unST
 
 
 
@@ -292,11 +310,13 @@ def equilibrium(s, p):
         
         if p['method_grainspeed']=='duran' or p['method_grainspeed']=='duran_full':
             #the syntax inside grainspeed needs to be cleaned up
-            u0, us, un, u = duran_grainspeed(s,p)
+            u0, us, un, u, usST, unST = duran_grainspeed(s,p)
             s['u0'] = u0
             s['us'] = us
             s['un'] = un
             s['u']  = u
+            s['usST'][:] = usST
+            s['unST'][:] = unST
             
         elif p['method_grainspeed']=='windspeed':
             s['u0'] = s['uw'][:,:,np.newaxis].repeat(nf, axis=2)

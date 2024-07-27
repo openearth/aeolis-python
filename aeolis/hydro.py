@@ -92,12 +92,6 @@ def interpolate(s, p, t):
             interp = NearestNDInterpolator(np.transpose(mask), s['SWL'][mask])
             s['SWL'] = interp( * np.indices(s['SWL'].shape))
 
-            # fig, ax = plt.subplots()
-            # pc = plt.pcolormesh(s['x'], s['y'], s['SWL'])#, vmin=1, vmax=1.3)
-            # ax.set_aspect('equal')
-            # fig.colorbar(pc, ax=ax)
-            # plt.show()
-
             print('!Be carefull, according to current implementation of importing waterlevel from Flexible Mesh, SWL is equal to DSWL = zs!')
             logger.warning('!Be carefull, according to current implementation of importing waterlevel from Flexible Mesh, SWL is equal to DSWL = zs!')
 
@@ -416,7 +410,37 @@ def update(s, p, dt,t):
 @njit
 def Boussinesq (GW, DSWL, ds, GW_stat, K_gw, ne_gw, D_gw,shl_ix, bound,zb,process_seepage_face):
     '''
-    Add description
+    Boussinesq equation for groundwater level change
+
+    Parameters
+    ----------
+    GW : numpy.ndarray
+        Groundwater level
+    DSWL : numpy.ndarray
+        Dynamic seawater level 
+    ds : numpy.ndarray
+        Cell size
+    GW_stat : float
+        Static groundwater level
+    K_gw : float
+        Hydraulic conductivity
+    ne_gw : float
+        Effective porosity
+    D_gw : float
+        Aquifer depth
+    shl_ix : numpy.ndarray
+        Index of shoreline location
+    bound : int
+        Landward boundary condition
+    zb : numpy.ndarray
+        Bed level
+    process_seepage_face : bool
+        Process seepage face
+
+    Returns 
+    -------
+    numpy.ndarray
+        Groundwater level change
     
     '''
 
@@ -468,8 +492,26 @@ def Boussinesq (GW, DSWL, ds, GW_stat, K_gw, ne_gw, D_gw,shl_ix, bound,zb,proces
 @njit
 def runup_overheight_distr(fx, fx_ix,shl_ix,runup_ix, x):
     '''
-    Add description
+    Compute distribution of infiltrated water due to wave runup according to Nielsen (1990)
+
+    Parameters
+    ----------
+    fx : numpy.ndarray
+        Distribution of infiltrated water
+    fx_ix : numpy.ndarray
+        Index of peak f(x)
+    shl_ix : numpy.ndarray
+        Index of shoreline location
+    runup_ix : numpy.ndarray
+        Index of runup limit
+    x : numpy.ndarray
+        x-coordinate
     
+    Returns
+    -------
+    numpy.ndarray
+        Distribution of infiltrated water
+
     '''
     for i in range(len(fx[:,0])):
         #Define index of peak f(x)
@@ -482,6 +524,61 @@ def runup_overheight_distr(fx, fx_ix,shl_ix,runup_ix, x):
 
 @njit
 def hdelta(wetting, scan_w, gw,gw_prev,scan_d,h_delta,zb,scan_w_moist,scan_d_moist,w_h,satd_moist,d_h,satw_moist,alfaw_moist,alfad_moist,resw_moist,resd_moist,mw_moist,md_moist,nw_moist,nd_moist):
+    '''
+    Compute suction at reversal between wetting/drying conditions
+
+    Parameters
+    ----------
+    wetting : numpy.ndarray
+        Flag indicating wetting or drying of soil profile
+    scan_w : numpy.ndarray
+        Flag indicating that the moisture is calculated on the wetting scanning curve
+    gw : numpy.ndarray
+        Groundwater level
+    gw_prev : numpy.ndarray
+        Groundwater level in previous timestep
+    scan_d : numpy.ndarray
+        Flag indicating that the moisture is calculated on the drying scanning curve
+    h_delta : numpy.ndarray
+        Suction at reversal between wetting/drying conditions
+    zb : numpy.ndarray
+        Bed level
+    scan_w_moist : numpy.ndarray
+        Moisture content on wetting scanning curve
+    scan_d_moist : numpy.ndarray
+        Moisture content on drying scanning curve
+    w_h : numpy.ndarray
+        Moisture content on wetting curve
+    satd_moist : float
+        Moisture content at saturation on drying curve
+    d_h : numpy.ndarray
+        Moisture content on drying curve
+    satw_moist : float
+        Moisture content at saturation on wetting curve
+    alfaw_moist : float
+        Inverse of the air-entry value for a wetting branch of the soil water retention function
+    alfad_moist : float
+        Inverse of the air-entry value for a drying branch of the soil water retention function
+    resw_moist : float
+        Residual moisture content on wetting curve
+    resd_moist : float
+        Residual moisture content on drying curve
+    mw_moist : float
+        Shape parameter for the wetting branch of the soil water retention function
+    md_moist : float
+        Shape parameter for the drying branch of the soil water retention function
+    nw_moist : float
+        Pore-size distribution index in the soil water retention function, wetting branch
+    nd_moist : float
+        Pore-size distribution index in the soil water retention function, drying branch
+
+    Returns
+    -------
+    numpy.ndarray
+        Suction at reversal between wetting/drying conditions
+
+    '''
+    
     for i in range(len(wetting[:,0])):
         for j in range(len(wetting[0,:])):
             #Compute h delta on the main drying and wetting curve
@@ -512,6 +609,39 @@ def hdelta(wetting, scan_w, gw,gw_prev,scan_d,h_delta,zb,scan_w_moist,scan_d_moi
 
 @njit
 def SWR_curve(wetting,gw,gw_prev,scan_w,moist_swr,w_h,scan_d,scan_w_moist,d_h,scan_d_moist):
+    '''
+    Compute moisture content due to capillary processes
+
+    Parameters
+    ----------
+    wetting : numpy.ndarray
+        Flag indicating wetting or drying of soil profile
+    gw : numpy.ndarray
+        Groundwater level
+    gw_prev : numpy.ndarray
+        Groundwater level in previous timestep
+    scan_w : numpy.ndarray
+        Flag indicating that the moisture is calculated on the wetting scanning curve
+    moist_swr : numpy.ndarray
+        Moisture content due to capillary processes
+    w_h : numpy.ndarray
+        Moisture content on wetting curve
+    scan_d : numpy.ndarray
+        Flag indicating that the moisture is calculated on the drying scanning curve
+    scan_w_moist : numpy.ndarray
+        Moisture content on wetting scanning curve
+    d_h : numpy.ndarray
+        Moisture content on drying curve
+    scan_d_moist : numpy.ndarray
+        Moisture content on drying scanning curve
+
+    Returns
+    -------
+    numpy.ndarray
+        Moisture content due to capillary processes
+
+    '''
+
     for i in range(len(wetting[:,0])):
         for j in range(len(wetting[0,:])):
             #Wetting conditions main curve
@@ -625,6 +755,25 @@ def saturation_pressure(T):
 def calc_runup_stockdon(Ho, Tp, beta):
     """
     Calculate runup according to /Stockdon et al 2006.
+
+    Parameters
+    ----------
+    Ho : float or numpy.ndarray
+        Significant wave height
+    Tp : float or numpy.ndarray
+        Peak period
+    beta : float
+        Beach slope
+
+    Returns
+    -------
+    eta : float or numpy.ndarray
+        Runup height
+    sigma_s : float or numpy.ndarray
+        Setup height
+    R : float or numpy.ndarray
+        Total runup height
+
     """
     
     if hasattr(Ho, "__len__"):
