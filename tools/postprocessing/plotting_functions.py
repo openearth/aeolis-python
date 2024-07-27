@@ -17,7 +17,7 @@ from scipy.ndimage import gaussian_filter, uniform_filter
 
 def plot1d(ncfile, itransects=0, itimes=0, ifrac=0, params='zb'):
     
-    '''Generic function for plotting 2D parameters from AeoLiS netcdf results
+    '''Generic function for plotting 1D parameters from AeoLiS netcdf results
 
     Parameters
     ----------
@@ -30,17 +30,18 @@ def plot1d(ncfile, itransects=0, itimes=0, ifrac=0, params='zb'):
     ifrac : integer
         index of fraction, only used when the results has multiple dimensions ( >=4 )
     params :
-        string or list of strings describing the name of the parameter for plotting
+        string or list of strings describing the name of the parameter for plotting'
+        the parameters that can be plotted are defined in the AeoLiS input file.
 
     Returns
     -------
-    figs/ axs?
+    figs/ ax
         ...
 
     Examples
     --------
-    >>> ploted(parse_value('T'))
-        bool
+    >>> plot1d(ncfile, itransects=0, itimes=0, ifrac=0, params='zb')            # plot the bed level for the first transect and timestep 0
+    >>> plot1d(ncfile, itransects=0, itimes=-1, ifrac=0, params=['zb', 'Hs'])   # plot the bed level and wave height for the first transect and last timestep
 
     '''
     
@@ -103,17 +104,16 @@ def plot2d(ncfile, itimes=0, ifrac=0, param='zb', cmap=plt.cm.jet, clim='auto', 
         Boolean for indicating plotting difference between timesteps or the actual value
     itimeDelta : integer
         index for the starting timestep in the netcdf-file when merging, only used when delta == Bool
-    quiver?
 
     Returns
     -------
-    figs/ axs?
+    figs/ ax
         ...
 
     Examples
     --------
-    >>> ploted(parse_value('T'))
-        bool
+    >>> plot2d(ncfile, itimes=0, ifrac=0, param='zb')            # plot the bed level for True first timestep
+    >>> plot2d(ncfile, itimes=-1, ifrac=0, param='zb', cmap=plt.cm.jet, clim='auto', delta=False, itimeDelta=0)   # plot the bed level difference for the first timestep
 
     '''
     
@@ -153,100 +153,3 @@ def plot2d(ncfile, itimes=0, ifrac=0, param='zb', cmap=plt.cm.jet, clim='auto', 
             plt.colorbar(pc)
     
     return fig, ax
-
-
-def plot3d(ncfile, itimes, scalez=1., vangle=90., hangle=0.):
-    
-    '''Generic function for plotting 2D parameters from AeoLiS netcdf results
-
-    Parameters
-    ----------
-    ncfile : str
-        filename of the netcdf-file containing the results
-    itimes : integer or array of integers
-        index or list of indices describing the timestep-indices in the netcdf-file for plotting
-
-    Returns
-    -------
-    figs/ axs?
-        ...
-
-    Examples
-    --------
-    >>> ploted(parse_value('T'))
-        bool
-
-    '''
-    
-    rgb=255.
-    sand = [230/rgb,230/rgb,210/rgb]
-    blue = [0/rgb, 166/rgb, 214/rgb]
-    sand = [230/rgb,230/rgb,210/rgb]
-    vegetation = [120/rgb,180/rgb,50/rgb]
-    white = [255/rgb,255/rgb,255/rgb]
-    gray = [100/rgb,100/rgb,100/rgb]
-    
-        
-    if type(itimes) == int:
-        itimes = [itimes]
-        
-    for it in itimes:
-    
-        with netCDF4.Dataset(ncfile, 'r') as ds:
-            
-            # get spatial dimensions and bed levels
-            x = ds.variables['x'][:,:]
-            y = ds.variables['y'][:,:]
-            z = ds.variables['zb'][it,:,:]
-            
-            fig = plt.figure()
-            ax = plt.gca(projection='3d')
-    
-            x_scale = 1.
-            y_scale = 1. # np.max(x)/np.max(y)
-            z_scale = scalez*np.max(z)/np.max(x)
-            
-            scale=np.diag([x_scale, y_scale, z_scale, 1.0])
-            scale=scale*(1.0/scale.max())
-            scale[3,3]=1.0
-            
-            def short_proj():
-                return np.dot(Axes3D.get_proj(ax), scale)
-            
-            ax.get_proj = short_proj   
-            
-            # lay-out of axes
-            ax.set_ylabel('alongshore distance [m]')
-            ax.set_xlabel('cross-shore distance [m]')
-            ax.axes.get_xaxis().set_ticks([])
-            ax.axes.get_yaxis().set_ticks([])
-            ax.axes.get_xaxis().set_visible(False)
-            ax.axes.get_yaxis().set_visible(False)
-            
-            # perspective
-            ax.view_init(vangle, hangle)
-            ax.set_proj_type(proj_type='persp')
-            
-            # make the panes transparent           
-            for axis in [ax.xaxis, ax.yaxis, ax.zaxis]:
-                axis.set_pane_color((0/rgb,166/rgb,214/rgb,0.0))
-                axis._axinfo["grid"]['color'] =  (1,1,1,0) 
-                axis.line.set_color((1.0, 1.0, 1.0, 0.0)) 
-            
-            ax.set_axis_off()
-            pos_z = z.copy()
-            neg_z = z.copy()
-            # neg_z[(neg_z > 0.2)] = np.nan
-            pos_z[(pos_z < 0.2)] = np.nan
-            
-            # ax.plot_surface(y, x, neg_z[:,:], color=white, linewidth=0, antialiased=False, shade=False, alpha=1.0, rstride=1, cstride=1)
-            ax.plot_surface(y, x, pos_z[:,:], color=sand, linewidth=0, antialiased=False, shade=True, alpha=1.0, rstride=1, cstride=1)          
-            
-            # plt.savefig(r'c:\Users\weste_bt\AeoLiS\Examples\Parabolic figures\plottoptime' + str('{:03}'.format(time_index)) + '.png', dpi=200)
-            # plt.show()
-            # plt.close(fig)
-            
-    return fig, ax
-
-
-    
