@@ -297,7 +297,6 @@ def initialize(outputfile, outputvars, s, p, dimensions):
         # this is where a quasi 2D model is stored in 1D
         if p['ny']+1 == 3:
             nc.variables['n'][:] = np.arange(1)
-            print(s['x'])
             nc.variables['x'][:,:] = s['x'][0,:]
             nc.variables['y'][:,:] = s['y'][0,:]
         else:
@@ -369,7 +368,6 @@ def append(outputfile, variables):
             # this is where a quasi 2D model is stored in 1D
             if v.shape[0]==3: 
                 nc.variables[k][i,...] = v[1,:]
-                print(v[0,:].shape)
             # this is where a 2D model is stored in 2D
             else: 
                 nc.variables[k][i,...] = v
