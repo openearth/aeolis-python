@@ -1,6 +1,6 @@
 Demonstration cases
 ===================
-The `example folder <https://github.com/openearth/aeolis-python/aeolis/examples>`_ contains a collection of input files needed to run example models. The different examples are explained in the `readme-file <https://github.com/openearth/aeolis-python/aeolis/examples/readme.txt>`. They are intended to serve as an example of the model's capabilities and instruction on how to set up and organize models. The model input files can be modified using the pre-processing [ADD LINK] tools, and the model output can be visualized with the post-processing tools [ADD LINK].
+The `example folder <https://github.com/openearth/aeolis-python/aeolis/examples>`_ contains a collection of input files needed to run example models. The different examples are explained in the `readme-file <https://github.com/openearth/aeolis-python/aeolis/examples/readme.txt>`. They are intended to serve as an example of the model's capabilities and instruction on how to set up and organize models. The model input files can be modified using the `pre-processing tools <https://github.com/openearth/aeolis-python/tree/main/tools/preprocessing>`, and the model output can be visualized with the `post-processing tools https://github.com/openearth/aeolis-python/tree/main/tools/postprocessing>`.
 
 To run the examples:
 
