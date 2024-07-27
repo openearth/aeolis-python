@@ -70,7 +70,7 @@ Contents
 
 Contact
 =======
-If you have questions about the model that is of interest for the community, please post your question in the  `discussion forum <https://github.com/openearth/aeolis-python/discussions>`_.
+If you have questions about the model that is of interest to the community, please post your question in the  `discussion forum <https://github.com/openearth/aeolis-python/discussions>`_.
 
 - Bart van Westen (Bart.vanWesten@deltares.nl) at Deltares
 - Nick Cohn (nicholas.t.cohn@usace.army.mil) at U.S. Army Engineer Research and Development Center (ERDC)
