@@ -31,10 +31,20 @@ import numpy as np
 import math
 #import matplotlib.pyplot as plt
 from aeolis.wind import *
+import aeolis.rotation
 
 # package modules
 import aeolis.wind
 #from aeolis.utils import *
+
+import numpy as np
+from scipy.integrate import quad
+from scipy.integrate import romberg
+from scipy.optimize import root_scalar
+from scipy.signal import convolve
+from scipy.special import sici
+from scipy.special import erfi
+import matplotlib.pyplot as plt
 
 # initialize logger
 logger = logging.getLogger(__name__)
@@ -76,12 +86,27 @@ def initialize (s,p):
     s['germinate'][:,:] = False
     s['lateral'][:,:] = False
 
+    if p['vegshear_type'] == 'okin':
+        s['okin'] = aeolis.rotation.rotationClass(s['x'], s['y'], s['zb'],
+                                        dx=p['dx'], dy=p['dy'],
+                                        buffer_width=100)
+
     return s
 
-
 def vegshear(s, p):
-    if p['vegshear_type'] == 'okin' and p['ny'] == 0:
-        s = vegshear_okin(s, p)
+    if p['vegshear_type'] == 'okin':
+
+        okin_params = {
+            'okin_c1_veg': p['okin_c1_veg'],
+            'okin_initialred_veg': p['okin_initialred_veg']
+        }
+
+        s['okin'](x=s['x'], y=s['y'], z=s['zb'], udir=s['udir'][0, 0], ustar=s['ustar'], tau=s['tau'], hveg=s['hveg'], type_flag = 1, params=okin_params)
+
+        s['ustar'] = s['okin'].get_ustar()
+        s['ustars'] = - s['ustar'] * np.sin((-p['alfa'] + s['udir']) / 180. * np.pi)
+        s['ustarn'] = - s['ustar'] * np.cos((-p['alfa'] + s['udir']) / 180. * np.pi)
+
     else:
         s = vegshear_raupach(s, p)
 
@@ -325,3 +350,69 @@ def vegshear_raupach(s, p):
     s['ustarn'] = s['ustar'] * etn
 
     return s
+
+def compute_okin_shear(xgrd, ustar,  hveg, okin_params):
+    #Approach to calculate shear reduction in the lee of plants using the general approach of:
+    #Okin (2008), JGR, A new model of wind erosion in the presence of vegetation
+    #Note that implementation only works in 1D currently
+
+    #Initialize shear variables and other grid parameters
+    ny, nx = xgrd.shape
+    ustar_okin = ustar.copy()
+
+    c1 = okin_params['okin_c1_veg']
+    intercept = okin_params['okin_initialred_veg']
+    if intercept > 1:
+        intercept = 1
+
+    #Calculate shear reduction by looking through all cells that have plants present and looking downwind of those features
+    for igridy in range(ny):
+        zp = hveg[igridy, :]
+        x = xgrd[igridy, :]
+        red_all = np.zeros(x.size)
+
+        for igrid in range(nx):
+
+            if zp[igrid] > 0:         # only look at cells with a roughness element
+                mult = np.ones(x.size)
+                red = np.zeros(x.size)
+                h = zp[igrid] #vegetation height at the appropriate cell
+
+                xrel = x - x[igrid]
+                #xrel = -xrel
+                for igrid2 in range(nx):
+
+                    if xrel[igrid2] >= 0:
+                        # apply okin model
+                        mult[igrid2] = intercept + (1 - intercept) * (1 - np.exp(-xrel[igrid2] * c1 / h))
+                    else:
+                        mult[igrid2] = 1
+
+                red = 1 - mult
+
+                # fix potential issues for summation
+                ix = red < 0.00001
+                red[ix] = 0
+                ix = red > 1
+                red[ix] = 1
+                ix = xrel < 0
+                red[ix] = 0
+
+                # combine all reductions between plants
+                red_all = red_all + red
+
+        # cant have more than 100% reduction
+        ifix = red_all > 1
+        red_all[ifix] = 1
+
+        #update shear velocity according to Okin (note does not operate on shear stress)
+        mult_all = 1 - red_all
+
+        ustarveg = ustar_okin[igridy, :] * mult_all
+
+        ix = ustarveg < 0.01
+        ustarveg[ix] = 0.01 #some small number so transport code doesnt crash
+
+        ustar_okin[igridy,:] = ustarveg
+
+    return ustar_okin
