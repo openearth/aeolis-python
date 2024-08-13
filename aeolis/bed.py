@@ -108,6 +108,14 @@ def initialize(s, p):
     else:
         s['mass'][:,:,:,:] = p['bedcomp_file'].reshape(s['mass'].shape)                
 
+
+    # Store mass for mixing (only for reset_initial, default is layer_average)
+    if p['method_mixing'] == 'reset_initial': 
+        if p['bedcomp_mixing_file'] is not None:
+            s['mass_mixing'][:,:,:,:] = p['bedcomp_mixing_file'].reshape(s['mass_mixing'].shape)
+        else:
+            s['mass_mixing'][:] = s['mass'][:]         
+
     # initialize masks
     for k, v in p.items():
         if k.endswith('_mask'):
@@ -185,8 +193,17 @@ def mixtoplayer(s, p):
                                        # .repeat(nx, axis=1) \
                                        # .repeat(nl, axis=2)
 
-            mass1 = np.nanmean(mass, axis=2, keepdims=True).repeat(nl, axis=2)
-            # mass2 = gd * s['thlyr'][:,:,:,np.newaxis].repeat(nf, axis=-1)
+            # Two different methods for mixing are implemented. 
+            # The first method is the default method, which is layer_average (default), which is used to average the grain size distribution over the layers that are above the depth of disturbance. 
+            # The second method is reset_initial, which is used to reset the initial grain size distribution in the top layer of the bed.
+            if p['method_mixing'] == 'reset_initial':
+                mass1 = s['mass_mixing'][:]
+            elif p['method_mixing'] == 'layer_average':
+                mass1 = np.nanmean(mass, axis=2, keepdims=True).repeat(nl, axis=2)
+            else:
+                logger.warning(f'Unknown method for mixing: {p["method_mixing"]}')
+                mass1 = np.nanmean(mass, axis=2, keepdims=True).repeat(nl, axis=2)
+
             mass = mass1 * f + mass * (1. - f)
 
         
