@@ -8,7 +8,9 @@ Setting up the AeoLiS model involves configuring various parameters and input fi
 - **Model state/output**: Overview of model state variables that can be outputted.
 - **Guidance on solver use**: Explanation of the use of different solvers.
 
-A general tip for setting up a model like AeoLiS is to start simple and build up the complexity. As a starting point, you can use the default values and then slowly deviate from those and turn on processes. In case you run into issues, we encourage (new) users to post questions and case studies on the [AeoLiS Discussion Board](https://github.com/openearth/aeolis-python/discussions). We use this public forum so our help and advice is available to everyone. 
+A general tip for setting up a model like AeoLiS is to start simple and build up the complexity. As a starting point, you can use the default values and then slowly deviate from those and turn on processes. In case you run into issues, we encourage (new) users to post questions and case studies on the `AeoLiS Discussion Board`_. We use this public forum so our help and advice is available to everyone.
+
+.. _AeoLiS Discussion Board: https://github.com/openearth/aeolis-python/discussions
 
 Model input
 -----------
