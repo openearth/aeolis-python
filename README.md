@@ -64,6 +64,12 @@ aeolis wind <path/to/wind.txt> --mean=6 --duration=3600
 ## Documentation
 Detailed documentation can be found at [AeoLiS ReadTheDocs](http://aeolis.readthedocs.io/)
 
+A couple of short courses are available to help new users get acquainted with the model:
+- [AeoLiS short course](https://github.com/openearth/aeolis-shortcourse)
+- [AeoLiS case study documentation by ERDC](https://github.com/erdc/aeolis-python/tree/master/tutorial)
+
+Example case studies can also be found in the [examples folder](https://github.com/openearth/aeolis-python/tree/main/aeolis/examples) that is part of the AeoLiS installation.
+
 
 ## AeoLiS Developer Team
 The maintenance and development is done by a group of very enthusiastic people.

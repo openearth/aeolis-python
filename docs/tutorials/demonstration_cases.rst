@@ -8,7 +8,7 @@ To run the examples:
 
 .. code-block:: bash
 
-pip install aeolis
+    pip install aeolis
 
 2. Install the examples
 
@@ -31,6 +31,4 @@ Run the simulation with (example parabolic dune model):
 
 4. View/plot the results (example parabolic dune model):
 
-.. code-block:: bash
-
-    [ADD DESCRIPTION OF HOW TO PLOT NETCDF]
+Run the plotting_run.py file to visualize the example. Make sure the in the code that the correct nc file from the correct directory is being read.
