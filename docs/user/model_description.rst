@@ -910,13 +910,15 @@ grain size dependency is implemented through
 :math:`u_{\mathrm{th}}`. :math:`u_{\mathrm{th}}` typically varies between 1 and 6
 m/s for sand.
 
-Vegetation (from :cite:`Strypsteen2024`)
--------------------------------------
+Vegetation 
+------------
+
+The text below is based on :cite:`Strypsteen2024`
 
 In AeoLiS, the influence of vegetation on dune evolution is comprehensively 
 addressed. This includes modelling the intrinsic growth of vegetation, 
 accounting for factors such as growth and decay due to burial :cite:`DuranMoore2013`, 
-lateral expansion and establishment :cite:`Keijsers20106`, as well as simulating 
+lateral expansion and establishment :cite:`Keijsers2016`, as well as simulating 
 the destruction of vegetation caused by hydrodynamic processes. In the event of 
 cell inundation, vegetation density is reduced as a result. Inspired by the 
 Coastal Dune Model (CDM) proposed by :cite:`DuranMoore2013`, AeoLiS incorporates 
@@ -924,7 +926,11 @@ vegetation-wind interaction using the expression established by :cite:`DuranHerr
 
 .. math::
    :label: shear_reduction_vegetation
-   :align: center
+   :nowrap:
+
+   \begin{center}
+   \frac{u_{\text{veg}}}{u_*} = \frac{1}{\sqrt{1 + \Gamma \rho_{\text{veg}}}}
+   \end{center}
 
    \frac{u_{\text{veg}}}{u_*} = \frac{1}{\sqrt{1 + \Gamma \rho_{\text{veg}}}}
 
@@ -943,9 +949,11 @@ to the maximum vegetation height (:math:`h_{\text{veg,max}}`), and can vary betw
 
 .. math::
    :label: Vegetation_density
-   :align: center
+   :nowrap:
 
+   \begin{center}
    \rho_{\text{veg}} = \left( \frac{h_{\text{veg}}}{h_{\text{veg,max}}} \right)^2
+   \end{center}
 
 This assumption is based on the idea that burying vegetation reduces its height, which indicates a decrease in 
 actual cover. The change in vegetation density per grid cell is directly linked to the alteration in vegetation 
@@ -957,9 +965,11 @@ follow the model proposed by :cite:`DuranHerrmann2006`, modified to include :mat
 
 .. math::
    :label: changes_vegetation_height
-   :align: center
+   :nowrap:
 
+   \begin{center}
    \frac{\delta h_{\text{veg}}}{\delta t} = V_{\text{ver}} \left(1 - \frac{h_{\text{veg}}}{h_{\text{veg,max}}}\right) - \gamma_{\text{veg}} \left| \frac{\delta z_{\text{b,veg}}}{\delta t} - \delta z_{\text{b,opt}} \right|
+   \end{center}
 
 Here, :math:`\gamma_{\text{veg}}` (default = 1) is a sediment burial factor that accounts for the impact of 
 sediment burial on vegetation. The height of the vegetation (:math:`h_{\text{veg}}` in m) cannot be less than zero. 
@@ -984,9 +994,9 @@ conditions that enhance or inhibit vegetation growth process :cite:`Danin1991`, 
    :width: 600px
    :align: center
 
-    A) The vegetation growth response varies with different vertical growth rates (example for Vver = 1 and 2 m/year). Optimal vegetation growth is determined by a burial rate of 0.31 
+   A) The vegetation growth response varies with different vertical growth rates (example for Vver = 1 and 2 m/year). Optimal vegetation growth is determined by a burial rate of 0.31 
    m/year, with a maximum vegetation height set at 1 m and a plant height of 0.5 m. Additionally, the growth response for varying burial factors is depicted (:math:`\lambda_{\text{veg}}`
-    = 1 and 2). B) Shear stress reduction for two different vegetation-related roughness parameters and vegetation densities (:math:`\Gamma` = 16 and 32).
+   = 1 and 2). B) Shear stress reduction for two different vegetation-related roughness parameters and vegetation densities (:math:`\Gamma` = 16 and 32).
 
 Vegetation can begin to grow through lateral propagation or random germination. Once established, it can continue 
 to grow and spread laterally. The uncertainties associated with random germination are handled on a cell-by-cell 
