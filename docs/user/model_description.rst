@@ -926,13 +926,9 @@ vegetation-wind interaction using the expression established by :cite:`DuranHerr
 
 .. math::
    :label: shear_reduction_vegetation
-   :nowrap:
-
-   \begin{center}
-   \frac{u_{\text{veg}}}{u_*} = \frac{1}{\sqrt{1 + \Gamma \rho_{\text{veg}}}}
-   \end{center}
 
    \frac{u_{\text{veg}}}{u_*} = \frac{1}{\sqrt{1 + \Gamma \rho_{\text{veg}}}}
+
 
 where the ratio of shear velocity in the presence of vegetation (:math:`u_{*,\text{veg}}`) to the unobstructed 
 shear velocity (:math:`u_*`) is determined by a vegetation-related roughness parameter (:math:`\Gamma`) and the 
@@ -949,11 +945,9 @@ to the maximum vegetation height (:math:`h_{\text{veg,max}}`), and can vary betw
 
 .. math::
    :label: Vegetation_density
-   :nowrap:
 
-   \begin{center}
    \rho_{\text{veg}} = \left( \frac{h_{\text{veg}}}{h_{\text{veg,max}}} \right)^2
-   \end{center}
+
 
 This assumption is based on the idea that burying vegetation reduces its height, which indicates a decrease in 
 actual cover. The change in vegetation density per grid cell is directly linked to the alteration in vegetation 
@@ -965,11 +959,8 @@ follow the model proposed by :cite:`DuranHerrmann2006`, modified to include :mat
 
 .. math::
    :label: changes_vegetation_height
-   :nowrap:
 
-   \begin{center}
    \frac{\delta h_{\text{veg}}}{\delta t} = V_{\text{ver}} \left(1 - \frac{h_{\text{veg}}}{h_{\text{veg,max}}}\right) - \gamma_{\text{veg}} \left| \frac{\delta z_{\text{b,veg}}}{\delta t} - \delta z_{\text{b,opt}} \right|
-   \end{center}
 
 Here, :math:`\gamma_{\text{veg}}` (default = 1) is a sediment burial factor that accounts for the impact of 
 sediment burial on vegetation. The height of the vegetation (:math:`h_{\text{veg}}` in m) cannot be less than zero. 
