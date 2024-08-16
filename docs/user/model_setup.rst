@@ -1,6 +1,12 @@
 Model setup
 =================
-INTRODUCTORY TEXT
+Setting up the AeoLiS model involves configuring various parameters and input files to ensure accurate and efficient simulations. In this section, we will cover:
+
+- **Model Input**: Detailed information on the required input files and their formats.
+- **Default settings**: Overview of the various parameters that can be adjusted in the model and their default values.
+- **Activate/deactivate processes**: Explanation of different process flags and their effects on the simulation.
+- **Model state/output**: Overview of model state variables that can be outputted.
+- **Guidance on solver use**: Explanation of the use of different solvers.
 
 Model input
 -----------
@@ -39,7 +45,7 @@ files can be found in the table below.  Each file is further defined below.
      - File containing meteorological time series data
 
 aeolis.txt
-^^^^^^^^^^
+^^^^^^^^^^^
 
 This is the parameter file for AeoLiS that defines the model processes and boundary conditions.
 Parameters in the file are specified by various keywords; each keyword has a pre-defined
@@ -52,7 +58,7 @@ process keywords in aeolis.txt to T (True) and F (False).  Example aeolis.txt pa
 found in the examples folder on the AeoLiS GitHub.
 
 x.grd
-^^^^^
+^^^^^^
 
 The x.grd file defines the computational grid in the cross-shore direction defined in meters.  
 In a 1-dimensional (1D) case, the file contains a single column of cross-shore locations 
@@ -62,7 +68,7 @@ where each value corresponds to a specific location in the 2D grid.  The file ca
 and is referenced from the parameters file with the xgrid_file keyword.
 
 y.grd
-^^^^^
+^^^^^^
 
 This file defines the computational grid in the alongshore direction.  In a 1D case,
 y.grd will contain a single column of zeros.  In a 2D case, similar to the x.grd file, 
@@ -73,7 +79,7 @@ As with the x.grd file, this file can be renamed and is referenced from the para
 keyword: ygrid_file.    
 
 z.grd
-^^^^^
+^^^^^^
 
 The z.grd file provides the model with the elevation information for the computational 
 grid defined in x.grd and y.grd.  Similar to x.grd and y.grd, when running 
@@ -84,7 +90,7 @@ positive is up and negative is down.  The file can be renamed and is referenced 
 parameters file with the keyword: bed_file.
 
 veg.grd
-^^^^^^^
+^^^^^^^^
 
 The veg.grd file is an optional grid providing initial vegetation coverage (density) at each position in the 
 model domain defined in x.grd and y.grd.  Similar to the grid files, if simulations are in 
@@ -102,7 +108,7 @@ where each red dots represent vegetation cover at each cross-shore position.
    File format for a 1D AeoLis vegetation grid.  Each red dot is the vegetation density at a specific location in the computational grid.
 
 mass.txt
-^^^^^^^^
+^^^^^^^^^
 
 The mass.txt file allows users to specify variations in grain size distribution in both 
 horizontal and vertical directions.  If the grain size distribution is constant throughout
@@ -147,7 +153,7 @@ file for AeoLis can be seen below.
    at each location in the computational grid (x, y, bed layer).
 
 wind.txt
-^^^^^^^^
+^^^^^^^^^
 
 The wind.txt file provides the model with wind boundary conditions and is formatted similar to 
 the tide.txt and wave.txt files.  The first column is time in seconds from 
@@ -167,7 +173,7 @@ importance.
    File format for wind boundary conditions file for AeoLis input.
 
 tide.txt
-^^^^^^^^
+^^^^^^^^^
 
 The tide.txt file contains the water elevation data for the duration of the 
 simulation.  It is formatted such that the first column is time in seconds and 
@@ -185,7 +191,7 @@ time or water elevation.
    File format for the water elevation conditions file for AeoLis input.
    
 wave.txt
-^^^^^^^^
+^^^^^^^^^
 
 The wave.txt file provides the model with wave data used in AeoLiS for runup calculations.  
 The file is formatted similar to tide.txt but has three columns instead of two.  
@@ -204,7 +210,7 @@ a data value.
    File format for the wave conditions file for AeoLis input.
 
 meteo.txt
-^^^^^^^^^
+^^^^^^^^^^
 
 The meteo.txt file contains meteorological data used to simulate surface moisture in the model domain (see Simulation of surface moisture 
 in Model description on for surface moisture implementation in AeoLiS).  This file is formatted similar to the other environmental boundary
@@ -225,7 +231,7 @@ column is air pressure (kPa).
    File format for meteorological data used to simulate surface moisture in AeoLiS where each red dot represents a time series value. 
 
 Default settings
-----------------
+-----------------
 
 The AeoLiS model can be configured using a model configuration
 file. For any configuration parameters not defined in the model
@@ -240,7 +246,7 @@ configuration is listed below.
 
 
 Activate/deactivate processes
------------------------------
+-------------------------------
 After creating the input files that are necessary to run an AeoLiS model, the next step is often to decide which processes and methods to use. Several processes are defined in the configuration file that can be turned on and off. Apart from turning processes on and off, there are also several user-defined thresholds and methods that affect the way in which processes are calculated. For example, there are different sediment transport equations available within *process_transport*. The default is Bagnold, but by defining *method_transport* in the configuration file a different equation can be used. Here, we provide a description of the processes and methods that are defined in configuration file. More detailed descriptions of the processes and their implementation can be found in :ref:`the model description <model_description>`.
 
 An easy way to look up where these process, threshold and method flags are used is by going to the main page of the AeoLiS github and using the search bar at the top. For instance, searching *process_tide* shows that it is used in :py:mod:`aeolis.threshold.compute`, :py:mod:`aeolis.vegetation.grow`, :py:mod:`aeolis.bed.update`.
@@ -271,27 +277,27 @@ process_transport
 Used in :py:mod:`aeolis.transport.equilibrium`
 
 process_bedupdate
-^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^
 Process_bedupdate allows the bed level to change based on calculated erosion/deposition. Used in :py:mod:`aeolis.bed.update`
 
 process_shear
-^^^^^^^^^^^^^
+^^^^^^^^^^^^^^
 Process_shear calls the shear module in shear.py to calculate the shear stress perturbation caused by topography. Used in :py:mod:`aeolis.wind.initialize`
 
 process_tide
-^^^^^^^^^^^^
+^^^^^^^^^^^^^
 Process_tide changes the threshold velocity to infinity (no aeolian transport) if the bed level is below the water level. This process is not used if th_moist is used. Used in :py:mod:`aeolis.threshold.compute`, :py:mod:`aeolis.vegetation.grow`, :py:mod:`aeolis.bed.update`.
 
 process_wave
-^^^^^^^^^^^^
+^^^^^^^^^^^^^
 Process_wave allows calculation of the water depth based on the input tide file and interpolates the input wave data to the timesteps of the model run. If the wave file is not available, the wave height and peak period are set to 0. Turning this process flag on also results in the calculation of Hsmix, which is needed for the calculation of the Depth of Disturbance (*process_mixtoplayer*). The initialization/calculation is skipped if external variables are imported from another model.
 
 process_runup
-^^^^^^^^^^^^
+^^^^^^^^^^^^^^
 Process_runup allows calculation of the runup extent based on the wave height, peak period and water level. Process_wave and Process_tide need to be on for this to work. The runup is calculated with the Stockdon equation using a user-defined, static beach slope. The initialization/calculation is skipped if external variables are imported from another model.
 
 process_moist
-^^^^^^^^^^^^^
+^^^^^^^^^^^^^^
 Process_moist allows calculation of the soil moisture content, based on different methods, infiltration or surface_moist
 
 method_moist_process
@@ -301,7 +307,7 @@ method_moist_threshold defines the equation used to calculate teh threshold shea
 Process_groundwater, Process_seepage_face and Process_scanning are all related to the calculation of the moisture content.
 
 process_mixtoplayer
-^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^
 This process flag allows mixing in the layers that are present down to the depth of disturbance. For the calculation of the DoD the process_wave need to be on.
 
 process_wet_bed_reset
@@ -309,7 +315,7 @@ process_wet_bed_reset
 Resets the bed to the original bathymetry if the bed is under water (zs). Used in :py:mod:`aeolis.bed.wet_bed_reset`. The execution of the wet bed reset is dependent on the TWL calculation, which can be turned on process_runup, process_waves and process_tide.
 
 process_meteo
-^^^^^^^^^^^^^
+^^^^^^^^^^^^^^
 This is a place holder and currently has no functionality
 
 process_avalanche
@@ -317,24 +323,24 @@ process_avalanche
 Simulates the process of avalanching when slopes of the bed become too steep to be realistic (i.e. > a critical static slope).
 
 process_separation
-^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^
 This enables the calculation of the separation bubble within the shear perturbation module. Before executing the calculation is checks whether steep slopes are present that might lead to a separation bubble. Process_separation will only be used if process_shear is on.
 
 process_vegetation
-^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^
 This process flag allows application of shear stress reduction due to vegetation based on Raupach or Okin. It also allows for germination and lateral growth of vegetation if those values are set to larger than 0. This process is actively being developed.
 
 process_fences
-^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^
 This process enables alteration of the shear velocity if fence characteristics are provided as user input. Calculations happen in 1D or 2D depending on grid size following the Okin model. 
 
 process_dune_erosion
-^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
 This flag turns on dune erosion calculation (:py:mod:`aeolis.erosion`.) based on the Palmsten and Holman (2012) method. After calculating the erosion, the avalanching routine is run in :py:mod:`aeolis.model.update`. This is needed because these modules only get called for aeolian transport in case of winds above threshold.
 
 
 Model state/output
-------------------
+-------------------
 
 The AeoLiS model state is described by a collection of spatial grid
 variables with at least one value per horizontal grid cell.  Specific
@@ -349,5 +355,5 @@ are listed below.
    :end-before: #: AeoLiS model default configuration
 
 
-Solver selection
-----------------
+Guidance on solver use
+------------------------
