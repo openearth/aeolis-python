@@ -41,6 +41,7 @@ Contents
    user/model_interaction
    user/sourcecode
    user/references
+   user/appendix
 
 .. toctree::
    :caption: Tutorials and examples

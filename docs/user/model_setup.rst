@@ -363,3 +363,73 @@ are listed below.
 
 Guidance on solver use
 ------------------------
+
+Different numerical solvers are available in the latest AeoLiS version. 
+The numerical solvers are used to solve the transport equation numerically.
+Other modules such as the shear module, vegetation module, and the moisture module
+use other equations and numerical implementations that currently do not have
+different options for numerical solvers.
+
+The advection equation is implemented in two-dimensional form
+following:
+
+.. math::
+   :label: apx-advection
+   
+   \frac{\partial c}{\partial t} +
+   u_{z,\mathrm{x}} \frac{\partial c}{\partial x} + 
+   u_{z,\mathrm{y}} \frac{\partial c}{\partial y} = 
+   \frac{c_{\mathrm{sat}} - c}{T}
+
+in which :math:`c` [:math:`\mathrm{kg/m^2}`] is the sediment mass per
+unit area in the air, :math:`c_{\mathrm{sat}}` [:math:`\mathrm{kg/m^2}`] is the
+maximum sediment mass in the air that is reached in case of
+saturation, :math:`u_{z,\mathrm{x}}` and :math:`u_{z,\mathrm{y}}` are the x- and
+y-component of the wind velocity at height :math:`z` [m], :math:`T` [s] is an
+adaptation time scale, :math:`t` [s] denotes time and :math:`x` [m] and :math:`y` [m]
+denote cross-shore and alongshore distances respectively.
+
+The formulation is discretized in different ways to allow for different types of simulations balancing accuracy vs. computational resources. 
+The conservative method combined with a steady state solution is the current default for most simulations.
+Non-conservative methods and explicit/implicit Euler forward/backward schemes are also available.
+
+The available solvers are *steadystate*, *trunk*, and *pieter*. Some details are given below. As of version 3 of the AeoLiS
+model, the steadystate solver is the default solver. The steadystate solver is most suitable for practical cases. 
+The other solvers are still available for specific applications. 
+
+steadystate (default since v3)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The *steadystate* solver is based on the assumption that dc/dt = 0 and uses a finite difference scheme to solve the transport equation.
+
+.. math::
+   :label: ss-advection
+   
+   u_{z,\mathrm{x}} \frac{\partial c}{\partial x} + 
+   u_{z,\mathrm{y}} \frac{\partial c}{\partial y} = 
+   \frac{c_{\mathrm{sat}} - c}{T}
+
+When solving for equation :eq:`ss-advection` a sweeping algorithm is used that propagates the boundary conditions through the 
+4 possible quadrants of the computational grid. The 4 quadrants depend on the signs of the sediment velocities and the 
+remaining grid cells that are not part of a quadrant (because winds diverge or converge in that cell) are solved as well.
+
+The steadystate solver is most suitable for case study simulations with larger timeframes and timesteps. All landform 
+simulations in the :cite:t:`VANWESTEN2024106093` publication were done with the steadystate solver.
+
+trunk
+^^^^^
+The *trunk* solver was the first solver that was implemented in AeoLiS. The trunk solver allows a time-varying solution for
+sediment concentration with options for explicit and implicit Euler forward/backward schemes. The 1D simulations by :cite:t:`deVries2014a`
+were done with the trunk solver in explicit mode. However, the explicit mode is not recommended for most simulations as 
+very strict requirements for stability are needed which results in large calculation times. The implicit mode is more stable 
+and allows for larger timesteps. However, the implicit numerical scheme lacks accuracy when larger timesteps are used. The 
+2D simulations by :cite:t:`Hoonhout2016` were done with the trunk solver in implicit mode.
+
+See :ref:`trunk_num` for details on the numerical implementation of the trunk solver.
+
+Pieter
+^^^^^^
+The *pieter* solver was built on the basis of using a conservative numerical scheme. This conservative scheme allowed for a better 
+implementation of spatially varying wind(/sediment) velocities. In simple cases (spatially non-varying winds) the solver is 
+identical to the trunk solver. The solver was built by Professor Pieter Rauwoens, hence the name. 
+
+See :ref:`pieter_num` for details on the numerical implementation of the Pieter solver.
