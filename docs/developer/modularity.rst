@@ -28,7 +28,9 @@ We have some ideas about how to improve the modularity of the code. However, we 
 .. _fig-step-flowchart:
 
 .. figure:: /images/model-step-flowchart.PNG
-   :alt: AeoLiS architecture
+   :alt: Step Flowchart
+
+   Flowchart of a modeling step in the AeoLiSRunner.
 
 
 .. seealso::

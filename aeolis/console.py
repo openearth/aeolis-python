@@ -70,6 +70,7 @@ For example:
 
         @aeolis_app.command(name="mycommand", help="My command help")
         def mycommand():
+        
             <add code here...>
 
 You can then run the command from the command line as follows:
@@ -78,6 +79,7 @@ You can then run the command from the command line as follows:
 
 
 ***************************************************************************
+
 
 """
 

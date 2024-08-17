@@ -234,6 +234,8 @@ column is air pressure (kPa).
    
    File format for meteorological data used to simulate surface moisture in AeoLiS where each red dot represents a time series value. 
 
+.. _default-settings:
+
 Default settings
 -----------------
 

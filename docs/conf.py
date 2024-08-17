@@ -44,6 +44,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx_copybutton',
     'sphinxcontrib.bibtex',
+    'sphinx_rtd_theme',
     # 'nbsphinx',
 ]
 
@@ -134,6 +135,11 @@ html_theme = 'sphinx_rtd_theme'
 # further.  For a list of options available for each theme, see the
 # documentation.
 #html_theme_options = {}
+html_theme_options = {
+    'collapse_navigation': True,  # Enable collapsing titles in the sidebar
+    'navigation_depth': 3,        # Adjust the depth of the navigation tree
+    'titles_only': False,         # Show only titles in the sidebar
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]

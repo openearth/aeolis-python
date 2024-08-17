@@ -63,4 +63,4 @@ Example from command line:
 
 .. note::
 
-   Model parameters and other configuration is passed in a `params.txt`. See the :ref:`default settings` for more details.  
+   Model parameters and other configuration is passed in a `params.txt`. See the :ref:`default-settings` for more details.  

@@ -25,6 +25,8 @@ AeoLiS publications
 
 2024
 ^^^^
+Van Westen, B., De Vries, S., Cohn, N., Van IJzendoorn, C., Strypsteen, G., Hallin, C. (2024). AeoLiS: Numerical modelling of coastal dunes and aeolian landform development for real-world applications, Environmental Modelling & Software, 179, 106093, Doi: https://doi.org/10.1016/j.envsoft.2024.106093.
+
 Strypsteen, G., de Vries, S., Bonte, D., Homberger, J.M., Hallin, C., Rauwoens, P. (2024). Planted vegetation on a sandy beach regulates maximum size of corresponding dune evolution. Coastal Engineering (preprint under review). Doi: http://dx.doi.org/10.2139/ssrn.4872614
 
 Heminway, S.S., Cohn, N., Davis, E.H., White, A., Hein, C.J., Zinnert, J.C., 2024. Exploring Ecological, Morphological, and Environmental Controls on Coastal Foredune Evolution at Annual Scales Using a Process-Based Model. Sustainability, 16, 3460. https://doi.org/10.3390/su16083460
