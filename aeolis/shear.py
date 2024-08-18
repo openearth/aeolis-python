@@ -877,8 +877,7 @@ class WindShear:
             inter = scipy.interpolate.RegularGridInterpolator((y_pad[:,0].copy(order='C'), x_pad[0,:].copy(order='C')), z_pad, bounds_error = False, fill_value = z0)
             zi = inter(xyi).reshape(xi.shape)
             
-            
-            
+        
         return zi
     
 

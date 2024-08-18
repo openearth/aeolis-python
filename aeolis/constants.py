@@ -322,6 +322,7 @@ DEFAULT_CONFIG = {
     'method_transport'              : 'bagnold',          # Name of method to compute equilibrium sediment transport rate
     'method_roughness'              : 'constant',         # Name of method to compute the roughness height z0, note that here the z0 = k, which does not follow the definition of Nikuradse where z0 = k/30.
     'method_grainspeed'             : 'windspeed',        # Name of method to assume/compute grainspeed (windspeed, duran, constant)
+    'method_shear'                  : 'fft',              # Name of method to compute topographic effects on wind shear stress (fft, quasi2d, duna2d (experimental))
     'max_error'                     : 1e-6,               # [-] Maximum error at which to quit iterative solution in implicit numerical schemes
     'max_iter'                      : 1000,               # [-] Maximum number of iterations at which to quit iterative solution in implicit numerical schemes
     'max_iter_ava'                  : 1000,               # [-] Maximum number of iterations at which to quit iterative solution in avalanching calculation
