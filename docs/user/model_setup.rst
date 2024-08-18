@@ -234,6 +234,18 @@ column is air pressure (kPa).
    
    File format for meteorological data used to simulate surface moisture in AeoLiS where each red dot represents a time series value. 
 
+
+
+1D and 2D models
+-----------------
+
+The model can be run in 1D and 2D mode depending on the definition of the input. Most processes are implemented in 2D mode. To run the model in 2D mode all grid files should contain 2D matrices of the same size. 
+
+To run the model in 1D mode, all grid files should contain vectors. In 1D mode, the ygrd_file typically contains vector with constant values (ones or zeros). 
+Because some processes are easier to solve in 2D, the 1D model is converted to a 2D model by repeating the vectors 3 times assuming the same resolution 
+spacing as in the xgrid direction. The model will run in a quasi 2D mode. Results are then converted to 1D again by taking the middle of the 3 vectors.
+
+
 .. _default-settings:
 
 Default settings
