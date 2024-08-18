@@ -87,7 +87,7 @@ Cdk                     = 5.                 					% [-] Constant in DK formulati
 
 %% -------------------- [Solver] ----------------------------- %%
 T 			= 1.							% [s] Adaptation time scale in advection equation
-solver 			= steadystate % [-] Numerical solver of advection scheme
+solver 			= trunk                                                 % [-] Numerical solver of advection scheme
 CFL                     = 1.                 					% [-] CFL number to determine time step in explicit scheme
 accfac 			= 1.							% [-] Numerical acceleration factor
 scheme 			= euler_backward 					% [-] Name of numerical scheme (euler_forward, euler_backward or crank_nicolson)
