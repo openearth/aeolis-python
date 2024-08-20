@@ -44,12 +44,14 @@ def simulation_setup(request):
         ("1D", "case1_small_waves"),
         ("1D", "case2_larger_waves"),
         ("1D", "case3_erosion_avalanching"),
+        ("2D", "Barchan_dune"),
     ],
     indirect=True,
     ids=[
         "1D_case1_small_waves",
         "1D_case2_larger_waves",
         "1D_case3_erosion_avalanching",
+        "2D_Barchan_dune",
     ],  # these ids prints the dimension and case in the test name in the
     # pytest report making it easier to see the pass/fail status of each test # case.
 )
@@ -76,12 +78,14 @@ class TestOutputFileGeneration:
         ("1D", "case1_small_waves"),
         ("1D", "case2_larger_waves"),
         ("1D", "case3_erosion_avalanching"),
+        ("2D", "Barchan_dune"),
     ],
     indirect=True,
     ids=[
         "1D_case1_small_waves",
         "1D_case2_larger_waves",
         "1D_case3_erosion_avalanching",
+        "2D_Barchan_dune",
     ],  # these ids prints the metal_adduct and output_type in the test name
     # in the pytest report, making it easier to see the pass/fail status of
     # each test case for each combination of dimensions and cases
