@@ -188,7 +188,6 @@ DEFAULT_CONFIG = {
     'process_seepage_face'          : False,              # Enable the process of groundwater seepage (NB. only applicable to positive beach slopes)
     'visualization'                 : False,              # Boolean for visualization of model interpretation before and just after initialization
     'output_sedtrails'              : False,              # NEW! [T/F] Boolean to see whether additional output for SedTRAILS should be generated
-    'OpenFOAM'                      : False,              # NEW! [T/F] Boolean to indicate coupling with OpenFOAM.
     'nfraction_sedtrails'           : 0,                  # [-] Index of selected fraction for SedTRAILS (0 if only one fraction)
     'xgrid_file'                    : None,               # Filename of ASCII file with x-coordinates of grid cells
     'ygrid_file'                    : None,               # Filename of ASCII file with y-coordinates of grid cells

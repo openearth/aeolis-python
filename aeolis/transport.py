@@ -355,6 +355,17 @@ def equilibrium(s, p):
             
             s['Cu0'][ix] = np.maximum(0., p['Cb'] * rhoa / g * (ustar0[ix] - uth0[ix])**3 / u[ix])
             
+        # ok Saeb, lets read the openfoam output here and use it to calculate the Cu directly at every timestep. 
+        
+        elif p['method_transport'].lower() == 'OpenFOAM':
+            # read something that includes ustar something like np.load('OpenFOAM.txt')
+            s['Cu'][ix]  = np.maximum(0., p['Cb'] * rhoa / g * (ustar[ix] - uth[ix])**3 / u[ix])
+            s['Cuf'][ix] = np.maximum(0., p['Cb'] * rhoa / g * (ustar[ix] - uthf[ix])**3 / u[ix])
+            
+            s['Cu0'][ix] = np.maximum(0., p['Cb'] * rhoa / g * (ustar0[ix] - uth0[ix])**3 / u[ix])
+
+
+
         elif p['method_transport'].lower() == 'bagnold_gs':
             Dref = 0.000250
             d = p['grain_size'][np.newaxis,np.newaxis,:].repeat(nx+1, axis=1)
