@@ -331,7 +331,29 @@ def equilibrium(s, p):
             us = s['us']
             un = s['un']
             u = s['u']
-     
+        
+        # Saeb ----------------------------------------------
+
+        elif p['method_grainspeed']=='openfoam':
+            s = constant_grainspeed(s,p)
+            #u0 = s['u']
+            us = s['us_openfoam']
+            un  = s['un_openfoam']
+
+            u = np.sqrt(us**2 + un**2)
+            s['u'] = u
+
+            ustars = s['ustars_openfoam']
+            ustarn  = s['ustarn_openfoam']
+
+            ustar = np.sqrt(ustars**2 + ustarn**2)
+            s['ustar'] = ustar
+
+
+            
+        
+        # End: Saeb ------------------------------------------
+
         
         ustar  = s['ustar'][:,:,np.newaxis].repeat(nf, axis=2)
         ustar0 = s['ustar0'][:,:,np.newaxis].repeat(nf, axis=2)
@@ -355,14 +377,21 @@ def equilibrium(s, p):
             
             s['Cu0'][ix] = np.maximum(0., p['Cb'] * rhoa / g * (ustar0[ix] - uth0[ix])**3 / u[ix])
             
+        # Saeb -----------------------------------------------
+
         # ok Saeb, lets read the openfoam output here and use it to calculate the Cu directly at every timestep. 
         
-        elif p['method_transport'].lower() == 'OpenFOAM':
+        elif p['method_transport'].lower() == 'openfoam':
             # read something that includes ustar something like np.load('OpenFOAM.txt')
+
             s['Cu'][ix]  = np.maximum(0., p['Cb'] * rhoa / g * (ustar[ix] - uth[ix])**3 / u[ix])
             s['Cuf'][ix] = np.maximum(0., p['Cb'] * rhoa / g * (ustar[ix] - uthf[ix])**3 / u[ix])
             
-            s['Cu0'][ix] = np.maximum(0., p['Cb'] * rhoa / g * (ustar0[ix] - uth0[ix])**3 / u[ix])
+            #s['Cu0'][ix] = np.maximum(0., p['Cb'] * rhoa / g * (ustar0[ix] - uth0[ix])**3 / u[ix])
+
+            print ("inside method_transport == 'openfoam")
+                
+        # End: Saeb ------------------------------------------
 
 
 
