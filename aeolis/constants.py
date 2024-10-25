@@ -58,16 +58,16 @@ INITIAL_STATE = {
         'Tp',                               # [s] Wave period for wave runup calculations
         'zne',                              # [m] Non-erodible layer
 
-        # Saeb ----------------------------------------------
+        # # Saeb ----------------------------------------------
 
-        'ustar_openfoam',                            # [m/s] Wind shear velocity
-        'ustars_openfoam',                           # [m/s] Component of wind shear velocity in x-direction
-        'ustarn_openfoam',                           # [m/s] Component of wind shear velocity in y-direction
-        #'ustar0_openfoam',                           # [m/s] Wind shear velocity over a flat bed
-        #'ustars0_openfoam',                          # [m/s] Component of wind shear velocity in x-direction over a flat bed
-        #'ustarn0_openfoam',                          # [m/s] Component of wind shear velocity in y-direction over a flat bed
+        # 'ustar_openfoam',                            # [m/s] Wind shear velocity
+        # 'ustars_openfoam',                           # [m/s] Component of wind shear velocity in x-direction
+        # 'ustarn_openfoam',                           # [m/s] Component of wind shear velocity in y-direction
+        # #'ustar0_openfoam',                           # [m/s] Wind shear velocity over a flat bed
+        # #'ustars0_openfoam',                          # [m/s] Component of wind shear velocity in x-direction over a flat bed
+        # #'ustarn0_openfoam',                          # [m/s] Component of wind shear velocity in y-direction over a flat bed
 
-        # End Saeb ----------------------------------------------
+        # # End Saeb ----------------------------------------------
 
     ),
 }
@@ -134,9 +134,23 @@ MODEL_STATE = {
         # Saeb ----------------------------------------------
 
 
-        'ustar_openfoam',                            # [m/s] Shear velocity by wind
+        #'ustar_openfoam',                            # [m/s] Shear velocity by wind
         'ustars_openfoam',                           # [m/s] Component of shear velocity in x-direction by wind
         'ustarn_openfoam',                           # [m/s] Component of shear velocity in y-direction by wind
+
+        # 'uws_openfoam',                               # [m/s] Mean horizontal saltation velocity in saturated state
+        # 'uwn_openfoam',                               # [m/s] Component of the saltation velocity in x-direction
+        #'uw_openfoam',                               # [m/s] Component of the saltation velocity in y-direction
+
+        # Saeb --------------------------------------------------
+
+        'uws_openfoam',                               # [m/s] Mean horizontal saltation velocity in saturated state
+        'uwn_openfoam',                               # [m/s] Component of the saltation velocity in x-direction
+        #'uw_openfoam',                               # [m/s] Component of the saltation velocity in y-direction
+
+        # End Saeb -----------------------------------------------
+
+
 
         # End Saeb ----------------------------------------------
 
@@ -166,14 +180,7 @@ MODEL_STATE = {
         'masstop',                          # [kg/m^2] Sediment mass in bed toplayer, only stored for output
 
 
-        # Saeb --------------------------------------------------
-
-        'u_openfoam',                                # [m/s] Mean horizontal saltation velocity in saturated state
-        'us_openfoam',                               # [m/s] Component of the saltation velocity in x-direction
-        'un_openfoam',                               # [m/s] Component of the saltation velocity in y-direction
-
-        # End Saeb -----------------------------------------------
-
+       
     ),
     ('ny','nx','nlayers') : (
         'thlyr',                            # [m] Bed composition layer thickness
@@ -374,6 +381,13 @@ DEFAULT_CONFIG = {
     'rhoveg_max'                    : 0.5,                #maximum vegetation density, only used in duran and moore 14 formulation
     't_veg'                         : 3,                  #time scale of vegetation growth (days), only used in duran and moore 14 formulation
     'v_gam'                         : 1,                  # only used in duran and moore 14 formulation
+
+    # Saeb -------------------------------------------------------
+
+    'method_wind'                   : 'aeolis',          # Name of method to compute wind flow
+
+    # End: Saeb --------------------------------------------------
+
 
 }
 

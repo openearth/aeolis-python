@@ -1018,3 +1018,56 @@ def compute_shear_perturbation_kroy1D(x, y, z, tau, params):
     tau_data = tau_update
 
     return tau_update
+
+# Saeb -------------------------------------------------------
+
+def wind_read_from_file(s):
+
+    s['uws'] = s['uws_openfoam']
+    s['uwn'] = s['uwn_openfoam']
+
+    uw = np.sqrt(s['uws']**2 + s['uwn']**2)
+    s['uw'] = uw
+
+    print("--------- wind_read_from_file function---------------------")
+
+    print("uws_openfoam shape:", s['uws_openfoam'].shape)
+    print("uwn_openfoam shape:", s['uwn_openfoam'].shape)
+
+    print("uws shape:", s['uws'].shape)
+    print("uwn shape:", s['uwn'].shape)
+    print("uw shape:", s['uw'].shape)
+
+    return s
+
+def shear_read_from_file(s,p):    
+
+    s['ustars'] = s['ustars_openfoam']
+    s['ustarn'] = s['ustarn_openfoam']
+
+    ustar = np.sqrt(s['ustars']**2 + s['ustarn']**2)
+    s['ustar'] = ustar
+
+    ets = np.zeros(s['ustar'].shape)
+    etn = np.zeros(s['ustar'].shape)
+    ix = ustar != 0
+    ets[ix] = s['ustars'][ix] / ustar[ix]
+    etn[ix] = s['ustarn'][ix] / ustar[ix]
+
+    s['tau'] = (s['ustar']**2 *p['rhoa'])
+
+    s['taus'] = s['tau'] * ets
+    s['taun'] = s['tau'] * etn
+
+    print("--------- shear_read_from_file function---------------------")
+    print("ustars shape:", s['ustars'].shape)
+    print("ustarn shape:", s['ustarn'].shape)
+    print("ustar shape:", s['ustar'].shape)
+
+    return s
+
+# End: Saeb --------------------------------------------------
+
+
+
+

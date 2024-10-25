@@ -245,8 +245,13 @@ class AeoLiS(IBmi):
         # initialize bed composition
         self.s = aeolis.bed.initialize(self.s, self.p)
 
-        # initialize wind model
-        self.s = aeolis.wind.initialize(self.s, self.p)
+# Saeb -------------------------------------------------------
+
+        if self.p['method_wind'].lower() == 'aeolis':
+           # initialize wind model
+           self.s = aeolis.wind.initialize(self.s, self.p)
+
+# End: Saeb --------------------------------------------------
          
         #initialize vegetation model
         self.s = aeolis.vegetation.initialize(self.s, self.p)                  
@@ -294,15 +299,34 @@ class AeoLiS(IBmi):
         self.l = self.s.copy()
         self.l['zb'] = self.s['zb'].copy()
         self.l['dzbavg'] = self.s['dzbavg'].copy()
-        
-        # interpolate wind time series
-        self.s = aeolis.wind.interpolate(self.s, self.p, self.t)  
+
+
+
+# Saeb -------------------------------------------------------
+
+        if self.p['method_wind'].lower() == 'aeolis':
+            # interpolate wind time series
+            self.s = aeolis.wind.interpolate(self.s, self.p, self.t)  
     
-        # Rotate gridparams, such that the grids is alligned horizontally
-        self.s = self.grid_rotate(self.p['alpha'])
+            # Rotate gridparams, such that the grids is alligned horizontally
+            self.s = self.grid_rotate(self.p['alpha'])
       
-        if np.sum(self.s['uw']) != 0:
-            self.s = aeolis.wind.shear(self.s, self.p)
+            if np.sum(self.s['uw']) != 0:
+                self.s = aeolis.wind.shear(self.s, self.p)
+
+        elif self.p['method_wind'].lower() == 'openfoam':
+
+            self.s = aeolis.wind.wind_read_from_file(self.s)
+            self.s = aeolis.wind.shear_read_from_file(self.s, self.p)
+
+        else:
+            logger.log_and_raise('Unknown wind method [%s]' % self.p['method_wind'], exc=ValueError)   
+
+
+# End: Saeb --------------------------------------------------
+
+
+
 
         #compute sand fence shear
         if self.p['process_fences']:
