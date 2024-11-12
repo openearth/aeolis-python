@@ -60,6 +60,9 @@ INITIAL_STATE = {
 
         # # Saeb ----------------------------------------------
 
+        'uws_openfoam',                               # [m/s] 
+        'uwn_openfoam',                               # [m/s] 
+
         # 'ustar_openfoam',                            # [m/s] Wind shear velocity
         # 'ustars_openfoam',                           # [m/s] Component of wind shear velocity in x-direction
         # 'ustarn_openfoam',                           # [m/s] Component of wind shear velocity in y-direction
@@ -144,9 +147,9 @@ MODEL_STATE = {
 
         # Saeb --------------------------------------------------
 
-        'uws_openfoam',                               # [m/s] Mean horizontal saltation velocity in saturated state
-        'uwn_openfoam',                               # [m/s] Component of the saltation velocity in x-direction
-        #'uw_openfoam',                               # [m/s] Component of the saltation velocity in y-direction
+        'uws_openfoam',                               # [m/s] 
+        'uwn_openfoam',                               # [m/s]
+        #'uw_openfoam',                               # [m/s] 
 
         # End Saeb -----------------------------------------------
 

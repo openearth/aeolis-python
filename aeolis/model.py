@@ -247,9 +247,19 @@ class AeoLiS(IBmi):
 
 # Saeb -------------------------------------------------------
 
-        if self.p['method_wind'].lower() == 'aeolis':
-           # initialize wind model
-           self.s = aeolis.wind.initialize(self.s, self.p)
+        self.s = aeolis.wind.initialize(self.s, self.p)
+
+        # if self.p['method_wind'].lower() == 'aeolis':
+        #    # initialize wind model
+        #    self.s = aeolis.wind.initialize(self.s, self.p)
+
+        # read wind velocity and u_star from openfoam files
+
+        if self.p['method_wind'].lower() == 'openfoam':
+
+            self.s = aeolis.wind.wind_read_from_file(self.s, self.p)
+            self.s = aeolis.wind.shear_read_from_file(self.s, self.p)
+
 
 # End: Saeb --------------------------------------------------
          
@@ -304,29 +314,31 @@ class AeoLiS(IBmi):
 
 # Saeb -------------------------------------------------------
 
+        # Rotate gridparams, such that the grids is alligned horizontally
+        self.s = self.grid_rotate(self.p['alpha'])
+
         if self.p['method_wind'].lower() == 'aeolis':
             # interpolate wind time series
             self.s = aeolis.wind.interpolate(self.s, self.p, self.t)  
-    
-            # Rotate gridparams, such that the grids is alligned horizontally
-            self.s = self.grid_rotate(self.p['alpha'])
       
             if np.sum(self.s['uw']) != 0:
                 self.s = aeolis.wind.shear(self.s, self.p)
 
         elif self.p['method_wind'].lower() == 'openfoam':
 
-            self.s = aeolis.wind.wind_read_from_file(self.s)
-            self.s = aeolis.wind.shear_read_from_file(self.s, self.p)
+            # This is needed to be updated in each iteration of time steps if openfoam velocity and u_star are updated in time
+            # self.s = aeolis.wind.wind_read_from_file(self.s, self.p)
+            # self.s = aeolis.wind.shear_read_from_file(self.s, self.p)
+
+            pass
 
         else:
             logger.log_and_raise('Unknown wind method [%s]' % self.p['method_wind'], exc=ValueError)   
 
+        print("t is:", self.p['_time'])
+
 
 # End: Saeb --------------------------------------------------
-
-
-
 
         #compute sand fence shear
         if self.p['process_fences']:
@@ -414,6 +426,12 @@ class AeoLiS(IBmi):
         float
             Current simulation time
         '''
+
+        # -----------------------Saeb -------------------
+
+        print ("self.t in get_current_time(self) function: ", self.t)
+
+        #End: Saeb ----------------------------------
 
         return self.t
 

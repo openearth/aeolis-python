@@ -259,6 +259,15 @@ def update(s, p):
         Spatial grids
 
     '''
+    # Saeb -------------------------------------------------------
+
+    # print ("aeolis.bed.update(self.s, self.p)is in run")
+
+    # print("t is:", p['_time'])
+
+    # End: Saeb -------------------------------------------------------
+
+
     # this is where a supply file is used, this in only for simple cases.
     if type(p['supply_file']) == np.ndarray:
         # in descrete supply limited conditions the bed bed layer operations are not valid. 
@@ -343,6 +352,33 @@ def update(s, p):
         s['dzb'] = dz.copy()
 
         # redistribute sediment from inactive zone to marine interaction zone
+
+
+        # Saeb -------------------------------------------------------
+
+        # print ("dz is calculated")
+
+        # print("dz: ", dz)
+
+        # print("s['zb']: ", s['zb'])
+
+        # print("dm: ", dm)
+
+        # print("p['rhog']: ",  p['rhog'])
+
+        # print("p['porosity']: ",  p['porosity'])
+
+        # print("pickup: ",  pickup) 
+
+        # print("s['taus']: ",  s['taus'])   
+        # print("s['taun']: ",  s['taun'])
+        # print("s['ustars']: ",  s['ustars'])   
+        # print("s['ustarn']: ",  s['ustarn'])
+        # print("s['uws']: ",  s['uws'])   
+        # print("s['uwn']: ",  s['uwn'])   
+
+        # End: Saeb ---------------------------------------------------
+
         s['zb'] += dz
         if p['process_tide']:
             s['zs'] += dz #???

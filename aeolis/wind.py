@@ -1021,32 +1021,50 @@ def compute_shear_perturbation_kroy1D(x, y, z, tau, params):
 
 # Saeb -------------------------------------------------------
 
-def wind_read_from_file(s):
+def wind_read_from_file(s,p):
 
-    s['uws'] = s['uws_openfoam']
-    s['uwn'] = s['uwn_openfoam']
+    print("--------- wind_read_from_file function---------------------")
+
+    s['uws'] = p['uws_openfoam']
+    s['uwn'] = p['uwn_openfoam']
 
     uw = np.sqrt(s['uws']**2 + s['uwn']**2)
     s['uw'] = uw
 
-    print("--------- wind_read_from_file function---------------------")
+    # print("uws_openfoam shape:", p['uws_openfoam'].shape)
+    # print("uwn_openfoam shape:", p['uwn_openfoam'].shape)
 
-    print("uws_openfoam shape:", s['uws_openfoam'].shape)
-    print("uwn_openfoam shape:", s['uwn_openfoam'].shape)
+    # print("uws shape:", s['uws'].shape)
+    # print("uwn shape:", s['uwn'].shape)
+    # print("uw shape:", s['uw'].shape)
 
-    print("uws shape:", s['uws'].shape)
-    print("uwn shape:", s['uwn'].shape)
-    print("uw shape:", s['uw'].shape)
+    # print("s['uws'] in shear_read_from_file function", s['uws'])
+    # print("s['uwn'] in shear_read_from_file function", s['uwn'])
+
+    # print("p['uws_openfoam'] in shear_read_from_file function", p['uws_openfoam'])
+    # print("p['uwn_openfoam'] in shear_read_from_file function", p['uwn_openfoam'])
+
+
+    # input('press enter to continue ...') 
+
 
     return s
 
 def shear_read_from_file(s,p):    
 
-    s['ustars'] = s['ustars_openfoam']
-    s['ustarn'] = s['ustarn_openfoam']
+    print("--------- shear_read_from_file function---------------------")
+
+    s['ustars'] = p['ustars_openfoam']
+    s['ustarn'] = p['ustarn_openfoam']
+
+    # print("s['ustars'] in shear_read_from_file function", s['ustars'])
+    # print("p['ustars_openfoam'] in shear_read_from_file function", p['ustars_openfoam'])
+
 
     ustar = np.sqrt(s['ustars']**2 + s['ustarn']**2)
     s['ustar'] = ustar
+
+    # print("s['ustar'] in shear_read_from_file function", s['ustar'])
 
     ets = np.zeros(s['ustar'].shape)
     etn = np.zeros(s['ustar'].shape)
@@ -1056,13 +1074,24 @@ def shear_read_from_file(s,p):
 
     s['tau'] = (s['ustar']**2 *p['rhoa'])
 
+    # print(" s['tau'] in shear_read_from_file function",  s['tau'])
+    # print("ix: ", ix)
+
     s['taus'] = s['tau'] * ets
     s['taun'] = s['tau'] * etn
 
-    print("--------- shear_read_from_file function---------------------")
-    print("ustars shape:", s['ustars'].shape)
-    print("ustarn shape:", s['ustarn'].shape)
-    print("ustar shape:", s['ustar'].shape)
+    # print("ustars shape:", s['ustars'].shape)
+    # print("ustarn shape:", s['ustarn'].shape)
+    # print("ustar shape:", s['ustar'].shape)
+
+    # print("s['ustars'] in shear_read_from_file function", s['ustars'])
+
+    # print("s['ustar'] in shear_read_from_file function", s['ustar'])
+
+
+    # print("pickup shear_read_from_file: ",  s['pickup'])  
+
+    # input('press enter to continue ...') 
 
     return s
 
