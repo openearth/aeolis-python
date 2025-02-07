@@ -823,13 +823,47 @@ def sweep3(Ct, Cu, mass, dt, Ts, ds, dn, us, un, w):
     ufn[1:-1,:, :] = 0.5*un[:-1,:, :] + 0.5*un[1:,:, :]
 
     # print(ufs[5,:,0])
-    
-    #boundary values
+
+        # boundary values
     ufs[:,0, :]  = us[:,0, :]
     ufs[:,-1, :] = us[:,-1, :]
    
     ufn[0,:, :]  = un[0,:, :]
     ufn[-1,:, :] = un[-1,:, :]
+    # first lets take the average of the top and bottom and left/right boundary cells
+    # apply the average to the boundary cells
+    ufs[:,0,:]  = (ufs[:,0,:]+ufs[:,-1,:])/2
+    ufs[:,-1,:] = ufs[:,0,:]     
+    ufs[0,:,:]  = (ufs[0,:,:]+ufs[-1,:,:])/2
+    ufs[-1,:,:] = ufs[0,:,:]     
+    
+    ufn[-1,:,:] = ufn[0,:,:] 
+
+    # now make sure that there is no gradients at the bondares
+    ufs[:,1,:]  = ufs[:,0,:]
+    ufs[:,-2,:] = ufs[:,-1,:]
+    ufs[1,:,:]  = ufs[0,:,:]
+    ufs[-2,:,:] = ufs[-1,:,:]
+
+    ufn[:,1,:]  = ufn[:,0,:]
+    ufn[:,-2,:] = ufn[:,-1,:]
+    ufn[1,:,:]  = ufn[0,:,:]
+    ufn[-2,:,:] = ufn[-1,:,:]
+
+    # ufn[:,:,:] = ufn[-2,:,:]
+
+    # also correct for the potential gradients at the boundary cells in the equilibrium concentrations
+    Cu[:,0,:]  = Cu[:,1,:]
+    Cu[:,-1,:] = Cu[:,-2,:]
+    Cu[0,:,:]  = Cu[1,:,:]
+    Cu[-1,:,:] = Cu[-2,:,:]
+    
+    # #boundary values
+    # ufs[:,0, :]  = us[:,0, :]
+    # ufs[:,-1, :] = us[:,-1, :]
+   
+    # ufn[0,:, :]  = un[0,:, :]
+    # ufn[-1,:, :] = un[-1,:, :]
 
     Ct_last = Ct.copy()
     while k==0 or np.any(np.abs(Ct[:,:,i]-Ct_last[:,:,i])>1e-10):
@@ -982,8 +1016,18 @@ def sweep3(Ct, Cu, mass, dt, Ts, ds, dn, us, un, w):
 
 
         k+=1
+
+    #     print(k)
     
     # print("q1 = " + str(np.sum(q==1)) + "     q2 = " + str(np.sum(q==2)) \
     #       + "     q3 = " + str(np.sum(q==3)) + "     q4 = " + str(np.sum(q==4)) \
     #         + "     q5 = " + str(np.sum(q==5)))
+    # print("pickup deviation percentage = " + str(pickup.sum()/pickup[pickup>0].sum()*100) + " %")
+    # print("pickup deviation percentage = " + str(pickup[1,:,0].sum()/pickup[1,pickup[1,:,0]>0,0].sum()*100) + " %")
+    # print("pickup maximum = " + str(pickup.max()) + " mass max = " + str(mass.max()))
+    # print("pickup minimum = " + str(pickup.min()))
+    # print("pickup average = " + str(pickup.mean()))
+    # print("number of cells for pickup maximum = " + str((pickup == mass.max()).sum()))
+                                                #  pickup[1,:,0].sum()/pickup[1,pickup[1,:,0]<0,0].sum()
+
     return Ct, pickup

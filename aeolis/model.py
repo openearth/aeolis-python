@@ -207,16 +207,21 @@ class AeoLiS(IBmi):
             if 1:
                 # this is the new quasi 2D stuff
                 # this is where we make the 1D grid into a 2D grid to ensure process compatibility
-                self.p['xgrid_file'] = np.transpose(np.stack((self.p['xgrid_file'], self.p['xgrid_file'], self.p['xgrid_file']),axis=1))
+                
+                # define size of 2D grid 3 is minumum, variable defined for debugging purposes
+                qnr = 3
+                
+                self.p['xgrid_file'] = np.transpose(np.stack([self.p['xgrid_file'] for i in range (qnr)],axis=1))
+                
+                # redefine shape
                 self.p['ny'], self.p['nx'] = self.p['xgrid_file'].shape
 
+                # repeat the above for ygrid_file assume dy is equal to dx
                 dy = self.p['xgrid_file'][1,2]-self.p['xgrid_file'][1,1]
-
-                # repeat the above for ygrid_file
-                self.p['ygrid_file'] = np.transpose(np.stack((self.p['ygrid_file'], self.p['ygrid_file']+dy, self.p['ygrid_file']+2*dy),axis=1))
+                self.p['ygrid_file'] = np.transpose(np.stack([self.p['ygrid_file'] + i * dy for i in range(qnr)], axis=1))
                 
                 # repeat the above for bed_file
-                self.p['bed_file'] = np.transpose(np.stack((self.p['bed_file'], self.p['bed_file'], self.p['bed_file']),axis=1))
+                self.p['bed_file'] = np.transpose(np.stack([self.p['bed_file'] for i in range (qnr)],axis=1))
 
                 # change from number of points to number of cells
                 self.p['nx'] -= 1  

@@ -297,8 +297,8 @@ def initialize(outputfile, outputvars, s, p, dimensions):
         # this is where a quasi 2D model is stored in 1D
         if p['ny']+1 == 3:
             nc.variables['n'][:] = np.arange(1)
-            nc.variables['x'][:,:] = s['x'][0,:]
-            nc.variables['y'][:,:] = s['y'][0,:]
+            nc.variables['x'][:,:] = s['x'][1,:]
+            nc.variables['y'][:,:] = s['y'][1,:]
         else:
             nc.variables['n'][:] = np.arange(p['ny']+1)
             nc.variables['x'][:,:] = s['x']
