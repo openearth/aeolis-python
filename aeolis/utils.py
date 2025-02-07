@@ -837,6 +837,9 @@ def sweep3(Ct, Cu, mass, dt, Ts, ds, dn, us, un, w):
     ufs[0,:,:]  = (ufs[0,:,:]+ufs[-1,:,:])/2
     ufs[-1,:,:] = ufs[0,:,:]     
     
+    ufn[:,0,:]  = (ufn[:,0,:]+ufn[:,-1,:])/2
+    ufn[:,-1,:] = ufn[:,0,:]     
+    ufn[0,:,:]  = (ufn[0,:,:]+ufn[-1,:,:])/2
     ufn[-1,:,:] = ufn[0,:,:] 
 
     # now make sure that there is no gradients at the bondares
