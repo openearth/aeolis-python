@@ -94,9 +94,11 @@ def compute(s, p):
             s = compute_humidity(s, p)
         if p['th_salt']:
             s = compute_salt(s, p)
-        if p['th_sheltering']:
+        if p['th_sheltering']: # sheltering based on grain size dsitribution
             s = compute_sheltering(s, p)
-                    
+        if p['th_sedtrapping']:
+            s = compute_sedtrapping(s, p)                    
+
         # apply complex mask
         s['uth'] = apply_mask(s['uth'], s['threshold_mask'])
         s['uthf'] = s['uth'].copy()
@@ -231,9 +233,11 @@ def compute_moisture(s, p):
     else:
         logger.log_and_raise('Unknown moisture formulation [%s]' % p['method_moist'], exc=ValueError)
 
+    th_mg = (p['max_moist']/100 * p['rhow'] / (p['rhog'] * (1. - p['porosity'])))
     # should be .04 according to Pye and Tsoar
-    # should be .64 according to Delgado-Fernandez (10% vol.)
-    ix = mg > 0.064
+    # should be .064 according to Delgado-Fernandez (10% vol.)
+    # .097 corresponds to 15%
+    ix = mg > th_mg
     s['uth'][ix] = np.inf
     
     return s
@@ -391,6 +395,93 @@ def compute_sheltering(s, p):
 
     # modify shear velocity threshold
     s['uth'] *= Rti.reshape((ny,nx,1)).repeat(nf, axis=-1)
+    
+    return s
+
+def compute_sedtrapping(s, p):
+    '''Modify wind velocity threshold based on the presence of roughness 
+      elements following Raupach (1993)
+      
+    The formulation used in compute_sheltering depends on the grain size 
+    distribution to account for the emergence of roughness elements due 
+    to grain size sorting. However, that formulation is not applicable to 
+    larger scale roughness elements such as cobbles on a dynamic 
+    revetment.
+    
+    Here, an altered version of the Raupach (1993) formulation is used 
+    that alters the threshold shear velocity based on a pre-defined 
+    value of lambda.
+
+    :math:`\\lambda` is the roughness density defined as the number of
+    elements per surface area :math:`\\frac{n}{S}` multiplied by the
+    frontal area of a roughness element :math:`A_f`, also known as the
+    frontal area index:
+
+    .. math::
+
+          \\lambda = \\frac{n b h}{S} = \\frac{n A_f}{S}
+
+    Here, it is a assumed that the values for lambda can be calculated 
+    based on the characteristics of the roughness elements. Lambda can 
+    be assigned to the entire domain by providing a single value. 
+    Alternatively, a grid with lambda values can be provided based on 
+    the location of roughness elements.
+
+    .. math::
+    
+        R_t = \\frac{u_{*,th,s}}{u_{*,th,r}} 
+            = \\sqrt{\\frac{\\tau_s''}{\\tau}} 
+            = \\frac{1}{\\sqrt{\\left( 1 - m \\sigma \\lambda \\right)
+                               \\left( 1 + m \\beta \\lambda \\right)}}
+
+    :math:`m` is a constant smaller or equal to unity that accounts
+    for the difference between the average stress on the bed surface
+    :math:`\\tau_s` and the maximum stress on the bed surface
+    :math:`\\tau_s''`. Here, it is assumed 0.5 for field applications.
+
+    :math:`\\sigma` is the shape coefficient defined as the basal area
+    divided by the frontal area: :math:`\\frac{A_b}{A_f}`. For
+    hemispheres :math:`\\sigma = 2`, for spheres :math:`\\sigma = 1`.
+    :math:`\\sigma = 2` is assumed for a cobble surface.
+
+    :math:`\\beta` is the stress partition coefficient defined as the
+    ratio between the drag coefficient of the roughness element itself
+    :math:`C_r` and the drag coefficient of the bare surface without
+    roughness elements :math:`C_s`. Calibration parameter, assumed 130 
+    by McKenna and Neumann (2012) for a shell surface, same value used 
+    by Hoonhout and de Vries (2016) to simulate sheltering.
+
+    Parameters
+    ----------
+    s : dict
+        Spatial grids
+    p : dict
+        Model configuration parameters
+
+    Returns
+    -------
+    dict
+        Spatial grids
+
+    '''
+
+    nx = p['nx']+1
+    ny = p['ny']+1
+
+    # compute inverse of shear stress ratio based on lambda
+    Rti = np.sqrt((1. - p['m'] * p['sigma'] * p['lambda']) * (1. + p['m'] * p['beta'] * p['lambda']))
+    s['Rti'] = Rti
+
+    # modify shear velocity threshold
+    if isinstance(p['lambda'], int) or isinstance(p['lambda'], float):
+        s['uth'] *= Rti   
+    else: 
+        s['uth'] *= Rti.reshape((ny,nx,1))
+
+    # where more than 10 cm pure cobble is present at the surface, set uth to inf
+    if p['dcob_file'] is not None and p['doverlap_file'] is not None:
+        ix = s['dcob']-s['doverlap'] >= 0.1
+        s['uth'][ix] = np.inf
     
     return s
 

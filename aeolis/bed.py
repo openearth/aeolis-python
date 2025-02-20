@@ -114,7 +114,16 @@ def initialize(s, p):
     # initialize threshold
     if p['threshold_file'] is not None:
         s['uth'] = p['threshold_file'][:,:,np.newaxis].repeat(nf, axis=-1)
-        
+
+    # initialize sand and cobble layers for composite beaches
+    s['zsand'][:,:] = p['zsand_file']
+    s['dcob'][:,:] = p['dcob_file']
+    s['dsandcover'][:,:] = p['dsandcover_file']
+    s['doverlap'][:,:] = p['doverlap_file']
+    if p['process_bedupdate_comp'] is True and (p['zsand_file'] is None or p['dcob_file'] is None or p['dsandcover_file'] is None or p['doverlap_file'] is None):
+        logger.log_and_raise('Process bedupdate for composite beaches is turned on but no initial sand and cobble locations are provided. Please'
+                             'provide a zsand_file, dcob_file, dsandcover_file and doverlap_file', exc=ValueError) 
+
     return s
 
 
@@ -314,8 +323,12 @@ def update(s, p):
         # s['dzb'] = dm[:, 0].reshape((ny + 1, nx + 1))
         s['dzb'] = dz.copy()
 
+        if p['process_bedupdate_comp']: 
+            s = update_composite(s, p)
+        else:
+            s['zb'] += dz
+
         # redistribute sediment from inactive zone to marine interaction zone
-        s['zb'] += dz
         if p['process_tide']:
             s['zs'] += dz #???
     
@@ -504,5 +517,173 @@ def arrange_layers(m,dm,d,nl,ix_ero,ix_dep):
     m[ix_dep,-1,:] -= dm[ix_dep,:] * d[ix_dep,-1,:]
 
     return m
-    
+
+def update_composite(s, p):
+    '''Update bed and sand level and cobble infilling for composite beaches
+
+    Update XX by YYY
+    layers. 
+    Initial sand level, cobble thickness, overlap and sandcover are defined 
+    in the model configuration file by ``zsand``, ``dcob``, ``doverlap`` and
+    ``dsandcover``. The bathymetry is updated if the sand cover increases.
+
+    Parameters
+    ----------
+    s : dict
+        Spatial grids
+    p : dict
+        Model configuration parameters
+
+    Returns
+    -------
+    dict
+        Spatial grids
+
+    '''
+
+    dz = s['dzb']
+    por = p['porosity'] # Assumes that cobble porosity is the same as sand porosity
+
+    # FIND LOCATIONS
+    # with deposition
+    ix_depo = dz >0
+    # with erosion
+    ix_ero = dz < 0
+    # with 0 bed level change
+    ix_none = dz == 0.
+
+    # where no cobble is present, i.e. pure sand
+    ix_nocob = s['dcob'] == 0.
+    # where open cobbles are present
+    ix_cob = s['dcob'] > 0.
+    # where sand cover is present
+    ix_sc = s['dsandcover'] > 0.
+    # where no sand cover is present
+    ix_nosc = s['dsandcover'] == 0.
+    # where elevation change is bigger than sand cover, these are locations that can accommodate erosion
+    ix_sc_accom = dz + s['dsandcover'] >= 0.
+    # where elevation change is smaller than sand cover, these are locations that cannot accommodate erosion
+    ix_sc_noaccom = dz + s['dsandcover'] < 0.
+    # where open cobbles are present at the top
+    ix_opencob = s['dcob']-s['doverlap'] > 0.
+    # where elevation change is smaller than pore space in open cobble, these are locations that can accommodate deposition
+    ix_oc_accom = (s['dcob']-s['doverlap']) - dz/(1-por) >= 0.
+    # where elevation change is bigger than pore space in open cobble, these are locations that can't accommodate deposition
+    ix_oc_noaccom = (s['dcob']-s['doverlap']) - dz/(1-por) < 0.
+    # where cobbles are fully filled with sand, so doverlap == dcob
+    ix_fullcob = s['dcob']==s['doverlap']
+    # where filled cobbles are present at the top, dcob > 0 & doverlap == dcob & dsandcover == 0 
+    ix_fillcob = (ix_cob & ix_fullcob & ix_nosc)
+
+    # where no bed level change occurs and cobble is present
+    ix_step0 = ix_none & ix_cob
+    # where deposition takes place and sand cover is present
+    ix_step1 = ix_depo & ix_sc
+    # where deposition takes place and filled cobble is present  
+    ix_step2 = ix_depo & ix_cob & ix_fillcob
+    # where deposition takes place and open cobble is present with enough accommodation space
+    ix_step3 = ix_depo & ix_cob & ix_opencob & ix_oc_accom
+    # where deposition takes place and open cobble is present without enough accommodation space
+    ix_step4 = ix_depo & ix_cob & ix_opencob & ix_oc_noaccom
+    # where erosion takes place and open cobble is present
+    ix_step5 = ix_ero & ix_cob & ix_opencob
+    # where erosion takes place and filled cobble is present
+    ix_step6 = ix_ero & ix_cob & ix_fillcob
+    # where erosion takes place, sand cover is present and there is enough accommodation space
+    ix_step7 = ix_ero & ix_sc & ix_sc_accom
+    # where erosion takes place, sand cover is present and there is not enough accommodation space
+    ix_step8 = ix_ero & ix_sc & ix_sc_noaccom
+
+    # Check if all locations are assigned to a single step
+    ix_steps = np.vstack((ix_nocob[1,:], ix_step0[1,:], ix_step1[1,:], ix_step2[1,:], ix_step3[1,:], ix_step4[1,:], ix_step5[1,:], ix_step6[1,:], ix_step7[1,:], ix_step8[1,:]))
+    check = np.sum(ix_steps, axis=0)
+    if np.sum(s['dcob'] - s['doverlap'] < 0) > 0:
+        print('Cobble thickness is smaller than overlap thickness')
+    if np.sum(check!=1) > 0:
+        args = np.argwhere(check!=1)
+        nocob_check = ix_nocob[1,args]
+        step0_check = ix_step0[1,args]
+        step1_check = ix_step1[1,args]
+        step2_check = ix_step2[1,args]
+        step3_check = ix_step3[1,args]
+        step4_check = ix_step4[1,args]
+        step5_check = ix_step5[1,args]
+        step6_check = ix_step6[1,args]
+        step7_check = ix_step7[1,args]
+        step8_check = ix_step8[1,args]
+        print(check)
+
+    # if no cobble is present, 
+    # change sand level. This is independent of erosion or deposition
+    s['zsand'][ix_nocob] += dz[ix_nocob]
+
+    # if no bed level change occurs and cobble is present,
+    # keep all variables the same.
+    s['zsand'][ix_step0] = s['zsand'][ix_step0]
+
+    # if deposition takes place and sand cover is present 
+    # change sand cover and sand level. 
+    s['dsandcover'][ix_step1] += dz[ix_step1]
+    s['zsand'][ix_step1] += dz[ix_step1]
+
+    # if deposition takes place and filled cobble is present 
+    # change sand cover and sand level. 
+    s['dsandcover'][ix_step2] += dz[ix_step2]
+    s['zsand'][ix_step2] += dz[ix_step2]
+
+    # if deposition takes place and open cobble is present with enough accommodation space, 
+    # change sand level and overlap. 
+    s['zsand'][ix_step3] += dz[ix_step3]/(1-por)
+    s['doverlap'][ix_step3] += dz[ix_step3]/(1-por)
+
+    if np.sum(s['dcob'] - s['doverlap'] < 0) > 0:
+        print('Cobble thickness is smaller than overlap thickness')
+
+    # if deposition takes place and open cobble is present without enough accommodation space, 
+    # change sand cover, sand level and overlap. 
+    s['dsandcover'][ix_step4] += dz[ix_step4] - (s['dcob'][ix_step4] - s['doverlap'][ix_step4])*(1-por)
+    s['zsand'][ix_step4] += (s['dcob'][ix_step4] - s['doverlap'][ix_step4]) + s['dsandcover'][ix_step4]
+    s['doverlap'][ix_step4] = s['dcob'][ix_step4]
+
+    if np.sum(s['dcob'] - s['doverlap'] < 0) > 0:
+        np.argwhere(s['dcob'] - s['doverlap'] < 0)
+        print('Cobble thickness is smaller than overlap thickness')
+
+    # if erosion takes place and open cobble is present, 
+    # change sand level and overlap. 
+    s['zsand'][ix_step5] += dz[ix_step5]/(1-por)
+    s['doverlap'][ix_step5] += dz[ix_step5]/(1-por)
+
+    if np.sum(s['dcob'] - s['doverlap'] < 0) > 0:
+        print('Cobble thickness is smaller than overlap thickness')
+
+    # if erosion takes place and filled cobble is present, 
+    # change sand level and overlap. 
+    s['zsand'][ix_step6] += dz[ix_step6]/(1-por)
+    s['doverlap'][ix_step6] += dz[ix_step6]/(1-por)
+
+    # if erosion takes place, sand cover is present and there is enough accommodation space, 
+    # change sand cover and sand level. 
+    s['dsandcover'][ix_step7] += dz[ix_step7]
+    s['zsand'][ix_step7] += dz[ix_step7]
+
+    # print(s['dcob'][0,380], s['doverlap'][0,380], s['dsandcover'][0,380], s['zsand'][0,380], dz[0,380])
+
+    # if erosion takes place, sand cover is present and there is not enough accommodation space, 
+    # change overlap, sand level and sand cover. 
+    s['doverlap'][ix_step8] += (dz[ix_step8] + s['dsandcover'][ix_step8])/(1-por)
+    s['zsand'][ix_step8] += (dz[ix_step8] + s['dsandcover'][ix_step8])/(1-por) - s['dsandcover'][ix_step8]
+    s['dsandcover'][ix_step8] = 0
+
+    # print(s['dcob'][0,380], s['doverlap'][0,380], s['dsandcover'][0,380], s['zsand'][0,380], dz[0,380])
+
+    if np.sum(s['dcob'] - s['doverlap'] < 0) > 0:
+        arg = np.argwhere(s['dcob'] - s['doverlap'] < 0)
+        print('Cobble thickness is smaller than overlap thickness')
+    # for now, assume not enough erosion takes place to halt erosion through changing the roughness. Requires small enough time step.
+
+    # For all locations calculate the new bed level
+    s['zb'] = s['zsand'] + (s['dcob']-s['doverlap'])
+
+    return s
 

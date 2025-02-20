@@ -78,6 +78,10 @@ MODEL_STATE = {
         'dzb',                              # [m/dt] Bed level change per time step (computed after avalanching!)
         'dzbyear',                          # [m/yr] Bed level change translated to m/y
         'dzbavg',                           # [m/year] Bed level change averaged over collected time steps
+        'zsand',                            # [m] Level of sand above reference
+        'dcob',                             # [m] Thickness of cobble layer
+        'dsandcover',                      # [m] Thickness of sand layer on top of cobble
+        'doverlap',                         # [m] Overlap between sand an cobble layer
         'S',                                # [-] Level of saturation
         'moist',                      #NEWCH      # [-] Moisture content (volumetric)
         'moist_swr',                  #NEWCH      # [-] Moisture content soil water retention relationship (volumetric)
@@ -154,6 +158,7 @@ DEFAULT_CONFIG = {
     'process_wind'                  : True,               # Enable the process of wind
     'process_transport'             : True,               # Enable the process of transport
     'process_bedupdate'             : True,               # Enable the process of bed updating
+    'process_bedupdate_comp'        : False,               # Enable the process of bed updating for composite beaches
     'process_threshold'             : True,               # Enable the process of threshold
     'th_grainsize'                  : True,               # Enable wind velocity threshold based on grainsize
     'th_bedslope'                   : False,              # Enable wind velocity threshold based on bedslope
@@ -161,7 +166,8 @@ DEFAULT_CONFIG = {
     'th_drylayer'                   : False,              # Enable threshold based on drying of layer
     'th_humidity'                   : False,              # Enable wind velocity threshold based on humidity
     'th_salt'                       : False,              # Enable wind velocity threshold based on salt
-    'th_sheltering'                 : False,               # Enable wind velocity threshold based on sheltering by roughness elements
+    'th_sheltering'                 : False,               # Enable wind velocity threshold based on sheltering by roughness elements using the grain size distrbution
+    'th_sedtrapping'                : False,               # Enable wind velocity threshold based on sediment trapping by roughness elements based on roughness density (lambda)
     'th_nelayer'                    : False,              # Enable wind velocity threshold based on a non-erodible layer
     'process_avalanche'             : False,               # Enable the process of avalanching
     'process_shear'                 : False,               # Enable the process of wind shear
@@ -195,6 +201,10 @@ DEFAULT_CONFIG = {
     'fence_file'                    : None,               # Filename of ASCII file with sand fence location/height (above the bed)
     'ne_file'                       : None,               # Filename of ASCII file with non-erodible layer
     'veg_file'                      : None,               # Filename of ASCII file with initial vegetation density
+    'zsand_file'                    : None,               # Filename of ASCII file with sand level
+    'dcob_file'                     : None,               # Filename of ASCII file with cobble layer thickness
+    'dsandcover_file'              : None,               # Filename of ASCII file with thickness of sand cover on top of cobble layer
+    'doverlap_file'                  : None,               # Filename of ASCII file with overlap between sand level and cobble layer
     'wave_mask'                     : None,               # Filename of ASCII file with mask for wave height
     'tide_mask'                     : None,               # Filename of ASCII file with mask for tidal elevation
     'runup_mask'                    : None,               # Filename of ASCII file with mask for run-up
@@ -246,7 +256,7 @@ DEFAULT_CONFIG = {
     'Ck'                            : 2.78,               # [-] Constant in kawamura formulation for equilibrium sediment concentration
     'Cl'                            : 6.7,                # [-] Constant in lettau formulation for equilibrium sediment concentration
     'Cdk'                           : 5.,                 # [-] Constant in DK formulation for equilibrium sediment concentration
-    # 'm'                             : 0.5,                # [-] Factor to account for difference between average and maximum shear stress
+    'm'                             : 0.5,                # [-] Factor to account for difference between average and maximum shear stress
 #    'alpha'                         : 0.4,               # [-] Relation of vertical component of ejection velocity and horizontal velocity difference between impact and ejection
     'kappa'                         : 0.41,               # [-] Von Kármán constant
     'sigma'                         : 4.2,                # [-] Ratio between basal area and frontal area of roughness elements
@@ -283,6 +293,7 @@ DEFAULT_CONFIG = {
     'Cl_gw'                         : 0.7,          # NEWCH      # [m] Groundwater overheight due to runup
     'in_gw'                         : 0,            # NEWCH      # [m] Initial groundwater level
     'GW_stat'                       : 1,            # NEWCH      # [m] Landward static groundwater boundary (if static boundary is defined)
+    'max_moist'                     : 10.,           # NEWCH      # [%] Moisture content (volumetric in percent) above which the threshold shear velocity is set to infinity (no transport, default value Delgado-Fernandez, 2010)
     'theta_dyn'                     : 33.,                # [degrees] Initial Dynamic angle of repose, critical dynamic slope for avalanching
     'theta_stat'                    : 34.,                # [degrees] Initial Static angle of repose, critical static slope for avalanching
     'avg_time'                      : 86400.,             # [s] Indication of the time period over which the bed level change is averaged for vegetation growth
@@ -321,6 +332,7 @@ DEFAULT_CONFIG = {
     'alfa'                          : 0,                  # [deg] Real-world grid cell orientation wrt the North (clockwise)
     'dune_toe_elevation'            : 3,                  # Choose dune toe elevation, only used in the PH12 dune erosion solver
     'beach_slope'                   : 0.1,                # Define the beach slope, only used in the PH12 dune erosion solver
+    'method_runup'                  : 'stockdon',         # Define the equation used in the wave runup calculations
     'veg_min_elevation'             : 3,                  # Choose the minimum elevation where vegetation can grow
     'vegshear_type'                 : 'raupach',          # Choose the Raupach grid based solver (1D or 2D) or the Okin approach (1D only)
     'okin_c1_veg'                   : 0.48,               #x/h spatial reduction factor in Okin model for use with vegetation

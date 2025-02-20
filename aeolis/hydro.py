@@ -124,6 +124,32 @@ def interpolate(s, p, t):
                                         p['wave_file'][:,0],
                                         p['wave_file'][:,2])
 
+            if p['process_runup']:
+                ny = p['ny']
+
+                for iy in range(ny + 1):  # do this computation seperately on every y for now so alongshore variable wave runup can be added in the future
+                
+                    hs = s['Hs'][iy][0]
+                    tp = s['Tp'][iy][0]
+                    wl = s['SWL'][iy][0]
+
+                    if p['method_runup'] == 'stockdon':
+                        eta, sigma_s, R = calc_runup_stockdon(hs, tp, p['beach_slope'])
+                    elif p['method_runup'] == 'ruggiero':
+                        eta, sigma_s, R = calc_runup_ruggiero(hs)
+        
+                    s['R'][iy][:] = R
+                    s['eta'][iy][:] = eta
+                    s['sigma_s'][iy][:] = sigma_s
+                    
+                    if hasattr(s['runup_mask'], "__len__"):
+                        s['eta'][iy][:] = apply_mask(s['eta'][iy][:], s['runup_mask'][iy][:])
+                        s['R'][iy][:] = apply_mask(s['R'][iy][:], s['runup_mask'][iy][:])
+
+                    s['TWL'][iy][:] = s['SWL'][iy][:]  + s['R'][iy][:]
+                    s['DSWL'][iy][:] = s['SWL'][iy][:] + s['eta'][iy][:]            # Was s['zs'] before
+
+            # Alters wave height based on maximum wave height over depth ratio, gamma default = 0.5
             s['Hs'] = np.minimum(h * p['gamma'], s['Hs'])
 
             # apply complex mask
@@ -140,32 +166,15 @@ def interpolate(s, p, t):
         s['Tp'] = apply_mask(s['Tp'], s['wave_mask'])
 
 
+
     if p['process_runup']:
         ny = p['ny']
-
-        if ('Hs' not in p['external_vars']):
-
-            for iy in range(ny + 1):  # do this computation seperately on every y for now so alongshore variable wave runup can be added in the future
-            
-                hs = s['Hs'][iy][0]
-                tp = s['Tp'][iy][0]
-                wl = s['SWL'][iy][0]
-
-                eta, sigma_s, R = calc_runup_stockdon(hs, tp, p['beach_slope'])
-                s['R'][iy][:] = R
-                s['eta'][iy][:] = eta
-                s['sigma_s'][iy][:] = sigma_s
-                
-                if hasattr(s['runup_mask'], "__len__"):
-                    s['eta'][iy][:] = apply_mask(s['eta'][iy][:], s['runup_mask'][iy][:])
-                    s['R'][iy][:] = apply_mask(s['R'][iy][:], s['runup_mask'][iy][:])
-
-                s['TWL'][iy][:] = s['SWL'][iy][:]  + s['R'][iy][:]
-                s['DSWL'][iy][:] = s['SWL'][iy][:] + s['eta'][iy][:]            # Was s['zs'] before
-
         if ('Hs' in p['external_vars']):
 
-            eta, sigma_s, R = calc_runup_stockdon(s['Hs'], s['Tp'], p['beach_slope'])
+            if p['method_runup'] == 'stockdon':
+                eta, sigma_s, R = calc_runup_stockdon(s['Hs'], s['Tp'], p['beach_slope'])
+            if p['method_runup'] == 'ruggiero':
+                eta, sigma_s, R = calc_runup_ruggiero(s['Hs'])
             s['R'][:] = R
 
             if hasattr(s['runup_mask'], "__len__"):
@@ -669,6 +678,23 @@ def calc_runup_stockdon(Ho, Tp, beta):
 
     return eta, sigma_s, R
 
+
+def calc_runup_ruggiero(Ho):
+    """
+    Calculate runup according to /Ruggiero et al 2004.
+    """
+    if Ho > 0:
+        R = 0.33 * Ho + 0.33 #formula for dissipative conditions
+        eta = 0
+        sigma_s = 0
+        # print(Ho, R)
+
+    else:
+        R = 0
+        eta = 0
+        sigma_s = 0
+
+    return eta, sigma_s, R
 
 
 

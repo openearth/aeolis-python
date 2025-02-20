@@ -197,8 +197,13 @@ class WindShear:
         gc['z'] = self.interpolate(gi['x'], gi['y'], gi['z'], gc['x'], gc['y'], 0)
         
         # Project the taus0 and taun0 on the computational grid
-        gc['taux'] = np.full(np.shape(gc['x']), taus0)
-        gc['tauy'] = np.full(np.shape(gc['x']), taun0)
+        if np.all(taus0 == taus0[0,0]):
+            gc['taux'] = np.full(np.shape(gc['x']), taus0[0,0])
+            gc['tauy'] = np.full(np.shape(gc['x']), taun0[0,0])
+        else:
+            gc['taux'] = self.interpolate(gi['x'], gi['y'], taus0, gc['x'], gc['y'], 0)
+            gc['tauy'] = self.interpolate(gi['x'], gi['y'], taun0, gc['x'], gc['y'], 0)
+        
 
         if plot:
             self.plot(ax=axs[0,1], cmap='Reds', stride=10, computational_grid=True)
@@ -261,8 +266,8 @@ class WindShear:
         # =====================================================================
     
         # Interpolate wind shear results to real grid
-        gi['taux'] = self.interpolate(gc['x'], gc['y'], gc['taux'], gi['x'], gi['y'], taus0)
-        gi['tauy'] = self.interpolate(gc['x'], gc['y'], gc['tauy'], gi['x'], gi['y'], taun0) 
+        gi['taux'] = self.interpolate(gc['x'], gc['y'], gc['taux'], gi['x'], gi['y'], taus0[0,0])
+        gi['tauy'] = self.interpolate(gc['x'], gc['y'], gc['tauy'], gi['x'], gi['y'], taus0[0,0])
         
         if process_separation:
             gi['hsep'] = self.interpolate(gc['x'], gc['y'], gc['hsep'], gi['x'], gi['y'], 0. )
@@ -556,7 +561,7 @@ class WindShear:
         
         # Inner layer height
         l  = self.l    
- 
+
         # interpolate roughness length z0 to computational grid
         if np.size(z0)>1:
             z0new = self.interpolate(gi['x'], gi['y'], z0, gc['x'], gc['y'], 0)
@@ -836,13 +841,13 @@ class WindShear:
     def interpolate(self, x, y, z, xi, yi, z0):
         '''Interpolate one grid to an other'''
 
-        
+
         # First compute angle with horizontal
         dx = x[0,1] - x[0,0]
         dy = y[0,1] - y[0,0]
 
         angle = np.rad2deg(np.arctan(dy/dx))
-        
+
         if dx <= 0 and dy<=0:
             angle += 180.
             
@@ -877,7 +882,7 @@ class WindShear:
             inter = scipy.interpolate.RegularGridInterpolator((y_pad[:,0].copy(order='C'), x_pad[0,:].copy(order='C')), z_pad, bounds_error = False, fill_value = z0)
             zi = inter(xyi).reshape(xi.shape)
             
-            
+
             
         return zi
     

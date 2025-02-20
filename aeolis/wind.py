@@ -70,7 +70,7 @@ def initialize(s, p):
     # initialize wind shear model (z0 according to Duran much smaller)
     # Otherwise no Barchan
     z0    = calculate_z0(p, s)
-    
+
     if p['process_shear']:
         if p['ny'] > 0:
             s['shear'] = aeolis.shear.WindShear(s['x'], s['y'], s['zb'],
@@ -174,12 +174,15 @@ def calculate_z0(p, s):
         z0
 
     '''
+
     if p['method_roughness'] == 'constant':
         z0    = p['k']  # Here, the ks (roughness length) is equal to the z0, this method is implemented to assure backward compatibility. Note, this does not follow the definition of z0 = ks /30 by Nikuradse    
     if p['method_roughness'] == 'constant_nikuradse':
         z0    = p['k'] / 30   # This equaion follows the definition of the bed roughness as introduced by Nikuradse
     if p['method_roughness'] == 'mean_grainsize_initial': #(based on Nikuradse and Bagnold, 1941), can only be applied in case with uniform grain size and is most applicable to a flat bed
         z0    = np.sum(p['grain_size']*p['grain_dist']) / 30.
+    if p['method_roughness'] == 'z0_grid' and isarray(p['z0_file']):
+        z0    = p['z0_file'][:,:]
     if p['method_roughness'] == 'mean_grainsize_adaptive': # makes Nikuradse roughness method variable through time and space depending on grain size variations
         z0    = calc_mean_grain_size(p, s) / 30.
     if p['method_roughness'] == 'median_grainsize_adaptive': # based on Sherman and Greenwood, 1982 - only appropriate for naturally occurring grain size distribution
@@ -212,14 +215,14 @@ def shear(s,p):
     # Compute shear velocity field (including separation)
 
     if 'shear' in s.keys() and p['process_shear'] and p['ny'] > 0:
-        
+
         s['shear'](x=s['x'], y=s['y'], z=s['zb'],
                    taux=s['taus'], tauy=s['taun'],
                    u0=s['uw'][0,0], udir=s['udir'][0,0],
                    process_separation = p['process_separation'],
                    c = p['c_b'],
                    mu_b = p['mu_b'],
-                   taus0 = s['taus0'][0,0], taun0 = s['taun0'][0,0],
+                   taus0 = s['taus0'], taun0 = s['taun0'],
                    sep_filter_iterations=p['sep_filter_iterations'],
                    zsep_y_filter=p['zsep_y_filter'])
 
