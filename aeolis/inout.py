@@ -153,7 +153,7 @@ def write_configfile(configfile, p=None):
     if p is None:
         p = DEFAULT_CONFIG.copy()
 
-    fmt = '%%%ds = %%s\n' % np.max([len(k) for k in p.iterkeys()])
+    fmt = '%%%ds = %%s\n' % np.max([len(k) for k in p.keys()])
         
     with open(configfile, 'w') as fp:
 
@@ -163,7 +163,7 @@ def write_configfile(configfile, p=None):
         fp.write('%s\n' % ('%' * 70))
         fp.write('\n')
         
-        for k, v in sorted(p.iteritems()):
+        for k, v in sorted(p.items()):
             if k.endswith('_file') and isiterable(v):
                 fname = '%s.txt' % k.replace('_file', '')
                 backup(fname)
