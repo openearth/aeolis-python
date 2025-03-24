@@ -3,8 +3,10 @@ from tkinter import *
 from tkinter import ttk, filedialog
 import os
 
+# Default configuration file path
 configfile = r'C:\Users\svries\Documents\GitHub\OE_aeolis-python\aeolis\examples\2D\Barchan_dune\aeolis.txt'
 
+# Function to prompt the user to select a configuration file
 def prompt_file():
     file_path = filedialog.askopenfilename(
         initialdir=os.path.dirname(configfile),
@@ -13,7 +15,9 @@ def prompt_file():
     )
     return file_path if file_path else configfile
 
+# Prompt the user to select a configuration file or use the default
 configfile = prompt_file()
+# Read the configuration file into a dictionary
 dic = aeolis.inout.read_configfile(configfile)
 
 class AeolisGUI:
@@ -24,14 +28,18 @@ class AeolisGUI:
         self.create_widgets()
 
     def create_widgets(self):
+        # Create a tab control widget
         tab_control = ttk.Notebook(self.root)
+        # Create individual tabs
         self.create_domain_tab(tab_control)
         self.create_timeframe_tab(tab_control)
         self.create_boundary_conditions_tab(tab_control)
         self.create_sediment_transport_tab(tab_control)
+        # Pack the tab control to expand and fill the available space
         tab_control.pack(expand=1, fill='both')
 
     def create_label_entry(self, tab, text, value, row):
+        # Create a label and entry widget for a given tab
         label = ttk.Label(tab, text=text)
         label.grid(row=row, column=0, sticky=W)
         entry = ttk.Entry(tab)
@@ -40,56 +48,76 @@ class AeolisGUI:
         return entry
 
     def create_domain_tab(self, tab_control):
+        # Create the 'Domain' tab
         tab1 = ttk.Frame(tab_control)
         tab_control.add(tab1, text='Domain')
 
+        # Fields to be displayed in the 'Domain' tab
         fields = ['xgrid_file', 'ygrid_file', 'bed_file', 'ne_file', 'veg_file', 'threshold_file', 'fence_file', 'wave_mask', 'tide_mask', 'threshold_mask']
+        # Create label and entry widgets for each field
         self.entries = {field: self.create_label_entry(tab1, f"{field}:", self.dic.get(field, ''), i) for i, field in enumerate(fields)}
 
+        # Create a frame for figures
         fig_frame = ttk.Frame(tab1)
         fig_frame.grid(row=10, column=0, columnspan=2, pady=10)
         fig_label = ttk.Label(fig_frame, text="Figures:")
         fig_label.pack()
 
+        # Create a canvas for displaying figures
         fig_canvas_frame = ttk.Frame(tab1)
         fig_canvas_frame.grid(row=0, column=2, rowspan=10, padx=10, pady=10, sticky=N)
         self.fig_canvas = Canvas(fig_canvas_frame, width=300, height=200, bg='white')
         self.fig_canvas.pack()
 
+        # Create an 'Update Figure' button
         update_button = ttk.Button(fig_canvas_frame, text="Update Figure", command=self.update_figure)
         update_button.pack()
 
     def create_timeframe_tab(self, tab_control):
+        # Create the 'Timeframe' tab
         tab2 = ttk.Frame(tab_control)
         tab_control.add(tab2, text='Timeframe')
 
+        # Fields to be displayed in the 'Timeframe' tab
         fields = ['tstart', 'tstop', 'dt', 'restart', 'refdate']
+        # Create label and entry widgets for each field
         self.entries.update({field: self.create_label_entry(tab2, f"{field}:", self.dic.get(field, ''), i) for i, field in enumerate(fields)})
 
     def create_boundary_conditions_tab(self, tab_control):
+        # Create the 'Boundary Conditions' tab
         tab3 = ttk.Frame(tab_control)
         tab_control.add(tab3, text='Boundary Conditions')
 
+        # Fields to be displayed in the 'Boundary Conditions' tab
         fields = ['boundary1', 'boundary2', 'boundary3']
+        # Create label and entry widgets for each field
         self.entries.update({field: self.create_label_entry(tab3, f"{field}:", self.dic.get(field, ''), i) for i, field in enumerate(fields)})
 
     def create_sediment_transport_tab(self, tab_control):
+        # Create the 'Sediment Transport' tab
         tab4 = ttk.Frame(tab_control)
         tab_control.add(tab4, text='Sediment Transport')
 
+        # Create a 'Save' button
         save_button = ttk.Button(tab4, text='Save', command=self.save)
         save_button.pack()
 
     def update_figure(self):
+        # Update the figure displayed on the canvas
         self.fig_canvas.create_rectangle(50, 50, 250, 150, fill="blue")
 
     def save(self):
+        # Save the current entries to the configuration dictionary
         for field, entry in self.entries.items():
             self.dic[field] = entry.get()
+        # Write the updated configuration to a new file
         aeolis.inout.write_configfile(configfile + '2', self.dic)
         print('Saved!')
 
 if __name__ == "__main__":
+    # Create the main application window
     root = Tk()
+    # Create an instance of the AeolisGUI class
     app = AeolisGUI(root, dic)
+    # Start the Tkinter event loop
     root.mainloop()
