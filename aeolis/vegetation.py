@@ -39,7 +39,6 @@ import aeolis.wind
 
 import numpy as np
 from scipy.integrate import quad
-from scipy.integrate import romberg
 from scipy.optimize import root_scalar
 from scipy.signal import convolve
 from scipy.special import sici

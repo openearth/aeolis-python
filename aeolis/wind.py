@@ -34,7 +34,6 @@ import operator
 from scipy import ndimage, misc
 import matplotlib.pyplot as plt
 from scipy.integrate import quad
-from scipy.integrate import romberg
 from scipy.optimize import root_scalar
 from scipy.signal import convolve
 from scipy.special import sici
