@@ -3,8 +3,8 @@ FROM continuumio/miniconda3
 # Set the working directory
 WORKDIR /workspace
 
-# Install Python 3.11
-RUN conda install python=3.10 -y
+# Install Python
+RUN conda install python -y
 
 # Copy the project files
 COPY . .
