@@ -1,10 +1,19 @@
-FROM python:3.11-slim
+FROM continuumio/miniconda3
 
 # Set the working directory
-WORKDIR /usr/src/app
+WORKDIR /workspace
 
-# Copy the rest of the application code
+# Install Python 3.11
+RUN conda install python=3.11 -y
+
+# Copy the project files
 COPY . .
 
-RUN pip install --no-cache-dir hatchling && \
-    pip install --no-cache-dir .
+# Install the necessary packages
+RUN pip install .
+
+# Clean up
+RUN conda clean -afy
+
+# Set the default command
+CMD ["bash"]
