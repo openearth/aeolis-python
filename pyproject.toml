@@ -31,7 +31,7 @@ dependencies = [
   "bmi-python",
   "netCDF4",
   "scipy",
-  "numpy<1.24,>=1.18",
+  "numpy",
   "matplotlib",
   "numba",
 ]
