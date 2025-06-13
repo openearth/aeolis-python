@@ -1,13 +1,13 @@
 FROM continuumio/miniconda3
 
 # Set the working directory
-WORKDIR /workspace
+#WORKDIR /workspace
 
 # Install Python
 RUN conda install python -y
 
 # Copy the project files
-COPY . .
+# COPY . .
 
 # Install the necessary packages
 RUN pip install .
