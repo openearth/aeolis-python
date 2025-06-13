@@ -28,18 +28,9 @@ from __future__ import absolute_import, division
 
 import numpy as np
 import logging
-import operator
-#import scipy.special
-#import scipy.interpolate
-from scipy import ndimage, misc
-import matplotlib.pyplot as plt
-from scipy.integrate import quad
-from scipy.integrate import romberg
+
+from scipy import ndimage
 from scipy.optimize import root_scalar
-from scipy.signal import convolve
-from scipy.special import sici
-from scipy.special import erfi
-from scipy.interpolate import griddata
 
 
 # package modules
