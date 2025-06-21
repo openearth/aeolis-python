@@ -149,6 +149,7 @@ MODEL_STATE = {
     ),
     ('ny','nx','nlayers','nfractions') : (
         'mass',                             # [kg/m^2] Sediment mass in bed
+        'mass_mixing',                      # [kg/m^2] Sediment mass in bed used for mixing
     ),
 }
 
@@ -197,6 +198,7 @@ DEFAULT_CONFIG = {
     'wave_file'                     : None,               # Filename of ASCII file with time series of wave heights
     'meteo_file'                    : None,               # Filename of ASCII file with time series of meteorlogical conditions
     'bedcomp_file'                  : None,               # Filename of ASCII file with initial bed composition
+    'bedcomp_mixing_file'           : None,               # Filename of ASCII file with initial bed composition
     'threshold_file'                : None,               # Filename of ASCII file with shear velocity threshold
     'fence_file'                    : None,               # Filename of ASCII file with sand fence location/height (above the bed)
     'ne_file'                       : None,               # Filename of ASCII file with non-erodible layer
@@ -314,6 +316,7 @@ DEFAULT_CONFIG = {
     'boundary_gw'                   : 'no_flow',          # Landward groundwater boundary, dGw/dx = 0 (or 'static')
     'method_moist_threshold'        : 'belly_johnson',    # Name of method to compute wind velocity threshold based on soil moisture content
     'method_moist_process'          : 'infiltration',     # Name of method to compute soil moisture content(infiltration or surface_moisture)
+    'method_mixing'                 : 'layer_average',    # Name of method to mixing the sediment bed composition in the mixed layers
     'offshore_flux'                 : 0.,                 # [-] Factor to determine offshore boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
     'constant_offshore_flux'        : 0.,                 # [kg/m/s] Constant input flux at offshore boundary
     'onshore_flux'                  : 0.,                 # [-] Factor to determine onshore boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
