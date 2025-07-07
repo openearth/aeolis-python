@@ -13,7 +13,7 @@ Requirements
 - netCDF4
 
 Dependencies
-""""""""""""
+------------
 
 - docopt==0.6.1
 - bmi-python
@@ -59,8 +59,8 @@ Example from command line:
 
 .. code:: shell
 
-   aeolis params.txt
+   aeolis run params.txt
 
 .. note::
 
-   Model parameters and other configuration is passed in a `params.txt`. See the :ref:`default settings` for more details.  
+   Model parameters and other configuration is passed in a `params.txt`. See the :ref:`default-settings` for more details.  
