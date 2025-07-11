@@ -91,7 +91,7 @@ Read our [Contribution Guidelines](CONTRIBUTING.md) to know how you can help to 
 
 Please, cite this software as follows:
 
-*de Vries, S., Hallin, C., van IJzendoorn, C., van Westen, B., Cohn, N., Strypsteen, G., Skaden, J., Agrawal, N., & Garcia Alvarez, M. (2023). AeoLiS (Version 3.0.0) [Computer software]. https://github.com/openearth/aeolis-python*
+*de Vries, S., Hallin, C., van IJzendoorn, C., van Westen, B., Cohn, N., Strypsteen, G., Skaden, J., Agrawal, N., & Garcia Alvarez, M. (2023). AeoLiS (Version 3.0.1) [Computer software]. https://github.com/openearth/aeolis-python*
 
 ## Acknowlegdements
 
