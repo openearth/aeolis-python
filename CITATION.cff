@@ -69,5 +69,5 @@ keywords:
   - sediment
 license: GPL-3.0
 commit: 0adaedfc8015f18b3b551bed1dda38d630cd8c95
-version: 3.0.0.rc3
-date-released: '2023-10-18'
+version: 3.0.0
+date-released: '2025-07-11'
