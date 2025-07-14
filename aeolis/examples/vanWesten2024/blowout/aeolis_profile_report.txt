@@ -1,0 +1,128 @@
+AeoLiS Model Profiling Report
+============================================================
+Generated: 2025-07-07 10:15:49
+Configuration: c:\Users\svries\Documents\GitHub\OE_aeolis-python\aeolis\examples\vanWesten2024\blowout\blowout_short.txt
+Total runtime: 37.65 seconds
+
+TOP FUNCTIONS BY CUMULATIVE TIME:
+----------------------------------------
+         16494201 function calls (15869761 primitive calls) in 38.026 seconds
+
+   Ordered by: cumulative time
+   List reduced from 5636 to 50 due to restriction <50>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        2    0.000    0.000   11.029    5.515 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\dispatcher.py:344(_compile_for_args)
+    221/2    0.003    0.000   10.980    5.490 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\dispatcher.py:858(compile)
+ 1832/274    0.006    0.000   10.534    0.038 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\compiler_lock.py:32(_acquire_compile_lock)
+        6    0.044    0.007   10.428    1.738 C:\Users\svries\Documents\GitHub\OE_aeolis-python\aeolis\bed.py:234(update)
+     44/1    0.000    0.000   10.074   10.074 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\dispatcher.py:79(compile)
+     44/1    0.000    0.000   10.074   10.074 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\dispatcher.py:86(_compile_cached)
+     44/1    0.001    0.000   10.074   10.074 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\dispatcher.py:101(_compile_core)
+     44/1    0.000    0.000   10.074   10.074 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\compiler.py:713(compile_extra)
+     51/1    0.000    0.000   10.073   10.073 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\compiler.py:433(compile_extra)
+     51/1    0.000    0.000   10.069   10.069 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\compiler.py:500(_compile_bytecode)
+     51/1    0.001    0.000   10.069   10.069 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\compiler.py:456(_compile_core)
+     55/1    0.006    0.000   10.069   10.069 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\compiler_machinery.py:342(run)
+  1321/27    0.038    0.000   10.068    0.373 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\compiler_machinery.py:267(_runPass)
+  3955/81    0.004    0.000   10.063    0.124 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\compiler_machinery.py:271(check)
+     43/1    0.003    0.000    9.699    9.699 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\typed_passes.py:437(run_pass)
+     43/1    0.001    0.000    7.461    7.461 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\lowering.py:188(lower)
+     43/1    0.000    0.000    7.038    7.038 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\lowering.py:224(lower_normal_function)
+     43/1    0.001    0.000    7.035    7.035 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\lowering.py:241(lower_function_body)
+    161/4    0.007    0.000    7.035    1.759 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\lowering.py:266(lower_block)
+ 2149/264    0.012    0.000    7.031    0.027 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\lowering.py:455(lower_inst)
+   315/74    0.001    0.000    6.228    0.084 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\base.py:1189(__call__)
+   315/74    0.001    0.000    6.227    0.084 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\base.py:1218(wrapper)
+  778/232    0.025    0.000    5.931    0.026 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\types\functions.py:281(get_call_type)
+4540/1558    0.009    0.000    5.840    0.004 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\typing\templates.py:356(apply)
+ 1904/874    0.004    0.000    5.794    0.007 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\typing\templates.py:614(generic)
+ 1904/874    0.008    0.000    5.791    0.007 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\typing\templates.py:705(_get_impl)
+        6    0.000    0.000    5.789    0.965 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\lowering.py:595(lower_setitem)
+        5    0.000    0.000    5.773    1.155 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\np\arrayobj.py:523(setitem_array)
+        5    0.000    0.000    5.758    1.152 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\np\arrayobj.py:1665(fancy_setslice)
+   135/35    0.002    0.000    5.743    0.164 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\typing\templates.py:756(_build_impl)
+   219/10    0.001    0.000    5.739    0.574 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\types\functions.py:531(get_call_type)
+   219/10    0.002    0.000    5.739    0.574 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\dispatcher.py:304(get_call_template)
+        5    0.000    0.000    5.658    1.132 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\np\arrayobj.py:1683(raise_shape_mismatch_error)
+19709/19708    4.819    0.000    5.421    0.000 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\llvmlite\binding\ffi.py:195(__call__)
+     55/9    0.001    0.000    5.294    0.588 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\typed_passes.py:105(run_pass)
+     55/9    0.001    0.000    5.294    0.588 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\typed_passes.py:68(type_inference_stage)
+     55/9    0.000    0.000    5.233    0.581 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\typeinfer.py:1055(propagate)
+   112/20    0.005    0.000    5.232    0.262 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\typeinfer.py:147(propagate)
+        6    0.000    0.000    5.170    0.862 C:\Users\svries\Documents\GitHub\OE_aeolis-python\aeolis\model.py:716(euler_backward)
+        6    4.114    0.686    5.170    0.862 C:\Users\svries\Documents\GitHub\OE_aeolis-python\aeolis\model.py:1607(solve_SS)
+  705/241    0.006    0.000    5.102    0.021 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\typeinfer.py:568(resolve)
+  691/227    0.001    0.000    5.090    0.022 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\typeinfer.py:1522(resolve_call)
+  713/227    0.001    0.000    5.089    0.022 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\typing\context.py:188(resolve_function_type)
+  713/227    0.003    0.000    5.089    0.022 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\typing\context.py:232(_resolve_user_function_type)
+   412/94    0.003    0.000    4.938    0.053 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\typeinfer.py:558(__call__)
+       44    0.001    0.000    4.603    0.105 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\codegen.py:747(finalize)
+        6    0.008    0.001    4.541    0.757 C:\Users\svries\Documents\GitHub\OE_aeolis-python\aeolis\wind.py:222(shear)
+        6    0.147    0.024    4.484    0.747 C:\Users\svries\Documents\GitHub\OE_aeolis-python\aeolis\shear.py:145(__call__)
+  285/197    0.000    0.000    4.301    0.022 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\codegen.py:565(_ensure_finalized)
+       37    0.001    0.000    4.187    0.113 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\cpu.py:225(get_executable)
+
+
+
+
+TOP FUNCTIONS BY TOTAL TIME:
+----------------------------------------
+         16494201 function calls (15869761 primitive calls) in 38.026 seconds
+
+   Ordered by: internal time
+   List reduced from 5636 to 50 due to restriction <50>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+19709/19708    4.819    0.000    5.421    0.000 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\llvmlite\binding\ffi.py:195(__call__)
+        6    4.114    0.686    5.170    0.862 C:\Users\svries\Documents\GitHub\OE_aeolis-python\aeolis\model.py:1607(solve_SS)
+       64    1.281    0.020    1.368    0.021 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\matplotlib\collections.py:2409(draw)
+       18    1.227    0.068    1.227    0.068 C:\Users\svries\Documents\GitHub\OE_aeolis-python\aeolis\utils.py:378(sc_kv)
+       67    1.171    0.017    1.171    0.017 {method 'encode' of 'ImagingEncoder' objects}
+       12    0.705    0.059    0.790    0.066 {built-in method numpy._core._multiarray_umath._load_from_filelike}
+   138244    0.650    0.000    0.650    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+        6    0.631    0.105    1.209    0.201 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\scipy\optimize\_zeros_py.py:397(_array_newton)
+       48    0.569    0.012    0.569    0.012 C:\Users\svries\Documents\GitHub\OE_aeolis-python\aeolis\transport.py:210(solve_u)
+      144    0.539    0.004    0.540    0.004 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numpy\lib\_arraypad_impl.py:296(_set_reflect_both)
+      102    0.514    0.005    0.718    0.007 C:\Users\svries\Documents\GitHub\OE_aeolis-python\aeolis\shear.py:817(rotate)
+       36    0.459    0.013    0.459    0.013 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numpy\fft\_pocketfft.py:51(_raw_fft)
+     8924    0.439    0.000    0.442    0.000 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\colorama\win32.py:108(_winapi_test)
+     8924    0.438    0.000    0.442    0.000 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\colorama\win32.py:170(GetConsoleMode)
+        6    0.399    0.066    1.671    0.279 C:\Users\svries\Documents\GitHub\OE_aeolis-python\aeolis\transport.py:43(duran_grainspeed)
+        6    0.378    0.063    2.192    0.365 C:\Users\svries\Documents\GitHub\OE_aeolis-python\aeolis\shear.py:524(compute_shear)
+       97    0.366    0.004    0.525    0.005 C:\Users\svries\Documents\GitHub\OE_aeolis-python\aeolis\utils.py:360(rotate)
+        3    0.357    0.119    0.357    0.119 {built-in method _tkinter.create}
+      199    0.339    0.002    0.339    0.002 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numpy\matrixlib\defmatrix.py:229(__rmul__)
+  1591993    0.316    0.000    0.402    0.000 {built-in method builtins.isinstance}
+   107004    0.312    0.000    0.312    0.000 {method 'copy' of 'numpy.ndarray' objects}
+   7557/2    0.262    0.000    1.507    0.753 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\matplotlib\text.py:358(_get_layout)
+630313/629420    0.241    0.000    0.622    0.000 {built-in method builtins.getattr}
+187335/32260    0.227    0.000    0.357    0.000 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\ir.py:321(_rec_list_vars)
+     4462    0.211    0.000    0.211    0.000 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\colorama\win32.py:177(SetConsoleMode)
+    128/4    0.208    0.002    1.696    0.424 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\matplotlib\backends\backend_agg.py:206(get_text_width_height_descent)
+       36    0.197    0.005    0.198    0.005 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numpy\lib\_arraypad_impl.py:129(_set_pad_area)
+      703    0.172    0.000    0.175    0.000 {method 'call' of '_tkinter.tkapp' objects}
+      417    0.168    0.000    0.168    0.000 C:\Users\svries\Documents\GitHub\OE_aeolis-python\aeolis\utils.py:37(isiterable)
+        6    0.166    0.028    1.850    0.308 C:\Users\svries\Documents\GitHub\OE_aeolis-python\aeolis\transport.py:287(equilibrium)
+      211    0.153    0.001    0.153    0.001 {method 'repeat' of 'numpy.ndarray' objects}
+      7/1    0.151    0.022    0.090    0.090 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\matplotlib\backends\backend_agg.py:185(draw_text)
+        6    0.147    0.024    4.484    0.747 C:\Users\svries\Documents\GitHub\OE_aeolis-python\aeolis\shear.py:145(__call__)
+   569227    0.140    0.000    0.161    0.000 {method 'get' of 'dict' objects}
+       18    0.140    0.008    0.178    0.010 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\scipy\interpolate\_rgi.py:591(_find_indices)
+146791/70885    0.140    0.000    0.439    0.000 {method 'format' of 'str' objects}
+   157776    0.135    0.000    0.281    0.000 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\event.py:243(notify)
+    33790    0.134    0.000    0.134    0.000 {built-in method matplotlib._path.affine_transform}
+    47703    0.130    0.000    0.191    0.000 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\matplotlib\font_manager.py:700(__hash__)
+   9650/2    0.128    0.000    1.509    0.754 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\matplotlib\text.py:926(get_window_extent)
+        6    0.126    0.021    0.127    0.021 C:\Users\svries\Documents\GitHub\OE_aeolis-python\aeolis\avalanching.py:194(calc_gradients)
+     4002    0.123    0.000    0.981    0.000 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\matplotlib\ticker.py:2159(_raw_ticks)
+    78099    0.123    0.000    0.295    0.000 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\copy.py:62(copy)
+17212/14547    0.122    0.000    0.240    0.000 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\matplotlib\transforms.py:2431(get_affine)
+    26953    0.117    0.000    0.118    0.000 {built-in method numpy.array}
+    65136    0.115    0.000    0.497    0.000 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numpy\_core\fromnumeric.py:69(_wrapreduction)
+        6    0.113    0.019    0.113    0.019 C:\Users\svries\Documents\GitHub\OE_aeolis-python\aeolis\shear.py:700(add_shear)
+        6    0.112    0.019    0.113    0.019 C:\Users\svries\Documents\GitHub\OE_aeolis-python\aeolis\shear.py:638(filter_highfrequenies)
+    47152    0.111    0.000    0.124    0.000 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\numba\core\event.py:66(_guard_kind)
+    36349    0.109    0.000    0.232    0.000 C:\Users\svries\AppData\Local\miniconda3\envs\aeolis\Lib\site-packages\matplotlib\transforms.py:749(__init__)
+
+

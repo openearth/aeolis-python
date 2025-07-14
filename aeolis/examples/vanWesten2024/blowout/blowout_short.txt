@@ -6,7 +6,7 @@
 %% -------------------- [Timing] ----------------------------- %%
 dt 						= 3600.000								% [s] Timeinterval between timesteps
 tstart 					= 36979200								% [s] Starting time of the simulation (03-04-2013)
-tstop 					= 37000000 % 66674520					% [s] End time of the simulation
+tstop 					= 66674520					            % [s] End time of the simulation
 restart                 = None               					% [s] Interval for which to write restart files
 refdate               	= 2012-01-01 00:00 						% [-] Reference datetime in netCDF output
 
