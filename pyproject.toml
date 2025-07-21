@@ -12,7 +12,7 @@ exclude = [
 
 [project]
 name = "aeolis"
-version = "3.0.0.rc1"
+version = "3.0.1"
 authors = [
   { name="Sierd de Vries", email="sierd.devries@tudelft.nl" },
 ]
@@ -31,7 +31,7 @@ dependencies = [
   "bmi-python",
   "netCDF4",
   "scipy",
-  "numpy<1.24,>=1.18",
+  "numpy",
   "matplotlib",
   "numba",
 ]

@@ -83,7 +83,12 @@ def initialize(s, p):
     if isinstance(p['grain_dist'], str):
             logger.log_and_raise('Grain size file not recognized as array, check file path and whether all values have been filled in.', exc=ValueError) 
 
-    if p['bedcomp_file'] is None and p['grain_dist'].ndim == 1 and p['grain_dist'].dtype == 'float64' or p['grain_dist'].dtype == 'int': 
+    if p['bedcomp_file'] is not None and p['supply_file'] is not None :
+            logger.log_and_raise('Conflict in input definition, cannot define supply_file and bedcomp_file simultaneously', exc=ValueError) 
+
+    if p['supply_file'] is not None:
+        s['mass'][:,:,:,:] = 0 #p['supply_file'].reshape(s['mass'].shape)                
+    elif p['bedcomp_file'] is None and p['grain_dist'].ndim == 1 and p['grain_dist'].dtype == 'float64' or p['grain_dist'].dtype == 'int': 
         # Both float and int are included as options for the grain dist to make sure there is no error when grain_dist is filled in as 1 instead of 1.0. 
         for i in range(nl):
             gs = makeiterable(p['grain_dist'])
@@ -100,8 +105,14 @@ def initialize(s, p):
             for j in range(nf):
                 s['mass'][:,:,i,j] = p['rhog'] * (1. - p['porosity']) \
                                      * s['thlyr'][:,:,i] * gs[j]
-    else:
-        s['mass'][:,:,:,:] = p['bedcomp_file'].reshape(s['mass'].shape)                
+    else:      
+        # if a quasi 2D domain is used, the bedcomp_file is reshaped to fit the domain
+        if s['mass'].shape[0] == 3:
+            s['mass'][0,:,:,:] = p['bedcomp_file'].reshape(s['mass'].shape[1:])
+            s['mass'][1,:,:,:] = p['bedcomp_file'].reshape(s['mass'].shape[1:])
+            s['mass'][2,:,:,:] = p['bedcomp_file'].reshape(s['mass'].shape[1:])                                                      
+        else:
+            s['mass'][:,:,:,:] = p['bedcomp_file'].reshape(s['mass'].shape)                
 
     # initialize masks
     for k, v in p.items():
@@ -200,7 +211,7 @@ def mixtoplayer(s, p):
 
 
 def wet_bed_reset(s, p):
-    ''' Text
+    ''' Reset wet bed to initial bed level if the total water level is above the bed level.
 
 
 
@@ -222,7 +233,7 @@ def wet_bed_reset(s, p):
         
         Tbedreset = p['dt_opt'] / p['Tbedreset']
         
-        ix = s['zs'] > (s['zb'] + 0.01)
+        ix = s['TWL'] > (s['zb'])
         s['zb'][ix] += (s['zb0'][ix] - s['zb'][ix]) * Tbedreset
             
     return s
@@ -257,6 +268,16 @@ def update(s, p):
         Spatial grids
 
     '''
+    # this is where a supply file is used, this in only for simple cases.
+    if type(p['supply_file']) == np.ndarray:
+        # in descrete supply limited conditions the bed bed layer operations are not valid. 
+        s['mass'][:,:,0,0] -= s['pickup'][:,:,0]
+        s['mass'][:,:,0,0] += p['supply_file']*p['dt_opt']
+        # reset supply under water if process tide is active
+        if p['process_tide']:
+            s['mass'][(s['zb']< s['zs']),0,0]=0
+        return s
+
 
     nx = p['nx']
     ny = p['ny']
@@ -274,7 +295,8 @@ def update(s, p):
     ix_dep = dm[:,0] > 0.
     
     # reshape mass matrix
-    m = s['mass'].reshape((-1,nl,nf))
+    m = s['mass'].reshape((-1,nl,nf)).copy()
+
 
     # negative mass may occur in case of deposition due to numerics,
     # which should be prevented
@@ -298,8 +320,11 @@ def update(s, p):
     if p['grain_dist'].ndim == 2: 
         m[ix_ero,-1,:] -= dm[ix_ero,:] * normalize(p['grain_dist'][-1,:])[np.newaxis,:].repeat(np.sum(ix_ero), axis=0)
     elif type(p['bedcomp_file']) == np.ndarray:
-        gs = p['bedcomp_file'].reshape((-1,nl,nf))
-        m[ix_ero,-1,:] -= dm[ix_ero,:] * normalize(gs[ix_ero,-1, :], axis=1)
+        gs = np.zeros(s['mass'].shape)
+        gs[0,:,:,:] = p['bedcomp_file'].reshape((-1,nl,nf))
+        gs[1,:,:,:] = p['bedcomp_file'].reshape((-1,nl,nf))
+        gs[2,:,:,:] = p['bedcomp_file'].reshape((-1,nl,nf))
+        m[ix_ero,-1,:] -= dm[ix_ero,:] * normalize(gs.reshape((-1,nl,nf))[ix_ero,-1, :], axis=1)
     else:
         m[ix_ero,-1,:] -= dm[ix_ero,:] * normalize(p['grain_dist'])[np.newaxis,:].repeat(np.sum(ix_ero), axis=0)
     # remove tiny negatives
@@ -315,6 +340,9 @@ def update(s, p):
     
     # reshape mass matrix
     s['mass'] = m.reshape((ny+1,nx+1,nl,nf))
+
+    # Store toplayer of 'mass' variable (ilayer = 0)
+    s['masstop'][:,:,:] = s['mass'][:,:,0,:].copy()
 
     # update bathy
     if p['process_bedupdate']:
@@ -475,8 +503,11 @@ def average_change(l, s, p):
     s['dzbavg'] = n*s['dzbyear']+(1-n)*l['dzbavg']
     
     # Calculate average bed level change as input for vegetation growth [m/year]
-    # s['dzbveg'] = s['dzbavg'].copy()
-    s['dzbveg'] = s['dzbyear'].copy()
+    s['dzbveg'] = s['dzbavg'].copy()
+    # s['dzbveg'] = s['dzbyear'].copy()
+
+    if p['_time'] < p['avg_time']:
+        s['dzbveg'] *= 0.
     
     
     return s

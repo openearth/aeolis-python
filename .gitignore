@@ -106,3 +106,6 @@ cython_debug/
 
 # Developer Notes
 dev-notes/
+*.nc
+*.mat
+*.log
