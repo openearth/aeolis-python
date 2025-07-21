@@ -629,7 +629,7 @@ def update_composite(s, p):
     ix_steps = np.vstack((ix_nocob[1,:], ix_step0[1,:], ix_step1[1,:], ix_step2[1,:], ix_step3[1,:], ix_step4[1,:], ix_step5[1,:], ix_step6[1,:], ix_step7[1,:], ix_step8[1,:]))
     check = np.sum(ix_steps, axis=0)
     if np.sum(s['dcob'] - s['doverlap'] < 0) > 0:
-        print('Cobble thickness is smaller than overlap thickness')
+        logger.warning('Cobble thickness is smaller than overlap thickness')
     if np.sum(check!=1) > 0:
         args = np.argwhere(check!=1)
         nocob_check = ix_nocob[1,args]
