@@ -94,7 +94,7 @@ def compute(s, p):
             s = compute_humidity(s, p)
         if p['th_salt']:
             s = compute_salt(s, p)
-        if p['th_sheltering']: # sheltering based on grain size dsitribution
+        if p['th_sheltering']: # sheltering based on grain size distribution
             s = compute_sheltering(s, p)
         if p['th_sedtrapping']:
             s = compute_sedtrapping(s, p)                    
