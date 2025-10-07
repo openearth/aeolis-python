@@ -25,6 +25,7 @@ wind_file                      =  wind.txt
 %% --------------------------- [Outputs] --------------------------- %%
 output_times                   =  3600.000000
 output_vars                    =  zb zs qs mass w Hs Ct
+visualization 			= T
 
 %% ------------------------ [Process Flags] ------------------------ %%
 process_wind                   =  T
