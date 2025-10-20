@@ -127,7 +127,11 @@ def interpolate(s, p, t):
                     tp = s['Tp'][iy][0]
                     wl = s['SWL'][iy][0]
 
-                    eta, sigma_s, R = calc_runup_stockdon(hs, tp, p['beach_slope'])
+                    if p['method_runup'] == 'stockdon':
+                        eta, sigma_s, R = calc_runup_stockdon(hs, tp, p['beach_slope'])
+                    elif p['method_runup'] == 'ruggiero':
+                        eta, sigma_s, R = calc_runup_ruggiero(hs)
+        
                     s['R'][iy][:] = R
                     s['eta'][iy][:] = eta
                     s['sigma_s'][iy][:] = sigma_s
@@ -156,11 +160,15 @@ def interpolate(s, p, t):
         s['Tp'] = apply_mask(s['Tp'], s['wave_mask'])
 
 
+
     if p['process_runup']:
         ny = p['ny']
         if ('Hs' in p['external_vars']):
 
-            eta, sigma_s, R = calc_runup_stockdon(s['Hs'], s['Tp'], p['beach_slope'])
+            if p['method_runup'] == 'stockdon':
+                eta, sigma_s, R = calc_runup_stockdon(s['Hs'], s['Tp'], p['beach_slope'])
+            if p['method_runup'] == 'ruggiero':
+                eta, sigma_s, R = calc_runup_ruggiero(s['Hs'])
             s['R'][:] = R
 
             if hasattr(s['runup_mask'], "__len__"):
@@ -819,6 +827,23 @@ def calc_runup_stockdon(Ho, Tp, beta):
 
     return eta, sigma_s, R
 
+
+def calc_runup_ruggiero(Ho):
+    """
+    Calculate runup according to /Ruggiero et al 2004.
+    """
+    if Ho > 0:
+        R = 0.33 * Ho + 0.33 #formula for dissipative conditions
+        eta = 0
+        sigma_s = 0
+        # print(Ho, R)
+
+    else:
+        R = 0
+        eta = 0
+        sigma_s = 0
+
+    return eta, sigma_s, R
 
 
 
