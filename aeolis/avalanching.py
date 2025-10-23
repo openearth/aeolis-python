@@ -33,6 +33,8 @@ import numpy as np
 # package modules
 from aeolis.utils import *
 
+from numba import njit
+
 # initialize logger
 logger = logging.getLogger(__name__)
 
@@ -90,178 +92,153 @@ def avalanche(s, p):
         Spatial grids
 
     '''
-
     if p['process_avalanche']:
+        nx = p['nx'] + 1
+        ny = p['ny'] + 1
 
-        nx = p['nx']+1
-        ny = p['ny']+1
-
-        #parameters
-
+        # parameters
         tan_stat = np.tan(np.deg2rad(s['theta_stat']))
         tan_dyn = np.tan(np.deg2rad(s['theta_dyn']))
-        
 
-
-        E = 0.2
-
-        grad_h_down = np.zeros((ny,nx,4))
-        flux_down = np.zeros((ny,nx,4))
-        slope_diff = np.zeros((ny,nx))
-        grad_h = np.zeros((ny,nx))
+        E = 0.1
 
         max_iter_ava = p['max_iter_ava']
-        
-        max_grad_h, grad_h, grad_h_down = calc_gradients(s['zb'], nx, ny, s['ds'], s['dn'], s['zne'])
-        
-        s['gradh'] = grad_h.copy()
 
-        initiate_avalanche = (max_grad_h > tan_stat) 
-
-        if initiate_avalanche:
-
-            for i in range(0,max_iter_ava):
-
-                grad_h_down *= 0.
-                flux_down *= 0.
-                slope_diff *= 0.
-                grad_h *= 0.
-
-                max_grad_h, grad_h, grad_h_down = calc_gradients(s['zb'], nx, ny, s['ds'], s['dn'], s[ 'zne'])
-
-                if max_grad_h < tan_dyn:
-                    break
-
-                # Calculation of flux
-
-                grad_h_nonerod = (s['zb'] - s['zne']) / s['ds'] # HAS TO BE ADJUSTED!    
-				
-                ix = np.logical_and(grad_h > tan_dyn, grad_h_nonerod > 0)
-                slope_diff[ix] = np.tanh(grad_h[ix]) - np.tanh(0.9*tan_dyn)    
-                
-                ix = grad_h_nonerod < grad_h - tan_dyn 
-                slope_diff[ix] = np.tanh(grad_h_nonerod[ix])				                    
-
-                ix = grad_h != 0
-                
-                if ny == 1:
-                    #1D interpretation
-                    flux_down[:,:,0][ix] = slope_diff[ix] * grad_h_down[:,:,0][ix] / grad_h[ix]
-                    flux_down[:,:,2][ix] = slope_diff[ix] * grad_h_down[:,:,2][ix] / grad_h[ix]
-                    
-                    # Calculation of change in bed level
-                    
-                    q_in = np.zeros((ny,nx))
-                    
-                    q_out = 0.5*np.abs(flux_down[:,:,0]) + 0.5*np.abs(flux_down[:,:,2])
-                    
-                    q_in[0,1:-1] =   0.5*(np.maximum(flux_down[0,:-2,0],0.) \
-                                        - np.minimum(flux_down[0,2:,0],0.) \
-                                        + np.maximum(flux_down[0,2:,2],0.) \
-                                        - np.minimum(flux_down[0,:-2,2],0.))
-                else:
-                    # 2D interpretation
-                    flux_down[:,:,0][ix] = slope_diff[ix] * grad_h_down[:,:,0][ix] / grad_h[ix]
-                    flux_down[:,:,1][ix] = slope_diff[ix] * grad_h_down[:,:,1][ix] / grad_h[ix]
-                    flux_down[:,:,2][ix] = slope_diff[ix] * grad_h_down[:,:,2][ix] / grad_h[ix]
-                    flux_down[:,:,3][ix] = slope_diff[ix] * grad_h_down[:,:,3][ix] / grad_h[ix]
-
-                    # Calculation of change in bed level
-
-                    q_in = np.zeros((ny,nx))
-
-                    q_out = 0.5*np.abs(flux_down[:,:,0]) + 0.5* np.abs(flux_down[:,:,1]) + 0.5*np.abs(flux_down[:,:,2]) + 0.5* np.abs(flux_down[:,:,3])
-
-                    q_in[1:-1,1:-1] =   0.5*(np.maximum(flux_down[1:-1,:-2,0],0.) \
-                                        - np.minimum(flux_down[1:-1,2:,0],0.) \
-                                        + np.maximum(flux_down[:-2,1:-1,1],0.) \
-                                        - np.minimum(flux_down[2:,1:-1,1],0.) \
-
-                                        + np.maximum(flux_down[1:-1,2:,2],0.) \
-                                        - np.minimum(flux_down[1:-1,:-2,2],0.) \
-                                        + np.maximum(flux_down[2:,1:-1,3],0.) \
-                                        - np.minimum(flux_down[:-2,1:-1,3],0.))
-
-                s['zb'] += E * (q_in - q_out)
+        # call the njit-compiled loop for performance
+        zb, grad_h = avalanche_loop(
+            s['zb'].copy(), s['zne'], s['ds'], s['dn'], nx, ny, E, max_iter_ava, tan_dyn
+            )
 
         # Ensure water level is up-to-date with bed level
-        s['zs'] = s['SWL'].copy()
+        s['zb'] = zb
+        s['gradh'] = grad_h
+        s['zs'] = s['SWL']
         ix = (s['zb'] > s['zs'])
         s['zs'][ix] = s['zb'][ix]
-    return s	    
 
+    return s
 
-def calc_gradients(zb, nx, ny, ds, dn, zne):
-    '''Calculates the downslope gradients in the bed that are needed for
-    avalanching module
+@njit(cache=True)
+def avalanche_loop(zb, zne, ds, dn, nx, ny, E, max_iter_ava, tan_dyn):
+    # Rewritten to use explicit loops and avoid numpy boolean indexing
+    for it in range(max_iter_ava):
+        # temporaries
+        grad_h_down = np.zeros((ny, nx, 2))
+        flux_down = np.zeros((ny, nx, 2))
+        slope_diff = np.zeros((ny, nx))
+        grad_h = np.zeros((ny, nx))
+
+        # first calculate the downslope gradients to see if there is avalanching
+        # Compute downslope gradients grad_h_down (ny,nx,2), grad_h (ny,nx), and max_grad_h
+        # Initialize
+        max_grad_h = 0.0
+
+        # Directions: 0 => +X, 1 => +Y
+        for i in range(ny):
+            for j in range(nx):
+                center = zb[i, j]
+
+                # +X direction
+                g0 = 0.0
+                if 1:#(j > 0) and (j < nx - 1):
+                    right = zb[i, (j + 1) % nx]
+                    left = zb[i, (j - 1) % nx]
+                    if not ((right > center) and (left > center)):
+                        if right > left:
+                            g0 = left - center
+                        else:
+                            g0 = center - right
+
+                grad_h_down[i, j, 0] = g0
+
+                # +Y direction
+                g1 = 0.0
+                if 1:#(i > 0) and (i < ny - 1):
+                    down = zb[(i + 1) % ny, j]
+                    up = zb[(i - 1) % ny, j]
+                    if not ((down > center) and (up > center)):
+                        if down > up:
+                            g1 = up - center
+                        else:
+                            g1 = center - down
+                grad_h_down[i, j, 1] = g1
+
+        # normalize by grid spacing (assume ds, dn are 2D fields)
+        for i in range(ny):
+            for j in range(nx):
+                grad_h_down[i, j, 0] = grad_h_down[i, j, 0] / ds[i, j]
+                grad_h_down[i, j, 1] = grad_h_down[i, j, 1] / dn[i, j]
+
+        # gradient magnitude and maximum
+        for i in range(ny):
+            for j in range(nx):
+                gh2 = grad_h_down[i, j, 0] * grad_h_down[i, j, 0] + grad_h_down[i, j, 1] * grad_h_down[i, j, 1]
+                # optional suppression near zne disabled
+                gh = np.sqrt(gh2)
+                grad_h[i, j] = gh
+                # derive maximum slope
+                if gh > max_grad_h:
+                    max_grad_h = gh
+
+        # ok now the gradients are calculated
+        # these are max_grad_h, grad_h, grad_h_down
+        # check for stopping criterion
+        if max_grad_h < tan_dyn:
+            break       
+        
+        # if we continue we compute fluxes and update zb
+        
+        # compute grad_h_nonerod and slope_diff per cell using explicit loops
+        for i in range(ny):
+            for j in range(nx):
+                grad_h_nonerod = (zb[i, j] - zne[i, j]) / ds[i, j]
+                if grad_h[i, j] > tan_dyn and grad_h_nonerod > 0.0:
+                    slope_diff[i, j] = np.tanh(grad_h[i, j]) - np.tanh(0.9 * tan_dyn)
+                elif grad_h_nonerod < (grad_h[i, j] - tan_dyn):
+                    slope_diff[i, j] = np.tanh(grad_h_nonerod)
+
+        for i in range(ny):
+            for j in range(nx):
+                if grad_h[i, j] != 0.0:
+                    flux_down[i, j, 0] = slope_diff[i, j] * grad_h_down[i, j, 0] / grad_h[i, j]
+                    flux_down[i, j, 1] = slope_diff[i, j] * grad_h_down[i, j, 1] / grad_h[i, j]
  
-    Parameters
-    ----------
-        
-        
-    Returns
-    -------
-    np.ndarray
-        Downslope gradients in 4 different directions (nx*ny, 4)
-    '''
-    
-    grad_h_down = np.zeros((ny,nx,4))
+        # Build q_in and q_out from 2-component flux representation
+        f_x = flux_down[:, :, 0]
+        f_y = flux_down[:, :, 1]
 
-    # Calculation of slope (positive x-direction)
-    grad_h_down[:,1:-1,0] = zb[:,1:-1] - zb[:,2:] 
-    ix = zb[:,2:] > zb[:,:-2]
-    grad_h_down[:,1:-1,0][ix] = - (zb[:,1:-1][ix] - zb[:,:-2][ix])    
-    ix = np.logical_and(zb[:,2:]>zb[:,1:-1], zb[:,:-2]>zb[:,1:-1])
-    grad_h_down[:,1:-1,0][ix] = 0.
+        # preserve sign: compute positive outgoing components per direction
+        out_east = np.maximum(f_x, 0.0)
+        out_south = np.maximum(f_y, 0.0)
 
-    # Calculation of slope (positive y-direction)
-    grad_h_down[1:-1,:,1] = zb[1:-1,:] - zb[2:,:]    
-    ix = zb[2:,:] > zb[:-2,:]
-    grad_h_down[1:-1,:,1][ix] = - (zb[1:-1,:][ix] - zb[:-2,:][ix])    
-    ix = np.logical_and(zb[2:,:]>zb[1:-1,:], zb[:-2,:]>zb[1:-1,:])
-    grad_h_down[1:-1,:,1][ix] = 0.
+        # average with neighbor contributions at faces (keeps sign info)
+        out_north = np.maximum(-f_y, 0.0)
+        out_west  = np.maximum(-f_x, 0.0)
 
-    # Calculation of slope (negative x-direction)
-    grad_h_down[:,1:-1,2] = zb[:,1:-1] - zb[:,:-2]    
-    ix = zb[:,:-2] > zb[:,2:]
-    grad_h_down[:,1:-1,2][ix] = - (zb[:,1:-1][ix] - zb[:,2:][ix])    
-    ix = np.logical_and(zb[:,:-2]>zb[:,1:-1], zb[:,2:]>zb[:,1:-1])
-    grad_h_down[:,1:-1,2][ix] = 0.
+        q_out = out_east + out_west + out_south + out_north
 
-    # Calculation of slope (negative y-direction)
-    grad_h_down[1:-1,:,3] = zb[1:-1,:] - zb[:-2,:]    
-    ix = zb[:-2,:] > zb[2:,:]
-    grad_h_down[1:-1,:,3][ix] = - (zb[1:-1,:][ix] - zb[2:,:][ix])    
-    ix = np.logical_and(zb[:-2,:]>zb[1:-1,:], zb[2:,:]>zb[1:-1,:])
-    grad_h_down[1:-1,:,3][ix] = 0.
-  
-    if ny == 1:
-        #1D interpretation
-        grad_h_down[:,0,:]  = 0
-        grad_h_down[:,-1,:] = 0
+        inc_west = np.zeros_like(f_x)
+        # from west neighbor (positive f_x of west cell) with periodic wrap
+        inc_west[:, 1:] = np.maximum(f_x[:, :-1], 0.0)
+        inc_west[:, 0] = np.maximum(f_x[:, -1], 0.0)
 
-    else:
-        # 2D interpretation
-        grad_h_down[:,0,:]  = 0
-        grad_h_down[:,-1,:] = 0
-        grad_h_down[0,:,:]  = 0
-        grad_h_down[-1,:,:] = 0
-        
-    grad_h_down[:,:,0] /= ds
-    grad_h_down[:,:,1] /= dn
-    grad_h_down[:,:,2] /= ds
-    grad_h_down[:,:,3] /= dn
+        inc_east = np.zeros_like(f_x)
+        # from east neighbor (negative f_x of east cell) with periodic wrap
+        inc_east[:, :-1] = np.maximum(-f_x[:, 1:], 0.0)
+        inc_east[:, -1] = np.maximum(-f_x[:, 0], 0.0)
 
-    grad_h2 = 0.5*grad_h_down[:,:,0]**2 + 0.5*grad_h_down[:,:,1]**2 + 0.5*grad_h_down[:,:,2]**2 + 0.5*grad_h_down[:,:,3]**2
+        inc_north = np.zeros_like(f_y)
+        # from north neighbor (positive f_y of north cell) with periodic wrap
+        inc_north[1:, :] = np.maximum(f_y[:-1, :], 0.0)
+        inc_north[0, :] = np.maximum(f_y[-1, :], 0.0)
 
-    if 0: #Sierd_com; to be changed in future release
-        ix = zb < zne + 0.005
-        grad_h2[ix] = 0.
+        inc_south = np.zeros_like(f_y)
+        # from south neighbor (negative f_y of south cell) with periodic wrap
+        inc_south[:-1, :] = np.maximum(-f_y[1:, :], 0.0)
+        inc_south[-1, :] = np.maximum(-f_y[0, :], 0.0)
 
-    grad_h = np.sqrt(grad_h2)
+        q_in = (inc_west + inc_east + inc_north + inc_south)
 
-    max_grad_h = np.max(grad_h)
+        zb += E * (q_in - q_out)
 
-    return max_grad_h, grad_h, grad_h_down
-    
-
+    return zb, grad_h
