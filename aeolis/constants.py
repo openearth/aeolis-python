@@ -331,7 +331,7 @@ DEFAULT_CONFIG = {
     'alfa'                          : 0,                  # [deg] Real-world grid cell orientation wrt the North (clockwise)
     'dune_toe_elevation'            : 3,                  # Choose dune toe elevation, only used in the PH12 dune erosion solver
     'beach_slope'                   : 0.1,                # Define the beach slope, only used in the PH12 dune erosion solver
-    'veg_min_elevation'             : -10.,               # Choose the minimum elevation where vegetation can grow
+    'veg_min_elevation'             : -10.,               # Minimum elevation (m) where vegetation can grow; default -10 disables restriction (allows vegetation everywhere). Set to a higher value to enforce a minimum elevation for vegetation growth.
     'vegshear_type'                 : 'raupach',          # Choose the Raupach grid based solver (1D or 2D) or the Okin approach (1D only)
     'okin_c1_veg'                   : 0.48,               #x/h spatial reduction factor in Okin model for use with vegetation
     'okin_c1_fence'                 : 0.48,               #x/h spatial reduction factor in Okin model for use with sand fence module
