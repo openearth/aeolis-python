@@ -108,7 +108,7 @@ def avalanche(s, p):
         zb, grad_h = avalanche_loop(
             s['zb'].copy(), s['zne'], s['ds'], s['dn'], nx, ny, E, max_iter_ava, tan_dyn
             )
-
+   
         # Ensure water level is up-to-date with bed level
         s['zb'] = zb
         s['gradh'] = grad_h
@@ -136,11 +136,13 @@ def avalanche_loop(zb, zne, ds, dn, nx, ny, E, max_iter_ava, tan_dyn):
         # Directions: 0 => +X, 1 => +Y
         for i in range(ny):
             for j in range(nx):
-                center = zb[i, j]
-
-                # +X direction
-                g0 = 0.0
-                if 1:#(j > 0) and (j < nx - 1):
+                # disable avalanching where zne >= zb
+                if zne[i, j] >= zb[i, j]:
+                    continue
+                else:
+                    center = zb[i, j]
+                    # +X direction
+                    g0 = 0.0
                     right = zb[i, (j + 1) % nx]
                     left = zb[i, (j - 1) % nx]
                     if not ((right > center) and (left > center)):
@@ -148,12 +150,10 @@ def avalanche_loop(zb, zne, ds, dn, nx, ny, E, max_iter_ava, tan_dyn):
                             g0 = left - center
                         else:
                             g0 = center - right
+                    grad_h_down[i, j, 0] = g0 / ds[i, j]
 
-                grad_h_down[i, j, 0] = g0
-
-                # +Y direction
-                g1 = 0.0
-                if 1:#(i > 0) and (i < ny - 1):
+                    # +Y direction
+                    g1 = 0.0
                     down = zb[(i + 1) % ny, j]
                     up = zb[(i - 1) % ny, j]
                     if not ((down > center) and (up > center)):
@@ -161,17 +161,17 @@ def avalanche_loop(zb, zne, ds, dn, nx, ny, E, max_iter_ava, tan_dyn):
                             g1 = up - center
                         else:
                             g1 = center - down
-                grad_h_down[i, j, 1] = g1
+                    grad_h_down[i, j, 1] = g1 / dn[i, j]
 
         # normalize by grid spacing (assume ds, dn are 2D fields)
-        for i in range(ny):
-            for j in range(nx):
-                grad_h_down[i, j, 0] = grad_h_down[i, j, 0] / ds[i, j]
-                grad_h_down[i, j, 1] = grad_h_down[i, j, 1] / dn[i, j]
+        # for i in range(ny):
+        #     for j in range(nx):
+        #         grad_h_down[i, j, 0] = grad_h_down[i, j, 0] / ds[i, j]
+        #         grad_h_down[i, j, 1] = grad_h_down[i, j, 1] / dn[i, j]
 
         # gradient magnitude and maximum
-        for i in range(ny):
-            for j in range(nx):
+        # for i in range(ny):
+        #     for j in range(nx):
                 gh2 = grad_h_down[i, j, 0] * grad_h_down[i, j, 0] + grad_h_down[i, j, 1] * grad_h_down[i, j, 1]
                 # optional suppression near zne disabled
                 gh = np.sqrt(gh2)
@@ -186,22 +186,22 @@ def avalanche_loop(zb, zne, ds, dn, nx, ny, E, max_iter_ava, tan_dyn):
         if max_grad_h < tan_dyn:
             break       
         
-        # if we continue we compute fluxes and update zb
+        # we continue to compute fluxes and update zb
         
         # compute grad_h_nonerod and slope_diff per cell using explicit loops
         for i in range(ny):
             for j in range(nx):
-                grad_h_nonerod = (zb[i, j] - zne[i, j]) / ds[i, j]
-                if grad_h[i, j] > tan_dyn and grad_h_nonerod > 0.0:
+                # grad_h_nonerod = (zb[i, j] - zne[i, j]) / (ds[i, j]*dn[i, j])
+                if grad_h[i, j] > tan_dyn: # and (zb[i, j] - zne[i, j]) > 0.0:
                     slope_diff[i, j] = np.tanh(grad_h[i, j]) - np.tanh(0.9 * tan_dyn)
-                elif grad_h_nonerod < (grad_h[i, j] - tan_dyn):
-                    slope_diff[i, j] = np.tanh(grad_h_nonerod)
+                # elif grad_h_nonerod < (grad_h[i, j] - tan_dyn):
+                #     slope_diff[i, j] = np.tanh(grad_h_nonerod)
 
-        for i in range(ny):
-            for j in range(nx):
+        # for i in range(ny):
+        #     for j in range(nx):
                 if grad_h[i, j] != 0.0:
-                    flux_down[i, j, 0] = slope_diff[i, j] * grad_h_down[i, j, 0] / grad_h[i, j]
-                    flux_down[i, j, 1] = slope_diff[i, j] * grad_h_down[i, j, 1] / grad_h[i, j]
+                    flux_down[i, j, 0] = slope_diff[i, j] * grad_h_down[i, j, 0]# / grad_h[i, j]
+                    flux_down[i, j, 1] = slope_diff[i, j] * grad_h_down[i, j, 1]# / grad_h[i, j]
  
         # Build q_in and q_out from 2-component flux representation
         f_x = flux_down[:, :, 0]
@@ -239,6 +239,14 @@ def avalanche_loop(zb, zne, ds, dn, nx, ny, E, max_iter_ava, tan_dyn):
 
         q_in = (inc_west + inc_east + inc_north + inc_south)
 
-        zb += E * (q_in - q_out)
+        # # check mass balance in the presence of non-erodible layer
+        if np.any((E * (q_in - q_out)) < (zne-zb)):
+            # update bed level with non-erodible layer limit
+            # this will effectively shut down further avalanching from the cells concerned
+            # because zb will equal zne there in the next iteration
+            zb += (zne - zb)
+        else:
+            # update bed level without non-erodible layer       
+            zb += E * (q_in - q_out)
 
     return zb, grad_h
