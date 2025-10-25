@@ -99,8 +99,7 @@ MODEL_STATE = {
         'ustar0',                           # [m/s] Initial shear velocity (without perturbation)
         'zsep',                             # [m] Z level of polynomial that defines the separation bubble
         'hsep',                             # [m] Height of separation bubbel = difference between z-level of zsep and of the bed level zb
-        'theta_stat',                       # [degrees] Updated, spatially varying static angle of repose
-        'theta_dyn',                        # [degrees] Updated, spatially varying dynamic angle of repose
+        'theta_dyn',                        # [degrees] spatially varying dynamic angle of repose for avalanching
         'rhoveg',                           # [-] Vegetation cover
         'drhoveg',                          # Change in vegetation cover
         'hveg',                             # [m] height of vegetation
