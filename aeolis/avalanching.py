@@ -93,7 +93,6 @@ def avalanche(s, p):
 
     '''
 
-    print('testing avalanching process2')
     if p['process_avalanche']:
         nx = p['nx'] + 1
         ny = p['ny'] + 1
