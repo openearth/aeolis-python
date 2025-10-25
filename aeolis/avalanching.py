@@ -255,7 +255,7 @@ def avalanche_loop(zb, zne, ds, dn, nx, ny, E, max_iter_ava, tan_dyn):
         q_in = (inc_west + inc_east + inc_north + inc_south)
 
         # # check mass balance in the presence of non-erodible layer
-        if np.any((E * (q_in - q_out)) < (zne-zb)):
+        if np.any(zb + E * (q_in - q_out) < zne):
             # update bed level with non-erodible layer limit
             # this will effectively shut down further avalanching from the cells concerned
             # because zb will equal zne there in the next iteration
