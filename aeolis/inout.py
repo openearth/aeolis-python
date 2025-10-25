@@ -118,13 +118,6 @@ def read_configfile(configfile, parse_files=True, load_defaults=True):
     if 'nsavetimes' in p and not p['nsavetimes']:
         p['nsavetimes'] = int(p['dzb_interval']/p['dt'])
 
-    # catch some incompatible parameter combinations.
-    if (p['ne_file'] is None) and (p['process_avalanche'] == True):
-        print('Please provide a valid ne_file path in the configuration file when using Avalanching.')
-        print('Code does not proceed until this is provided.')
-        print('Hint: If you do not have a ne_file, you can create one with all zeros, with the same dimensions as your grid.')        
-        exit("Exiting due to error")       
-    
     return p
 
 

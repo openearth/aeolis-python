@@ -178,17 +178,8 @@ def avalanche_loop(zb, zne, ds, dn, nx, ny, E, max_iter_ava, tan_dyn):
                                 g1 = center - down
                         grad_h_down[i, j, 1] = g1 / dn[i, j]
 
-        # normalize by grid spacing (assume ds, dn are 2D fields)
-        # for i in range(ny):
-        #     for j in range(nx):
-        #         grad_h_down[i, j, 0] = grad_h_down[i, j, 0] / ds[i, j]
-        #         grad_h_down[i, j, 1] = grad_h_down[i, j, 1] / dn[i, j]
-
-        # gradient magnitude and maximum
-        # for i in range(ny):
-        #     for j in range(nx):
+                # gradient magnitude and maximum
                 gh2 = grad_h_down[i, j, 0] * grad_h_down[i, j, 0] + grad_h_down[i, j, 1] * grad_h_down[i, j, 1]
-                # optional suppression near zne disabled
                 gh = np.sqrt(gh2)
                 grad_h[i, j] = gh
                 # derive maximum slope
@@ -206,15 +197,8 @@ def avalanche_loop(zb, zne, ds, dn, nx, ny, E, max_iter_ava, tan_dyn):
         # compute grad_h_nonerod and slope_diff per cell using explicit loops
         for i in range(ny):
             for j in range(nx):
-                # grad_h_nonerod = (zb[i, j] - zne[i, j]) / (ds[i, j]*dn[i, j])
-                if grad_h[i, j] > tan_dyn: # and (zb[i, j] - zne[i, j]) > 0.0:
+                if grad_h[i, j] > tan_dyn: 
                     slope_diff[i, j] = np.tanh(grad_h[i, j]) - np.tanh(0.9 * tan_dyn)
-                # elif grad_h_nonerod < (grad_h[i, j] - tan_dyn):
-                #     slope_diff[i, j] = np.tanh(grad_h_nonerod)
-
-        # for i in range(ny):
-        #     for j in range(nx):
-                if grad_h[i, j] != 0.0:
                     flux_down[i, j, 0] = slope_diff[i, j] * grad_h_down[i, j, 0]# / grad_h[i, j]
                     flux_down[i, j, 1] = slope_diff[i, j] * grad_h_down[i, j, 1]# / grad_h[i, j]
  
@@ -254,14 +238,7 @@ def avalanche_loop(zb, zne, ds, dn, nx, ny, E, max_iter_ava, tan_dyn):
 
         q_in = (inc_west + inc_east + inc_north + inc_south)
 
-        # # check mass balance in the presence of non-erodible layer
-        if np.any(zb + E * (q_in - q_out) < zne):
-            # update bed level with non-erodible layer limit
-            # this will effectively shut down further avalanching from the cells concerned
-            # because zb will equal zne there in the next iteration
-            zb += (zne - zb)
-        else:
-            # update bed level without non-erodible layer       
-            zb += E * (q_in - q_out)
+        # update bed level without non-erodible layer       
+        zb += E * (q_in - q_out)
 
     return zb, grad_h
