@@ -62,10 +62,10 @@ def angele_of_repose(s,p):
     # comment Lisa: dependence on moisture content is not yet implemented 
     # Can we do something with theta dependent on vegetation cover (larger rhoveg = larger theta?)    
         
-    theta_stat = p['theta_stat']
+    # theta_stat = p['theta_stat']
     theta_dyn  = p['theta_dyn']
     
-    s['theta_stat'] = theta_stat
+    # s['theta_stat'] = theta_stat
     s['theta_dyn'] = theta_dyn
         
     return s
@@ -92,12 +92,15 @@ def avalanche(s, p):
         Spatial grids
 
     '''
+
+    print('testing avalanching process2')
     if p['process_avalanche']:
         nx = p['nx'] + 1
         ny = p['ny'] + 1
 
-        # parameters
-        tan_stat = np.tan(np.deg2rad(s['theta_stat']))
+        # parameters - only dynamic angle used in loop for now. 
+        # Static angle can be used for more complex criterions in later
+        # tan_stat = np.tan(np.deg2rad(s['theta_stat']))
         tan_dyn = np.tan(np.deg2rad(s['theta_dyn']))
 
         E = 0.1
