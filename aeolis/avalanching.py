@@ -124,12 +124,17 @@ def avalanche(s, p):
 @njit(cache=True)
 def avalanche_loop(zb, zne, ds, dn, nx, ny, E, max_iter_ava, tan_dyn):
     # Rewritten to use explicit loops and avoid numpy boolean indexing
+    # Allocate temporaries once
+    grad_h_down = np.zeros((ny, nx, 2))
+    flux_down = np.zeros((ny, nx, 2))
+    slope_diff = np.zeros((ny, nx))
+    grad_h = np.zeros((ny, nx))
     for it in range(max_iter_ava):
-        # temporaries
-        grad_h_down = np.zeros((ny, nx, 2))
-        flux_down = np.zeros((ny, nx, 2))
-        slope_diff = np.zeros((ny, nx))
-        grad_h = np.zeros((ny, nx))
+        # Reset temporaries to zero
+        grad_h_down.fill(0)
+        flux_down.fill(0)
+        slope_diff.fill(0)
+        grad_h.fill(0)
 
         # first calculate the downslope gradients to see if there is avalanching
         # Compute downslope gradients grad_h_down (ny,nx,2), grad_h (ny,nx), and max_grad_h
