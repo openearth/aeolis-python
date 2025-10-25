@@ -151,25 +151,32 @@ def avalanche_loop(zb, zne, ds, dn, nx, ny, E, max_iter_ava, tan_dyn):
                     center = zb[i, j]
                     # +X direction
                     g0 = 0.0
-                    right = zb[i, (j + 1) % nx]
-                    left = zb[i, (j - 1) % nx]
-                    if not ((right > center) and (left > center)):
-                        if right > left:
-                            g0 = left - center
-                        else:
-                            g0 = center - right
-                    grad_h_down[i, j, 0] = g0 / ds[i, j]
+                    # Handle boundaries: set gradient to zero at edges
+                    if j == 0 or j == nx - 1:
+                        grad_h_down[i, j, 0] = 0.0
+                    else:
+                        right = zb[i, j + 1]
+                        left = zb[i, j - 1]
+                        if not ((right > center) and (left > center)):
+                            if right > left:
+                                g0 = left - center
+                            else:
+                                g0 = center - right
+                        grad_h_down[i, j, 0] = g0 / ds[i, j]
 
                     # +Y direction
                     g1 = 0.0
-                    down = zb[(i + 1) % ny, j]
-                    up = zb[(i - 1) % ny, j]
-                    if not ((down > center) and (up > center)):
-                        if down > up:
-                            g1 = up - center
-                        else:
-                            g1 = center - down
-                    grad_h_down[i, j, 1] = g1 / dn[i, j]
+                    if i == 0 or i == ny - 1:
+                        grad_h_down[i, j, 1] = 0.0
+                    else:
+                        down = zb[i + 1, j]
+                        up = zb[i - 1, j]
+                        if not ((down > center) and (up > center)):
+                            if down > up:
+                                g1 = up - center
+                            else:
+                                g1 = center - down
+                        grad_h_down[i, j, 1] = g1 / dn[i, j]
 
         # normalize by grid spacing (assume ds, dn are 2D fields)
         # for i in range(ny):
