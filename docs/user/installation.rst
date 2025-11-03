@@ -8,18 +8,19 @@ AeoLiS is a Python package that can be installed from PyPI or from source. For t
 Requirements
 ------------
 
-- Python 3.8 or newer 
+- Python 3.9 or newer 
 - pip 22.0 or newer
 - netCDF4
 
 Dependencies
 """"""""""""
 
-- docopt==0.6.1
+- docopt
+- typer
 - bmi-python
 - netCDF4
 - scipy
-- numpy<1.24,>=1.18
+- numpy
 - matplotlib
 - numba
 
@@ -59,7 +60,7 @@ Example from command line:
 
 .. code:: shell
 
-   aeolis params.txt
+   aeolis run params.txt
 
 .. note::
 
