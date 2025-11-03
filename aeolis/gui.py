@@ -1,7 +1,17 @@
 import aeolis
 from tkinter import *
-from tkinter import ttk, filedialog
+from tkinter import ttk, filedialog, messagebox
 import os
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+
+try:
+    import netCDF4
+    HAVE_NETCDF = True
+except ImportError:
+    HAVE_NETCDF = False
 
 # Default configuration file path
 configfile = r'C:\Users\svries\Documents\GitHub\OE_aeolis-python\aeolis\examples\2D\Barchan_dune\aeolis.txt'
@@ -25,16 +35,22 @@ class AeolisGUI:
         self.root = root
         self.dic = dic
         self.root.title('Aeolis')
+        
+        # Initialize attributes
+        self.nc_data_cache = None
+        
         self.create_widgets()
 
     def create_widgets(self):
         # Create a tab control widget
         tab_control = ttk.Notebook(self.root)
         # Create individual tabs
+        self.create_input_file_tab(tab_control)
         self.create_domain_tab(tab_control)
         self.create_timeframe_tab(tab_control)
         self.create_boundary_conditions_tab(tab_control)
         self.create_sediment_transport_tab(tab_control)
+        self.create_plot_output_tab(tab_control)
         # Pack the tab control to expand and fill the available space
         tab_control.pack(expand=1, fill='both')
 
@@ -47,31 +63,274 @@ class AeolisGUI:
         entry.grid(row=row, column=1, sticky=W)
         return entry
 
+    def create_input_file_tab(self, tab_control):
+        # Create the 'Read/Write Inputfile' tab
+        tab0 = ttk.Frame(tab_control)
+        tab_control.add(tab0, text='Read/Write Inputfile')
+
+        # Create frame for file operations
+        file_ops_frame = ttk.LabelFrame(tab0, text="Configuration File", padding=20)
+        file_ops_frame.pack(padx=20, pady=20, fill=BOTH, expand=True)
+
+        # Current config file display
+        current_file_label = ttk.Label(file_ops_frame, text="Current config file:")
+        current_file_label.grid(row=0, column=0, sticky=W, pady=5)
+        
+        self.current_config_label = ttk.Label(file_ops_frame, text=configfile, 
+                                             foreground='blue', wraplength=500)
+        self.current_config_label.grid(row=0, column=1, columnspan=2, sticky=W, pady=5, padx=10)
+
+        # Read new config file
+        read_label = ttk.Label(file_ops_frame, text="Read new config file:")
+        read_label.grid(row=1, column=0, sticky=W, pady=10)
+        
+        read_button = ttk.Button(file_ops_frame, text="Browse & Load Config", 
+                                command=self.load_new_config)
+        read_button.grid(row=1, column=1, sticky=W, pady=10, padx=10)
+
+        # Separator
+        separator = ttk.Separator(file_ops_frame, orient='horizontal')
+        separator.grid(row=2, column=0, columnspan=3, sticky=(W, E), pady=20)
+
+        # Save config file
+        save_label = ttk.Label(file_ops_frame, text="Save config file as:")
+        save_label.grid(row=3, column=0, sticky=W, pady=5)
+        
+        self.save_config_entry = ttk.Entry(file_ops_frame, width=40)
+        self.save_config_entry.grid(row=3, column=1, sticky=W, pady=5, padx=10)
+        
+        save_browse_button = ttk.Button(file_ops_frame, text="Browse...", 
+                                       command=self.browse_save_location)
+        save_browse_button.grid(row=3, column=2, sticky=W, pady=5, padx=5)
+
+        # Save button
+        save_config_button = ttk.Button(file_ops_frame, text="Save Configuration", 
+                                       command=self.save_config_file)
+        save_config_button.grid(row=4, column=1, sticky=W, pady=10, padx=10)
+
     def create_domain_tab(self, tab_control):
         # Create the 'Domain' tab
         tab1 = ttk.Frame(tab_control)
         tab_control.add(tab1, text='Domain')
 
-        # Fields to be displayed in the 'Domain' tab
+        # Create frame for Domain Parameters
+        params_frame = ttk.LabelFrame(tab1, text="Domain Parameters", padding=10)
+        params_frame.grid(row=0, column=0, padx=10, pady=10, sticky=(N, W, E))
+
+        # Fields to be displayed in the 'Domain Parameters' frame
         fields = ['xgrid_file', 'ygrid_file', 'bed_file', 'ne_file', 'veg_file', 'threshold_file', 'fence_file', 'wave_mask', 'tide_mask', 'threshold_mask']
-        # Create label and entry widgets for each field
-        self.entries = {field: self.create_label_entry(tab1, f"{field}:", self.dic.get(field, ''), i) for i, field in enumerate(fields)}
+        # Create label and entry widgets for each field with browse buttons
+        self.entries = {}
+        for i, field in enumerate(fields):
+            label = ttk.Label(params_frame, text=f"{field}:")
+            label.grid(row=i, column=0, sticky=W, pady=2)
+            entry = ttk.Entry(params_frame, width=35)
+            entry.insert(0, str(self.dic.get(field, '')))
+            entry.grid(row=i, column=1, sticky=W, pady=2, padx=(0, 5))
+            self.entries[field] = entry
+            
+            # Add browse button for each field
+            browse_btn = ttk.Button(params_frame, text="Browse...", 
+                                   command=lambda e=entry: self.browse_file(e))
+            browse_btn.grid(row=i, column=2, sticky=W, pady=2)
 
-        # Create a frame for figures
-        fig_frame = ttk.Frame(tab1)
-        fig_frame.grid(row=10, column=0, columnspan=2, pady=10)
-        fig_label = ttk.Label(fig_frame, text="Figures:")
-        fig_label.pack()
+        # Create frame for Domain Visualization
+        viz_frame = ttk.LabelFrame(tab1, text="Domain Visualization", padding=10)
+        viz_frame.grid(row=0, column=1, padx=10, pady=10, sticky=(N, S, E, W))
+        
+        # Configure grid weights to allow expansion
+        tab1.columnconfigure(1, weight=1)
+        tab1.rowconfigure(0, weight=1)
+        
+        # Create matplotlib figure
+        self.fig = Figure(figsize=(7, 6), dpi=100)
+        self.ax = self.fig.add_subplot(111)
+        self.colorbar = None  # Initialize colorbar attribute
+        self.cbar_ax = None  # Initialize colorbar axes
+        
+        # Create canvas for the figure
+        self.canvas = FigureCanvasTkAgg(self.fig, master=viz_frame)
+        self.canvas.draw()
+        self.canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=1)
 
-        # Create a canvas for displaying figures
-        fig_canvas_frame = ttk.Frame(tab1)
-        fig_canvas_frame.grid(row=0, column=2, rowspan=10, padx=10, pady=10, sticky=N)
-        self.fig_canvas = Canvas(fig_canvas_frame, width=300, height=200, bg='white')
-        self.fig_canvas.pack()
+        # Create a frame for buttons
+        button_frame = ttk.Frame(viz_frame)
+        button_frame.pack(pady=5)
 
-        # Create an 'Update Figure' button
-        update_button = ttk.Button(fig_canvas_frame, text="Update Figure", command=self.update_figure)
-        update_button.pack()
+        # Create plot buttons
+        bed_button = ttk.Button(button_frame, text="Plot Bed", command=lambda: self.plot_data('bed_file', 'Bed Elevation'))
+        bed_button.grid(row=0, column=0, padx=5)
+        
+        ne_button = ttk.Button(button_frame, text="Plot Ne", command=lambda: self.plot_data('ne_file', 'Ne'))
+        ne_button.grid(row=0, column=1, padx=5)
+        
+        veg_button = ttk.Button(button_frame, text="Plot Vegetation", command=lambda: self.plot_data('veg_file', 'Vegetation'))
+        veg_button.grid(row=0, column=2, padx=5)
+        
+        combined_button = ttk.Button(button_frame, text="Bed + Vegetation", command=self.plot_combined)
+        combined_button.grid(row=0, column=3, padx=5)
+
+    def browse_file(self, entry_widget):
+        """Open file dialog to select a file and update the entry widget"""
+        # Get initial directory from config file location
+        initial_dir = os.path.dirname(configfile)
+        
+        # Get current value to determine initial directory
+        current_value = entry_widget.get()
+        if current_value:
+            if os.path.isabs(current_value):
+                initial_dir = os.path.dirname(current_value)
+            else:
+                full_path = os.path.join(initial_dir, current_value)
+                if os.path.exists(full_path):
+                    initial_dir = os.path.dirname(full_path)
+        
+        # Open file dialog
+        file_path = filedialog.askopenfilename(
+            initialdir=initial_dir,
+            title="Select file",
+            filetypes=(("Text files", "*.txt"), 
+                      ("All files", "*.*"))
+        )
+        
+        # Update entry if a file was selected
+        if file_path:
+            # Try to make path relative to config file directory for portability
+            config_dir = os.path.dirname(configfile)
+            try:
+                rel_path = os.path.relpath(file_path, config_dir)
+                # Use relative path if it doesn't go up too many levels
+                if not rel_path.startswith('..\\..\\'):
+                    file_path = rel_path
+            except ValueError:
+                # Different drives on Windows, keep absolute path
+                pass
+            
+            entry_widget.delete(0, END)
+            entry_widget.insert(0, file_path)
+
+    def browse_nc_file(self):
+        """Open file dialog to select a NetCDF file"""
+        # Get initial directory from config file location
+        initial_dir = os.path.dirname(configfile)
+        
+        # Get current value to determine initial directory
+        current_value = self.nc_file_entry.get()
+        if current_value:
+            if os.path.isabs(current_value):
+                initial_dir = os.path.dirname(current_value)
+            else:
+                full_path = os.path.join(initial_dir, current_value)
+                if os.path.exists(full_path):
+                    initial_dir = os.path.dirname(full_path)
+        
+        # Open file dialog
+        file_path = filedialog.askopenfilename(
+            initialdir=initial_dir,
+            title="Select NetCDF output file",
+            filetypes=(("NetCDF files", "*.nc"), 
+                      ("All files", "*.*"))
+        )
+        
+        # Update entry if a file was selected
+        if file_path:
+            # Try to make path relative to config file directory for portability
+            config_dir = os.path.dirname(configfile)
+            try:
+                rel_path = os.path.relpath(file_path, config_dir)
+                # Use relative path if it doesn't go up too many levels
+                if not rel_path.startswith('..\\..\\'):
+                    file_path = rel_path
+            except ValueError:
+                # Different drives on Windows, keep absolute path
+                pass
+            
+            self.nc_file_entry.delete(0, END)
+            self.nc_file_entry.insert(0, file_path)
+
+    def load_new_config(self):
+        """Load a new configuration file and update all fields"""
+        global configfile
+        
+        # Open file dialog
+        file_path = filedialog.askopenfilename(
+            initialdir=os.path.dirname(configfile),
+            title="Select config file",
+            filetypes=(("Text files", "*.txt"), ("All files", "*.*"))
+        )
+        
+        if file_path:
+            try:
+                # Read the new configuration file
+                self.dic = aeolis.inout.read_configfile(file_path)
+                configfile = file_path
+                
+                # Update the current file label
+                self.current_config_label.config(text=configfile)
+                
+                # Update all entry fields with new values
+                for field, entry in self.entries.items():
+                    entry.delete(0, END)
+                    entry.insert(0, str(self.dic.get(field, '')))
+                
+                # Update NC file entry if it exists
+                if hasattr(self, 'nc_file_entry'):
+                    self.nc_file_entry.delete(0, END)
+                
+                messagebox.showinfo("Success", f"Configuration loaded from:\n{file_path}")
+                
+            except Exception as e:
+                import traceback
+                error_msg = f"Failed to load config file: {str(e)}\n\n{traceback.format_exc()}"
+                messagebox.showerror("Error", error_msg)
+                print(error_msg)
+
+    def browse_save_location(self):
+        """Browse for save location for config file"""
+        # Open file dialog for saving
+        file_path = filedialog.asksaveasfilename(
+            initialdir=os.path.dirname(configfile),
+            title="Save config file as",
+            defaultextension=".txt",
+            filetypes=(("Text files", "*.txt"), ("All files", "*.*"))
+        )
+        
+        if file_path:
+            self.save_config_entry.delete(0, END)
+            self.save_config_entry.insert(0, file_path)
+
+    def save_config_file(self):
+        """Save the current configuration to a file"""
+        save_path = self.save_config_entry.get()
+        
+        if not save_path:
+            messagebox.showwarning("Warning", "Please specify a file path to save the configuration.")
+            return
+        
+        try:
+            # Update dictionary with current entry values
+            for field, entry in self.entries.items():
+                self.dic[field] = entry.get()
+            
+            # Write the configuration file
+            aeolis.inout.write_configfile(save_path, self.dic)
+            
+            messagebox.showinfo("Success", f"Configuration saved to:\n{save_path}")
+            
+        except Exception as e:
+            import traceback
+            error_msg = f"Failed to save config file: {str(e)}\n\n{traceback.format_exc()}"
+            messagebox.showerror("Error", error_msg)
+            print(error_msg)
+
+    def toggle_color_limits(self):
+        """Enable or disable colorbar limit entries based on auto limits checkbox"""
+        if self.auto_limits_var.get():
+            self.vmin_entry.config(state='disabled')
+            self.vmax_entry.config(state='disabled')
+        else:
+            self.vmin_entry.config(state='normal')
+            self.vmax_entry.config(state='normal')
 
     def create_timeframe_tab(self, tab_control):
         # Create the 'Timeframe' tab
@@ -102,9 +361,496 @@ class AeolisGUI:
         save_button = ttk.Button(tab4, text='Save', command=self.save)
         save_button.pack()
 
-    def update_figure(self):
-        # Update the figure displayed on the canvas
-        self.fig_canvas.create_rectangle(50, 50, 250, 150, fill="blue")
+    def create_plot_output_tab(self, tab_control):
+        # Create the 'Plot Output' tab
+        tab5 = ttk.Frame(tab_control)
+        tab_control.add(tab5, text='Plot Output')
+
+        # Create frame for file selection
+        file_frame = ttk.LabelFrame(tab5, text="Output File", padding=10)
+        file_frame.grid(row=0, column=0, padx=10, pady=10, sticky=(N, W, E))
+
+        # NC file selection
+        nc_label = ttk.Label(file_frame, text="NetCDF file:")
+        nc_label.grid(row=0, column=0, sticky=W, pady=2)
+        self.nc_file_entry = ttk.Entry(file_frame, width=35)
+        self.nc_file_entry.grid(row=0, column=1, sticky=W, pady=2, padx=(0, 5))
+        
+        # Browse button for NC file
+        nc_browse_btn = ttk.Button(file_frame, text="Browse...", 
+                                   command=lambda: self.browse_nc_file())
+        nc_browse_btn.grid(row=0, column=2, sticky=W, pady=2)
+
+        # Colorbar limits
+        vmin_label = ttk.Label(file_frame, text="Color min:")
+        vmin_label.grid(row=1, column=0, sticky=W, pady=2)
+        self.vmin_entry = ttk.Entry(file_frame, width=15, state='disabled')
+        self.vmin_entry.grid(row=1, column=1, sticky=W, pady=2, padx=(0, 5))
+        
+        vmax_label = ttk.Label(file_frame, text="Color max:")
+        vmax_label.grid(row=2, column=0, sticky=W, pady=2)
+        self.vmax_entry = ttk.Entry(file_frame, width=15, state='disabled')
+        self.vmax_entry.grid(row=2, column=1, sticky=W, pady=2, padx=(0, 5))
+        
+        # Auto limits checkbox
+        self.auto_limits_var = BooleanVar(value=True)
+        auto_limits_check = ttk.Checkbutton(file_frame, text="Auto limits", 
+                                           variable=self.auto_limits_var,
+                                           command=self.toggle_color_limits)
+        auto_limits_check.grid(row=1, column=2, rowspan=2, sticky=W, pady=2)
+
+        # Colormap selection
+        cmap_label = ttk.Label(file_frame, text="Colormap:")
+        cmap_label.grid(row=3, column=0, sticky=W, pady=2)
+        
+        # Available colormaps
+        self.colormap_options = [
+            'terrain',
+            'viridis',
+            'plasma',
+            'inferno',
+            'magma',
+            'cividis',
+            'jet',
+            'rainbow',
+            'turbo',
+            'coolwarm',
+            'seismic',
+            'RdYlBu',
+            'RdYlGn',
+            'Spectral',
+            'Greens',
+            'Blues',
+            'Reds',
+            'gray',
+            'hot',
+            'cool'
+        ]
+        
+        self.colormap_var = StringVar(value='terrain')
+        colormap_dropdown = ttk.Combobox(file_frame, textvariable=self.colormap_var, 
+                                        values=self.colormap_options, state='readonly', width=13)
+        colormap_dropdown.grid(row=3, column=1, sticky=W, pady=2, padx=(0, 5))
+
+        # Create frame for visualization
+        plot_frame = ttk.LabelFrame(tab5, text="Output Visualization", padding=10)
+        plot_frame.grid(row=0, column=1, padx=10, pady=10, sticky=(N, S, E, W))
+        
+        # Configure grid weights to allow expansion
+        tab5.columnconfigure(1, weight=1)
+        tab5.rowconfigure(0, weight=1)
+        
+        # Create matplotlib figure for output
+        self.output_fig = Figure(figsize=(7, 6), dpi=100)
+        self.output_ax = self.output_fig.add_subplot(111)
+        self.output_colorbar = None
+        self.output_cbar_ax = None
+        
+        # Create canvas for the output figure
+        self.output_canvas = FigureCanvasTkAgg(self.output_fig, master=plot_frame)
+        self.output_canvas.draw()
+        self.output_canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=1)
+
+        # Create a frame for time slider
+        slider_frame = ttk.Frame(plot_frame)
+        slider_frame.pack(pady=5, fill=X, padx=10)
+        
+        # Time slider label
+        self.time_label = ttk.Label(slider_frame, text="Time step: 0")
+        self.time_label.pack(side=LEFT, padx=5)
+        
+        # Time slider
+        self.time_slider = ttk.Scale(slider_frame, from_=0, to=0, orient=HORIZONTAL,
+                                     command=self.update_time_step)
+        self.time_slider.pack(side=LEFT, fill=X, expand=1, padx=5)
+        self.time_slider.set(0)
+
+        # Create a frame for buttons
+        output_button_frame = ttk.Frame(plot_frame)
+        output_button_frame.pack(pady=5)
+
+        # Create plot button
+        plot_bed_button = ttk.Button(output_button_frame, text="Plot Bed Level", 
+                                     command=self.plot_nc_bed_level)
+        plot_bed_button.grid(row=0, column=0, padx=5)
+        
+        # Create apply limits button
+        apply_button = ttk.Button(output_button_frame, text="Apply Limits", 
+                                 command=self.apply_color_limits)
+        apply_button.grid(row=0, column=1, padx=5)
+
+    def plot_data(self, file_key, title):
+        """Plot data from specified file (bed_file, ne_file, or veg_file)"""
+        try:
+            # Clear the previous plot
+            self.ax.clear()
+            
+            # Get the file paths from the entries
+            xgrid_file = self.entries['xgrid_file'].get()
+            ygrid_file = self.entries['ygrid_file'].get()
+            data_file = self.entries[file_key].get()
+            
+            # Check if files are specified
+            if not data_file:
+                messagebox.showwarning("Warning", f"No {file_key} specified!")
+                return
+            
+            # Get the directory of the config file to resolve relative paths
+            config_dir = os.path.dirname(configfile)
+            
+            # Load the data file
+            if not os.path.isabs(data_file):
+                data_file_path = os.path.join(config_dir, data_file)
+            else:
+                data_file_path = data_file
+                
+            if not os.path.exists(data_file_path):
+                messagebox.showerror("Error", f"File not found: {data_file_path}")
+                return
+            
+            # Load data
+            z_data = np.loadtxt(data_file_path)
+            
+            # Try to load x and y grid data if available
+            x_data = None
+            y_data = None
+            
+            if xgrid_file:
+                xgrid_file_path = os.path.join(config_dir, xgrid_file) if not os.path.isabs(xgrid_file) else xgrid_file
+                if os.path.exists(xgrid_file_path):
+                    x_data = np.loadtxt(xgrid_file_path)
+            
+            if ygrid_file:
+                ygrid_file_path = os.path.join(config_dir, ygrid_file) if not os.path.isabs(ygrid_file) else ygrid_file
+                if os.path.exists(ygrid_file_path):
+                    y_data = np.loadtxt(ygrid_file_path)
+            
+            # Choose colormap based on data type
+            if file_key == 'bed_file':
+                cmap = 'terrain'
+                label = 'Elevation (m)'
+            elif file_key == 'ne_file':
+                cmap = 'viridis'
+                label = 'Ne'
+            elif file_key == 'veg_file':
+                cmap = 'Greens'
+                label = 'Vegetation'
+            else:
+                cmap = 'viridis'
+                label = 'Value'
+            
+            # Create the plot
+            if x_data is not None and y_data is not None:
+                # Use pcolormesh for 2D grid data with coordinates
+                im = self.ax.pcolormesh(x_data, y_data, z_data, shading='auto', cmap=cmap)
+                self.ax.set_xlabel('X (m)')
+                self.ax.set_ylabel('Y (m)')
+            else:
+                # Use imshow if no coordinate data available
+                im = self.ax.imshow(z_data, cmap=cmap, origin='lower', aspect='auto')
+                self.ax.set_xlabel('Grid X Index')
+                self.ax.set_ylabel('Grid Y Index')
+            
+            self.ax.set_title(title)
+            
+            # Handle colorbar properly to avoid shrinking
+            if self.colorbar is not None:
+                # Update existing colorbar
+                self.colorbar.update_normal(im)
+                self.colorbar.set_label(label)
+            else:
+                # Create new colorbar only on first run
+                self.colorbar = self.fig.colorbar(im, ax=self.ax, label=label)
+            
+            # Redraw the canvas
+            self.canvas.draw()
+            
+        except Exception as e:
+            import traceback
+            error_msg = f"Failed to plot {file_key}: {str(e)}\n\n{traceback.format_exc()}"
+            messagebox.showerror("Error", error_msg)
+            print(error_msg)  # Also print to console for debugging
+
+    def plot_combined(self):
+        """Plot bed elevation with vegetation overlay"""
+        try:
+            # Clear the previous plot
+            self.ax.clear()
+            
+            # Get the file paths from the entries
+            xgrid_file = self.entries['xgrid_file'].get()
+            ygrid_file = self.entries['ygrid_file'].get()
+            bed_file = self.entries['bed_file'].get()
+            veg_file = self.entries['veg_file'].get()
+            
+            # Check if files are specified
+            if not bed_file:
+                messagebox.showwarning("Warning", "No bed_file specified!")
+                return
+            if not veg_file:
+                messagebox.showwarning("Warning", "No veg_file specified!")
+                return
+            
+            # Get the directory of the config file to resolve relative paths
+            config_dir = os.path.dirname(configfile)
+            
+            # Load the bed file
+            if not os.path.isabs(bed_file):
+                bed_file_path = os.path.join(config_dir, bed_file)
+            else:
+                bed_file_path = bed_file
+                
+            if not os.path.exists(bed_file_path):
+                messagebox.showerror("Error", f"Bed file not found: {bed_file_path}")
+                return
+            
+            # Load the vegetation file
+            if not os.path.isabs(veg_file):
+                veg_file_path = os.path.join(config_dir, veg_file)
+            else:
+                veg_file_path = veg_file
+                
+            if not os.path.exists(veg_file_path):
+                messagebox.showerror("Error", f"Vegetation file not found: {veg_file_path}")
+                return
+            
+            # Load data
+            bed_data = np.loadtxt(bed_file_path)
+            veg_data = np.loadtxt(veg_file_path)
+            
+            # Try to load x and y grid data if available
+            x_data = None
+            y_data = None
+            
+            if xgrid_file:
+                xgrid_file_path = os.path.join(config_dir, xgrid_file) if not os.path.isabs(xgrid_file) else xgrid_file
+                if os.path.exists(xgrid_file_path):
+                    x_data = np.loadtxt(xgrid_file_path)
+            
+            if ygrid_file:
+                ygrid_file_path = os.path.join(config_dir, ygrid_file) if not os.path.isabs(ygrid_file) else ygrid_file
+                if os.path.exists(ygrid_file_path):
+                    y_data = np.loadtxt(ygrid_file_path)
+            
+            # Create the bed elevation plot
+            if x_data is not None and y_data is not None:
+                # Use pcolormesh for 2D grid data with coordinates
+                im = self.ax.pcolormesh(x_data, y_data, bed_data, shading='auto', cmap='terrain')
+                self.ax.set_xlabel('X (m)')
+                self.ax.set_ylabel('Y (m)')
+                
+                # Overlay vegetation as contours where vegetation exists
+                veg_mask = veg_data > 0
+                if np.any(veg_mask):
+                    # Create contour lines for vegetation
+                    contour = self.ax.contour(x_data, y_data, veg_data, levels=[0.5], 
+                                             colors='darkgreen', linewidths=2)
+                    # Fill vegetation areas with semi-transparent green
+                    contourf = self.ax.contourf(x_data, y_data, veg_data, levels=[0.5, veg_data.max()], 
+                                               colors=['green'], alpha=0.3)
+            else:
+                # Use imshow if no coordinate data available
+                im = self.ax.imshow(bed_data, cmap='terrain', origin='lower', aspect='auto')
+                self.ax.set_xlabel('Grid X Index')
+                self.ax.set_ylabel('Grid Y Index')
+                
+                # Overlay vegetation
+                veg_mask = veg_data > 0
+                if np.any(veg_mask):
+                    # Create a masked array for vegetation overlay
+                    veg_overlay = np.ma.masked_where(~veg_mask, veg_data)
+                    self.ax.imshow(veg_overlay, cmap='Greens', origin='lower', aspect='auto', alpha=0.5)
+            
+            self.ax.set_title('Bed Elevation with Vegetation')
+            
+            # Handle colorbar properly to avoid shrinking
+            if self.colorbar is not None:
+                # Update existing colorbar
+                self.colorbar.update_normal(im)
+                self.colorbar.set_label('Elevation (m)')
+            else:
+                # Create new colorbar only on first run
+                self.colorbar = self.fig.colorbar(im, ax=self.ax, label='Elevation (m)')
+            
+            # Redraw the canvas
+            self.canvas.draw()
+            
+        except Exception as e:
+            import traceback
+            error_msg = f"Failed to plot combined view: {str(e)}\n\n{traceback.format_exc()}"
+            messagebox.showerror("Error", error_msg)
+            print(error_msg)  # Also print to console for debugging
+
+    def plot_nc_bed_level(self):
+        """Plot bed level from NetCDF output file"""
+        if not HAVE_NETCDF:
+            messagebox.showerror("Error", "netCDF4 library is not available!")
+            return
+            
+        try:
+            # Clear the previous plot
+            self.output_ax.clear()
+            
+            # Get the NC file path
+            nc_file = self.nc_file_entry.get()
+            
+            if not nc_file:
+                messagebox.showwarning("Warning", "No NetCDF file specified!")
+                return
+            
+            # Get the directory of the config file to resolve relative paths
+            config_dir = os.path.dirname(configfile)
+            
+            # Load the NC file
+            if not os.path.isabs(nc_file):
+                nc_file_path = os.path.join(config_dir, nc_file)
+            else:
+                nc_file_path = nc_file
+                
+            if not os.path.exists(nc_file_path):
+                messagebox.showerror("Error", f"NetCDF file not found: {nc_file_path}")
+                return
+            
+            # Open NetCDF file and cache data
+            with netCDF4.Dataset(nc_file_path, 'r') as nc:
+                # Check if zb variable exists
+                if 'zb' not in nc.variables:
+                    available_vars = list(nc.variables.keys())
+                    messagebox.showerror("Error", 
+                        f"Variable 'zb' not found in NetCDF file.\n"
+                        f"Available variables: {', '.join(available_vars)}")
+                    return
+                
+                # Read bed level data (zb)
+                zb_var = nc.variables['zb']
+                
+                # Check if time dimension exists
+                if 'time' in zb_var.dimensions:
+                    # Load all time steps
+                    zb_data = zb_var[:]
+                    n_times = zb_data.shape[0]
+                else:
+                    # Single time step
+                    zb_data = zb_var[:, :]
+                    zb_data = np.expand_dims(zb_data, axis=0)  # Add time dimension
+                    n_times = 1
+                
+                # Try to get x and y coordinates
+                x_data = None
+                y_data = None
+                
+                if 'x' in nc.variables:
+                    x_data = nc.variables['x'][:]
+                if 'y' in nc.variables:
+                    y_data = nc.variables['y'][:]
+                
+                # Create meshgrid if we have 1D coordinates
+                if x_data is not None and y_data is not None:
+                    if x_data.ndim == 1 and y_data.ndim == 1:
+                        x_data, y_data = np.meshgrid(x_data, y_data)
+                
+                # Cache data for slider updates
+                self.nc_data_cache = {
+                    'zb': zb_data,
+                    'x': x_data,
+                    'y': y_data,
+                    'n_times': n_times
+                }
+            
+            # Configure the time slider
+            if n_times > 1:
+                self.time_slider.configure(from_=0, to=n_times-1)
+                self.time_slider.set(n_times - 1)  # Start with last time step
+            else:
+                self.time_slider.configure(from_=0, to=0)
+                self.time_slider.set(0)
+            
+            # Plot the initial (last) time step
+            self.update_time_step(n_times - 1 if n_times > 1 else 0)
+            
+        except Exception as e:
+            import traceback
+            error_msg = f"Failed to plot NetCDF bed level: {str(e)}\n\n{traceback.format_exc()}"
+            messagebox.showerror("Error", error_msg)
+            print(error_msg)  # Also print to console for debugging
+
+    def update_time_step(self, value):
+        """Update the plot based on the time slider value"""
+        if self.nc_data_cache is None:
+            return
+        
+        try:
+            # Get time index from slider
+            time_idx = int(float(value))
+            
+            # Update label
+            self.time_label.config(text=f"Time step: {time_idx}")
+            
+            # Clear the previous plot
+            self.output_ax.clear()
+            
+            # Get data from cache
+            z_data = self.nc_data_cache['zb'][time_idx, :, :]
+            x_data = self.nc_data_cache['x']
+            y_data = self.nc_data_cache['y']
+            
+            # Get colorbar limits
+            vmin = None
+            vmax = None
+            if not self.auto_limits_var.get():
+                try:
+                    vmin_str = self.vmin_entry.get().strip()
+                    vmax_str = self.vmax_entry.get().strip()
+                    if vmin_str:
+                        vmin = float(vmin_str)
+                    if vmax_str:
+                        vmax = float(vmax_str)
+                except ValueError:
+                    pass  # Use auto limits if conversion fails
+            
+            # Get selected colormap
+            cmap = self.colormap_var.get()
+            
+            # Create the plot
+            if x_data is not None and y_data is not None:
+                # Use pcolormesh for 2D grid data with coordinates
+                im = self.output_ax.pcolormesh(x_data, y_data, z_data, shading='auto', 
+                                              cmap=cmap, vmin=vmin, vmax=vmax)
+                self.output_ax.set_xlabel('X (m)')
+                self.output_ax.set_ylabel('Y (m)')
+            else:
+                # Use imshow if no coordinate data available
+                im = self.output_ax.imshow(z_data, cmap=cmap, origin='lower', 
+                                          aspect='auto', vmin=vmin, vmax=vmax)
+                self.output_ax.set_xlabel('Grid X Index')
+                self.output_ax.set_ylabel('Grid Y Index')
+            
+            # Set title with time step
+            self.output_ax.set_title(f'Bed Elevation (Time step: {time_idx})')
+            
+            # Handle colorbar properly to avoid shrinking
+            if self.output_colorbar is not None:
+                # Update existing colorbar
+                self.output_colorbar.update_normal(im)
+                self.output_colorbar.set_label('Elevation (m)')
+            else:
+                # Create new colorbar only on first run
+                self.output_colorbar = self.output_fig.colorbar(im, ax=self.output_ax, label='Elevation (m)')
+            
+            # Redraw the canvas
+            self.output_canvas.draw()
+            
+        except Exception as e:
+            import traceback
+            error_msg = f"Failed to update time step: {str(e)}\n\n{traceback.format_exc()}"
+            print(error_msg)  # Print to console for debugging
+
+    def apply_color_limits(self):
+        """Re-plot with updated colorbar limits"""
+        if self.nc_data_cache is not None:
+            # Get current slider value and update the plot
+            current_time = int(self.time_slider.get())
+            self.update_time_step(current_time)
 
     def save(self):
         # Save the current entries to the configuration dictionary
