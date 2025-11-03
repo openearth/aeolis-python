@@ -1,0 +1,7 @@
+{
+  "name": "AEOLIS Development Container",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  }
+}

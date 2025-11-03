@@ -28,23 +28,13 @@ from __future__ import absolute_import, division
 import logging
 from scipy import ndimage, misc
 import numpy as np
-import math
-#import matplotlib.pyplot as plt
 from aeolis.wind import *
 import aeolis.rotation
 
 # package modules
 import aeolis.wind
-#from aeolis.utils import *
 
 import numpy as np
-from scipy.integrate import quad
-from scipy.integrate import romberg
-from scipy.optimize import root_scalar
-from scipy.signal import convolve
-from scipy.special import sici
-from scipy.special import erfi
-import matplotlib.pyplot as plt
 
 # initialize logger
 logger = logging.getLogger(__name__)
