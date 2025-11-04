@@ -251,6 +251,9 @@ class AeolisGUI:
             
             self.nc_file_entry.delete(0, END)
             self.nc_file_entry.insert(0, file_path)
+            
+            # Auto-load and plot the data
+            self.plot_nc_2d()
 
     def load_new_config(self):
         """Load a new configuration file and update all fields"""
@@ -486,15 +489,6 @@ class AeolisGUI:
         self.time_slider.pack(side=LEFT, fill=X, expand=1, padx=5)
         self.time_slider.set(0)
 
-        # Create a frame for buttons
-        output_button_frame = ttk.Frame(plot_frame)
-        output_button_frame.pack(pady=5)
-
-        # Single Load & Plot button
-        plot_button = ttk.Button(output_button_frame, text="Load & Plot", 
-                                     command=self.plot_nc_2d)
-        plot_button.grid(row=0, column=0, padx=5)
-
     def create_plot_output_1d_tab(self, tab_control):
         # Create the 'Plot Output 1D' tab
         tab6 = ttk.Frame(tab_control)
@@ -584,15 +578,6 @@ class AeolisGUI:
         self.time_slider_1d.pack(side=LEFT, fill=X, expand=1, padx=5)
         self.time_slider_1d.set(0)
 
-        # Create a frame for buttons
-        output_button_frame_1d = ttk.Frame(plot_frame_1d)
-        output_button_frame_1d.pack(pady=5)
-
-        # Create plot button
-        plot_button_1d = ttk.Button(output_button_frame_1d, text="Load & Plot", 
-                                     command=self.plot_1d_transect)
-        plot_button_1d.grid(row=0, column=0, padx=5)
-
     def browse_nc_file_1d(self):
         """Open file dialog to select a NetCDF file for 1D plotting"""
         # Get initial directory from config file location
@@ -632,6 +617,9 @@ class AeolisGUI:
             
             self.nc_file_entry_1d.delete(0, END)
             self.nc_file_entry_1d.insert(0, file_path)
+            
+            # Auto-load and plot the data
+            self.plot_1d_transect()
 
     def on_variable_changed(self, event):
         """Update plot when variable selection changes"""
@@ -766,17 +754,21 @@ class AeolisGUI:
                     if 'time' in var.dimensions:
                         # Load all time steps
                         var_data = var[:]
-                        # Need at least 3 dimensions: (time, n, s)
+                        # Need at least 3 dimensions: (time, n, s) or (time, n, s, fractions)
                         if var_data.ndim < 3:
                             continue  # Skip variables without spatial dimensions
                         n_times = max(n_times, var_data.shape[0])
                     else:
                         # Single time step - validate shape
-                        # Need exactly 2 spatial dimensions: (n, s)
-                        if var.ndim != 2:
-                            continue  # Skip variables without 2D spatial dimensions
-                        var_data = var[:, :]
-                        var_data = np.expand_dims(var_data, axis=0)  # Add time dimension
+                        # Need at least 2 spatial dimensions: (n, s) or (n, s, fractions)
+                        if var.ndim < 2:
+                            continue  # Skip variables without spatial dimensions
+                        if var.ndim == 2:
+                            var_data = var[:, :]
+                            var_data = np.expand_dims(var_data, axis=0)  # Add time dimension
+                        elif var.ndim == 3:  # (n, s, fractions)
+                            var_data = var[:, :, :]
+                            var_data = np.expand_dims(var_data, axis=0)  # Add time dimension
                     
                     var_data_dict[var_name] = var_data
                     candidate_vars.append(var_name)
@@ -863,10 +855,19 @@ class AeolisGUI:
             # Get the data
             var_data = self.nc_data_cache_1d['vars'][var_name]
             
+            # Check if variable has fractions dimension (4D: time, n, s, fractions)
+            has_fractions = var_data.ndim == 4
+            
             # Extract transect based on direction
             if self.transect_direction_var.get() == 'cross-shore':
                 # Fix y-index (n), vary along x (s)
-                transect_data = var_data[time_idx, transect_idx, :]
+                if has_fractions:
+                    # Extract all fractions for this transect: (fractions,)
+                    transect_data = var_data[time_idx, transect_idx, :, :]  # (s, fractions)
+                    # Average or select first fraction
+                    transect_data = transect_data.mean(axis=1)  # Average across fractions
+                else:
+                    transect_data = var_data[time_idx, transect_idx, :]
                 
                 # Get x-coordinates
                 if self.nc_data_cache_1d['x'] is not None:
@@ -884,7 +885,13 @@ class AeolisGUI:
                     xlabel = 'Grid Index'
             else:
                 # Fix x-index (s), vary along y (n)
-                transect_data = var_data[time_idx, :, transect_idx]
+                if has_fractions:
+                    # Extract all fractions for this transect: (fractions,)
+                    transect_data = var_data[time_idx, :, transect_idx, :]  # (n, fractions)
+                    # Average or select first fraction
+                    transect_data = transect_data.mean(axis=1)  # Average across fractions
+                else:
+                    transect_data = var_data[time_idx, :, transect_idx]
                 
                 # Get y-coordinates
                 if self.nc_data_cache_1d['y'] is not None:
@@ -912,9 +919,22 @@ class AeolisGUI:
                 'ustars': 'Shear Velocity S-component (m/s)',
                 'ustarn': 'Shear Velocity N-component (m/s)',
                 'zs': 'Surface Elevation (m)',
-                'zsep': 'Separation Elevation (m)'
+                'zsep': 'Separation Elevation (m)',
+                'Ct': 'Sediment Concentration (kg/m²)',
+                'Cu': 'Equilibrium Concentration (kg/m²)',
+                'q': 'Sediment Flux (kg/m/s)',
+                'qs': 'Sediment Flux S-component (kg/m/s)',
+                'qn': 'Sediment Flux N-component (kg/m/s)',
+                'pickup': 'Sediment Entrainment (kg/m²)',
+                'uth': 'Threshold Shear Velocity (m/s)',
+                'w': 'Fraction Weight (-)',
             }
             ylabel = ylabel_dict.get(var_name, var_name)
+            
+            # Add indication if variable has fractions dimension
+            if has_fractions:
+                ylabel += ' (avg. fractions)'
+            
             self.output_1d_ax.set_ylabel(ylabel)
             
             # Set title
@@ -1083,9 +1103,26 @@ class AeolisGUI:
             'ustars': 'Shear Velocity S-component (m/s)',
             'ustarn': 'Shear Velocity N-component (m/s)',
             'zs': 'Surface Elevation (m)',
-            'zsep': 'Separation Elevation (m)'
+            'zsep': 'Separation Elevation (m)',
+            'Ct': 'Sediment Concentration (kg/m²)',
+            'Cu': 'Equilibrium Concentration (kg/m²)',
+            'q': 'Sediment Flux (kg/m/s)',
+            'qs': 'Sediment Flux S-component (kg/m/s)',
+            'qn': 'Sediment Flux N-component (kg/m/s)',
+            'pickup': 'Sediment Entrainment (kg/m²)',
+            'uth': 'Threshold Shear Velocity (m/s)',
+            'w': 'Fraction Weight (-)',
         }
-        return label_dict.get(var_name, var_name)
+        base_label = label_dict.get(var_name, var_name)
+        
+        # Check if this variable has fractions dimension
+        if hasattr(self, 'nc_data_cache') and self.nc_data_cache is not None:
+            if var_name in self.nc_data_cache.get('vars', {}):
+                var_data = self.nc_data_cache['vars'][var_name]
+                if var_data.ndim == 4:
+                    base_label += ' (avg. fractions)'
+        
+        return base_label
 
     def get_variable_title(self, var_name):
         """Get title for variable"""
@@ -1095,9 +1132,26 @@ class AeolisGUI:
             'ustars': 'Shear Velocity (S-component)',
             'ustarn': 'Shear Velocity (N-component)',
             'zs': 'Surface Elevation',
-            'zsep': 'Separation Elevation'
+            'zsep': 'Separation Elevation',
+            'Ct': 'Sediment Concentration',
+            'Cu': 'Equilibrium Concentration',
+            'q': 'Sediment Flux',
+            'qs': 'Sediment Flux (S-component)',
+            'qn': 'Sediment Flux (N-component)',
+            'pickup': 'Sediment Entrainment',
+            'uth': 'Threshold Shear Velocity',
+            'w': 'Fraction Weight',
         }
-        return title_dict.get(var_name, var_name)
+        base_title = title_dict.get(var_name, var_name)
+        
+        # Check if this variable has fractions dimension
+        if hasattr(self, 'nc_data_cache') and self.nc_data_cache is not None:
+            if var_name in self.nc_data_cache.get('vars', {}):
+                var_data = self.nc_data_cache['vars'][var_name]
+                if var_data.ndim == 4:
+                    base_title += ' (avg. fractions)'
+        
+        return base_title
 
     def update_2d_plot(self):
         """Update the 2D plot with current settings"""
@@ -1121,7 +1175,14 @@ class AeolisGUI:
             
             # Get the data
             var_data = self.nc_data_cache['vars'][var_name]
-            z_data = var_data[time_idx, :, :]
+            
+            # Check if variable has fractions dimension (4D: time, n, s, fractions)
+            if var_data.ndim == 4:
+                # Average across fractions or select first fraction
+                z_data = var_data[time_idx, :, :, :].mean(axis=2)  # Average across fractions
+            else:
+                z_data = var_data[time_idx, :, :]
+            
             x_data = self.nc_data_cache['x']
             y_data = self.nc_data_cache['y']
             
