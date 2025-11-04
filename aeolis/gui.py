@@ -69,7 +69,8 @@ class AeolisGUI:
         self.create_timeframe_tab(tab_control)
         self.create_boundary_conditions_tab(tab_control)
         self.create_sediment_transport_tab(tab_control)
-        self.create_plot_output_tab(tab_control)
+        self.create_plot_output_2d_tab(tab_control)
+        self.create_plot_output_1d_tab(tab_control)
         # Pack the tab control to expand and fill the available space
         tab_control.pack(expand=1, fill='both')
 
@@ -222,7 +223,8 @@ class AeolisGUI:
             try:
                 rel_path = os.path.relpath(file_path, config_dir)
                 # Use relative path if it doesn't go up too many levels
-                if not rel_path.startswith('..\\..\\'):
+                parent_dir = os.pardir + os.sep + os.pardir + os.sep
+                if not rel_path.startswith(parent_dir):
                     file_path = rel_path
             except (ValueError, TypeError):
                 # Different drives on Windows or invalid path, keep absolute path
@@ -261,7 +263,8 @@ class AeolisGUI:
             try:
                 rel_path = os.path.relpath(file_path, config_dir)
                 # Use relative path if it doesn't go up too many levels
-                if not rel_path.startswith('..\\..\\'):
+                parent_dir = os.pardir + os.sep + os.pardir + os.sep
+                if not rel_path.startswith(parent_dir):
                     file_path = rel_path
             except (ValueError, TypeError):
                 # Different drives on Windows or invalid path, keep absolute path
@@ -383,13 +386,13 @@ class AeolisGUI:
         save_button = ttk.Button(tab4, text='Save', command=self.save)
         save_button.pack()
 
-    def create_plot_output_tab(self, tab_control):
-        # Create the 'Plot Output' tab
+    def create_plot_output_2d_tab(self, tab_control):
+        # Create the 'Plot Output 2D' tab
         tab5 = ttk.Frame(tab_control)
-        tab_control.add(tab5, text='Plot Output')
+        tab_control.add(tab5, text='Plot Output 2D')
 
         # Create frame for file selection
-        file_frame = ttk.LabelFrame(tab5, text="Output File", padding=10)
+        file_frame = ttk.LabelFrame(tab5, text="Output File & Settings", padding=10)
         file_frame.grid(row=0, column=0, padx=10, pady=10, sticky=(N, W, E))
 
         # NC file selection
@@ -403,27 +406,38 @@ class AeolisGUI:
                                    command=lambda: self.browse_nc_file())
         nc_browse_btn.grid(row=0, column=2, sticky=W, pady=2)
 
+        # Variable selection dropdown
+        var_label_2d = ttk.Label(file_frame, text="Variable:")
+        var_label_2d.grid(row=1, column=0, sticky=W, pady=2)
+        
+        # Initialize with empty list - will be populated when file is loaded
+        self.variable_var_2d = StringVar(value='')
+        self.variable_dropdown_2d = ttk.Combobox(file_frame, textvariable=self.variable_var_2d, 
+                                        values=[], state='readonly', width=13)
+        self.variable_dropdown_2d.grid(row=1, column=1, sticky=W, pady=2, padx=(0, 5))
+        self.variable_dropdown_2d.bind('<<ComboboxSelected>>', self.on_variable_changed_2d)
+
         # Colorbar limits
         vmin_label = ttk.Label(file_frame, text="Color min:")
-        vmin_label.grid(row=1, column=0, sticky=W, pady=2)
+        vmin_label.grid(row=2, column=0, sticky=W, pady=2)
         self.vmin_entry = ttk.Entry(file_frame, width=15, state='disabled')
-        self.vmin_entry.grid(row=1, column=1, sticky=W, pady=2, padx=(0, 5))
+        self.vmin_entry.grid(row=2, column=1, sticky=W, pady=2, padx=(0, 5))
         
         vmax_label = ttk.Label(file_frame, text="Color max:")
-        vmax_label.grid(row=2, column=0, sticky=W, pady=2)
+        vmax_label.grid(row=3, column=0, sticky=W, pady=2)
         self.vmax_entry = ttk.Entry(file_frame, width=15, state='disabled')
-        self.vmax_entry.grid(row=2, column=1, sticky=W, pady=2, padx=(0, 5))
+        self.vmax_entry.grid(row=3, column=1, sticky=W, pady=2, padx=(0, 5))
         
         # Auto limits checkbox
         self.auto_limits_var = BooleanVar(value=True)
         auto_limits_check = ttk.Checkbutton(file_frame, text="Auto limits", 
                                            variable=self.auto_limits_var,
                                            command=self.toggle_color_limits)
-        auto_limits_check.grid(row=1, column=2, rowspan=2, sticky=W, pady=2)
+        auto_limits_check.grid(row=2, column=2, rowspan=2, sticky=W, pady=2)
 
         # Colormap selection
         cmap_label = ttk.Label(file_frame, text="Colormap:")
-        cmap_label.grid(row=3, column=0, sticky=W, pady=2)
+        cmap_label.grid(row=4, column=0, sticky=W, pady=2)
         
         # Available colormaps
         self.colormap_options = [
@@ -452,7 +466,13 @@ class AeolisGUI:
         self.colormap_var = StringVar(value='terrain')
         colormap_dropdown = ttk.Combobox(file_frame, textvariable=self.colormap_var, 
                                         values=self.colormap_options, state='readonly', width=13)
-        colormap_dropdown.grid(row=3, column=1, sticky=W, pady=2, padx=(0, 5))
+        colormap_dropdown.grid(row=4, column=1, sticky=W, pady=2, padx=(0, 5))
+
+        # Overlay vegetation checkbox
+        self.overlay_veg_var = BooleanVar(value=False)
+        overlay_veg_check = ttk.Checkbutton(file_frame, text="Overlay vegetation", 
+                                           variable=self.overlay_veg_var)
+        overlay_veg_check.grid(row=5, column=1, sticky=W, pady=2)
 
         # Create frame for visualization
         plot_frame = ttk.LabelFrame(tab5, text="Output Visualization", padding=10)
@@ -491,25 +511,710 @@ class AeolisGUI:
         output_button_frame = ttk.Frame(plot_frame)
         output_button_frame.pack(pady=5)
 
-        # Create plot button
-        plot_bed_button = ttk.Button(output_button_frame, text="Plot Bed Level", 
-                                     command=self.plot_nc_bed_level)
-        plot_bed_button.grid(row=0, column=0, padx=5)
+        # Single Load & Plot button
+        plot_button = ttk.Button(output_button_frame, text="Load & Plot", 
+                                     command=self.plot_nc_2d)
+        plot_button.grid(row=0, column=0, padx=5)
+
+    def create_plot_output_1d_tab(self, tab_control):
+        # Create the 'Plot Output 1D' tab
+        tab6 = ttk.Frame(tab_control)
+        tab_control.add(tab6, text='Plot Output 1D')
+
+        # Create frame for file selection
+        file_frame_1d = ttk.LabelFrame(tab6, text="Output File & Transect Selection", padding=10)
+        file_frame_1d.grid(row=0, column=0, padx=10, pady=10, sticky=(N, W, E))
+
+        # NC file selection (shared with 2D plot)
+        nc_label_1d = ttk.Label(file_frame_1d, text="NetCDF file:")
+        nc_label_1d.grid(row=0, column=0, sticky=W, pady=2)
+        self.nc_file_entry_1d = ttk.Entry(file_frame_1d, width=35)
+        self.nc_file_entry_1d.grid(row=0, column=1, sticky=W, pady=2, padx=(0, 5))
         
-        # Create plot shear velocity button
-        plot_wind_button = ttk.Button(output_button_frame, text="Plot Shear Velocity", 
-                                      command=self.plot_nc_wind)
-        plot_wind_button.grid(row=0, column=1, padx=5)
+        # Browse button for NC file
+        nc_browse_btn_1d = ttk.Button(file_frame_1d, text="Browse...", 
+                                       command=lambda: self.browse_nc_file_1d())
+        nc_browse_btn_1d.grid(row=0, column=2, sticky=W, pady=2)
 
-        # Create apply limits button
-        apply_button = ttk.Button(output_button_frame, text="Apply Limits", 
-                                  command=self.apply_color_limits)
-        apply_button.grid(row=0, column=2, padx=5)
+        # Variable selection dropdown
+        var_label = ttk.Label(file_frame_1d, text="Variable:")
+        var_label.grid(row=1, column=0, sticky=W, pady=2)
+        
+        # Initialize with empty list - will be populated when file is loaded
+        self.variable_var_1d = StringVar(value='')
+        self.variable_dropdown_1d = ttk.Combobox(file_frame_1d, textvariable=self.variable_var_1d, 
+                                        values=[], state='readonly', width=13)
+        self.variable_dropdown_1d.grid(row=1, column=1, sticky=W, pady=2, padx=(0, 5))
+        self.variable_dropdown_1d.bind('<<ComboboxSelected>>', self.on_variable_changed)
 
-        # Overlay vegetation button
-        overlay_button = ttk.Button(output_button_frame, text="Overlay Vegetation", 
-                                    command=self.enable_overlay_vegetation)
-        overlay_button.grid(row=0, column=3, padx=5)
+        # Transect direction selection
+        direction_label = ttk.Label(file_frame_1d, text="Transect direction:")
+        direction_label.grid(row=2, column=0, sticky=W, pady=2)
+        
+        self.transect_direction_var = StringVar(value='cross-shore')
+        direction_frame = ttk.Frame(file_frame_1d)
+        direction_frame.grid(row=2, column=1, sticky=W, pady=2)
+        
+        cross_shore_radio = ttk.Radiobutton(direction_frame, text="Cross-shore (fix y-index)", 
+                                            variable=self.transect_direction_var, value='cross-shore',
+                                            command=self.update_transect_direction)
+        cross_shore_radio.pack(side=LEFT, padx=5)
+        
+        along_shore_radio = ttk.Radiobutton(direction_frame, text="Along-shore (fix x-index)", 
+                                            variable=self.transect_direction_var, value='along-shore',
+                                            command=self.update_transect_direction)
+        along_shore_radio.pack(side=LEFT, padx=5)
+
+        # Transect position slider
+        self.transect_label = ttk.Label(file_frame_1d, text="Y-index: 0")
+        self.transect_label.grid(row=3, column=0, sticky=W, pady=2)
+        
+        self.transect_slider = ttk.Scale(file_frame_1d, from_=0, to=0, orient=HORIZONTAL,
+                                         command=self.update_1d_transect_position)
+        self.transect_slider.grid(row=3, column=1, sticky=(W, E), pady=2, padx=(0, 5))
+        self.transect_slider.set(0)
+
+        # Create frame for visualization
+        plot_frame_1d = ttk.LabelFrame(tab6, text="1D Transect Visualization", padding=10)
+        plot_frame_1d.grid(row=0, column=1, padx=10, pady=10, sticky=(N, S, E, W))
+        
+        # Configure grid weights to allow expansion
+        tab6.columnconfigure(1, weight=1)
+        tab6.rowconfigure(0, weight=1)
+        
+        # Create matplotlib figure for 1D output
+        self.output_1d_fig = Figure(figsize=(7, 6), dpi=100)
+        self.output_1d_ax = self.output_1d_fig.add_subplot(111)
+        
+        # Create canvas for the 1D output figure
+        self.output_1d_canvas = FigureCanvasTkAgg(self.output_1d_fig, master=plot_frame_1d)
+        self.output_1d_canvas.draw()
+        self.output_1d_canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=1)
+
+        # Create a frame for time slider
+        slider_frame_1d = ttk.Frame(plot_frame_1d)
+        slider_frame_1d.pack(pady=5, fill=X, padx=10)
+        
+        # Time slider label
+        self.time_label_1d = ttk.Label(slider_frame_1d, text="Time step: 0")
+        self.time_label_1d.pack(side=LEFT, padx=5)
+        
+        # Time slider
+        self.time_slider_1d = ttk.Scale(slider_frame_1d, from_=0, to=0, orient=HORIZONTAL,
+                                        command=self.update_1d_time_step)
+        self.time_slider_1d.pack(side=LEFT, fill=X, expand=1, padx=5)
+        self.time_slider_1d.set(0)
+
+        # Create a frame for buttons
+        output_button_frame_1d = ttk.Frame(plot_frame_1d)
+        output_button_frame_1d.pack(pady=5)
+
+        # Create plot button
+        plot_button_1d = ttk.Button(output_button_frame_1d, text="Load & Plot", 
+                                     command=self.plot_1d_transect)
+        plot_button_1d.grid(row=0, column=0, padx=5)
+
+    def browse_nc_file_1d(self):
+        """Open file dialog to select a NetCDF file for 1D plotting"""
+        # Get initial directory from config file location
+        initial_dir = os.path.dirname(configfile)
+        
+        # Get current value to determine initial directory
+        current_value = self.nc_file_entry_1d.get()
+        if current_value:
+            if os.path.isabs(current_value):
+                initial_dir = os.path.dirname(current_value)
+            else:
+                full_path = os.path.join(initial_dir, current_value)
+                if os.path.exists(full_path):
+                    initial_dir = os.path.dirname(full_path)
+        
+        # Open file dialog
+        file_path = filedialog.askopenfilename(
+            initialdir=initial_dir,
+            title="Select NetCDF output file",
+            filetypes=(("NetCDF files", "*.nc"), 
+                      ("All files", "*.*"))
+        )
+        
+        # Update entry if a file was selected
+        if file_path:
+            # Try to make path relative to config file directory for portability
+            config_dir = os.path.dirname(configfile)
+            try:
+                rel_path = os.path.relpath(file_path, config_dir)
+                # Use relative path if it doesn't go up too many levels
+                parent_dir = os.pardir + os.sep + os.pardir + os.sep
+                if not rel_path.startswith(parent_dir):
+                    file_path = rel_path
+            except ValueError:
+                # Different drives on Windows, keep absolute path
+                pass
+            
+            self.nc_file_entry_1d.delete(0, END)
+            self.nc_file_entry_1d.insert(0, file_path)
+
+    def on_variable_changed(self, event):
+        """Update plot when variable selection changes"""
+        if hasattr(self, 'nc_data_cache_1d') and self.nc_data_cache_1d is not None:
+            self.update_1d_plot()
+
+    def update_transect_direction(self):
+        """Update transect label and slider range when direction changes"""
+        # Update plot if data is loaded
+        if hasattr(self, 'nc_data_cache_1d') and self.nc_data_cache_1d is not None:
+            # Reconfigure slider range based on new direction
+            first_var = list(self.nc_data_cache_1d['vars'].values())[0]
+            
+            if self.transect_direction_var.get() == 'cross-shore':
+                # Fix y-index, vary along x (s dimension)
+                max_idx = first_var.shape[1] - 1  # n dimension
+                self.transect_slider.configure(from_=0, to=max_idx)
+                # Set to middle or constrain current value
+                current_val = int(self.transect_slider.get())
+                if current_val > max_idx:
+                    self.transect_slider.set(max_idx // 2)
+                self.transect_label.config(text=f"Y-index: {int(self.transect_slider.get())}")
+            else:
+                # Fix x-index, vary along y (n dimension)
+                max_idx = first_var.shape[2] - 1  # s dimension
+                self.transect_slider.configure(from_=0, to=max_idx)
+                # Set to middle or constrain current value
+                current_val = int(self.transect_slider.get())
+                if current_val > max_idx:
+                    self.transect_slider.set(max_idx // 2)
+                self.transect_label.config(text=f"X-index: {int(self.transect_slider.get())}")
+            
+            self.update_1d_plot()
+        else:
+            # Just update the label if no data loaded yet
+            idx = int(self.transect_slider.get())
+            if self.transect_direction_var.get() == 'cross-shore':
+                self.transect_label.config(text=f"Y-index: {idx}")
+            else:
+                self.transect_label.config(text=f"X-index: {idx}")
+
+    def update_1d_transect_position(self, value):
+        """Update the transect position label"""
+        idx = int(float(value))
+        if self.transect_direction_var.get() == 'cross-shore':
+            self.transect_label.config(text=f"Y-index: {idx}")
+        else:
+            self.transect_label.config(text=f"X-index: {idx}")
+        
+        # Update plot if data is loaded
+        if hasattr(self, 'nc_data_cache_1d') and self.nc_data_cache_1d is not None:
+            self.update_1d_plot()
+
+    def update_1d_time_step(self, value):
+        """Update the 1D plot based on the time slider value"""
+        if not hasattr(self, 'nc_data_cache_1d') or self.nc_data_cache_1d is None:
+            return
+        
+        # Get time index from slider
+        time_idx = int(float(value))
+        
+        # Update label
+        self.time_label_1d.config(text=f"Time step: {time_idx}")
+        
+        # Update plot
+        self.update_1d_plot()
+
+    def plot_1d_transect(self):
+        """Load NetCDF file and plot 1D transect"""
+        if not HAVE_NETCDF:
+            messagebox.showerror("Error", "netCDF4 library is not available!")
+            return
+            
+        try:
+            # Get the NC file path
+            nc_file = self.nc_file_entry_1d.get()
+            
+            if not nc_file:
+                messagebox.showwarning("Warning", "No NetCDF file specified!")
+                return
+            
+            # Get the directory of the config file to resolve relative paths
+            config_dir = os.path.dirname(configfile)
+            
+            # Load the NC file
+            if not os.path.isabs(nc_file):
+                nc_file_path = os.path.join(config_dir, nc_file)
+            else:
+                nc_file_path = nc_file
+                
+            if not os.path.exists(nc_file_path):
+                messagebox.showerror("Error", f"NetCDF file not found: {nc_file_path}")
+                return
+            
+            # Open NetCDF file and cache data
+            with netCDF4.Dataset(nc_file_path, 'r') as nc:
+                # Get available variables
+                available_vars = list(nc.variables.keys())
+                
+                # Try to get x and y coordinates
+                x_data = None
+                y_data = None
+                
+                if 'x' in nc.variables:
+                    x_data = nc.variables['x'][:]
+                if 'y' in nc.variables:
+                    y_data = nc.variables['y'][:]
+                
+                # Get s and n coordinates (grid indices)
+                s_data = None
+                n_data = None
+                if 's' in nc.variables:
+                    s_data = nc.variables['s'][:]
+                if 'n' in nc.variables:
+                    n_data = nc.variables['n'][:]
+                
+                # Find all available 2D/3D variables (potential plot candidates)
+                # Exclude coordinate and metadata variables
+                coord_vars = {'x', 'y', 's', 'n', 'lat', 'lon', 'time', 'layers', 'fractions', 
+                             'x_bounds', 'y_bounds', 'lat_bounds', 'lon_bounds', 'time_bounds', 'crs', 'nv', 'nv2'}
+                candidate_vars = []
+                var_data_dict = {}
+                n_times = 1
+                
+                for var_name in available_vars:
+                    if var_name in coord_vars:
+                        continue
+                    
+                    var = nc.variables[var_name]
+                    
+                    # Check if time dimension exists
+                    if 'time' in var.dimensions:
+                        # Load all time steps
+                        var_data = var[:]
+                        # Need at least 3 dimensions: (time, n, s)
+                        if var_data.ndim < 3:
+                            continue  # Skip variables without spatial dimensions
+                        n_times = max(n_times, var_data.shape[0])
+                    else:
+                        # Single time step - validate shape
+                        # Need exactly 2 spatial dimensions: (n, s)
+                        if var.ndim != 2:
+                            continue  # Skip variables without 2D spatial dimensions
+                        var_data = var[:, :]
+                        var_data = np.expand_dims(var_data, axis=0)  # Add time dimension
+                    
+                    var_data_dict[var_name] = var_data
+                    candidate_vars.append(var_name)
+                
+                # Check if any variables were loaded
+                if not var_data_dict:
+                    messagebox.showerror("Error", "No valid variables found in NetCDF file!")
+                    return
+                
+                # Update variable dropdown with available variables
+                self.variable_dropdown_1d['values'] = sorted(candidate_vars)
+                # Set default to first variable (prefer 'zb' if available)
+                if 'zb' in candidate_vars:
+                    self.variable_var_1d.set('zb')
+                else:
+                    self.variable_var_1d.set(sorted(candidate_vars)[0])
+                
+                # Cache data for slider updates
+                self.nc_data_cache_1d = {
+                    'vars': var_data_dict,
+                    'x': x_data,
+                    'y': y_data,
+                    's': s_data,
+                    'n': n_data,
+                    'n_times': n_times,
+                    'available_vars': candidate_vars
+                }
+            
+            # Configure the time slider
+            if n_times > 1:
+                self.time_slider_1d.configure(from_=0, to=n_times-1)
+                self.time_slider_1d.set(n_times - 1)  # Start with last time step
+            else:
+                self.time_slider_1d.configure(from_=0, to=0)
+                self.time_slider_1d.set(0)
+            
+            # Configure transect slider based on data shape
+            # Get shape from first available variable (already validated to be non-empty above)
+            # Use dict.values() directly instead of next(iter()) for clarity
+            first_var = list(var_data_dict.values())[0]
+            if self.transect_direction_var.get() == 'cross-shore':
+                # Fix y-index, vary along x (s dimension)
+                max_idx = first_var.shape[1] - 1  # n dimension
+                self.transect_slider.configure(from_=0, to=max_idx)
+                self.transect_slider.set(max_idx // 2)  # Middle
+            else:
+                # Fix x-index, vary along y (n dimension)
+                max_idx = first_var.shape[2] - 1  # s dimension
+                self.transect_slider.configure(from_=0, to=max_idx)
+                self.transect_slider.set(max_idx // 2)  # Middle
+            
+            # Plot the initial (last) time step
+            self.update_1d_plot()
+            
+        except Exception as e:
+            import traceback
+            error_msg = f"Failed to plot 1D transect: {str(e)}\n\n{traceback.format_exc()}"
+            messagebox.showerror("Error", error_msg)
+            print(error_msg)  # Also print to console for debugging
+
+    def update_1d_plot(self):
+        """Update the 1D plot with current settings"""
+        if not hasattr(self, 'nc_data_cache_1d') or self.nc_data_cache_1d is None:
+            return
+        
+        try:
+            # Clear the previous plot
+            self.output_1d_ax.clear()
+            
+            # Get time index from slider
+            time_idx = int(self.time_slider_1d.get())
+            
+            # Get transect index from slider
+            transect_idx = int(self.transect_slider.get())
+            
+            # Get selected variable
+            var_name = self.variable_var_1d.get()
+            
+            # Check if variable exists in cache
+            if var_name not in self.nc_data_cache_1d['vars']:
+                messagebox.showwarning("Warning", f"Variable '{var_name}' not found in NetCDF file!")
+                return
+            
+            # Get the data
+            var_data = self.nc_data_cache_1d['vars'][var_name]
+            
+            # Extract transect based on direction
+            if self.transect_direction_var.get() == 'cross-shore':
+                # Fix y-index (n), vary along x (s)
+                transect_data = var_data[time_idx, transect_idx, :]
+                
+                # Get x-coordinates
+                if self.nc_data_cache_1d['x'] is not None:
+                    x_data = self.nc_data_cache_1d['x']
+                    if x_data.ndim == 2:
+                        x_coords = x_data[transect_idx, :]
+                    else:
+                        x_coords = x_data
+                    xlabel = 'X (m)'
+                elif self.nc_data_cache_1d['s'] is not None:
+                    x_coords = self.nc_data_cache_1d['s']
+                    xlabel = 'S-index'
+                else:
+                    x_coords = np.arange(len(transect_data))
+                    xlabel = 'Grid Index'
+            else:
+                # Fix x-index (s), vary along y (n)
+                transect_data = var_data[time_idx, :, transect_idx]
+                
+                # Get y-coordinates
+                if self.nc_data_cache_1d['y'] is not None:
+                    y_data = self.nc_data_cache_1d['y']
+                    if y_data.ndim == 2:
+                        x_coords = y_data[:, transect_idx]
+                    else:
+                        x_coords = y_data
+                    xlabel = 'Y (m)'
+                elif self.nc_data_cache_1d['n'] is not None:
+                    x_coords = self.nc_data_cache_1d['n']
+                    xlabel = 'N-index'
+                else:
+                    x_coords = np.arange(len(transect_data))
+                    xlabel = 'Grid Index'
+            
+            # Plot the transect
+            self.output_1d_ax.plot(x_coords, transect_data, 'b-', linewidth=2)
+            self.output_1d_ax.set_xlabel(xlabel)
+            
+            # Set ylabel based on variable
+            ylabel_dict = {
+                'zb': 'Bed Elevation (m)',
+                'ustar': 'Shear Velocity (m/s)',
+                'ustars': 'Shear Velocity S-component (m/s)',
+                'ustarn': 'Shear Velocity N-component (m/s)',
+                'zs': 'Surface Elevation (m)',
+                'zsep': 'Separation Elevation (m)'
+            }
+            ylabel = ylabel_dict.get(var_name, var_name)
+            self.output_1d_ax.set_ylabel(ylabel)
+            
+            # Set title
+            direction = 'Cross-shore' if self.transect_direction_var.get() == 'cross-shore' else 'Along-shore'
+            idx_label = 'Y' if self.transect_direction_var.get() == 'cross-shore' else 'X'
+            self.output_1d_ax.set_title(f'{direction} Transect: {var_name} ({idx_label}-index={transect_idx}, Time={time_idx})')
+            
+            # Add grid
+            self.output_1d_ax.grid(True, alpha=0.3)
+            
+            # Redraw the canvas
+            self.output_1d_canvas.draw()
+            
+        except Exception as e:
+            import traceback
+            error_msg = f"Failed to update 1D plot: {str(e)}\n\n{traceback.format_exc()}"
+            print(error_msg)  # Print to console for debugging
+
+    def on_variable_changed_2d(self, event):
+        """Update plot when variable selection changes in 2D tab"""
+        if hasattr(self, 'nc_data_cache') and self.nc_data_cache is not None:
+            self.update_2d_plot()
+
+    def plot_nc_2d(self):
+        """Load NetCDF file and plot 2D data"""
+        if not HAVE_NETCDF:
+            messagebox.showerror("Error", "netCDF4 library is not available!")
+            return
+            
+        try:
+            # Get the NC file path
+            nc_file = self.nc_file_entry.get()
+            
+            if not nc_file:
+                messagebox.showwarning("Warning", "No NetCDF file specified!")
+                return
+            
+            # Get the directory of the config file to resolve relative paths
+            config_dir = os.path.dirname(configfile)
+            
+            # Load the NC file
+            if not os.path.isabs(nc_file):
+                nc_file_path = os.path.join(config_dir, nc_file)
+            else:
+                nc_file_path = nc_file
+                
+            if not os.path.exists(nc_file_path):
+                messagebox.showerror("Error", f"NetCDF file not found: {nc_file_path}")
+                return
+            
+            # Open NetCDF file and cache data
+            with netCDF4.Dataset(nc_file_path, 'r') as nc:
+                # Get available variables
+                available_vars = list(nc.variables.keys())
+                
+                # Try to get x and y coordinates
+                x_data = None
+                y_data = None
+                
+                if 'x' in nc.variables:
+                    x_data = nc.variables['x'][:]
+                if 'y' in nc.variables:
+                    y_data = nc.variables['y'][:]
+                
+                # Find all available 2D/3D variables (potential plot candidates)
+                # Exclude coordinate and metadata variables
+                coord_vars = {'x', 'y', 's', 'n', 'lat', 'lon', 'time', 'layers', 'fractions', 
+                             'x_bounds', 'y_bounds', 'lat_bounds', 'lon_bounds', 'time_bounds', 'crs', 'nv', 'nv2'}
+                candidate_vars = []
+                var_data_dict = {}
+                n_times = 1
+                
+                # Also load vegetation if checkbox is enabled
+                veg_data = None
+                
+                for var_name in available_vars:
+                    if var_name in coord_vars:
+                        continue
+                    
+                    var = nc.variables[var_name]
+                    
+                    # Check if time dimension exists
+                    if 'time' in var.dimensions:
+                        # Load all time steps
+                        var_data = var[:]
+                        # Need at least 3 dimensions: (time, n, s)
+                        if var_data.ndim < 3:
+                            continue  # Skip variables without spatial dimensions
+                        n_times = max(n_times, var_data.shape[0])
+                    else:
+                        # Single time step - validate shape
+                        # Need exactly 2 spatial dimensions: (n, s)
+                        if var.ndim != 2:
+                            continue  # Skip variables without 2D spatial dimensions
+                        var_data = var[:, :]
+                        var_data = np.expand_dims(var_data, axis=0)  # Add time dimension
+                    
+                    var_data_dict[var_name] = var_data
+                    candidate_vars.append(var_name)
+                
+                # Load vegetation data if requested
+                if self.overlay_veg_var.get():
+                    veg_candidates = ['rhoveg', 'vegetated', 'hveg', 'vegfac']
+                    for veg_name in veg_candidates:
+                        if veg_name in available_vars:
+                            veg_var = nc.variables[veg_name]
+                            if 'time' in veg_var.dimensions:
+                                veg_data = veg_var[:]
+                            else:
+                                veg_data = veg_var[:, :]
+                                veg_data = np.expand_dims(veg_data, axis=0)
+                            break
+                
+                # Check if any variables were loaded
+                if not var_data_dict:
+                    messagebox.showerror("Error", "No valid variables found in NetCDF file!")
+                    return
+                
+                # Update variable dropdown with available variables
+                self.variable_dropdown_2d['values'] = sorted(candidate_vars)
+                # Set default to first variable (prefer 'zb' if available)
+                if 'zb' in candidate_vars:
+                    self.variable_var_2d.set('zb')
+                else:
+                    self.variable_var_2d.set(sorted(candidate_vars)[0])
+                
+                # Cache data for slider updates
+                self.nc_data_cache = {
+                    'vars': var_data_dict,
+                    'x': x_data,
+                    'y': y_data,
+                    'n_times': n_times,
+                    'available_vars': candidate_vars,
+                    'veg': veg_data
+                }
+            
+            # Configure the time slider
+            if n_times > 1:
+                self.time_slider.configure(from_=0, to=n_times-1)
+                self.time_slider.set(n_times - 1)  # Start with last time step
+            else:
+                self.time_slider.configure(from_=0, to=0)
+                self.time_slider.set(0)
+            
+            # Remember current output plot state
+            self.output_plot_state = {
+                'key': self.variable_var_2d.get(),
+                'label': self.get_variable_label(self.variable_var_2d.get()),
+                'title': self.get_variable_title(self.variable_var_2d.get())
+            }
+
+            # Plot the initial (last) time step
+            self.update_2d_plot()
+            
+        except Exception as e:
+            import traceback
+            error_msg = f"Failed to plot 2D data: {str(e)}\n\n{traceback.format_exc()}"
+            messagebox.showerror("Error", error_msg)
+            print(error_msg)  # Also print to console for debugging
+
+    def get_variable_label(self, var_name):
+        """Get axis label for variable"""
+        label_dict = {
+            'zb': 'Elevation (m)',
+            'ustar': 'Shear Velocity (m/s)',
+            'ustars': 'Shear Velocity S-component (m/s)',
+            'ustarn': 'Shear Velocity N-component (m/s)',
+            'zs': 'Surface Elevation (m)',
+            'zsep': 'Separation Elevation (m)'
+        }
+        return label_dict.get(var_name, var_name)
+
+    def get_variable_title(self, var_name):
+        """Get title for variable"""
+        title_dict = {
+            'zb': 'Bed Elevation',
+            'ustar': 'Shear Velocity',
+            'ustars': 'Shear Velocity (S-component)',
+            'ustarn': 'Shear Velocity (N-component)',
+            'zs': 'Surface Elevation',
+            'zsep': 'Separation Elevation'
+        }
+        return title_dict.get(var_name, var_name)
+
+    def update_2d_plot(self):
+        """Update the 2D plot with current settings"""
+        if not hasattr(self, 'nc_data_cache') or self.nc_data_cache is None:
+            return
+        
+        try:
+            # Clear the previous plot
+            self.output_ax.clear()
+            
+            # Get time index from slider
+            time_idx = int(self.time_slider.get())
+            
+            # Get selected variable
+            var_name = self.variable_var_2d.get()
+            
+            # Check if variable exists in cache
+            if var_name not in self.nc_data_cache['vars']:
+                messagebox.showwarning("Warning", f"Variable '{var_name}' not found in NetCDF file!")
+                return
+            
+            # Get the data
+            var_data = self.nc_data_cache['vars'][var_name]
+            z_data = var_data[time_idx, :, :]
+            x_data = self.nc_data_cache['x']
+            y_data = self.nc_data_cache['y']
+            
+            # Get colorbar limits
+            vmin = None
+            vmax = None
+            if not self.auto_limits_var.get():
+                try:
+                    vmin_str = self.vmin_entry.get().strip()
+                    vmax_str = self.vmax_entry.get().strip()
+                    if vmin_str:
+                        vmin = float(vmin_str)
+                    if vmax_str:
+                        vmax = float(vmax_str)
+                except ValueError:
+                    pass  # Use auto limits if conversion fails
+            
+            # Get selected colormap
+            cmap = self.colormap_var.get()
+            
+            # Create the plot
+            if x_data is not None and y_data is not None:
+                # Use pcolormesh for 2D grid data with coordinates
+                im = self.output_ax.pcolormesh(x_data, y_data, z_data, shading='auto', 
+                                              cmap=cmap, vmin=vmin, vmax=vmax)
+                self.output_ax.set_xlabel('X (m)')
+                self.output_ax.set_ylabel('Y (m)')
+            else:
+                # Use imshow if no coordinate data available
+                im = self.output_ax.imshow(z_data, cmap=cmap, origin='lower', 
+                                          aspect='auto', vmin=vmin, vmax=vmax)
+                self.output_ax.set_xlabel('Grid X Index')
+                self.output_ax.set_ylabel('Grid Y Index')
+            
+            # Set title with time step
+            title = self.get_variable_title(var_name)
+            self.output_ax.set_title(f'{title} (Time step: {time_idx})')
+            
+            # Handle colorbar properly to avoid shrinking
+            if self.output_colorbar is not None:
+                # Update existing colorbar
+                self.output_colorbar.update_normal(im)
+                cbar_label = self.get_variable_label(var_name)
+                self.output_colorbar.set_label(cbar_label)
+            else:
+                # Create new colorbar only on first run
+                cbar_label = self.get_variable_label(var_name)
+                self.output_colorbar = self.output_fig.colorbar(im, ax=self.output_ax, label=cbar_label)
+
+            # Overlay vegetation if enabled and available
+            if self.overlay_veg_var.get() and self.nc_data_cache['veg'] is not None:
+                veg_slice = self.nc_data_cache['veg']
+                if veg_slice.ndim == 3:
+                    veg_data = veg_slice[time_idx, :, :]
+                else:
+                    veg_data = veg_slice[:, :]
+
+                # Choose plotting method consistent with base plot
+                if x_data is not None and y_data is not None:
+                    self.output_ax.pcolormesh(x_data, y_data, veg_data, shading='auto', 
+                                              cmap='Greens', vmin=0, vmax=1, alpha=0.4)
+                else:
+                    self.output_ax.imshow(veg_data, cmap='Greens', origin='lower', 
+                                          aspect='auto', vmin=0, vmax=1, alpha=0.4)
+            
+            # Redraw the canvas
+            self.output_canvas.draw()
+            
+        except Exception as e:
+            import traceback
+            error_msg = f"Failed to update 2D plot: {str(e)}\n\n{traceback.format_exc()}"
+            print(error_msg)  # Print to console for debugging
 
     def plot_data(self, file_key, title):
         """Plot data from specified file (bed_file, ne_file, or veg_file)"""
@@ -824,143 +1529,14 @@ class AeolisGUI:
         if self.nc_data_cache is None:
             return
         
-        try:
-            # Get time index from slider
-            time_idx = int(float(value))
-            
-            # Update label
-            self.time_label.config(text=f"Time step: {time_idx}")
-            
-            # Clear the previous plot
-            self.output_ax.clear()
-            
-            # Get data from cache
-            # Determine which variable to plot (default to 'zb')
-            plot_key = getattr(self, 'output_plot_state', {}).get('key', 'zb')
-            z_data = self.nc_data_cache.get(plot_key)
-            if z_data is None:
-                # Fallback to bed if desired key missing
-                plot_key = 'zb'
-                z_data = self.nc_data_cache['zb']
-            # Select time slice
-            z_data = z_data[time_idx, :, :]
-            x_data = self.nc_data_cache['x']
-            y_data = self.nc_data_cache['y']
-            
-            # Get colorbar limits
-            vmin = None
-            vmax = None
-            if not self.auto_limits_var.get():
-                try:
-                    vmin_str = self.vmin_entry.get().strip()
-                    vmax_str = self.vmax_entry.get().strip()
-                    if vmin_str:
-                        vmin = float(vmin_str)
-                    if vmax_str:
-                        vmax = float(vmax_str)
-                except ValueError:
-                    pass  # Use auto limits if conversion fails
-            
-            # Get selected colormap
-            cmap = self.colormap_var.get()
-            
-            # Create the plot
-            if x_data is not None and y_data is not None:
-                # Use pcolormesh for 2D grid data with coordinates
-                im = self.output_ax.pcolormesh(x_data, y_data, z_data, shading='auto', 
-                                              cmap=cmap, vmin=vmin, vmax=vmax)
-                self.output_ax.set_xlabel('X (m)')
-                self.output_ax.set_ylabel('Y (m)')
-            else:
-                # Use imshow if no coordinate data available
-                im = self.output_ax.imshow(z_data, cmap=cmap, origin='lower', 
-                                          aspect='auto', vmin=vmin, vmax=vmax)
-                self.output_ax.set_xlabel('Grid X Index')
-                self.output_ax.set_ylabel('Grid Y Index')
-            
-            # Set title with time step
-            title_base = getattr(self, 'output_plot_state', {}).get('title', 'Bed Elevation')
-            self.output_ax.set_title(f'{title_base} (Time step: {time_idx})')
-            
-            # Handle colorbar properly to avoid shrinking
-            if self.output_colorbar is not None:
-                # Update existing colorbar
-                self.output_colorbar.update_normal(im)
-                cbar_label = getattr(self, 'output_plot_state', {}).get('label', 'Elevation (m)')
-                self.output_colorbar.set_label(cbar_label)
-            else:
-                # Create new colorbar only on first run
-                cbar_label = getattr(self, 'output_plot_state', {}).get('label', 'Elevation (m)')
-                self.output_colorbar = self.output_fig.colorbar(im, ax=self.output_ax, label=cbar_label)
-
-            # Optionally overlay vegetation if enabled and available in cache
-            if getattr(self, 'overlay_veg_enabled', False) and 'veg' in self.nc_data_cache:
-                veg_slice = self.nc_data_cache['veg']
-                # veg_slice may be 3D (time,y,x) or 2D (y,x)
-                if veg_slice.ndim == 3:
-                    veg_data = veg_slice[time_idx, :, :]
-                else:
-                    veg_data = veg_slice[:, :]
-
-                # Choose plotting method consistent with base plot
-                if x_data is not None and y_data is not None:
-                    self.output_ax.pcolormesh(x_data, y_data, veg_data, shading='auto', 
-                                              cmap='Greens', vmin=0, vmax=1, alpha=0.4)
-                else:
-                    self.output_ax.imshow(veg_data, cmap='Greens', origin='lower', 
-                                          aspect='auto', vmin=0, vmax=1, alpha=0.4)
-            
-            # Add quiver overlay for shear velocity vectors if plotting ustar and components available
-            if plot_key == 'ustar' and 'ustars' in self.nc_data_cache and 'ustarn' in self.nc_data_cache:
-                ustars_slice = self.nc_data_cache['ustars'][time_idx, :, :]
-                ustarn_slice = self.nc_data_cache['ustarn'][time_idx, :, :]
-                
-                # Subsample for cleaner quiver plot
-                skip = max(1, min(ustars_slice.shape) // 20)  # ~20 arrows per dimension
-                
-                # Filter out invalid values (zeros, NaNs, infs) to avoid quiver warnings
-                ustars_sub = ustars_slice[::skip, ::skip]
-                ustarn_sub = ustarn_slice[::skip, ::skip]
-                
-                # Create mask for valid (non-zero, finite) vectors
-                valid_mask = (
-                    np.isfinite(ustars_sub) & 
-                    np.isfinite(ustarn_sub) & 
-                    ((np.abs(ustars_sub) > 1e-10) | (np.abs(ustarn_sub) > 1e-10))
-                )
-                
-                if np.any(valid_mask):
-                    if x_data is not None and y_data is not None:
-                        # Use actual coordinates
-                        x_sub = x_data[::skip, ::skip][valid_mask]
-                        y_sub = y_data[::skip, ::skip][valid_mask]
-                        us_sub = ustars_sub[valid_mask]
-                        un_sub = ustarn_sub[valid_mask]
-                        self.output_ax.quiver(
-                            x_sub, y_sub, us_sub, un_sub,
-                            color='black', alpha=0.6, scale_units='xy', width=0.003
-                        )
-                    else:
-                        # Use indices
-                        ny, nx = ustars_slice.shape
-                        Y, X = np.meshgrid(np.arange(ny), np.arange(nx), indexing='ij')
-                        x_sub = X[::skip, ::skip][valid_mask]
-                        y_sub = Y[::skip, ::skip][valid_mask]
-                        us_sub = ustars_sub[valid_mask]
-                        un_sub = ustarn_sub[valid_mask]
-                        self.output_ax.quiver(
-                            x_sub, y_sub, us_sub, un_sub,
-                            color='black', alpha=0.6, scale_units='xy', width=0.003
-                        )
-            
-            # Redraw the canvas
-            self.output_canvas.draw()
-            
-        except Exception as e:
-            import traceback
-            error_msg = f"Failed to update time step: {str(e)}\n\n{traceback.format_exc()}"
-            print(error_msg)  # Print to console for debugging
-
+        # Get time index from slider
+        time_idx = int(float(value))
+        
+        # Update label
+        self.time_label.config(text=f"Time step: {time_idx}")
+        
+        # Update the 2D plot
+        self.update_2d_plot()
     def plot_nc_wind(self):
         """Plot shear velocity (ustar) from NetCDF output file (uses 'ustar' or computes from 'ustars' and 'ustarn')."""
         if not HAVE_NETCDF:
