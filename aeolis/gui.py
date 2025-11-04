@@ -736,13 +736,15 @@ class AeolisGUI:
                         if 'time' in var.dimensions:
                             # Load all time steps
                             var_data = var[:]
-                            if var_data.ndim < 1:
-                                continue  # Skip scalar variables
+                            # Need at least 3 dimensions: (time, n, s)
+                            if var_data.ndim < 3:
+                                continue  # Skip variables without spatial dimensions
                             n_times = max(n_times, var_data.shape[0])
                         else:
                             # Single time step - validate shape
-                            if var.ndim < 2:
-                                continue  # Skip variables with insufficient dimensions
+                            # Need exactly 2 spatial dimensions: (n, s)
+                            if var.ndim != 2:
+                                continue  # Skip variables without 2D spatial dimensions
                             var_data = var[:, :]
                             var_data = np.expand_dims(var_data, axis=0)  # Add time dimension
                         
@@ -773,8 +775,9 @@ class AeolisGUI:
                 self.time_slider_1d.set(0)
             
             # Configure transect slider based on data shape
-            # Get shape from first available variable (already validated above)
-            first_var = next(iter(var_data_dict.values()))
+            # Get shape from first available variable (already validated to be non-empty above)
+            # Use dict.values() directly instead of next(iter()) for clarity
+            first_var = list(var_data_dict.values())[0]
             if self.transect_direction_var.get() == 'cross-shore':
                 # Fix y-index, vary along x (s dimension)
                 max_idx = first_var.shape[1] - 1  # n dimension
