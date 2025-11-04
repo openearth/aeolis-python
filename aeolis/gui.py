@@ -18,17 +18,31 @@ configfile = r'C:\Users\svries\Documents\GitHub\OE_aeolis-python\aeolis\examples
 
 # Function to prompt the user to select a configuration file
 def prompt_file():
+    # Get initial directory, defaulting to current directory if configfile doesn't exist
+    initial_dir = os.path.dirname(configfile) if os.path.exists(os.path.dirname(configfile)) else os.getcwd()
+    
     file_path = filedialog.askopenfilename(
-        initialdir=os.path.dirname(configfile),
+        initialdir=initial_dir,
         title="Select config file",
         filetypes=(("Text files", "*.txt"), ("All files", "*.*"))
     )
-    return file_path if file_path else configfile
+    return file_path
 
 # Prompt the user to select a configuration file or use the default
-configfile = prompt_file()
+selected_file = prompt_file()
+
 # Read the configuration file into a dictionary
-dic = aeolis.inout.read_configfile(configfile)
+if selected_file:
+    # User selected a file
+    configfile = selected_file
+    dic = aeolis.inout.read_configfile(configfile)
+else:
+    # User canceled - load empty fields with defaults
+    # Set configfile to a placeholder path in the current directory
+    configfile = os.path.join(os.getcwd(), "aeolis.txt")
+    # Use the default configuration from constants
+    from aeolis.constants import DEFAULT_CONFIG
+    dic = DEFAULT_CONFIG.copy()
 
 class AeolisGUI:
     def __init__(self, root, dic):
@@ -60,7 +74,8 @@ class AeolisGUI:
         label = ttk.Label(tab, text=text)
         label.grid(row=row, column=0, sticky=W)
         entry = ttk.Entry(tab)
-        entry.insert(0, str(value))
+        # Convert None to empty string for cleaner display
+        entry.insert(0, '' if value is None else str(value))
         entry.grid(row=row, column=1, sticky=W)
         return entry
 
@@ -126,7 +141,9 @@ class AeolisGUI:
             label = ttk.Label(params_frame, text=f"{field}:")
             label.grid(row=i, column=0, sticky=W, pady=2)
             entry = ttk.Entry(params_frame, width=35)
-            entry.insert(0, str(self.dic.get(field, '')))
+            value = self.dic.get(field, '')
+            # Convert None to empty string for cleaner display
+            entry.insert(0, '' if value is None else str(value))
             entry.grid(row=i, column=1, sticky=W, pady=2, padx=(0, 5))
             self.entries[field] = entry
             
