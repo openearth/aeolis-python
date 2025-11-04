@@ -220,6 +220,13 @@ def check_configuration(p):
         logger.warning('Warning: the used roughness method (constant) defines the z0 as '
                        'k (z0 = k), this was implemented to ensure backward compatibility '
                        'and does not follow the definition of Nikuradse (z0 = k / 30).')
+    
+    # check if steadystate solver is used with multiple sediment fractions
+    if p['solver'].lower() in ['steadystate', 'steadystatepieter']:
+        if len(p['grain_size']) > 1:
+            logger.log_and_raise('The steadystate solver is not compatible with multiple sediment fractions. '
+                                 'Please use a single sediment fraction or switch to a different solver (e.g., trunk or pieter).', 
+                                 exc=ValueError)
 
         
 def parse_value(val, parse_files=True, force_list=False):
