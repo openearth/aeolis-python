@@ -202,7 +202,8 @@ class AeolisGUI:
             try:
                 rel_path = os.path.relpath(file_path, config_dir)
                 # Use relative path if it doesn't go up too many levels
-                if not rel_path.startswith('..\\..\\'):
+                parent_dir = os.pardir + os.sep + os.pardir + os.sep
+                if not rel_path.startswith(parent_dir):
                     file_path = rel_path
             except ValueError:
                 # Different drives on Windows, keep absolute path
@@ -241,7 +242,8 @@ class AeolisGUI:
             try:
                 rel_path = os.path.relpath(file_path, config_dir)
                 # Use relative path if it doesn't go up too many levels
-                if not rel_path.startswith('..\\..\\'):
+                parent_dir = os.pardir + os.sep + os.pardir + os.sep
+                if not rel_path.startswith(parent_dir):
                     file_path = rel_path
             except ValueError:
                 # Different drives on Windows, keep absolute path
@@ -619,7 +621,8 @@ class AeolisGUI:
             try:
                 rel_path = os.path.relpath(file_path, config_dir)
                 # Use relative path if it doesn't go up too many levels
-                if not rel_path.startswith('..\\..\\'):
+                parent_dir = os.pardir + os.sep + os.pardir + os.sep
+                if not rel_path.startswith(parent_dir):
                     file_path = rel_path
             except ValueError:
                 # Different drives on Windows, keep absolute path
@@ -733,13 +736,22 @@ class AeolisGUI:
                         if 'time' in var.dimensions:
                             # Load all time steps
                             var_data = var[:]
+                            if var_data.ndim < 1:
+                                continue  # Skip scalar variables
                             n_times = max(n_times, var_data.shape[0])
                         else:
-                            # Single time step
+                            # Single time step - validate shape
+                            if var.ndim < 2:
+                                continue  # Skip variables with insufficient dimensions
                             var_data = var[:, :]
                             var_data = np.expand_dims(var_data, axis=0)  # Add time dimension
                         
                         var_data_dict[var_name] = var_data
+                
+                # Check if any variables were loaded
+                if not var_data_dict:
+                    messagebox.showerror("Error", "No valid variables found in NetCDF file!")
+                    return
                 
                 # Cache data for slider updates
                 self.nc_data_cache_1d = {
@@ -761,7 +773,7 @@ class AeolisGUI:
                 self.time_slider_1d.set(0)
             
             # Configure transect slider based on data shape
-            # Get shape from first available variable
+            # Get shape from first available variable (already validated above)
             first_var = next(iter(var_data_dict.values()))
             if self.transect_direction_var.get() == 'cross-shore':
                 # Fix y-index, vary along x (s dimension)
