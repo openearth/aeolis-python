@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
+from aeolis.constants import DEFAULT_CONFIG
 
 try:
     import netCDF4
@@ -13,8 +14,8 @@ try:
 except ImportError:
     HAVE_NETCDF = False
 
-# Default configuration file path
-configfile = r'C:\Users\svries\Documents\GitHub\OE_aeolis-python\aeolis\examples\2D\Barchan_dune\aeolis.txt'
+# Default configuration file path (placeholder, will be replaced by user selection)
+configfile = os.path.join(os.getcwd(), "aeolis.txt")
 
 # Function to prompt the user to select a configuration file
 def prompt_file():
@@ -38,10 +39,8 @@ if selected_file:
     dic = aeolis.inout.read_configfile(configfile)
 else:
     # User canceled - load empty fields with defaults
-    # Set configfile to a placeholder path in the current directory
-    configfile = os.path.join(os.getcwd(), "aeolis.txt")
+    # Keep configfile as placeholder path in the current directory
     # Use the default configuration from constants
-    from aeolis.constants import DEFAULT_CONFIG
     dic = DEFAULT_CONFIG.copy()
 
 class AeolisGUI:
