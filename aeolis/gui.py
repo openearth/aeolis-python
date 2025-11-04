@@ -520,6 +520,7 @@ class AeolisGUI:
         variable_dropdown = ttk.Combobox(file_frame_1d, textvariable=self.variable_var_1d, 
                                         values=self.variable_options_1d, state='readonly', width=13)
         variable_dropdown.grid(row=1, column=1, sticky=W, pady=2, padx=(0, 5))
+        variable_dropdown.bind('<<ComboboxSelected>>', self.on_variable_changed)
 
         # Transect direction selection
         direction_label = ttk.Label(file_frame_1d, text="Transect direction:")
@@ -626,6 +627,11 @@ class AeolisGUI:
             
             self.nc_file_entry_1d.delete(0, END)
             self.nc_file_entry_1d.insert(0, file_path)
+
+    def on_variable_changed(self, event):
+        """Update plot when variable selection changes"""
+        if hasattr(self, 'nc_data_cache_1d') and self.nc_data_cache_1d is not None:
+            self.update_1d_plot()
 
     def update_transect_direction(self):
         """Update transect label when direction changes"""
