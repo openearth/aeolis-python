@@ -14,16 +14,10 @@ try:
 except ImportError:
     HAVE_NETCDF = False
 
-# Default configuration file path (placeholder, will be replaced by user selection)
-configfile = os.path.join(os.getcwd(), "aeolis.txt")
-
 # Function to prompt the user to select a configuration file
 def prompt_file():
-    # Get initial directory, defaulting to current directory if configfile doesn't exist
-    initial_dir = os.path.dirname(configfile) if os.path.exists(os.path.dirname(configfile)) else os.getcwd()
-    
     file_path = filedialog.askopenfilename(
-        initialdir=initial_dir,
+        initialdir=os.getcwd(),
         title="Select config file",
         filetypes=(("Text files", "*.txt"), ("All files", "*.*"))
     )
@@ -39,7 +33,7 @@ if selected_file:
     dic = aeolis.inout.read_configfile(configfile)
 else:
     # User canceled - load empty fields with defaults
-    # Keep configfile as placeholder path in the current directory
+    configfile = "No file selected"
     # Use the default configuration from constants
     dic = DEFAULT_CONFIG.copy()
 
@@ -54,6 +48,17 @@ class AeolisGUI:
         self.overlay_veg_enabled = False
         
         self.create_widgets()
+
+    def get_config_dir(self):
+        """Get the directory of the config file, or current directory if no file selected"""
+        global configfile
+        if configfile and configfile != "No file selected" and os.path.exists(configfile):
+            return os.path.dirname(configfile)
+        elif configfile and configfile != "No file selected" and os.path.dirname(configfile):
+            # configfile might be a path even if file doesn't exist yet
+            return os.path.dirname(configfile)
+        else:
+            return os.getcwd()
 
     def create_widgets(self):
         # Create a tab control widget
@@ -190,7 +195,7 @@ class AeolisGUI:
     def browse_file(self, entry_widget):
         """Open file dialog to select a file and update the entry widget"""
         # Get initial directory from config file location
-        initial_dir = os.path.dirname(configfile)
+        initial_dir = self.get_config_dir()
         
         # Get current value to determine initial directory
         current_value = entry_widget.get()
@@ -213,14 +218,14 @@ class AeolisGUI:
         # Update entry if a file was selected
         if file_path:
             # Try to make path relative to config file directory for portability
-            config_dir = os.path.dirname(configfile)
+            config_dir = self.get_config_dir()
             try:
                 rel_path = os.path.relpath(file_path, config_dir)
                 # Use relative path if it doesn't go up too many levels
                 if not rel_path.startswith('..\\..\\'):
                     file_path = rel_path
-            except ValueError:
-                # Different drives on Windows, keep absolute path
+            except (ValueError, TypeError):
+                # Different drives on Windows or invalid path, keep absolute path
                 pass
             
             entry_widget.delete(0, END)
@@ -229,7 +234,7 @@ class AeolisGUI:
     def browse_nc_file(self):
         """Open file dialog to select a NetCDF file"""
         # Get initial directory from config file location
-        initial_dir = os.path.dirname(configfile)
+        initial_dir = self.get_config_dir()
         
         # Get current value to determine initial directory
         current_value = self.nc_file_entry.get()
@@ -252,14 +257,14 @@ class AeolisGUI:
         # Update entry if a file was selected
         if file_path:
             # Try to make path relative to config file directory for portability
-            config_dir = os.path.dirname(configfile)
+            config_dir = self.get_config_dir()
             try:
                 rel_path = os.path.relpath(file_path, config_dir)
                 # Use relative path if it doesn't go up too many levels
                 if not rel_path.startswith('..\\..\\'):
                     file_path = rel_path
-            except ValueError:
-                # Different drives on Windows, keep absolute path
+            except (ValueError, TypeError):
+                # Different drives on Windows or invalid path, keep absolute path
                 pass
             
             self.nc_file_entry.delete(0, END)
@@ -271,7 +276,7 @@ class AeolisGUI:
         
         # Open file dialog
         file_path = filedialog.askopenfilename(
-            initialdir=os.path.dirname(configfile),
+            initialdir=self.get_config_dir(),
             title="Select config file",
             filetypes=(("Text files", "*.txt"), ("All files", "*.*"))
         )
@@ -306,7 +311,7 @@ class AeolisGUI:
         """Browse for save location for config file"""
         # Open file dialog for saving
         file_path = filedialog.asksaveasfilename(
-            initialdir=os.path.dirname(configfile),
+            initialdir=self.get_config_dir(),
             title="Save config file as",
             defaultextension=".txt",
             filetypes=(("Text files", "*.txt"), ("All files", "*.*"))
@@ -523,7 +528,7 @@ class AeolisGUI:
                 return
             
             # Get the directory of the config file to resolve relative paths
-            config_dir = os.path.dirname(configfile)
+            config_dir = self.get_config_dir()
             
             # Load the data file
             if not os.path.isabs(data_file):
@@ -622,7 +627,7 @@ class AeolisGUI:
                 return
             
             # Get the directory of the config file to resolve relative paths
-            config_dir = os.path.dirname(configfile)
+            config_dir = self.get_config_dir()
             
             # Load the bed file
             if not os.path.isabs(bed_file):
@@ -732,7 +737,7 @@ class AeolisGUI:
                 return
             
             # Get the directory of the config file to resolve relative paths
-            config_dir = os.path.dirname(configfile)
+            config_dir = self.get_config_dir()
             
             # Load the NC file
             if not os.path.isabs(nc_file):
@@ -970,7 +975,7 @@ class AeolisGUI:
             if not nc_file:
                 messagebox.showwarning("Warning", "No NetCDF file specified!")
                 return
-            config_dir = os.path.dirname(configfile)
+            config_dir = self.get_config_dir()
             nc_file_path = os.path.join(config_dir, nc_file) if not os.path.isabs(nc_file) else nc_file
             if not os.path.exists(nc_file_path):
                 messagebox.showerror("Error", f"NetCDF file not found: {nc_file_path}")
@@ -1098,7 +1103,7 @@ class AeolisGUI:
                 if not nc_file:
                     messagebox.showwarning("Warning", "No NetCDF file specified!")
                     return
-                config_dir = os.path.dirname(configfile)
+                config_dir = self.get_config_dir()
                 nc_file_path = os.path.join(config_dir, nc_file) if not os.path.isabs(nc_file) else nc_file
                 if not os.path.exists(nc_file_path):
                     messagebox.showerror("Error", f"NetCDF file not found: {nc_file_path}")
