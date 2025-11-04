@@ -285,9 +285,9 @@ def parse_value(val, parse_files=True, force_list=False):
         return np.asarray([parse_value(x) for x in val.split(' ')])
     elif re.match('^[TF]$', val):
         return val == 'T'
-    elif re.match('^-?\d+$', val):
+    elif re.match(r'^-?\d+$', val):
         return int(val)
-    elif re.match('^-?[\d\.]+$', val):
+    elif re.match(r'^-?[\d.]+$', val):
         return float(val)
     elif re.match('None', val):
         return None

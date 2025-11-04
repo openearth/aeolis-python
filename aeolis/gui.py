@@ -38,6 +38,7 @@ class AeolisGUI:
         
         # Initialize attributes
         self.nc_data_cache = None
+        self.overlay_veg_enabled = False
         
         self.create_widgets()
 
@@ -474,10 +475,20 @@ class AeolisGUI:
                                      command=self.plot_nc_bed_level)
         plot_bed_button.grid(row=0, column=0, padx=5)
         
+        # Create plot shear velocity button
+        plot_wind_button = ttk.Button(output_button_frame, text="Plot Shear Velocity", 
+                                      command=self.plot_nc_wind)
+        plot_wind_button.grid(row=0, column=1, padx=5)
+
         # Create apply limits button
         apply_button = ttk.Button(output_button_frame, text="Apply Limits", 
-                                 command=self.apply_color_limits)
-        apply_button.grid(row=0, column=1, padx=5)
+                                  command=self.apply_color_limits)
+        apply_button.grid(row=0, column=2, padx=5)
+
+        # Overlay vegetation button
+        overlay_button = ttk.Button(output_button_frame, text="Overlay Vegetation", 
+                                    command=self.enable_overlay_vegetation)
+        overlay_button.grid(row=0, column=3, padx=5)
 
     def plot_data(self, file_key, title):
         """Plot data from specified file (bed_file, ne_file, or veg_file)"""
@@ -561,6 +572,9 @@ class AeolisGUI:
             else:
                 # Create new colorbar only on first run
                 self.colorbar = self.fig.colorbar(im, ax=self.ax, label=label)
+
+            # Enforce equal aspect ratio in domain visualization
+            self.ax.set_aspect('equal', adjustable='box')
             
             # Redraw the canvas
             self.canvas.draw()
@@ -671,6 +685,9 @@ class AeolisGUI:
             else:
                 # Create new colorbar only on first run
                 self.colorbar = self.fig.colorbar(im, ax=self.ax, label='Elevation (m)')
+
+            # Enforce equal aspect ratio in domain visualization
+            self.ax.set_aspect('equal', adjustable='box')
             
             # Redraw the canvas
             self.canvas.draw()
@@ -765,6 +782,13 @@ class AeolisGUI:
                 self.time_slider.configure(from_=0, to=0)
                 self.time_slider.set(0)
             
+            # Remember current output plot state
+            self.output_plot_state = {
+                'key': 'zb',
+                'label': 'Elevation (m)',
+                'title': 'Bed Elevation'
+            }
+
             # Plot the initial (last) time step
             self.update_time_step(n_times - 1 if n_times > 1 else 0)
             
@@ -790,7 +814,15 @@ class AeolisGUI:
             self.output_ax.clear()
             
             # Get data from cache
-            z_data = self.nc_data_cache['zb'][time_idx, :, :]
+            # Determine which variable to plot (default to 'zb')
+            plot_key = getattr(self, 'output_plot_state', {}).get('key', 'zb')
+            z_data = self.nc_data_cache.get(plot_key)
+            if z_data is None:
+                # Fallback to bed if desired key missing
+                plot_key = 'zb'
+                z_data = self.nc_data_cache['zb']
+            # Select time slice
+            z_data = z_data[time_idx, :, :]
             x_data = self.nc_data_cache['x']
             y_data = self.nc_data_cache['y']
             
@@ -826,16 +858,79 @@ class AeolisGUI:
                 self.output_ax.set_ylabel('Grid Y Index')
             
             # Set title with time step
-            self.output_ax.set_title(f'Bed Elevation (Time step: {time_idx})')
+            title_base = getattr(self, 'output_plot_state', {}).get('title', 'Bed Elevation')
+            self.output_ax.set_title(f'{title_base} (Time step: {time_idx})')
             
             # Handle colorbar properly to avoid shrinking
             if self.output_colorbar is not None:
                 # Update existing colorbar
                 self.output_colorbar.update_normal(im)
-                self.output_colorbar.set_label('Elevation (m)')
+                cbar_label = getattr(self, 'output_plot_state', {}).get('label', 'Elevation (m)')
+                self.output_colorbar.set_label(cbar_label)
             else:
                 # Create new colorbar only on first run
-                self.output_colorbar = self.output_fig.colorbar(im, ax=self.output_ax, label='Elevation (m)')
+                cbar_label = getattr(self, 'output_plot_state', {}).get('label', 'Elevation (m)')
+                self.output_colorbar = self.output_fig.colorbar(im, ax=self.output_ax, label=cbar_label)
+
+            # Optionally overlay vegetation if enabled and available in cache
+            if getattr(self, 'overlay_veg_enabled', False) and 'veg' in self.nc_data_cache:
+                veg_slice = self.nc_data_cache['veg']
+                # veg_slice may be 3D (time,y,x) or 2D (y,x)
+                if veg_slice.ndim == 3:
+                    veg_data = veg_slice[time_idx, :, :]
+                else:
+                    veg_data = veg_slice[:, :]
+
+                # Choose plotting method consistent with base plot
+                if x_data is not None and y_data is not None:
+                    self.output_ax.pcolormesh(x_data, y_data, veg_data, shading='auto', 
+                                              cmap='Greens', vmin=0, vmax=1, alpha=0.4)
+                else:
+                    self.output_ax.imshow(veg_data, cmap='Greens', origin='lower', 
+                                          aspect='auto', vmin=0, vmax=1, alpha=0.4)
+            
+            # Add quiver overlay for shear velocity vectors if plotting ustar and components available
+            if plot_key == 'ustar' and 'ustars' in self.nc_data_cache and 'ustarn' in self.nc_data_cache:
+                ustars_slice = self.nc_data_cache['ustars'][time_idx, :, :]
+                ustarn_slice = self.nc_data_cache['ustarn'][time_idx, :, :]
+                
+                # Subsample for cleaner quiver plot
+                skip = max(1, min(ustars_slice.shape) // 20)  # ~20 arrows per dimension
+                
+                # Filter out invalid values (zeros, NaNs, infs) to avoid quiver warnings
+                ustars_sub = ustars_slice[::skip, ::skip]
+                ustarn_sub = ustarn_slice[::skip, ::skip]
+                
+                # Create mask for valid (non-zero, finite) vectors
+                valid_mask = (
+                    np.isfinite(ustars_sub) & 
+                    np.isfinite(ustarn_sub) & 
+                    ((np.abs(ustars_sub) > 1e-10) | (np.abs(ustarn_sub) > 1e-10))
+                )
+                
+                if np.any(valid_mask):
+                    if x_data is not None and y_data is not None:
+                        # Use actual coordinates
+                        x_sub = x_data[::skip, ::skip][valid_mask]
+                        y_sub = y_data[::skip, ::skip][valid_mask]
+                        us_sub = ustars_sub[valid_mask]
+                        un_sub = ustarn_sub[valid_mask]
+                        self.output_ax.quiver(
+                            x_sub, y_sub, us_sub, un_sub,
+                            color='black', alpha=0.6, scale_units='xy', width=0.003
+                        )
+                    else:
+                        # Use indices
+                        ny, nx = ustars_slice.shape
+                        Y, X = np.meshgrid(np.arange(ny), np.arange(nx), indexing='ij')
+                        x_sub = X[::skip, ::skip][valid_mask]
+                        y_sub = Y[::skip, ::skip][valid_mask]
+                        us_sub = ustars_sub[valid_mask]
+                        un_sub = ustarn_sub[valid_mask]
+                        self.output_ax.quiver(
+                            x_sub, y_sub, us_sub, un_sub,
+                            color='black', alpha=0.6, scale_units='xy', width=0.003
+                        )
             
             # Redraw the canvas
             self.output_canvas.draw()
@@ -845,12 +940,189 @@ class AeolisGUI:
             error_msg = f"Failed to update time step: {str(e)}\n\n{traceback.format_exc()}"
             print(error_msg)  # Print to console for debugging
 
+    def plot_nc_wind(self):
+        """Plot shear velocity (ustar) from NetCDF output file (uses 'ustar' or computes from 'ustars' and 'ustarn')."""
+        if not HAVE_NETCDF:
+            messagebox.showerror("Error", "netCDF4 library is not available!")
+            return
+        try:
+            # Clear the previous plot
+            self.output_ax.clear()
+
+            # Resolve file path
+            nc_file = self.nc_file_entry.get()
+            if not nc_file:
+                messagebox.showwarning("Warning", "No NetCDF file specified!")
+                return
+            config_dir = os.path.dirname(configfile)
+            nc_file_path = os.path.join(config_dir, nc_file) if not os.path.isabs(nc_file) else nc_file
+            if not os.path.exists(nc_file_path):
+                messagebox.showerror("Error", f"NetCDF file not found: {nc_file_path}")
+                return
+
+            with netCDF4.Dataset(nc_file_path, 'r') as nc:
+                vars_available = set(nc.variables.keys())
+
+                ustar_data = None
+                ustars_data = None
+                ustarn_data = None
+                # Prefer magnitude if available
+                if 'ustar' in vars_available:
+                    ustar_var = nc.variables['ustar']
+                    if 'time' in ustar_var.dimensions:
+                        ustar_data = ustar_var[:]
+                    else:
+                        ustar_data = ustar_var[:, :]
+                        ustar_data = np.expand_dims(ustar_data, axis=0)
+                else:
+                    # Try compute magnitude from components
+                    if 'ustars' in vars_available and 'ustarn' in vars_available:
+                        ustars_var = nc.variables['ustars']
+                        ustarn_var = nc.variables['ustarn']
+                        if 'time' in ustars_var.dimensions:
+                            ustars_data = ustars_var[:]
+                            ustarn_data = ustarn_var[:]
+                        else:
+                            ustars_data = np.expand_dims(ustars_var[:, :], axis=0)
+                            ustarn_data = np.expand_dims(ustarn_var[:, :], axis=0)
+                        ustar_data = np.sqrt(ustars_data**2 + ustarn_data**2)
+                    else:
+                        messagebox.showerror(
+                            "Error",
+                            "No shear velocity variables found in NetCDF file.\n"
+                            "Expected 'ustar' or both 'ustars' and 'ustarn'.\n"
+                            f"Available: {', '.join(sorted(vars_available))}"
+                        )
+                        return
+                
+                # If we have magnitude but not components, try loading components separately for quiver
+                if ustar_data is not None and ustars_data is None:
+                    if 'ustars' in vars_available and 'ustarn' in vars_available:
+                        ustars_var = nc.variables['ustars']
+                        ustarn_var = nc.variables['ustarn']
+                        if 'time' in ustars_var.dimensions:
+                            ustars_data = ustars_var[:]
+                            ustarn_data = ustarn_var[:]
+                        else:
+                            ustars_data = np.expand_dims(ustars_var[:, :], axis=0)
+                            ustarn_data = np.expand_dims(ustarn_var[:, :], axis=0)
+
+                # Get coordinates
+                x_data = nc.variables['x'][:] if 'x' in vars_available else None
+                y_data = nc.variables['y'][:] if 'y' in vars_available else None
+                if x_data is not None and y_data is not None:
+                    if x_data.ndim == 1 and y_data.ndim == 1:
+                        x_data, y_data = np.meshgrid(x_data, y_data)
+
+                n_times = ustar_data.shape[0]
+
+                # Initialize or update cache; keep existing cached fields
+                if self.nc_data_cache is None:
+                    self.nc_data_cache = {}
+                cache_update = {
+                    'ustar': ustar_data,
+                    'x': x_data,
+                    'y': y_data,
+                    'n_times': n_times
+                }
+                # Add vector components if available
+                if ustars_data is not None and ustarn_data is not None:
+                    cache_update['ustars'] = ustars_data
+                    cache_update['ustarn'] = ustarn_data
+                self.nc_data_cache.update(cache_update)
+
+            # Configure slider range
+            if n_times > 1:
+                self.time_slider.configure(from_=0, to=n_times-1)
+                self.time_slider.set(n_times - 1)
+            else:
+                self.time_slider.configure(from_=0, to=0)
+                self.time_slider.set(0)
+
+            # Set plot state for shear velocity
+            self.output_plot_state = {
+                'key': 'ustar',
+                'label': 'Shear velocity (m/s)',
+                'title': 'Shear Velocity (ustar)'
+            }
+
+            # Render
+            self.update_time_step(n_times - 1 if n_times > 1 else 0)
+
+        except Exception as e:
+            import traceback
+            error_msg = f"Failed to plot NetCDF shear velocity: {str(e)}\n\n{traceback.format_exc()}"
+            messagebox.showerror("Error", error_msg)
+            print(error_msg)
+
     def apply_color_limits(self):
         """Re-plot with updated colorbar limits"""
         if self.nc_data_cache is not None:
             # Get current slider value and update the plot
             current_time = int(self.time_slider.get())
             self.update_time_step(current_time)
+
+    def enable_overlay_vegetation(self):
+        """Enable vegetation overlay in the output plot and load vegetation data if needed"""
+        if not HAVE_NETCDF:
+            messagebox.showerror("Error", "netCDF4 library is not available!")
+            return
+
+        # Ensure bed data is loaded and slider configured
+        if self.nc_data_cache is None:
+            self.plot_nc_bed_level()
+            if self.nc_data_cache is None:
+                return
+
+        # Load vegetation data into cache if not present
+        if 'veg' not in self.nc_data_cache:
+            try:
+                # Resolve file path
+                nc_file = self.nc_file_entry.get()
+                if not nc_file:
+                    messagebox.showwarning("Warning", "No NetCDF file specified!")
+                    return
+                config_dir = os.path.dirname(configfile)
+                nc_file_path = os.path.join(config_dir, nc_file) if not os.path.isabs(nc_file) else nc_file
+                if not os.path.exists(nc_file_path):
+                    messagebox.showerror("Error", f"NetCDF file not found: {nc_file_path}")
+                    return
+
+                # Try common vegetation variable names
+                veg_candidates = ['rhoveg', 'vegetated', 'hveg', 'vegfac']
+                with netCDF4.Dataset(nc_file_path, 'r') as nc:
+                    available = set(nc.variables.keys())
+                    veg_name = next((v for v in veg_candidates if v in available), None)
+                    if veg_name is None:
+                        messagebox.showerror(
+                            "Error",
+                            "No vegetation variable found in NetCDF file.\n"
+                            f"Tried: {', '.join(veg_candidates)}\n"
+                            f"Available: {', '.join(sorted(available))}"
+                        )
+                        return
+                    veg_var = nc.variables[veg_name]
+                    # Read entire time series if time dimension exists
+                    if 'time' in veg_var.dimensions:
+                        veg_data = veg_var[:]
+                    else:
+                        veg_data = veg_var[:, :]
+
+                # Cache vegetation data and name
+                self.nc_data_cache['veg'] = veg_data
+                self.nc_data_cache['veg_name'] = veg_name
+
+            except Exception as e:
+                import traceback
+                error_msg = f"Failed to load vegetation from NetCDF: {str(e)}\n\n{traceback.format_exc()}"
+                messagebox.showerror("Error", error_msg)
+                print(error_msg)
+                return
+
+        # Enable overlay and refresh current time step
+        self.overlay_veg_enabled = True
+        current_time = int(self.time_slider.get())
+        self.update_time_step(current_time)
 
     def save(self):
         # Save the current entries to the configuration dictionary
