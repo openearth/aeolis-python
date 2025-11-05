@@ -1704,15 +1704,8 @@ class AeolisGUI:
                 messagebox.showwarning("Warning", f"No {file_key} specified!")
                 return
             
-            # Get the directory of the config file to resolve relative paths
-            config_dir = self.get_config_dir()
-            
-            # Load the data file
-            if not os.path.isabs(data_file):
-                data_file_path = os.path.join(config_dir, data_file)
-            else:
-                data_file_path = data_file
-                
+            # Resolve file paths using helper
+            data_file_path = self._resolve_file_path(data_file)
             if not os.path.exists(data_file_path):
                 messagebox.showerror("Error", f"File not found: {data_file_path}")
                 return
@@ -1725,12 +1718,12 @@ class AeolisGUI:
             y_data = None
             
             if xgrid_file:
-                xgrid_file_path = os.path.join(config_dir, xgrid_file) if not os.path.isabs(xgrid_file) else xgrid_file
+                xgrid_file_path = self._resolve_file_path(xgrid_file)
                 if os.path.exists(xgrid_file_path):
                     x_data = np.loadtxt(xgrid_file_path)
             
             if ygrid_file:
-                ygrid_file_path = os.path.join(config_dir, ygrid_file) if not os.path.isabs(ygrid_file) else ygrid_file
+                ygrid_file_path = self._resolve_file_path(ygrid_file)
                 if os.path.exists(ygrid_file_path):
                     y_data = np.loadtxt(ygrid_file_path)
             
@@ -1797,25 +1790,13 @@ class AeolisGUI:
                 messagebox.showwarning("Warning", "No veg_file specified!")
                 return
             
-            # Get the directory of the config file to resolve relative paths
-            config_dir = self.get_config_dir()
-            
-            # Load the bed file
-            if not os.path.isabs(bed_file):
-                bed_file_path = os.path.join(config_dir, bed_file)
-            else:
-                bed_file_path = bed_file
-                
+            # Resolve file paths using helper
+            bed_file_path = self._resolve_file_path(bed_file)
             if not os.path.exists(bed_file_path):
                 messagebox.showerror("Error", f"Bed file not found: {bed_file_path}")
                 return
             
-            # Load the vegetation file
-            if not os.path.isabs(veg_file):
-                veg_file_path = os.path.join(config_dir, veg_file)
-            else:
-                veg_file_path = veg_file
-                
+            veg_file_path = self._resolve_file_path(veg_file)
             if not os.path.exists(veg_file_path):
                 messagebox.showerror("Error", f"Vegetation file not found: {veg_file_path}")
                 return
@@ -1829,12 +1810,12 @@ class AeolisGUI:
             y_data = None
             
             if xgrid_file:
-                xgrid_file_path = os.path.join(config_dir, xgrid_file) if not os.path.isabs(xgrid_file) else xgrid_file
+                xgrid_file_path = self._resolve_file_path(xgrid_file)
                 if os.path.exists(xgrid_file_path):
                     x_data = np.loadtxt(xgrid_file_path)
             
             if ygrid_file:
-                ygrid_file_path = os.path.join(config_dir, ygrid_file) if not os.path.isabs(ygrid_file) else ygrid_file
+                ygrid_file_path = self._resolve_file_path(ygrid_file)
                 if os.path.exists(ygrid_file_path):
                     y_data = np.loadtxt(ygrid_file_path)
             
