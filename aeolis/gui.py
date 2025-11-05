@@ -15,11 +15,81 @@ try:
 except ImportError:
     HAVE_NETCDF = False
 
-def apply_hillshade(z2d, x1d, y1d, az_deg=155.0, alt_deg=5.0):
+# Constants
+COORD_VARS = {'x', 'y', 's', 'n', 'lat', 'lon', 'time', 'layers', 'fractions',
+              'x_bounds', 'y_bounds', 'lat_bounds', 'lon_bounds', 'time_bounds', 'crs', 'nv', 'nv2'}
+
+VEG_CANDIDATES = ['rhoveg', 'vegetated', 'hveg', 'vegfac']
+
+COLORMAP_OPTIONS = [
+    'terrain', 'viridis', 'plasma', 'inferno', 'magma', 'cividis',
+    'jet', 'rainbow', 'turbo', 'coolwarm', 'seismic', 'RdYlBu',
+    'RdYlGn', 'Spectral', 'Greens', 'Blues', 'Reds', 'gray', 'hot', 'cool'
+]
+
+VARIABLE_LABELS = {
+    'zb': 'Elevation (m)',
+    'zb+rhoveg': 'Vegetation-shaded Topography',
+    'ustar': 'Shear Velocity (m/s)',
+    'ustar quiver': 'Shear Velocity Vectors',
+    'ustars': 'Shear Velocity S-component (m/s)',
+    'ustarn': 'Shear Velocity N-component (m/s)',
+    'zs': 'Surface Elevation (m)',
+    'zsep': 'Separation Elevation (m)',
+    'Ct': 'Sediment Concentration (kg/m²)',
+    'Cu': 'Equilibrium Concentration (kg/m²)',
+    'q': 'Sediment Flux (kg/m/s)',
+    'qs': 'Sediment Flux S-component (kg/m/s)',
+    'qn': 'Sediment Flux N-component (kg/m/s)',
+    'pickup': 'Sediment Entrainment (kg/m²)',
+    'uth': 'Threshold Shear Velocity (m/s)',
+    'w': 'Fraction Weight (-)',
+}
+
+VARIABLE_TITLES = {
+    'zb': 'Bed Elevation',
+    'zb+rhoveg': 'Bed Elevation with Vegetation (Shaded)',
+    'ustar': 'Shear Velocity',
+    'ustar quiver': 'Shear Velocity Vector Field',
+    'ustars': 'Shear Velocity (S-component)',
+    'ustarn': 'Shear Velocity (N-component)',
+    'zs': 'Surface Elevation',
+    'zsep': 'Separation Elevation',
+    'Ct': 'Sediment Concentration',
+    'Cu': 'Equilibrium Concentration',
+    'q': 'Sediment Flux',
+    'qs': 'Sediment Flux (S-component)',
+    'qn': 'Sediment Flux (N-component)',
+    'pickup': 'Sediment Entrainment',
+    'uth': 'Threshold Shear Velocity',
+    'w': 'Fraction Weight',
+}
+
+# Hillshade parameters
+HILLSHADE_AZIMUTH = 155.0
+HILLSHADE_ALTITUDE = 5.0
+HILLSHADE_AMBIENT = 0.35
+
+# Color definitions for combined visualization
+COLOR_SAND = np.array([1.0, 239.0/255.0, 213.0/255.0])
+COLOR_DARKGREEN = np.array([34/255, 139/255, 34/255])
+COLOR_OCEAN = np.array([70/255, 130/255, 180/255])
+
+def apply_hillshade(z2d, x1d, y1d, az_deg=HILLSHADE_AZIMUTH, alt_deg=HILLSHADE_ALTITUDE):
     """
     Compute a simple hillshade (0–1) for 2D elevation array.
     Uses safe gradient computation and normalization.
     Adapted from Anim2D_ShadeVeg.py
+    
+    Args:
+        z2d: 2D elevation array
+        x1d: 1D x-coordinates
+        y1d: 1D y-coordinates
+        az_deg: Azimuth angle in degrees (default: 155.0)
+        alt_deg: Altitude angle in degrees (default: 5.0)
+    
+    Returns:
+        2D array with hillshade values in range [0, 1]
     """
     z = np.asarray(z2d, dtype=float)
     if z.ndim != 2:
@@ -48,11 +118,12 @@ def apply_hillshade(z2d, x1d, y1d, az_deg=155.0, alt_deg=5.0):
     lz = math.sin(alt)
 
     illum = np.clip(nx * lx + ny * ly + nz * lz, 0.0, 1.0)
-    shaded = 0.35 + (1.0 - 0.35) * illum  # ambient term
+    shaded = HILLSHADE_AMBIENT + (1.0 - HILLSHADE_AMBIENT) * illum
     return np.clip(shaded, 0.0, 1.0)
 
 # Function to prompt the user to select a configuration file
 def prompt_file():
+    """Prompt user to select a configuration file"""
     file_path = filedialog.askopenfilename(
         initialdir=os.getcwd(),
         title="Select config file",
@@ -73,6 +144,53 @@ else:
     configfile = "No file selected"
     # Use the default configuration from constants
     dic = DEFAULT_CONFIG.copy()
+
+
+def resolve_relative_path(file_path, base_dir):
+    """
+    Resolve a file path relative to a base directory.
+    
+    Args:
+        file_path: File path to resolve (can be absolute or relative)
+        base_dir: Base directory for relative paths
+    
+    Returns:
+        Absolute path to the file
+    """
+    if not file_path or not base_dir:
+        return file_path
+    
+    if os.path.isabs(file_path):
+        return file_path
+    else:
+        return os.path.join(base_dir, file_path)
+
+
+def make_relative_path(file_path, base_dir):
+    """
+    Convert an absolute path to a relative path if beneficial.
+    
+    Args:
+        file_path: Absolute file path to convert
+        base_dir: Base directory to make path relative to
+    
+    Returns:
+        Relative path if beneficial, otherwise absolute path
+    """
+    if not file_path or not base_dir:
+        return file_path
+    
+    try:
+        rel_path = os.path.relpath(file_path, base_dir)
+        # Use relative path if it doesn't go up too many levels
+        parent_dir = os.pardir + os.sep + os.pardir + os.sep
+        if not rel_path.startswith(parent_dir):
+            return rel_path
+    except (ValueError, TypeError):
+        # Different drives on Windows or invalid path, keep absolute path
+        pass
+    
+    return file_path
 
 class AeolisGUI:
     def __init__(self, root, dic):
@@ -96,6 +214,183 @@ class AeolisGUI:
             return os.path.dirname(configfile)
         else:
             return os.getcwd()
+
+    def _browse_file_dialog(self, entry_widget, title, filetypes, initial_value=None):
+        """
+        Generic file browsing method to reduce code duplication.
+        
+        Args:
+            entry_widget: The entry widget to update with selected file
+            title: Dialog title
+            filetypes: File types for the dialog
+            initial_value: Current value in entry widget (if None, gets from widget)
+        
+        Returns:
+            Selected file path or None if canceled
+        """
+        # Get initial directory from config file location
+        initial_dir = self.get_config_dir()
+        
+        # Get current value to determine initial directory
+        current_value = initial_value if initial_value is not None else entry_widget.get()
+        if current_value:
+            current_abs = resolve_relative_path(current_value, initial_dir)
+            if os.path.exists(current_abs):
+                initial_dir = os.path.dirname(current_abs)
+        
+        # Open file dialog
+        file_path = filedialog.askopenfilename(
+            initialdir=initial_dir,
+            title=title,
+            filetypes=filetypes
+        )
+        
+        # Update entry if a file was selected
+        if file_path:
+            # Try to make path relative to config file directory for portability
+            rel_path = make_relative_path(file_path, self.get_config_dir())
+            entry_widget.delete(0, END)
+            entry_widget.insert(0, rel_path)
+            return rel_path
+        
+        return None
+
+    def _handle_colorbar(self, ax, im, label, colorbar_attr='colorbar'):
+        """
+        Handle colorbar creation and updates to avoid plot shrinking.
+        
+        Args:
+            ax: Matplotlib axes
+            im: Image object
+            label: Colorbar label
+            colorbar_attr: Attribute name for storing colorbar (default: 'colorbar')
+        
+        Returns:
+            Colorbar object
+        """
+        colorbar = getattr(self, colorbar_attr, None)
+        
+        if colorbar is not None:
+            try:
+                # Update existing colorbar
+                colorbar.update_normal(im)
+                colorbar.set_label(label)
+                return colorbar
+            except:
+                # If update fails, create new one
+                pass
+        
+        # Create new colorbar
+        colorbar = ax.figure.colorbar(im, ax=ax, label=label)
+        setattr(self, colorbar_attr, colorbar)
+        return colorbar
+
+    def _remove_colorbar(self, colorbar_attr='colorbar'):
+        """
+        Safely remove a colorbar.
+        
+        Args:
+            colorbar_attr: Attribute name for colorbar to remove
+        """
+        colorbar = getattr(self, colorbar_attr, None)
+        if colorbar is not None:
+            try:
+                colorbar.remove()
+            except:
+                # If remove() fails, try removing from figure
+                try:
+                    if hasattr(colorbar, 'ax'):
+                        colorbar.ax.figure.delaxes(colorbar.ax)
+                except:
+                    pass
+            setattr(self, colorbar_attr, None)
+
+    def _resolve_file_path(self, file_path):
+        """
+        Resolve a file path relative to the config directory.
+        
+        Args:
+            file_path: File path to resolve
+        
+        Returns:
+            Absolute path to the file
+        """
+        if not file_path:
+            return None
+        
+        config_dir = self.get_config_dir()
+        return resolve_relative_path(file_path, config_dir)
+
+    def _load_netcdf_variables(self, nc_file_path):
+        """
+        Load variables from NetCDF file and return organized data structure.
+        
+        Args:
+            nc_file_path: Path to NetCDF file
+        
+        Returns:
+            Dictionary containing:
+                - 'vars': Dictionary of variable data arrays
+                - 'x', 'y': Coordinate arrays (or None)
+                - 's', 'n': Grid indices (or None)
+                - 'n_times': Number of time steps
+                - 'available_vars': List of available variable names
+        """
+        with netCDF4.Dataset(nc_file_path, 'r') as nc:
+            # Get available variables
+            available_vars = list(nc.variables.keys())
+            
+            # Try to get x and y coordinates
+            x_data = nc.variables['x'][:] if 'x' in nc.variables else None
+            y_data = nc.variables['y'][:] if 'y' in nc.variables else None
+            
+            # Get s and n coordinates (grid indices)
+            s_data = nc.variables['s'][:] if 's' in nc.variables else None
+            n_data = nc.variables['n'][:] if 'n' in nc.variables else None
+            
+            # Find all available 2D/3D variables (potential plot candidates)
+            candidate_vars = []
+            var_data_dict = {}
+            n_times = 1
+            
+            for var_name in available_vars:
+                if var_name in COORD_VARS:
+                    continue
+                
+                var = nc.variables[var_name]
+                
+                # Check if time dimension exists
+                if 'time' in var.dimensions:
+                    # Load all time steps
+                    var_data = var[:]
+                    # Need at least 3 dimensions: (time, n, s)
+                    if var_data.ndim < 3:
+                        continue  # Skip variables without spatial dimensions
+                    n_times = max(n_times, var_data.shape[0])
+                else:
+                    # Single time step - validate shape
+                    if var.ndim < 2:
+                        continue  # Skip variables without spatial dimensions
+                    
+                    if var.ndim == 2:
+                        var_data = var[:, :]
+                        var_data = np.expand_dims(var_data, axis=0)  # Add time dimension
+                    elif var.ndim == 3:  # (n, s, fractions)
+                        var_data = var[:, :, :]
+                        var_data = np.expand_dims(var_data, axis=0)  # Add time dimension
+                
+                var_data_dict[var_name] = var_data
+                candidate_vars.append(var_name)
+            
+            return {
+                'vars': var_data_dict,
+                'x': x_data,
+                'y': y_data,
+                's': s_data,
+                'n': n_data,
+                'n_times': n_times,
+                'available_vars': candidate_vars
+            }
 
     def create_widgets(self):
         # Create a tab control widget
@@ -263,85 +558,22 @@ class AeolisGUI:
 
     def browse_file(self, entry_widget):
         """Open file dialog to select a file and update the entry widget"""
-        # Get initial directory from config file location
-        initial_dir = self.get_config_dir()
-        
-        # Get current value to determine initial directory
-        current_value = entry_widget.get()
-        if current_value:
-            if os.path.isabs(current_value):
-                initial_dir = os.path.dirname(current_value)
-            else:
-                full_path = os.path.join(initial_dir, current_value)
-                if os.path.exists(full_path):
-                    initial_dir = os.path.dirname(full_path)
-        
-        # Open file dialog
-        file_path = filedialog.askopenfilename(
-            initialdir=initial_dir,
-            title="Select file",
-            filetypes=(("Text files", "*.txt"), 
-                      ("All files", "*.*"))
+        self._browse_file_dialog(
+            entry_widget,
+            "Select file",
+            (("Text files", "*.txt"), ("All files", "*.*"))
         )
-        
-        # Update entry if a file was selected
-        if file_path:
-            # Try to make path relative to config file directory for portability
-            config_dir = self.get_config_dir()
-            try:
-                rel_path = os.path.relpath(file_path, config_dir)
-                # Use relative path if it doesn't go up too many levels
-                parent_dir = os.pardir + os.sep + os.pardir + os.sep
-                if not rel_path.startswith(parent_dir):
-                    file_path = rel_path
-            except (ValueError, TypeError):
-                # Different drives on Windows or invalid path, keep absolute path
-                pass
-            
-            entry_widget.delete(0, END)
-            entry_widget.insert(0, file_path)
 
     def browse_nc_file(self):
         """Open file dialog to select a NetCDF file"""
-        # Get initial directory from config file location
-        initial_dir = self.get_config_dir()
-        
-        # Get current value to determine initial directory
-        current_value = self.nc_file_entry.get()
-        if current_value:
-            if os.path.isabs(current_value):
-                initial_dir = os.path.dirname(current_value)
-            else:
-                full_path = os.path.join(initial_dir, current_value)
-                if os.path.exists(full_path):
-                    initial_dir = os.path.dirname(full_path)
-        
-        # Open file dialog
-        file_path = filedialog.askopenfilename(
-            initialdir=initial_dir,
-            title="Select NetCDF output file",
-            filetypes=(("NetCDF files", "*.nc"), 
-                      ("All files", "*.*"))
+        result = self._browse_file_dialog(
+            self.nc_file_entry,
+            "Select NetCDF output file",
+            (("NetCDF files", "*.nc"), ("All files", "*.*"))
         )
         
-        # Update entry if a file was selected
-        if file_path:
-            # Try to make path relative to config file directory for portability
-            config_dir = self.get_config_dir()
-            try:
-                rel_path = os.path.relpath(file_path, config_dir)
-                # Use relative path if it doesn't go up too many levels
-                parent_dir = os.pardir + os.sep + os.pardir + os.sep
-                if not rel_path.startswith(parent_dir):
-                    file_path = rel_path
-            except (ValueError, TypeError):
-                # Different drives on Windows or invalid path, keep absolute path
-                pass
-            
-            self.nc_file_entry.delete(0, END)
-            self.nc_file_entry.insert(0, file_path)
-            
-            # Auto-load and plot the data
+        # Auto-load and plot the data if a file was selected
+        if result:
             self.plot_nc_2d()
 
     def load_new_config(self):
@@ -523,33 +755,9 @@ class AeolisGUI:
         cmap_label = ttk.Label(file_frame, text="Colormap:")
         cmap_label.grid(row=4, column=0, sticky=W, pady=2)
         
-        # Available colormaps
-        self.colormap_options = [
-            'terrain',
-            'viridis',
-            'plasma',
-            'inferno',
-            'magma',
-            'cividis',
-            'jet',
-            'rainbow',
-            'turbo',
-            'coolwarm',
-            'seismic',
-            'RdYlBu',
-            'RdYlGn',
-            'Spectral',
-            'Greens',
-            'Blues',
-            'Reds',
-            'gray',
-            'hot',
-            'cool'
-        ]
-        
         self.colormap_var = StringVar(value='terrain')
         colormap_dropdown = ttk.Combobox(file_frame, textvariable=self.colormap_var, 
-                                        values=self.colormap_options, state='readonly', width=13)
+                                        values=COLORMAP_OPTIONS, state='readonly', width=13)
         colormap_dropdown.grid(row=4, column=1, sticky=W, pady=2, padx=(0, 5))
 
         # Overlay vegetation checkbox
@@ -700,45 +908,14 @@ class AeolisGUI:
 
     def browse_nc_file_1d(self):
         """Open file dialog to select a NetCDF file for 1D plotting"""
-        # Get initial directory from config file location
-        initial_dir = os.path.dirname(configfile)
-        
-        # Get current value to determine initial directory
-        current_value = self.nc_file_entry_1d.get()
-        if current_value:
-            if os.path.isabs(current_value):
-                initial_dir = os.path.dirname(current_value)
-            else:
-                full_path = os.path.join(initial_dir, current_value)
-                if os.path.exists(full_path):
-                    initial_dir = os.path.dirname(full_path)
-        
-        # Open file dialog
-        file_path = filedialog.askopenfilename(
-            initialdir=initial_dir,
-            title="Select NetCDF output file",
-            filetypes=(("NetCDF files", "*.nc"), 
-                      ("All files", "*.*"))
+        result = self._browse_file_dialog(
+            self.nc_file_entry_1d,
+            "Select NetCDF output file",
+            (("NetCDF files", "*.nc"), ("All files", "*.*"))
         )
         
-        # Update entry if a file was selected
-        if file_path:
-            # Try to make path relative to config file directory for portability
-            config_dir = os.path.dirname(configfile)
-            try:
-                rel_path = os.path.relpath(file_path, config_dir)
-                # Use relative path if it doesn't go up too many levels
-                parent_dir = os.pardir + os.sep + os.pardir + os.sep
-                if not rel_path.startswith(parent_dir):
-                    file_path = rel_path
-            except ValueError:
-                # Different drives on Windows, keep absolute path
-                pass
-            
-            self.nc_file_entry_1d.delete(0, END)
-            self.nc_file_entry_1d.insert(0, file_path)
-            
-            # Auto-load and plot the data
+        # Auto-load and plot the data if a file was selected
+        if result:
             self.plot_1d_transect()
 
     def on_variable_changed(self, event):
@@ -1032,24 +1209,8 @@ class AeolisGUI:
             self.output_1d_ax.plot(x_coords, transect_data, 'b-', linewidth=2)
             self.output_1d_ax.set_xlabel(xlabel)
             
-            # Set ylabel based on variable
-            ylabel_dict = {
-                'zb': 'Bed Elevation (m)',
-                'ustar': 'Shear Velocity (m/s)',
-                'ustars': 'Shear Velocity S-component (m/s)',
-                'ustarn': 'Shear Velocity N-component (m/s)',
-                'zs': 'Surface Elevation (m)',
-                'zsep': 'Separation Elevation (m)',
-                'Ct': 'Sediment Concentration (kg/m²)',
-                'Cu': 'Equilibrium Concentration (kg/m²)',
-                'q': 'Sediment Flux (kg/m/s)',
-                'qs': 'Sediment Flux S-component (kg/m/s)',
-                'qn': 'Sediment Flux N-component (kg/m/s)',
-                'pickup': 'Sediment Entrainment (kg/m²)',
-                'uth': 'Threshold Shear Velocity (m/s)',
-                'w': 'Fraction Weight (-)',
-            }
-            ylabel = ylabel_dict.get(var_name, var_name)
+            # Set ylabel based on variable (use same labels as 2D plots)
+            ylabel = VARIABLE_LABELS.get(var_name, var_name)
             
             # Add indication if variable has fractions dimension
             if has_fractions:
@@ -1062,24 +1223,8 @@ class AeolisGUI:
             direction = 'Cross-shore' if self.transect_direction_var.get() == 'cross-shore' else 'Along-shore'
             idx_label = 'Y' if self.transect_direction_var.get() == 'cross-shore' else 'X'
             
-            # Get variable title
-            title_dict = {
-                'zb': 'Bed Elevation',
-                'ustar': 'Shear Velocity',
-                'ustars': 'Shear Velocity (S-component)',
-                'ustarn': 'Shear Velocity (N-component)',
-                'zs': 'Surface Elevation',
-                'zsep': 'Separation Elevation',
-                'Ct': 'Sediment Concentration',
-                'Cu': 'Equilibrium Concentration',
-                'q': 'Sediment Flux',
-                'qs': 'Sediment Flux (S-component)',
-                'qn': 'Sediment Flux (N-component)',
-                'pickup': 'Sediment Entrainment',
-                'uth': 'Threshold Shear Velocity',
-                'w': 'Fraction Weight',
-            }
-            var_title = title_dict.get(var_name, var_name)
+            # Get variable title (use same titles as 2D plots)
+            var_title = VARIABLE_TITLES.get(var_name, var_name)
             if has_fractions:
                 n_fractions = var_data.shape[3]
                 var_title += f' (averaged over {n_fractions} fractions)'
@@ -1267,25 +1412,7 @@ class AeolisGUI:
 
     def get_variable_label(self, var_name):
         """Get axis label for variable"""
-        label_dict = {
-            'zb': 'Elevation (m)',
-            'zb+rhoveg': 'Vegetation-shaded Topography',
-            'ustar': 'Shear Velocity (m/s)',
-            'ustar quiver': 'Shear Velocity Vectors',
-            'ustars': 'Shear Velocity S-component (m/s)',
-            'ustarn': 'Shear Velocity N-component (m/s)',
-            'zs': 'Surface Elevation (m)',
-            'zsep': 'Separation Elevation (m)',
-            'Ct': 'Sediment Concentration (kg/m²)',
-            'Cu': 'Equilibrium Concentration (kg/m²)',
-            'q': 'Sediment Flux (kg/m/s)',
-            'qs': 'Sediment Flux S-component (kg/m/s)',
-            'qn': 'Sediment Flux N-component (kg/m/s)',
-            'pickup': 'Sediment Entrainment (kg/m²)',
-            'uth': 'Threshold Shear Velocity (m/s)',
-            'w': 'Fraction Weight (-)',
-        }
-        base_label = label_dict.get(var_name, var_name)
+        base_label = VARIABLE_LABELS.get(var_name, var_name)
         
         # Special cases that don't need fraction checking
         if var_name in ['zb+rhoveg', 'ustar quiver']:
@@ -1303,25 +1430,7 @@ class AeolisGUI:
 
     def get_variable_title(self, var_name):
         """Get title for variable"""
-        title_dict = {
-            'zb': 'Bed Elevation',
-            'zb+rhoveg': 'Bed Elevation with Vegetation (Shaded)',
-            'ustar': 'Shear Velocity',
-            'ustar quiver': 'Shear Velocity Vector Field',
-            'ustars': 'Shear Velocity (S-component)',
-            'ustarn': 'Shear Velocity (N-component)',
-            'zs': 'Surface Elevation',
-            'zsep': 'Separation Elevation',
-            'Ct': 'Sediment Concentration',
-            'Cu': 'Equilibrium Concentration',
-            'q': 'Sediment Flux',
-            'qs': 'Sediment Flux (S-component)',
-            'qn': 'Sediment Flux (N-component)',
-            'pickup': 'Sediment Entrainment',
-            'uth': 'Threshold Shear Velocity',
-            'w': 'Fraction Weight',
-        }
-        base_title = title_dict.get(var_name, var_name)
+        base_title = VARIABLE_TITLES.get(var_name, var_name)
         
         # Special cases that don't need fraction checking
         if var_name in ['zb+rhoveg', 'ustar quiver']:
@@ -1416,20 +1525,8 @@ class AeolisGUI:
             self.output_ax.set_title(f'{title} (Time step: {time_idx})')
             
             # Handle colorbar properly to avoid shrinking
-            if self.output_colorbar is not None:
-                try:
-                    # Update existing colorbar
-                    self.output_colorbar.update_normal(im)
-                    cbar_label = self.get_variable_label(var_name)
-                    self.output_colorbar.set_label(cbar_label)
-                except:
-                    # If update fails (e.g., colorbar was removed), create new one
-                    cbar_label = self.get_variable_label(var_name)
-                    self.output_colorbar = self.output_fig.colorbar(im, ax=self.output_ax, label=cbar_label)
-            else:
-                # Create new colorbar only on first run or after removal
-                cbar_label = self.get_variable_label(var_name)
-                self.output_colorbar = self.output_fig.colorbar(im, ax=self.output_ax, label=cbar_label)
+            cbar_label = self.get_variable_label(var_name)
+            self.output_colorbar = self._handle_colorbar(self.output_ax, im, cbar_label, 'output_colorbar')
 
             # Overlay vegetation if enabled and available
             if self.overlay_veg_var.get() and self.nc_data_cache['veg'] is not None:
@@ -1515,20 +1612,15 @@ class AeolisGUI:
             # Apply hillshade to topography
             shaded = apply_hillshade(zb, x1d, y1d)
             
-            # Define colors (from Anim2D_ShadeVeg.py)
-            sand = np.array([1.0, 239.0/255.0, 213.0/255.0])  # light sand
-            darkgreen = np.array([34/255, 139/255, 34/255])
-            ocean = np.array([70/255, 130/255, 180/255])  # steelblue
-            
             # Create base color by blending sand and vegetation
             # rgb shape: (ny, nx, 3)
-            rgb = sand[None, None, :] * (1.0 - veg_norm[..., None]) + darkgreen[None, None, :] * veg_norm[..., None]
+            rgb = COLOR_SAND[None, None, :] * (1.0 - veg_norm[..., None]) + COLOR_DARKGREEN[None, None, :] * veg_norm[..., None]
             
             # Apply ocean mask: zb < -0.5 and x < 200
             if x_data is not None:
                 X2d, _ = np.meshgrid(x1d, y1d)
                 ocean_mask = (zb < -0.5) & (X2d < 200)
-                rgb[ocean_mask] = ocean
+                rgb[ocean_mask] = COLOR_OCEAN
             
             # Apply hillshade to modulate colors
             rgb *= shaded[..., None]
@@ -1552,16 +1644,7 @@ class AeolisGUI:
             self.output_ax.set_title(f'{title} (Time step: {time_idx})')
             
             # Remove colorbar for RGB visualization
-            if self.output_colorbar is not None:
-                try:
-                    self.output_colorbar.remove()
-                except:
-                    # If remove() fails, try removing from figure
-                    try:
-                        self.output_fig.delaxes(self.output_colorbar.ax)
-                    except:
-                        pass
-                self.output_colorbar = None
+            self._remove_colorbar('output_colorbar')
             
             # Redraw the canvas
             self.output_canvas.draw()
@@ -1638,16 +1721,9 @@ class AeolisGUI:
                 self.output_ax.set_ylabel('Grid Y Index')
             
             # Handle colorbar
-            if self.output_colorbar is not None:
-                try:
-                    self.output_colorbar.update_normal(im)
-                    self.output_colorbar.set_label('Shear Velocity (m/s)')
-                except:
-                    cbar_label = 'Shear Velocity (m/s)'
-                    self.output_colorbar = self.output_fig.colorbar(im, ax=self.output_ax, label=cbar_label)
-            else:
-                cbar_label = 'Shear Velocity (m/s)'
-                self.output_colorbar = self.output_fig.colorbar(im, ax=self.output_ax, label=cbar_label)
+            self.output_colorbar = self._handle_colorbar(
+                self.output_ax, im, 'Shear Velocity (m/s)', 'output_colorbar'
+            )
             
             # Create coordinate arrays for quiver
             if x_data is not None and y_data is not None:
@@ -1783,13 +1859,7 @@ class AeolisGUI:
             self.ax.set_title(title)
             
             # Handle colorbar properly to avoid shrinking
-            if self.colorbar is not None:
-                # Update existing colorbar
-                self.colorbar.update_normal(im)
-                self.colorbar.set_label(label)
-            else:
-                # Create new colorbar only on first run
-                self.colorbar = self.fig.colorbar(im, ax=self.ax, label=label)
+            self.colorbar = self._handle_colorbar(self.ax, im, label, 'colorbar')
 
             # Enforce equal aspect ratio in domain visualization
             self.ax.set_aspect('equal', adjustable='box')
@@ -1896,13 +1966,7 @@ class AeolisGUI:
             self.ax.set_title('Bed Elevation with Vegetation')
             
             # Handle colorbar properly to avoid shrinking
-            if self.colorbar is not None:
-                # Update existing colorbar
-                self.colorbar.update_normal(im)
-                self.colorbar.set_label('Elevation (m)')
-            else:
-                # Create new colorbar only on first run
-                self.colorbar = self.fig.colorbar(im, ax=self.ax, label='Elevation (m)')
+            self.colorbar = self._handle_colorbar(self.ax, im, 'Elevation (m)', 'colorbar')
 
             # Enforce equal aspect ratio in domain visualization
             self.ax.set_aspect('equal', adjustable='box')
