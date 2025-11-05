@@ -3,6 +3,7 @@ from tkinter import *
 from tkinter import ttk, filedialog, messagebox
 import os
 import numpy as np
+import math
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
@@ -13,6 +14,42 @@ try:
     HAVE_NETCDF = True
 except ImportError:
     HAVE_NETCDF = False
+
+def apply_hillshade(z2d, x1d, y1d, az_deg=155.0, alt_deg=5.0):
+    """
+    Compute a simple hillshade (0–1) for 2D elevation array.
+    Uses safe gradient computation and normalization.
+    Adapted from Anim2D_ShadeVeg.py
+    """
+    z = np.asarray(z2d, dtype=float)
+    if z.ndim != 2:
+        raise ValueError("apply_hillshade expects a 2D array")
+
+    x1 = np.asarray(x1d).ravel()
+    y1 = np.asarray(y1d).ravel()
+
+    eps = 1e-8
+    dx = np.mean(np.diff(x1)) if x1.size > 1 else 1.0
+    dy = np.mean(np.diff(y1)) if y1.size > 1 else 1.0
+    dx = 1.0 if abs(dx) < eps else dx
+    dy = 1.0 if abs(dy) < eps else dy
+
+    dz_dy, dz_dx = np.gradient(z, dy, dx)
+
+    nx, ny, nz = -dz_dx, -dz_dy, np.ones_like(z)
+    norm = np.sqrt(nx * nx + ny * ny + nz * nz)
+    norm = np.where(norm < eps, eps, norm)
+    nx, ny, nz = nx / norm, ny / norm, nz / norm
+
+    az = math.radians(az_deg)
+    alt = math.radians(alt_deg)
+    lx = math.cos(alt) * math.cos(az)
+    ly = math.cos(alt) * math.sin(az)
+    lz = math.sin(alt)
+
+    illum = np.clip(nx * lx + ny * ly + nz * lz, 0.0, 1.0)
+    shaded = 0.35 + (1.0 - 0.35) * illum  # ambient term
+    return np.clip(shaded, 0.0, 1.0)
 
 # Function to prompt the user to select a configuration file
 def prompt_file():
@@ -73,6 +110,37 @@ class AeolisGUI:
         self.create_plot_output_1d_tab(tab_control)
         # Pack the tab control to expand and fill the available space
         tab_control.pack(expand=1, fill='both')
+        
+        # Store reference to tab control for later use
+        self.tab_control = tab_control
+        
+        # Bind tab change event to check if domain tab is selected
+        tab_control.bind('<<NotebookTabChanged>>', self.on_tab_changed)
+
+    def on_tab_changed(self, event):
+        """Handle tab change event to auto-plot domain when tab is selected"""
+        # Get the currently selected tab index
+        selected_tab = self.tab_control.index(self.tab_control.select())
+        
+        # Domain tab is at index 1 (0: Input file, 1: Domain, 2: Timeframe, etc.)
+        if selected_tab == 1:
+            # Check if required files are defined
+            xgrid = self.entries.get('xgrid_file', None)
+            ygrid = self.entries.get('ygrid_file', None)
+            bed = self.entries.get('bed_file', None)
+            
+            if xgrid and ygrid and bed:
+                xgrid_val = xgrid.get().strip()
+                ygrid_val = ygrid.get().strip()
+                bed_val = bed.get().strip()
+                
+                # Only auto-plot if all three files are specified (not empty)
+                if xgrid_val and ygrid_val and bed_val:
+                    try:
+                        self.plot_data('bed_file', 'Bed Elevation')
+                    except Exception as e:
+                        # Silently fail if plotting doesn't work (e.g., files don't exist)
+                        pass
 
     def create_label_entry(self, tab, text, value, row):
         # Create a label and entry widget for a given tab
@@ -360,6 +428,19 @@ class AeolisGUI:
             self.vmin_entry.config(state='normal')
             self.vmax_entry.config(state='normal')
 
+    def toggle_y_limits(self):
+        """Enable or disable Y-axis limit entries based on auto limits checkbox"""
+        if self.auto_ylimits_var.get():
+            self.ymin_entry_1d.config(state='disabled')
+            self.ymax_entry_1d.config(state='disabled')
+        else:
+            self.ymin_entry_1d.config(state='normal')
+            self.ymax_entry_1d.config(state='normal')
+        
+        # Update plot if data is loaded
+        if hasattr(self, 'nc_data_cache_1d') and self.nc_data_cache_1d is not None:
+            self.update_1d_plot()
+
     def create_timeframe_tab(self, tab_control):
         # Create the 'Timeframe' tab
         tab2 = ttk.Frame(tab_control)
@@ -567,6 +648,24 @@ class AeolisGUI:
                                          command=self.update_1d_transect_position)
         self.transect_slider.grid(row=3, column=1, sticky=(W, E), pady=2, padx=(0, 5))
         self.transect_slider.set(0)
+
+        # Y-axis limits
+        ymin_label = ttk.Label(file_frame_1d, text="Y-axis min:")
+        ymin_label.grid(row=4, column=0, sticky=W, pady=2)
+        self.ymin_entry_1d = ttk.Entry(file_frame_1d, width=15, state='disabled')
+        self.ymin_entry_1d.grid(row=4, column=1, sticky=W, pady=2, padx=(0, 5))
+        
+        ymax_label = ttk.Label(file_frame_1d, text="Y-axis max:")
+        ymax_label.grid(row=5, column=0, sticky=W, pady=2)
+        self.ymax_entry_1d = ttk.Entry(file_frame_1d, width=15, state='disabled')
+        self.ymax_entry_1d.grid(row=5, column=1, sticky=W, pady=2, padx=(0, 5))
+        
+        # Auto Y-axis limits checkbox
+        self.auto_ylimits_var = BooleanVar(value=True)
+        auto_ylimits_check = ttk.Checkbutton(file_frame_1d, text="Auto Y-axis limits", 
+                                            variable=self.auto_ylimits_var,
+                                            command=self.toggle_y_limits)
+        auto_ylimits_check.grid(row=4, column=2, rowspan=2, sticky=W, pady=2)
 
         # Create frame for visualization
         plot_frame_1d = ttk.LabelFrame(tab6, text="1D Transect Visualization", padding=10)
@@ -954,14 +1053,56 @@ class AeolisGUI:
             
             # Add indication if variable has fractions dimension
             if has_fractions:
-                ylabel += ' (avg. fractions)'
+                n_fractions = var_data.shape[3]
+                ylabel += f' (averaged over {n_fractions} fractions)'
             
             self.output_1d_ax.set_ylabel(ylabel)
             
             # Set title
             direction = 'Cross-shore' if self.transect_direction_var.get() == 'cross-shore' else 'Along-shore'
             idx_label = 'Y' if self.transect_direction_var.get() == 'cross-shore' else 'X'
-            self.output_1d_ax.set_title(f'{direction} Transect: {var_name} ({idx_label}-index={transect_idx}, Time={time_idx})')
+            
+            # Get variable title
+            title_dict = {
+                'zb': 'Bed Elevation',
+                'ustar': 'Shear Velocity',
+                'ustars': 'Shear Velocity (S-component)',
+                'ustarn': 'Shear Velocity (N-component)',
+                'zs': 'Surface Elevation',
+                'zsep': 'Separation Elevation',
+                'Ct': 'Sediment Concentration',
+                'Cu': 'Equilibrium Concentration',
+                'q': 'Sediment Flux',
+                'qs': 'Sediment Flux (S-component)',
+                'qn': 'Sediment Flux (N-component)',
+                'pickup': 'Sediment Entrainment',
+                'uth': 'Threshold Shear Velocity',
+                'w': 'Fraction Weight',
+            }
+            var_title = title_dict.get(var_name, var_name)
+            if has_fractions:
+                n_fractions = var_data.shape[3]
+                var_title += f' (averaged over {n_fractions} fractions)'
+            
+            self.output_1d_ax.set_title(f'{direction} Transect: {var_title} ({idx_label}-index={transect_idx}, Time={time_idx})')
+            
+            # Apply Y-axis limits if specified
+            if not self.auto_ylimits_var.get():
+                try:
+                    ymin_str = self.ymin_entry_1d.get().strip()
+                    ymax_str = self.ymax_entry_1d.get().strip()
+                    if ymin_str and ymax_str:
+                        ymin = float(ymin_str)
+                        ymax = float(ymax_str)
+                        self.output_1d_ax.set_ylim(ymin, ymax)
+                    elif ymin_str:
+                        ymin = float(ymin_str)
+                        self.output_1d_ax.set_ylim(bottom=ymin)
+                    elif ymax_str:
+                        ymax = float(ymax_str)
+                        self.output_1d_ax.set_ylim(top=ymax)
+                except ValueError:
+                    pass  # Use auto limits if conversion fails
             
             # Add grid
             self.output_1d_ax.grid(True, alpha=0.3)
@@ -1074,6 +1215,14 @@ class AeolisGUI:
                     messagebox.showerror("Error", "No valid variables found in NetCDF file!")
                     return
                 
+                # Add special combined option if both zb and rhoveg are available
+                if 'zb' in var_data_dict and 'rhoveg' in var_data_dict:
+                    candidate_vars.append('zb+rhoveg')
+                
+                # Add quiver plot option if wind velocity components are available
+                if 'ustarn' in var_data_dict and 'ustars' in var_data_dict:
+                    candidate_vars.append('ustar quiver')
+                
                 # Update variable dropdown with available variables
                 self.variable_dropdown_2d['values'] = sorted(candidate_vars)
                 # Set default to first variable (prefer 'zb' if available)
@@ -1120,7 +1269,9 @@ class AeolisGUI:
         """Get axis label for variable"""
         label_dict = {
             'zb': 'Elevation (m)',
+            'zb+rhoveg': 'Vegetation-shaded Topography',
             'ustar': 'Shear Velocity (m/s)',
+            'ustar quiver': 'Shear Velocity Vectors',
             'ustars': 'Shear Velocity S-component (m/s)',
             'ustarn': 'Shear Velocity N-component (m/s)',
             'zs': 'Surface Elevation (m)',
@@ -1136,12 +1287,17 @@ class AeolisGUI:
         }
         base_label = label_dict.get(var_name, var_name)
         
+        # Special cases that don't need fraction checking
+        if var_name in ['zb+rhoveg', 'ustar quiver']:
+            return base_label
+        
         # Check if this variable has fractions dimension
         if hasattr(self, 'nc_data_cache') and self.nc_data_cache is not None:
             if var_name in self.nc_data_cache.get('vars', {}):
                 var_data = self.nc_data_cache['vars'][var_name]
                 if var_data.ndim == 4:
-                    base_label += ' (avg. fractions)'
+                    n_fractions = var_data.shape[3]
+                    base_label += f' (averaged over {n_fractions} fractions)'
         
         return base_label
 
@@ -1149,7 +1305,9 @@ class AeolisGUI:
         """Get title for variable"""
         title_dict = {
             'zb': 'Bed Elevation',
+            'zb+rhoveg': 'Bed Elevation with Vegetation (Shaded)',
             'ustar': 'Shear Velocity',
+            'ustar quiver': 'Shear Velocity Vector Field',
             'ustars': 'Shear Velocity (S-component)',
             'ustarn': 'Shear Velocity (N-component)',
             'zs': 'Surface Elevation',
@@ -1165,12 +1323,17 @@ class AeolisGUI:
         }
         base_title = title_dict.get(var_name, var_name)
         
+        # Special cases that don't need fraction checking
+        if var_name in ['zb+rhoveg', 'ustar quiver']:
+            return base_title
+        
         # Check if this variable has fractions dimension
         if hasattr(self, 'nc_data_cache') and self.nc_data_cache is not None:
             if var_name in self.nc_data_cache.get('vars', {}):
                 var_data = self.nc_data_cache['vars'][var_name]
                 if var_data.ndim == 4:
-                    base_title += ' (avg. fractions)'
+                    n_fractions = var_data.shape[3]
+                    base_title += f' (averaged over {n_fractions} fractions)'
         
         return base_title
 
@@ -1188,6 +1351,16 @@ class AeolisGUI:
             
             # Get selected variable
             var_name = self.variable_var_2d.get()
+            
+            # Special handling for zb+rhoveg combined visualization
+            if var_name == 'zb+rhoveg':
+                self.render_zb_rhoveg_shaded(time_idx)
+                return
+            
+            # Special handling for ustar quiver plot
+            if var_name == 'ustar quiver':
+                self.render_ustar_quiver(time_idx)
+                return
             
             # Check if variable exists in cache
             if var_name not in self.nc_data_cache['vars']:
@@ -1244,12 +1417,17 @@ class AeolisGUI:
             
             # Handle colorbar properly to avoid shrinking
             if self.output_colorbar is not None:
-                # Update existing colorbar
-                self.output_colorbar.update_normal(im)
-                cbar_label = self.get_variable_label(var_name)
-                self.output_colorbar.set_label(cbar_label)
+                try:
+                    # Update existing colorbar
+                    self.output_colorbar.update_normal(im)
+                    cbar_label = self.get_variable_label(var_name)
+                    self.output_colorbar.set_label(cbar_label)
+                except:
+                    # If update fails (e.g., colorbar was removed), create new one
+                    cbar_label = self.get_variable_label(var_name)
+                    self.output_colorbar = self.output_fig.colorbar(im, ax=self.output_ax, label=cbar_label)
             else:
-                # Create new colorbar only on first run
+                # Create new colorbar only on first run or after removal
                 cbar_label = self.get_variable_label(var_name)
                 self.output_colorbar = self.output_fig.colorbar(im, ax=self.output_ax, label=cbar_label)
 
@@ -1276,6 +1454,259 @@ class AeolisGUI:
             import traceback
             error_msg = f"Failed to update 2D plot: {str(e)}\n\n{traceback.format_exc()}"
             print(error_msg)  # Print to console for debugging
+
+    def render_zb_rhoveg_shaded(self, time_idx):
+        """
+        Render zb+rhoveg combined visualization with hillshading and vegetation blending.
+        Inspired by Anim2D_ShadeVeg.py
+        """
+        try:
+            # Get zb and rhoveg data - check if they exist
+            if 'zb' not in self.nc_data_cache['vars']:
+                raise ValueError("Variable 'zb' not found in NetCDF cache")
+            if 'rhoveg' not in self.nc_data_cache['vars']:
+                raise ValueError("Variable 'rhoveg' not found in NetCDF cache")
+            
+            zb_data = self.nc_data_cache['vars']['zb']
+            veg_data = self.nc_data_cache['vars']['rhoveg']
+            
+            # Extract time slice
+            if zb_data.ndim == 4:
+                zb = zb_data[time_idx, :, :, :].mean(axis=2)
+            else:
+                zb = zb_data[time_idx, :, :]
+            
+            if veg_data.ndim == 4:
+                veg = veg_data[time_idx, :, :, :].mean(axis=2)
+            else:
+                veg = veg_data[time_idx, :, :]
+            
+            # Ensure zb and veg have the same shape
+            if zb.shape != veg.shape:
+                raise ValueError(f"Shape mismatch: zb={zb.shape}, veg={veg.shape}")
+            
+            # Get coordinates
+            x_data = self.nc_data_cache['x']
+            y_data = self.nc_data_cache['y']
+            
+            # Convert x, y to 1D arrays if needed
+            if x_data is not None and y_data is not None:
+                if x_data.ndim == 2:
+                    x1d = x_data[0, :].astype(float)
+                    y1d = y_data[:, 0].astype(float)
+                else:
+                    x1d = np.asarray(x_data, dtype=float).ravel()
+                    y1d = np.asarray(y_data, dtype=float).ravel()
+            else:
+                # Use indices if no coordinate data
+                x1d = np.arange(zb.shape[1], dtype=float)
+                y1d = np.arange(zb.shape[0], dtype=float)
+            
+            # Normalize vegetation to [0,1]
+            veg_max = np.nanmax(veg)
+            if veg_max is not None and veg_max > 0:
+                veg_norm = np.clip(veg / veg_max, 0.0, 1.0)
+            else:
+                veg_norm = np.clip(veg, 0.0, 1.0)
+            
+            # Replace any NaNs with 0
+            veg_norm = np.nan_to_num(veg_norm, nan=0.0)
+            
+            # Apply hillshade to topography
+            shaded = apply_hillshade(zb, x1d, y1d)
+            
+            # Define colors (from Anim2D_ShadeVeg.py)
+            sand = np.array([1.0, 239.0/255.0, 213.0/255.0])  # light sand
+            darkgreen = np.array([34/255, 139/255, 34/255])
+            ocean = np.array([70/255, 130/255, 180/255])  # steelblue
+            
+            # Create base color by blending sand and vegetation
+            # rgb shape: (ny, nx, 3)
+            rgb = sand[None, None, :] * (1.0 - veg_norm[..., None]) + darkgreen[None, None, :] * veg_norm[..., None]
+            
+            # Apply ocean mask: zb < -0.5 and x < 200
+            if x_data is not None:
+                X2d, _ = np.meshgrid(x1d, y1d)
+                ocean_mask = (zb < -0.5) & (X2d < 200)
+                rgb[ocean_mask] = ocean
+            
+            # Apply hillshade to modulate colors
+            rgb *= shaded[..., None]
+            
+            # Clip to valid range
+            rgb = np.clip(rgb, 0.0, 1.0)
+            
+            # Plot the RGB image
+            if x_data is not None and y_data is not None:
+                extent = [x1d.min(), x1d.max(), y1d.min(), y1d.max()]
+                self.output_ax.imshow(rgb, origin='lower', extent=extent, interpolation='nearest', aspect='auto')
+                self.output_ax.set_xlabel('X (m)')
+                self.output_ax.set_ylabel('Y (m)')
+            else:
+                self.output_ax.imshow(rgb, origin='lower', interpolation='nearest', aspect='auto')
+                self.output_ax.set_xlabel('Grid X Index')
+                self.output_ax.set_ylabel('Grid Y Index')
+            
+            # Set title
+            title = self.get_variable_title('zb+rhoveg')
+            self.output_ax.set_title(f'{title} (Time step: {time_idx})')
+            
+            # Remove colorbar for RGB visualization
+            if self.output_colorbar is not None:
+                try:
+                    self.output_colorbar.remove()
+                except:
+                    # If remove() fails, try removing from figure
+                    try:
+                        self.output_fig.delaxes(self.output_colorbar.ax)
+                    except:
+                        pass
+                self.output_colorbar = None
+            
+            # Redraw the canvas
+            self.output_canvas.draw()
+            
+        except Exception as e:
+            import traceback
+            error_msg = f"Failed to render zb+rhoveg: {str(e)}\n\n{traceback.format_exc()}"
+            print(error_msg)
+            messagebox.showerror("Error", f"Failed to render zb+rhoveg visualization:\n{str(e)}")
+
+    def render_ustar_quiver(self, time_idx):
+        """
+        Render quiver plot of shear velocity vectors (ustars, ustarn) overlaid on ustar magnitude.
+        Background: color plot of ustar magnitude
+        Arrows: black vectors showing direction and magnitude
+        """
+        try:
+            # Get ustar component data - check if they exist
+            if 'ustars' not in self.nc_data_cache['vars']:
+                raise ValueError("Variable 'ustars' not found in NetCDF cache")
+            if 'ustarn' not in self.nc_data_cache['vars']:
+                raise ValueError("Variable 'ustarn' not found in NetCDF cache")
+            
+            ustars_data = self.nc_data_cache['vars']['ustars']
+            ustarn_data = self.nc_data_cache['vars']['ustarn']
+            
+            # Extract time slice
+            if ustars_data.ndim == 4:
+                ustars = ustars_data[time_idx, :, :, :].mean(axis=2)
+            else:
+                ustars = ustars_data[time_idx, :, :]
+            
+            if ustarn_data.ndim == 4:
+                ustarn = ustarn_data[time_idx, :, :, :].mean(axis=2)
+            else:
+                ustarn = ustarn_data[time_idx, :, :]
+            
+            # Calculate ustar magnitude from components
+            ustar = np.sqrt(ustars**2 + ustarn**2)
+            
+            # Get coordinates
+            x_data = self.nc_data_cache['x']
+            y_data = self.nc_data_cache['y']
+            
+            # Get colorbar limits
+            vmin = None
+            vmax = None
+            if not self.auto_limits_var.get():
+                try:
+                    vmin_str = self.vmin_entry.get().strip()
+                    vmax_str = self.vmax_entry.get().strip()
+                    if vmin_str:
+                        vmin = float(vmin_str)
+                    if vmax_str:
+                        vmax = float(vmax_str)
+                except ValueError:
+                    pass  # Use auto limits if conversion fails
+            
+            # Get selected colormap
+            cmap = self.colormap_var.get()
+            
+            # Plot the background ustar magnitude
+            if x_data is not None and y_data is not None:
+                # Use pcolormesh for 2D grid data with coordinates
+                im = self.output_ax.pcolormesh(x_data, y_data, ustar, shading='auto', 
+                                              cmap=cmap, vmin=vmin, vmax=vmax)
+                self.output_ax.set_xlabel('X (m)')
+                self.output_ax.set_ylabel('Y (m)')
+            else:
+                # Use imshow if no coordinate data available
+                im = self.output_ax.imshow(ustar, cmap=cmap, origin='lower', 
+                                          aspect='auto', vmin=vmin, vmax=vmax)
+                self.output_ax.set_xlabel('Grid X Index')
+                self.output_ax.set_ylabel('Grid Y Index')
+            
+            # Handle colorbar
+            if self.output_colorbar is not None:
+                try:
+                    self.output_colorbar.update_normal(im)
+                    self.output_colorbar.set_label('Shear Velocity (m/s)')
+                except:
+                    cbar_label = 'Shear Velocity (m/s)'
+                    self.output_colorbar = self.output_fig.colorbar(im, ax=self.output_ax, label=cbar_label)
+            else:
+                cbar_label = 'Shear Velocity (m/s)'
+                self.output_colorbar = self.output_fig.colorbar(im, ax=self.output_ax, label=cbar_label)
+            
+            # Create coordinate arrays for quiver
+            if x_data is not None and y_data is not None:
+                if x_data.ndim == 2:
+                    X = x_data
+                    Y = y_data
+                else:
+                    X, Y = np.meshgrid(x_data, y_data)
+            else:
+                # Use indices if no coordinate data
+                X, Y = np.meshgrid(np.arange(ustars.shape[1]), np.arange(ustars.shape[0]))
+            
+            # Filter out invalid vectors (NaN, zero magnitude)
+            valid = np.isfinite(ustars) & np.isfinite(ustarn)
+            magnitude = np.sqrt(ustars**2 + ustarn**2)
+            valid = valid & (magnitude > 1e-10)
+            
+            # Subsample for better visibility (every nth point)
+            subsample = max(1, min(ustars.shape[0], ustars.shape[1]) // 25)
+            
+            X_sub = X[::subsample, ::subsample]
+            Y_sub = Y[::subsample, ::subsample]
+            ustars_sub = ustars[::subsample, ::subsample]
+            ustarn_sub = ustarn[::subsample, ::subsample]
+            valid_sub = valid[::subsample, ::subsample]
+            
+            # Apply mask
+            X_plot = X_sub[valid_sub]
+            Y_plot = Y_sub[valid_sub]
+            U_plot = ustars_sub[valid_sub]
+            V_plot = ustarn_sub[valid_sub]
+            
+            # Overlay quiver plot with black arrows
+            if len(X_plot) > 0:
+                q = self.output_ax.quiver(X_plot, Y_plot, U_plot, V_plot,
+                                          color='black', scale=None, scale_units='xy',
+                                          angles='xy', pivot='mid', width=0.003)
+                
+                # Calculate reference vector magnitude for quiver key
+                magnitude_all = np.sqrt(U_plot**2 + V_plot**2)
+                if magnitude_all.max() > 0:
+                    ref_magnitude = magnitude_all.max() * 0.5
+                    qk = self.output_ax.quiverkey(q, 0.9, 0.95, ref_magnitude,
+                                                 f'{ref_magnitude:.3f} m/s',
+                                                 labelpos='E', coordinates='figure',
+                                                 color='black')
+            
+            # Set title
+            title = self.get_variable_title('ustar quiver')
+            self.output_ax.set_title(f'{title} (Time step: {time_idx})')
+            
+            # Redraw the canvas
+            self.output_canvas.draw()
+            
+        except Exception as e:
+            import traceback
+            error_msg = f"Failed to render ustar quiver: {str(e)}\n\n{traceback.format_exc()}"
+            print(error_msg)
+            messagebox.showerror("Error", f"Failed to render ustar quiver visualization:\n{str(e)}")
 
     def plot_data(self, file_key, title):
         """Plot data from specified file (bed_file, ne_file, or veg_file)"""
@@ -1793,7 +2224,15 @@ class AeolisGUI:
 if __name__ == "__main__":
     # Create the main application window
     root = Tk()
+    
     # Create an instance of the AeolisGUI class
     app = AeolisGUI(root, dic)
+    
+    # Bring window to front and give it focus
+    root.lift()
+    root.attributes('-topmost', True)
+    root.after_idle(root.attributes, '-topmost', False)
+    root.focus_force()
+    
     # Start the Tkinter event loop
     root.mainloop()
