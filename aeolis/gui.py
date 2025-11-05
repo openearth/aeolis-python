@@ -123,7 +123,12 @@ def apply_hillshade(z2d, x1d, y1d, az_deg=HILLSHADE_AZIMUTH, alt_deg=HILLSHADE_A
 
 # Function to prompt the user to select a configuration file
 def prompt_file():
-    """Prompt user to select a configuration file"""
+    """
+    Prompt user to select a configuration file.
+    
+    Returns:
+        str: Path to selected file, or empty string if canceled
+    """
     file_path = filedialog.askopenfilename(
         initialdir=os.getcwd(),
         title="Select config file",
@@ -276,7 +281,7 @@ class AeolisGUI:
                 colorbar.update_normal(im)
                 colorbar.set_label(label)
                 return colorbar
-            except:
+            except (AttributeError, ValueError, RuntimeError):
                 # If update fails, create new one
                 pass
         
@@ -296,12 +301,12 @@ class AeolisGUI:
         if colorbar is not None:
             try:
                 colorbar.remove()
-            except:
+            except (AttributeError, ValueError, RuntimeError):
                 # If remove() fails, try removing from figure
                 try:
                     if hasattr(colorbar, 'ax'):
                         colorbar.ax.figure.delaxes(colorbar.ax)
-                except:
+                except (AttributeError, ValueError):
                     pass
             setattr(self, colorbar_attr, None)
 
@@ -378,6 +383,9 @@ class AeolisGUI:
                     elif var.ndim == 3:  # (n, s, fractions)
                         var_data = var[:, :, :]
                         var_data = np.expand_dims(var_data, axis=0)  # Add time dimension
+                    else:
+                        # Skip variables with more than 3 spatial dimensions
+                        continue
                 
                 var_data_dict[var_name] = var_data
                 candidate_vars.append(var_name)
