@@ -2170,12 +2170,19 @@ class AeolisGUI:
         self.update_time_step(current_time)
 
     def save(self):
+        """Save the current entries to the configuration dictionary"""
+        global configfile
         # Save the current entries to the configuration dictionary
         for field, entry in self.entries.items():
             self.dic[field] = entry.get()
         # Write the updated configuration to a new file
-        aeolis.inout.write_configfile(configfile + '2', self.dic)
-        print('Saved!')
+        # Use original configfile if available, otherwise use current directory
+        if configfile and configfile != "No file selected":
+            output_path = configfile + '2'
+        else:
+            output_path = os.path.join(os.getcwd(), 'aeolis_config2.txt')
+        aeolis.inout.write_configfile(output_path, self.dic)
+        print(f'Saved to: {output_path}')
 
 if __name__ == "__main__":
     # Create the main application window
