@@ -991,110 +991,40 @@ class AeolisGUI:
             return
             
         try:
-            # Get the NC file path
+            # Get and resolve the NC file path
             nc_file = self.nc_file_entry_1d.get()
-            
             if not nc_file:
                 messagebox.showwarning("Warning", "No NetCDF file specified!")
                 return
             
-            # Get the directory of the config file to resolve relative paths
-            config_dir = os.path.dirname(configfile)
-            
-            # Load the NC file
-            if not os.path.isabs(nc_file):
-                nc_file_path = os.path.join(config_dir, nc_file)
-            else:
-                nc_file_path = nc_file
-                
+            nc_file_path = self._resolve_file_path(nc_file)
             if not os.path.exists(nc_file_path):
                 messagebox.showerror("Error", f"NetCDF file not found: {nc_file_path}")
                 return
             
-            # Open NetCDF file and cache data
-            with netCDF4.Dataset(nc_file_path, 'r') as nc:
-                # Get available variables
-                available_vars = list(nc.variables.keys())
-                
-                # Try to get x and y coordinates
-                x_data = None
-                y_data = None
-                
-                if 'x' in nc.variables:
-                    x_data = nc.variables['x'][:]
-                if 'y' in nc.variables:
-                    y_data = nc.variables['y'][:]
-                
-                # Get s and n coordinates (grid indices)
-                s_data = None
-                n_data = None
-                if 's' in nc.variables:
-                    s_data = nc.variables['s'][:]
-                if 'n' in nc.variables:
-                    n_data = nc.variables['n'][:]
-                
-                # Find all available 2D/3D variables (potential plot candidates)
-                # Exclude coordinate and metadata variables
-                coord_vars = {'x', 'y', 's', 'n', 'lat', 'lon', 'time', 'layers', 'fractions', 
-                             'x_bounds', 'y_bounds', 'lat_bounds', 'lon_bounds', 'time_bounds', 'crs', 'nv', 'nv2'}
-                candidate_vars = []
-                var_data_dict = {}
-                n_times = 1
-                
-                for var_name in available_vars:
-                    if var_name in coord_vars:
-                        continue
-                    
-                    var = nc.variables[var_name]
-                    
-                    # Check if time dimension exists
-                    if 'time' in var.dimensions:
-                        # Load all time steps
-                        var_data = var[:]
-                        # Need at least 3 dimensions: (time, n, s) or (time, n, s, fractions)
-                        if var_data.ndim < 3:
-                            continue  # Skip variables without spatial dimensions
-                        n_times = max(n_times, var_data.shape[0])
-                    else:
-                        # Single time step - validate shape
-                        # Need at least 2 spatial dimensions: (n, s) or (n, s, fractions)
-                        if var.ndim < 2:
-                            continue  # Skip variables without spatial dimensions
-                        if var.ndim == 2:
-                            var_data = var[:, :]
-                            var_data = np.expand_dims(var_data, axis=0)  # Add time dimension
-                        elif var.ndim == 3:  # (n, s, fractions)
-                            var_data = var[:, :, :]
-                            var_data = np.expand_dims(var_data, axis=0)  # Add time dimension
-                    
-                    var_data_dict[var_name] = var_data
-                    candidate_vars.append(var_name)
-                
-                # Check if any variables were loaded
-                if not var_data_dict:
-                    messagebox.showerror("Error", "No valid variables found in NetCDF file!")
-                    return
-                
-                # Update variable dropdown with available variables
-                self.variable_dropdown_1d['values'] = sorted(candidate_vars)
-                # Set default to first variable (prefer 'zb' if available)
-                if 'zb' in candidate_vars:
-                    self.variable_var_1d.set('zb')
-                else:
-                    self.variable_var_1d.set(sorted(candidate_vars)[0])
-                
-                # Cache data for slider updates
-                self.nc_data_cache_1d = {
-                    'vars': var_data_dict,
-                    'x': x_data,
-                    'y': y_data,
-                    's': s_data,
-                    'n': n_data,
-                    'n_times': n_times,
-                    'available_vars': candidate_vars
-                }
+            # Load NetCDF data using helper method
+            nc_data = self._load_netcdf_variables(nc_file_path)
+            
+            # Check if any variables were loaded
+            if not nc_data['vars']:
+                messagebox.showerror("Error", "No valid variables found in NetCDF file!")
+                return
+            
+            # Update variable dropdown with available variables
+            candidate_vars = sorted(nc_data['available_vars'])
+            self.variable_dropdown_1d['values'] = candidate_vars
+            
+            # Set default to first variable (prefer 'zb' if available)
+            if 'zb' in candidate_vars:
+                self.variable_var_1d.set('zb')
+            else:
+                self.variable_var_1d.set(candidate_vars[0])
+            
+            # Cache data for slider updates
+            self.nc_data_cache_1d = nc_data
             
             # Configure the time slider
+            n_times = nc_data['n_times']
             if n_times > 1:
                 self.time_slider_1d.configure(from_=0, to=n_times-1)
                 self.time_slider_1d.set(n_times - 1)  # Start with last time step
@@ -1103,9 +1033,7 @@ class AeolisGUI:
                 self.time_slider_1d.set(0)
             
             # Configure transect slider based on data shape
-            # Get shape from first available variable (already validated to be non-empty above)
-            # Use dict.values() directly instead of next(iter()) for clarity
-            first_var = list(var_data_dict.values())[0]
+            first_var = list(nc_data['vars'].values())[0]
             if self.transect_direction_var.get() == 'cross-shore':
                 # Fix y-index, vary along x (s dimension)
                 max_idx = first_var.shape[1] - 1  # n dimension
@@ -1272,80 +1200,58 @@ class AeolisGUI:
             return
             
         try:
-            # Get the NC file path
+            # Get and resolve the NC file path
             nc_file = self.nc_file_entry.get()
-            
             if not nc_file:
                 messagebox.showwarning("Warning", "No NetCDF file specified!")
                 return
             
-            # Get the directory of the config file to resolve relative paths
-            config_dir = os.path.dirname(configfile)
-            
-            # Load the NC file
-            if not os.path.isabs(nc_file):
-                nc_file_path = os.path.join(config_dir, nc_file)
-            else:
-                nc_file_path = nc_file
-                
+            nc_file_path = self._resolve_file_path(nc_file)
             if not os.path.exists(nc_file_path):
                 messagebox.showerror("Error", f"NetCDF file not found: {nc_file_path}")
                 return
             
-            # Open NetCDF file and cache data
+            # Load NetCDF data using helper method (loads only non-2D vars for 2D plotting)
             with netCDF4.Dataset(nc_file_path, 'r') as nc:
                 # Get available variables
                 available_vars = list(nc.variables.keys())
                 
-                # Try to get x and y coordinates
-                x_data = None
-                y_data = None
+                # Get coordinates
+                x_data = nc.variables['x'][:] if 'x' in nc.variables else None
+                y_data = nc.variables['y'][:] if 'y' in nc.variables else None
                 
-                if 'x' in nc.variables:
-                    x_data = nc.variables['x'][:]
-                if 'y' in nc.variables:
-                    y_data = nc.variables['y'][:]
-                
-                # Find all available 2D/3D variables (potential plot candidates)
-                # Exclude coordinate and metadata variables
-                coord_vars = {'x', 'y', 's', 'n', 'lat', 'lon', 'time', 'layers', 'fractions', 
-                             'x_bounds', 'y_bounds', 'lat_bounds', 'lon_bounds', 'time_bounds', 'crs', 'nv', 'nv2'}
+                # Find all available 2D/3D variables
                 candidate_vars = []
                 var_data_dict = {}
                 n_times = 1
-                
-                # Also load vegetation if checkbox is enabled
                 veg_data = None
                 
                 for var_name in available_vars:
-                    if var_name in coord_vars:
+                    if var_name in COORD_VARS:
                         continue
                     
                     var = nc.variables[var_name]
                     
                     # Check if time dimension exists
                     if 'time' in var.dimensions:
-                        # Load all time steps
                         var_data = var[:]
                         # Need at least 3 dimensions: (time, n, s)
                         if var_data.ndim < 3:
-                            continue  # Skip variables without spatial dimensions
+                            continue
                         n_times = max(n_times, var_data.shape[0])
                     else:
-                        # Single time step - validate shape
-                        # Need exactly 2 spatial dimensions: (n, s)
+                        # Single time step - need exactly 2 spatial dimensions
                         if var.ndim != 2:
-                            continue  # Skip variables without 2D spatial dimensions
+                            continue
                         var_data = var[:, :]
-                        var_data = np.expand_dims(var_data, axis=0)  # Add time dimension
+                        var_data = np.expand_dims(var_data, axis=0)
                     
                     var_data_dict[var_name] = var_data
                     candidate_vars.append(var_name)
                 
                 # Load vegetation data if requested
                 if self.overlay_veg_var.get():
-                    veg_candidates = ['rhoveg', 'vegetated', 'hveg', 'vegfac']
-                    for veg_name in veg_candidates:
+                    for veg_name in VEG_CANDIDATES:
                         if veg_name in available_vars:
                             veg_var = nc.variables[veg_name]
                             if 'time' in veg_var.dimensions:
@@ -1360,21 +1266,11 @@ class AeolisGUI:
                     messagebox.showerror("Error", "No valid variables found in NetCDF file!")
                     return
                 
-                # Add special combined option if both zb and rhoveg are available
+                # Add special combined options if components are available
                 if 'zb' in var_data_dict and 'rhoveg' in var_data_dict:
                     candidate_vars.append('zb+rhoveg')
-                
-                # Add quiver plot option if wind velocity components are available
                 if 'ustarn' in var_data_dict and 'ustars' in var_data_dict:
                     candidate_vars.append('ustar quiver')
-                
-                # Update variable dropdown with available variables
-                self.variable_dropdown_2d['values'] = sorted(candidate_vars)
-                # Set default to first variable (prefer 'zb' if available)
-                if 'zb' in candidate_vars:
-                    self.variable_var_2d.set('zb')
-                else:
-                    self.variable_var_2d.set(sorted(candidate_vars)[0])
                 
                 # Cache data for slider updates
                 self.nc_data_cache = {
@@ -1385,6 +1281,14 @@ class AeolisGUI:
                     'available_vars': candidate_vars,
                     'veg': veg_data
                 }
+            
+            # Update variable dropdown with available variables
+            self.variable_dropdown_2d['values'] = sorted(candidate_vars)
+            # Set default to 'zb' if available, otherwise first variable
+            if 'zb' in candidate_vars:
+                self.variable_var_2d.set('zb')
+            else:
+                self.variable_var_2d.set(sorted(candidate_vars)[0])
             
             # Configure the time slider
             if n_times > 1:
@@ -2235,22 +2139,21 @@ class AeolisGUI:
                 if not nc_file:
                     messagebox.showwarning("Warning", "No NetCDF file specified!")
                     return
-                config_dir = self.get_config_dir()
-                nc_file_path = os.path.join(config_dir, nc_file) if not os.path.isabs(nc_file) else nc_file
+                
+                nc_file_path = self._resolve_file_path(nc_file)
                 if not os.path.exists(nc_file_path):
                     messagebox.showerror("Error", f"NetCDF file not found: {nc_file_path}")
                     return
 
-                # Try common vegetation variable names
-                veg_candidates = ['rhoveg', 'vegetated', 'hveg', 'vegfac']
+                # Try common vegetation variable names (use constant)
                 with netCDF4.Dataset(nc_file_path, 'r') as nc:
                     available = set(nc.variables.keys())
-                    veg_name = next((v for v in veg_candidates if v in available), None)
+                    veg_name = next((v for v in VEG_CANDIDATES if v in available), None)
                     if veg_name is None:
                         messagebox.showerror(
                             "Error",
                             "No vegetation variable found in NetCDF file.\n"
-                            f"Tried: {', '.join(veg_candidates)}\n"
+                            f"Tried: {', '.join(VEG_CANDIDATES)}\n"
                             f"Available: {', '.join(sorted(available))}"
                         )
                         return
