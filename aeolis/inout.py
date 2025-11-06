@@ -153,7 +153,7 @@ def write_configfile(configfile, p=None):
     if p is None:
         p = DEFAULT_CONFIG.copy()
 
-    fmt = '%%%ds = %%s\n' % np.max([len(k) for k in p.iterkeys()])
+    fmt = '%%%ds = %%s\n' % np.max([len(k) for k in p.keys()])
         
     with open(configfile, 'w') as fp:
 
@@ -163,7 +163,7 @@ def write_configfile(configfile, p=None):
         fp.write('%s\n' % ('%' * 70))
         fp.write('\n')
         
-        for k, v in sorted(p.iteritems()):
+        for k, v in sorted(p.items()):
             if k.endswith('_file') and isiterable(v):
                 fname = '%s.txt' % k.replace('_file', '')
                 backup(fname)
@@ -220,6 +220,13 @@ def check_configuration(p):
         logger.warning('Warning: the used roughness method (constant) defines the z0 as '
                        'k (z0 = k), this was implemented to ensure backward compatibility '
                        'and does not follow the definition of Nikuradse (z0 = k / 30).')
+    
+    # check if steadystate solver is used with multiple sediment fractions
+    if p['solver'].lower() in ['steadystate', 'steadystatepieter']:
+        if len(p['grain_size']) > 1:
+            logger.log_and_raise('The steadystate solver is not compatible with multiple sediment fractions. '
+                                 'Please use a single sediment fraction or switch to a different solver (e.g., trunk or pieter).', 
+                                 exc=ValueError)
 
         
 def parse_value(val, parse_files=True, force_list=False):
@@ -278,9 +285,9 @@ def parse_value(val, parse_files=True, force_list=False):
         return np.asarray([parse_value(x) for x in val.split(' ')])
     elif re.match('^[TF]$', val):
         return val == 'T'
-    elif re.match('^-?\d+$', val):
+    elif re.match(r'^-?\d+$', val):
         return int(val)
-    elif re.match('^-?[\d\.]+$', val):
+    elif re.match(r'^-?[\d.]+$', val):
         return float(val)
     elif re.match('None', val):
         return None

@@ -1706,46 +1706,8 @@ class AeoLiS(IBmi):
                     Ct[0,:,0] =  -2                
                     Ct[-1,:,0] =  -2
 
-                # Ct, pickup = sweep(s['Cu'].copy(), s['mass'].copy(), self.dt, p['T'], s['ds'], s['dn'], s['us'], s['un'] )
-                Ct, pickup = sweep3(Ct, s['Cu'].copy(), s['mass'].copy(), self.dt, p['T'], s['ds'], s['dn'], s['us'], s['un'],w)
+                Ct, pickup = sweep(Ct, s['Cu'].copy(), s['mass'].copy(), self.dt, p['T'], s['ds'], s['dn'], s['us'], s['un'],w)
 
-            if 0:
-                #define 4 quadrants based on wind directions
-                ix1 = ((s['us'][:,:,0]>=0) & (s['un'][:,:,0]>=0))
-                ix2 = ((s['us'][:,:,0]<0) & (s['un'][:,:,0]>=0))
-                ix3 = ((s['us'][:,:,0]<0) & (s['un'][:,:,0]<0))
-                ix4 = ((s['us'][:,:,0]>0) & (s['un'][:,:,0]<0))
-                
-                # initiate solution matrix including ghost cells to accomodate boundaries
-                Ct_s = np.zeros((Ct.shape[0]+2,Ct.shape[1]+2))
-                # populate solution matrix with previous concentration results
-                Ct_s[1:-1,1:-1] = Ct[:,:,i]
-                
-                #set upwind boundary condition
-                Ct_s[:,0:2]=0
-                #circular boundary condition in lateral directions
-                Ct_s[0,:]=Ct_s[-2,:]
-                Ct_s[-1,:]=Ct_s[1,:]
-                # using the Euler forward scheme we can calculate pickup first based on the previous timestep
-                # there is no need for iteration
-                pickup[:,:,i] = self.dt*(np.minimum(s['Cu'][:,:,i],s['mass'][:,:,0,i]+Ct[:,:,i])-Ct[:,:,i])/Ts
-                
-                #solve for all 4 quadrants in one step using logical indexing
-                Ct_s[1:-1,1:-1] = Ct_s[1:-1,1:-1] + \
-                    ix1*(-self.dt*s['us'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[1:-1,:-2])/s['ds'] \
-                         -self.dt*s['un'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[:-2,1:-1])/s['dn']) +\
-                    ix2*(+self.dt*s['us'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[1:-1,2:])/s['ds'] \
-                         -self.dt*s['un'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[:-2,1:-1])/s['dn']) +\
-                    ix3*(+self.dt*s['us'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[1:-1,2:])/s['ds'] \
-                         +self.dt*s['un'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[2:,1:-1])/s['dn']) +\
-                    ix4*(-self.dt*s['us'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[1:-1,:-2])/s['ds'] \
-                         +self.dt*s['un'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[2:,1:-1])/s['dn']) \
-                    + pickup[:,:,i]
-                
-                # define Ct as a subset of Ct_s (eliminating the boundaries)
-                Ct[:,:,i] = Ct_s[1:-1,1:-1] 
-         
-    
         qs = Ct * s['us'] 
         qn = Ct * s['un'] 
         q = np.hypot(qs, qn)

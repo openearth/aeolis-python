@@ -36,6 +36,7 @@ Options:
 
 Commands:
     examples  sets up some examples for AeoLiS.
+    gui       starts the AeoLiS graphical user interface (GUI).
     run       runs model for simulating supply-limited aeolian sediment...
     wind      A wind time series generation tool for the aeolis model.
 
@@ -44,6 +45,14 @@ Usage examples:
 > Run a model
 
         aeolis run <path_to_model_configuration_file.txt>
+
+> Start the GUI
+
+        aeolis gui
+
+        Or with a configuration file:
+
+        aeolis gui <path_to_model_configuration_file.txt>
 
 > To generate a wind time series
 
@@ -206,6 +215,56 @@ def examples(
         shutil.copytree(example_path, target_path)
 
     print("Done. Examples copied to: \n %s" % destination_path)
+
+
+@aeolis_app.command(name="gui", help="starts the AeoLiS graphical user interface (GUI).")
+def gui(
+    config: Annotated[
+        Optional[str],
+        typer.Argument(
+            help="optional configuration file to load on startup"
+        ),
+    ] = None,
+):
+    print_license()
+
+    try:
+        import tkinter as tk
+        from aeolis.gui import AeolisGUI
+        import aeolis.inout
+    except ImportError as e:
+        print(f"Error: Failed to import required GUI modules: {e}")
+        print("Make sure tkinter is installed on your system.")
+        sys.exit(1)
+
+    # Load configuration if provided, otherwise use defaults
+    if config and os.path.isfile(config):
+        print(f"Loading configuration from: {config}")
+        dic = aeolis.inout.read_configfile(config)
+        configfile = config
+    else:
+        if config:
+            print(f"Warning: Configuration file '{config}' not found. Using defaults.")
+        print("Starting GUI with default configuration...")
+        dic = {}
+        configfile = "No file selected"
+
+    # Create and start the GUI
+    root = tk.Tk()
+    
+    # Set the configfile in the gui module
+    import aeolis.gui as gui_module
+    gui_module.configfile = configfile
+    
+    app = AeolisGUI(root, dic)
+    
+    # Make window appear on top at startup
+    root.lift()
+    root.attributes('-topmost', True)
+    root.after_idle(root.attributes, '-topmost', False)
+    root.focus_force()
+    
+    root.mainloop()
 
 
 def print_license():

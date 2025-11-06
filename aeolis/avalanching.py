@@ -96,6 +96,8 @@ def avalanche(s, p):
     if p['process_avalanche']:
         nx = p['nx'] + 1
         ny = p['ny'] + 1
+        nx = p['nx'] + 1
+        ny = p['ny'] + 1
 
         # parameters - only dynamic angle used in loop for now. 
         # Static angle can be used for more complex criterions in later
