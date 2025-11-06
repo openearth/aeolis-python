@@ -667,15 +667,32 @@ class AeolisGUI:
                                             command=self.toggle_y_limits)
         auto_ylimits_check.grid(row=4, column=2, rowspan=2, sticky=W, pady=2)
 
-        # Create frame for visualization
+        # Create frame for domain overview
+        overview_frame = ttk.LabelFrame(tab6, text="Domain Overview", padding=10)
+        overview_frame.grid(row=1, column=0, padx=10, pady=(0, 10), sticky=(N, S, E, W))
+        
+        # Create matplotlib figure for domain overview (smaller size)
+        self.output_1d_overview_fig = Figure(figsize=(3.5, 3.5), dpi=80)
+        self.output_1d_overview_fig.subplots_adjust(left=0.15, right=0.95, top=0.92, bottom=0.12)
+        self.output_1d_overview_ax = self.output_1d_overview_fig.add_subplot(111)
+        
+        # Create canvas for the overview figure (centered, not expanded)
+        self.output_1d_overview_canvas = FigureCanvasTkAgg(self.output_1d_overview_fig, master=overview_frame)
+        self.output_1d_overview_canvas.draw()
+        # Center the canvas both horizontally and vertically without expanding to fill
+        canvas_widget = self.output_1d_overview_canvas.get_tk_widget()
+        canvas_widget.pack(expand=True)
+
+        # Create frame for transect visualization
         plot_frame_1d = ttk.LabelFrame(tab6, text="1D Transect Visualization", padding=10)
-        plot_frame_1d.grid(row=0, column=1, padx=10, pady=10, sticky=(N, S, E, W))
+        plot_frame_1d.grid(row=0, column=1, rowspan=2, padx=10, pady=10, sticky=(N, S, E, W))
         
         # Configure grid weights to allow expansion
         tab6.columnconfigure(1, weight=1)
         tab6.rowconfigure(0, weight=1)
+        tab6.rowconfigure(1, weight=1)
         
-        # Create matplotlib figure for 1D output
+        # Create matplotlib figure for 1D transect output
         self.output_1d_fig = Figure(figsize=(7, 6), dpi=100)
         self.output_1d_ax = self.output_1d_fig.add_subplot(111)
         
@@ -1107,6 +1124,9 @@ class AeolisGUI:
             # Add grid
             self.output_1d_ax.grid(True, alpha=0.3)
             
+            # Update the overview map showing the transect location
+            self.update_1d_overview(transect_idx)
+            
             # Redraw the canvas
             self.output_1d_canvas.draw()
             
@@ -1114,6 +1134,90 @@ class AeolisGUI:
             import traceback
             error_msg = f"Failed to update 1D plot: {str(e)}\n\n{traceback.format_exc()}"
             print(error_msg)  # Print to console for debugging
+
+    def update_1d_overview(self, transect_idx):
+        """Update the overview map showing the domain and transect location"""
+        try:
+            # Clear the overview axes
+            self.output_1d_overview_ax.clear()
+            
+            # Get the selected variable for background
+            var_name = self.variable_var_1d.get()
+            
+            # Get time index from slider
+            time_idx = int(self.time_slider_1d.get())
+            
+            # Check if variable exists in cache
+            if var_name not in self.nc_data_cache_1d['vars']:
+                return
+            
+            # Get the data for background
+            var_data = self.nc_data_cache_1d['vars'][var_name]
+            
+            # Extract 2D slice at current time
+            if var_data.ndim == 4:
+                z_data = var_data[time_idx, :, :, :].mean(axis=2)
+            else:
+                z_data = var_data[time_idx, :, :]
+            
+            # Get coordinates
+            x_data = self.nc_data_cache_1d['x']
+            y_data = self.nc_data_cache_1d['y']
+            
+            # Plot the background
+            if x_data is not None and y_data is not None:
+                self.output_1d_overview_ax.pcolormesh(x_data, y_data, z_data, 
+                                                     shading='auto', cmap='terrain', alpha=0.7)
+                xlabel = 'X (m)'
+                ylabel = 'Y (m)'
+            else:
+                self.output_1d_overview_ax.imshow(z_data, origin='lower', 
+                                                 aspect='auto', cmap='terrain', alpha=0.7)
+                xlabel = 'S-index'
+                ylabel = 'N-index'
+            
+            # Draw the transect line
+            if self.transect_direction_var.get() == 'cross-shore':
+                # Horizontal line at fixed y-index (n)
+                if x_data is not None and y_data is not None:
+                    if x_data.ndim == 2:
+                        x_line = x_data[transect_idx, :]
+                        y_line = np.full_like(x_line, y_data[transect_idx, 0])
+                    else:
+                        x_line = x_data
+                        y_line = np.full_like(x_line, y_data[transect_idx])
+                    self.output_1d_overview_ax.plot(x_line, y_line, 'r-', linewidth=2, label='Transect')
+                else:
+                    self.output_1d_overview_ax.axhline(y=transect_idx, color='r', linewidth=2, label='Transect')
+            else:
+                # Vertical line at fixed x-index (s)
+                if x_data is not None and y_data is not None:
+                    if x_data.ndim == 2:
+                        x_line = np.full_like(y_data[:, transect_idx], x_data[0, transect_idx])
+                        y_line = y_data[:, transect_idx]
+                    else:
+                        x_line = np.full_like(y_data, x_data[transect_idx])
+                        y_line = y_data
+                    self.output_1d_overview_ax.plot(x_line, y_line, 'r-', linewidth=2, label='Transect')
+                else:
+                    self.output_1d_overview_ax.axvline(x=transect_idx, color='r', linewidth=2, label='Transect')
+            
+            # Set labels and title
+            self.output_1d_overview_ax.set_xlabel(xlabel, fontsize=8)
+            self.output_1d_overview_ax.set_ylabel(ylabel, fontsize=8)
+            self.output_1d_overview_ax.set_title('Transect Location', fontsize=9)
+            self.output_1d_overview_ax.tick_params(labelsize=7)
+            
+            # Add equal aspect ratio
+            self.output_1d_overview_ax.set_aspect('equal', adjustable='box')
+            
+            # Redraw the overview canvas
+            self.output_1d_overview_canvas.draw()
+            
+        except Exception as e:
+            # Silently fail if overview can't be drawn
+            import traceback
+            print(f"Failed to update overview: {str(e)}\n{traceback.format_exc()}")
 
     def on_variable_changed_2d(self, event):
         """Update plot when variable selection changes in 2D tab"""
