@@ -17,6 +17,8 @@ import os
 import numpy as np
 import traceback
 import netCDF4
+import threading
+import logging
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
@@ -39,6 +41,7 @@ from aeolis.gui.visualizers.domain import DomainVisualizer
 from aeolis.gui.visualizers.wind import WindVisualizer
 from aeolis.gui.visualizers.output_2d import Output2DVisualizer
 from aeolis.gui.visualizers.output_1d import Output1DVisualizer
+from aeolis.gui.visualizers.model_runner import ModelRunner
 
 from windrose import WindroseAxes
 
@@ -105,6 +108,7 @@ class AeolisGUI:
         self.create_input_file_tab(tab_control)
         self.create_domain_tab(tab_control)
         self.create_wind_input_tab(tab_control)
+        self.create_run_model_tab(tab_control)
         self.create_plot_output_2d_tab(tab_control)
         self.create_plot_output_1d_tab(tab_control)
         # Pack the tab control to expand and fill the available space
@@ -118,6 +122,8 @@ class AeolisGUI:
 
     def on_tab_changed(self, event):
         """Handle tab change event to auto-plot domain/wind when tab is selected"""
+        global configfile
+        
         # Get the currently selected tab index
         selected_tab = self.tab_control.index(self.tab_control.select())
         
@@ -158,6 +164,12 @@ class AeolisGUI:
                     except Exception as e:
                         # Silently fail if plotting doesn't work (e.g., file doesn't exist)
                         pass
+        
+        # Run Model tab is at index 3 (0: Input file, 1: Domain, 2: Wind, 3: Run Model, 4: Output 2D, 5: Output 1D)
+        elif selected_tab == 3:
+            # Update config file label
+            if hasattr(self, 'model_runner_visualizer'):
+                self.model_runner_visualizer.update_config_display(configfile)
 
     def create_label_entry(self, tab, text, value, row):
         # Create a label and entry widget for a given tab
@@ -1363,6 +1375,85 @@ class AeolisGUI:
         self.overlay_veg_enabled = True
         current_time = int(self.time_slider.get())
         self.update_time_step(current_time)
+
+    def create_run_model_tab(self, tab_control):
+        """Create the 'Run Model' tab for executing AeoLiS simulations"""
+        tab_run = ttk.Frame(tab_control)
+        tab_control.add(tab_run, text='Run Model')
+        
+        # Configure grid weights
+        tab_run.columnconfigure(0, weight=1)
+        tab_run.rowconfigure(1, weight=1)
+        
+        # Create control frame
+        control_frame = ttk.LabelFrame(tab_run, text="Model Control", padding=10)
+        control_frame.grid(row=0, column=0, padx=10, pady=10, sticky=(N, W, E))
+        
+        # Config file display
+        config_label = ttk.Label(control_frame, text="Config file:")
+        config_label.grid(row=0, column=0, sticky=W, pady=5)
+        
+        run_config_label = ttk.Label(control_frame, text="No file selected", 
+                                     foreground="gray")
+        run_config_label.grid(row=0, column=1, sticky=W, pady=5, padx=(10, 0))
+        
+        # Start/Stop buttons
+        button_frame = ttk.Frame(control_frame)
+        button_frame.grid(row=1, column=0, columnspan=2, pady=10)
+        
+        start_model_btn = ttk.Button(button_frame, text="Start Model", width=15)
+        start_model_btn.pack(side=LEFT, padx=5)
+        
+        stop_model_btn = ttk.Button(button_frame, text="Stop Model", 
+                                    width=15, state=DISABLED)
+        stop_model_btn.pack(side=LEFT, padx=5)
+        
+        # Progress bar
+        model_progress = ttk.Progressbar(control_frame, mode='indeterminate', length=400)
+        model_progress.grid(row=2, column=0, columnspan=2, pady=5, sticky=(W, E))
+        
+        # Status label
+        model_status_label = ttk.Label(control_frame, text="Ready", foreground="blue")
+        model_status_label.grid(row=3, column=0, columnspan=2, sticky=W, pady=5)
+        
+        # Create output frame for logging
+        output_frame = ttk.LabelFrame(tab_run, text="Model Output / Logging", padding=10)
+        output_frame.grid(row=1, column=0, padx=10, pady=(0, 10), sticky=(N, S, E, W))
+        output_frame.rowconfigure(0, weight=1)
+        output_frame.columnconfigure(0, weight=1)
+        
+        # Create Text widget with scrollbar for terminal output
+        output_scroll = ttk.Scrollbar(output_frame)
+        output_scroll.grid(row=0, column=1, sticky=(N, S))
+        
+        model_output_text = Text(output_frame, wrap=WORD, 
+                                 yscrollcommand=output_scroll.set,
+                                 height=20, width=80,
+                                 bg='black', fg='lime',
+                                 font=('Courier', 9))
+        model_output_text.grid(row=0, column=0, sticky=(N, S, E, W))
+        output_scroll.config(command=model_output_text.yview)
+        
+        # Add clear button
+        clear_btn = ttk.Button(output_frame, text="Clear Output", 
+                              command=lambda: model_output_text.delete(1.0, END))
+        clear_btn.grid(row=1, column=0, columnspan=2, pady=(5, 0))
+        
+        # Initialize model runner visualizer
+        self.model_runner_visualizer = ModelRunner(
+            start_model_btn, stop_model_btn, model_progress, 
+            model_status_label, model_output_text, run_config_label,
+            self.root, self.get_current_config_file
+        )
+        
+        # Connect button commands
+        start_model_btn.config(command=self.model_runner_visualizer.start_model)
+        stop_model_btn.config(command=self.model_runner_visualizer.stop_model)
+    
+    def get_current_config_file(self):
+        """Get the current config file path"""
+        global configfile
+        return configfile
 
     def save(self):
         # Save the current entries to the configuration dictionary
