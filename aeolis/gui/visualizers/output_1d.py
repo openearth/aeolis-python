@@ -34,7 +34,8 @@ class Output1DVisualizer:
                  time_slider_1d, time_label_1d, transect_slider, transect_label,
                  variable_var_1d, direction_var, nc_file_entry_1d,
                  variable_dropdown_1d, overview_canvas, get_config_dir_func, 
-                 get_variable_label_func, get_variable_title_func):
+                 get_variable_label_func, get_variable_title_func,
+                 auto_ylimits_var=None, ymin_entry=None, ymax_entry=None):
         """Initialize the 1D output visualizer."""
         self.transect_ax = transect_ax
         self.overview_ax = overview_ax
@@ -52,8 +53,12 @@ class Output1DVisualizer:
         self.get_config_dir = get_config_dir_func
         self.get_variable_label = get_variable_label_func
         self.get_variable_title = get_variable_title_func
+        self.auto_ylimits_var = auto_ylimits_var
+        self.ymin_entry = ymin_entry
+        self.ymax_entry = ymax_entry
         
         self.nc_data_cache_1d = None
+        self.held_plots = []  # List of tuples: (time_idx, transect_data, x_data)
     
     def load_and_plot(self):
         """Load NetCDF file and plot 1D transect data."""
@@ -147,6 +152,10 @@ class Output1DVisualizer:
         first_var = list(self.nc_data_cache_1d['vars'].values())[0]
         n_transects = first_var.shape[1] if self.direction_var.get() == 'cross-shore' else first_var.shape[2]
         self.transect_label.config(text=f"Transect: {transect_idx} / {n_transects-1}")
+        
+        # Clear held plots when transect changes (they're from different transect)
+        self.held_plots = []
+        
         self.update_plot()
     
     def update_time_step(self, value):
@@ -157,6 +166,7 @@ class Output1DVisualizer:
         time_idx = int(float(value))
         n_times = self.nc_data_cache_1d['n_times']
         self.time_label_1d.config(text=f"Time step: {time_idx} / {n_times-1}")
+        
         self.update_plot()
     
     def update_plot(self):
@@ -165,6 +175,7 @@ class Output1DVisualizer:
             return
         
         try:
+            # Always clear the axis to redraw
             self.transect_ax.clear()
             
             time_idx = int(self.time_slider_1d.get())
@@ -190,20 +201,52 @@ class Output1DVisualizer:
                 x_data = self.nc_data_cache_1d['y'][:, transect_idx] if self.nc_data_cache_1d['y'].ndim == 2 else self.nc_data_cache_1d['y']
                 xlabel = 'Along-shore distance (m)'
             
-            # Plot transect
+            # Redraw held plots first (if any)
+            if self.held_plots:
+                for held_time_idx, held_data, held_x_data in self.held_plots:
+                    if held_x_data is not None:
+                        self.transect_ax.plot(held_x_data, held_data, '--', linewidth=1.5, 
+                                            alpha=0.7, label=f'Time: {held_time_idx}')
+                    else:
+                        self.transect_ax.plot(held_data, '--', linewidth=1.5, 
+                                            alpha=0.7, label=f'Time: {held_time_idx}')
+            
+            # Plot current transect
             if x_data is not None:
-                self.transect_ax.plot(x_data, transect_data, 'b-', linewidth=2)
+                line = self.transect_ax.plot(x_data, transect_data, 'b-', linewidth=2, 
+                                            label=f'Time: {time_idx}' if self.held_plots else None)
                 self.transect_ax.set_xlabel(xlabel)
             else:
-                self.transect_ax.plot(transect_data, 'b-', linewidth=2)
+                line = self.transect_ax.plot(transect_data, 'b-', linewidth=2,
+                                            label=f'Time: {time_idx}' if self.held_plots else None)
                 self.transect_ax.set_xlabel('Grid Index')
             
             ylabel = self.get_variable_label(var_name)
             self.transect_ax.set_ylabel(ylabel)
             
             title = self.get_variable_title(var_name)
-            self.transect_ax.set_title(f'{title} - {direction.capitalize()} (Time: {time_idx}, Transect: {transect_idx})')
+            if self.held_plots:
+                self.transect_ax.set_title(f'{title} - {direction.capitalize()} (Transect: {transect_idx}) - Multiple Time Steps')
+            else:
+                self.transect_ax.set_title(f'{title} - {direction.capitalize()} (Time: {time_idx}, Transect: {transect_idx})')
             self.transect_ax.grid(True, alpha=0.3)
+            
+            # Add legend if there are held plots
+            if self.held_plots:
+                self.transect_ax.legend(loc='best')
+            
+            # Apply Y-axis limits if not auto
+            if self.auto_ylimits_var is not None and self.ymin_entry is not None and self.ymax_entry is not None:
+                if not self.auto_ylimits_var.get():
+                    try:
+                        ymin_str = self.ymin_entry.get().strip()
+                        ymax_str = self.ymax_entry.get().strip()
+                        if ymin_str and ymax_str:
+                            ymin = float(ymin_str)
+                            ymax = float(ymax_str)
+                            self.transect_ax.set_ylim([ymin, ymax])
+                    except ValueError:
+                        pass  # Invalid input, keep auto limits
             
             # Update overview
             self.update_overview(transect_idx)
@@ -280,6 +323,56 @@ class Output1DVisualizer:
         except Exception as e:
             error_msg = f"Failed to update overview: {str(e)}"
             print(error_msg)
+    
+    def _add_current_to_held_plots(self):
+        """Helper method to add the current time step to held plots."""
+        if not self.nc_data_cache_1d:
+            return
+        
+        time_idx = int(self.time_slider_1d.get())
+        transect_idx = int(self.transect_slider.get())
+        var_name = self.variable_var_1d.get()
+        direction = self.direction_var.get()
+        
+        if var_name not in self.nc_data_cache_1d['vars']:
+            return
+        
+        # Check if this time step is already in held plots
+        for held_time, _, _ in self.held_plots:
+            if held_time == time_idx:
+                return  # Already held, don't add duplicate
+        
+        var_data = self.nc_data_cache_1d['vars'][var_name]
+        z_data = extract_time_slice(var_data, time_idx)
+        
+        # Extract transect
+        if direction == 'cross-shore':
+            transect_data = z_data[transect_idx, :]
+            x_data = self.nc_data_cache_1d['x'][transect_idx, :] if self.nc_data_cache_1d['x'].ndim == 2 else self.nc_data_cache_1d['x']
+        else:  # along-shore
+            transect_data = z_data[:, transect_idx]
+            x_data = self.nc_data_cache_1d['y'][:, transect_idx] if self.nc_data_cache_1d['y'].ndim == 2 else self.nc_data_cache_1d['y']
+        
+        # Add to held plots
+        self.held_plots.append((time_idx, transect_data.copy(), x_data.copy() if x_data is not None else None))
+    
+    def toggle_hold_on(self):
+        """
+        Add the current plot to the collection of held plots.
+        This allows overlaying multiple time steps on the same plot.
+        """
+        if not self.nc_data_cache_1d:
+            messagebox.showwarning("Warning", "Please load data first!")
+            return
+        
+        # Add current plot to held plots
+        self._add_current_to_held_plots()
+        self.update_plot()
+    
+    def clear_held_plots(self):
+        """Clear all held plots."""
+        self.held_plots = []
+        self.update_plot()
     
     def export_png(self, default_filename="output_1d.png"):
         """Export current 1D plot as PNG."""

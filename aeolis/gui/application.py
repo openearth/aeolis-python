@@ -476,8 +476,8 @@ class AeolisGUI:
             self.ymax_entry_1d.config(state='normal')
         
         # Update plot if data is loaded
-        if hasattr(self, 'nc_data_cache_1d') and self.nc_data_cache_1d is not None:
-            self.update_1d_plot()
+        if hasattr(self, 'output_1d_visualizer') and self.output_1d_visualizer.nc_data_cache_1d is not None:
+            self.output_1d_visualizer.update_plot()
 
     def load_and_plot_wind(self):
         """
@@ -909,6 +909,16 @@ class AeolisGUI:
         self.time_slider_1d.pack(side=LEFT, fill=X, expand=1, padx=5)
         self.time_slider_1d.set(0)
         
+        # Hold On button
+        self.hold_on_btn_1d = ttk.Button(slider_frame_1d, text="Hold On", 
+                                         command=self.toggle_hold_on_1d)
+        self.hold_on_btn_1d.pack(side=LEFT, padx=5)
+        
+        # Clear Held Plots button
+        self.clear_held_btn_1d = ttk.Button(slider_frame_1d, text="Clear Held", 
+                                            command=self.clear_held_plots_1d)
+        self.clear_held_btn_1d.pack(side=LEFT, padx=5)
+        
         # Initialize 1D output visualizer (after all UI components are created)
         self.output_1d_visualizer = Output1DVisualizer(
             self.output_1d_ax, self.output_1d_overview_ax,
@@ -918,7 +928,8 @@ class AeolisGUI:
             self.variable_var_1d, self.transect_direction_var,
             self.nc_file_entry_1d, self.variable_dropdown_1d,
             self.output_1d_overview_canvas,
-            self.get_config_dir, self.get_variable_label, self.get_variable_title
+            self.get_config_dir, self.get_variable_label, self.get_variable_title,
+            self.auto_ylimits_var, self.ymin_entry_1d, self.ymax_entry_1d
         )
         
         # Update slider commands to use visualizer
@@ -993,6 +1004,21 @@ class AeolisGUI:
         """
         if hasattr(self, 'output_1d_visualizer'):
             self.output_1d_visualizer.update_plot()
+    
+    def toggle_hold_on_1d(self):
+        """
+        Toggle hold on for the 1D transect plot.
+        This allows overlaying multiple time steps on the same plot.
+        """
+        if hasattr(self, 'output_1d_visualizer'):
+            self.output_1d_visualizer.toggle_hold_on()
+    
+    def clear_held_plots_1d(self):
+        """
+        Clear all held plots from the 1D transect visualization.
+        """
+        if hasattr(self, 'output_1d_visualizer'):
+            self.output_1d_visualizer.clear_held_plots()
 
     def get_variable_label(self, var_name):
         """
