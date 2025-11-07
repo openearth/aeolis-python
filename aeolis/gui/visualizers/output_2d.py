@@ -228,7 +228,7 @@ class Output2DVisualizer:
                     self.output_ax.imshow(veg_data, cmap='Greens', origin='lower',
                                         aspect='auto', vmin=0, vmax=1, alpha=0.4)
             
-            self.output_canvas.draw()
+            self.output_canvas.draw_idle()
             
         except Exception as e:
             error_msg = f"Failed to update 2D plot: {str(e)}\n\n{traceback.format_exc()}"

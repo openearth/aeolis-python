@@ -208,7 +208,7 @@ class Output1DVisualizer:
             # Update overview
             self.update_overview(transect_idx)
             
-            self.transect_canvas.draw()
+            self.transect_canvas.draw_idle()
             
         except Exception as e:
             error_msg = f"Failed to update 1D plot: {str(e)}\n\n{traceback.format_exc()}"
@@ -275,7 +275,7 @@ class Output1DVisualizer:
             self.overview_ax.legend()
             
             # Redraw the overview canvas
-            self.overview_canvas.draw()
+            self.overview_canvas.draw_idle()
             
         except Exception as e:
             error_msg = f"Failed to update overview: {str(e)}"
