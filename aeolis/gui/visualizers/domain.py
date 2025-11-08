@@ -251,8 +251,8 @@ class DomainVisualizer:
                 veg_mask = veg_data > 0
                 if np.any(veg_mask):
                     # Create contour lines for vegetation
-                    contour = self.ax.contour(x_data, y_data, veg_data, levels=[0.5], 
-                                             colors='darkgreen', linewidths=2)
+                    self.ax.contour(x_data, y_data, veg_data, levels=[0.5], 
+                                    colors='darkgreen', linewidths=2)
                     # Fill vegetation areas with semi-transparent green
                     contourf = self.ax.contourf(x_data, y_data, veg_data, levels=[0.5, veg_data.max()], 
                                                colors=['green'], alpha=0.3)
