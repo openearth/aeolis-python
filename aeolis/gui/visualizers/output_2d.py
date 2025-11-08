@@ -194,7 +194,10 @@ class Output2DVisualizer:
                     vmin = float(vmin_str) if vmin_str else None
                     vmax = float(vmax_str) if vmax_str else None
                 except ValueError:
-                    pass
+                    messagebox.showwarning(
+                        "Invalid Input",
+                        "Colorbar limits must be valid numbers. Using automatic limits instead."
+                    )
             
             cmap = self.colormap_var.get()
             
