@@ -23,7 +23,7 @@ def launch_gui():
     root = Tk()
     
     # Create an instance of the AeolisGUI class
-    app = AeolisGUI(root, dic)
+    AeolisGUI(root, dic)
     
     # Bring window to front and give it focus
     root.lift()
