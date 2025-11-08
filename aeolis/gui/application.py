@@ -7,7 +7,7 @@ This module provides a comprehensive GUI for:
 - Plotting wind input data and wind roses
 - Visualizing model output (2D and 1D transects)
 
-This is the main application module that coordinates the GUI and visualizers.
+This is the main application module that coordinates the GUI and tab modules.
 """
 
 import aeolis
@@ -36,12 +36,12 @@ from aeolis.gui.utils import (
     extract_time_slice, apply_hillshade
 )
 
-# Import visualizers
-from aeolis.gui.visualizers.domain import DomainVisualizer
-from aeolis.gui.visualizers.wind import WindVisualizer
-from aeolis.gui.visualizers.output_2d import Output2DVisualizer
-from aeolis.gui.visualizers.output_1d import Output1DVisualizer
-from aeolis.gui.visualizers.model_runner import ModelRunner
+# Import GUI tabs
+from aeolis.gui.gui_tabs.domain import DomainVisualizer
+from aeolis.gui.gui_tabs.wind import WindVisualizer
+from aeolis.gui.gui_tabs.output_2d import Output2DVisualizer
+from aeolis.gui.gui_tabs.output_1d import Output1DVisualizer
+from aeolis.gui.gui_tabs.model_runner import ModelRunner
 
 from windrose import WindroseAxes
 
