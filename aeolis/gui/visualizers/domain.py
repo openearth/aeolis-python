@@ -254,8 +254,8 @@ class DomainVisualizer:
                     self.ax.contour(x_data, y_data, veg_data, levels=[0.5], 
                                     colors='darkgreen', linewidths=2)
                     # Fill vegetation areas with semi-transparent green
-                    contourf = self.ax.contourf(x_data, y_data, veg_data, levels=[0.5, veg_data.max()], 
-                                               colors=['green'], alpha=0.3)
+                    self.ax.contourf(x_data, y_data, veg_data, levels=[0.5, veg_data.max()], 
+                                     colors=['green'], alpha=0.3)
             else:
                 # Use imshow if no coordinate data available
                 im = self.ax.imshow(bed_data, cmap='terrain', origin='lower', aspect='auto')
