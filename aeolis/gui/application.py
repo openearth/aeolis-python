@@ -799,7 +799,7 @@ class AeolisGUI:
         
         # Browse button for NC file
         nc_browse_btn_1d = ttk.Button(file_frame_1d, text="Browse...", 
-                                       command=lambda: self.browse_nc_file_1d())
+                                       command=self.browse_nc_file_1d)
         nc_browse_btn_1d.grid(row=0, column=2, sticky=W, pady=2)
 
         # Variable selection dropdown
