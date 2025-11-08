@@ -117,7 +117,7 @@ class DomainVisualizer:
                 self.colorbar.update_normal(im)
                 self.colorbar.set_label(label)
                 return self.colorbar
-            except:
+            except Exception:
                 # If update fails, create new one
                 pass
         

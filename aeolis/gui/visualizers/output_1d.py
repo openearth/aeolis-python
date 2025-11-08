@@ -17,7 +17,7 @@ from tkinter import ttk
 
 
 from aeolis.gui.utils import (
-    NC_COORD_VARS, VARIABLE_LABELS, VARIABLE_TITLES,
+    NC_COORD_VARS,
     resolve_file_path, extract_time_slice
 )
 

@@ -12,8 +12,7 @@ import os
 import threading
 import logging
 import traceback
-from tkinter import messagebox, END, WORD, NORMAL, DISABLED, Text
-from tkinter import ttk
+from tkinter import messagebox, END, NORMAL, DISABLED
 
 
 class ModelRunner:
