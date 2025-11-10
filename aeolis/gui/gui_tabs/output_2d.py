@@ -15,6 +15,9 @@ import traceback
 import netCDF4
 from tkinter import messagebox, filedialog, Toplevel
 from tkinter import ttk
+import matplotlib.pyplot as plt
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import Normalize
 
 from aeolis.gui.utils import (
     HILLSHADE_AZIMUTH, HILLSHADE_ALTITUDE, 
@@ -350,55 +353,182 @@ class Output2DVisualizer:
         return None
 
     def _render_zb_rhoveg_shaded(self, time_idx):
-        """Render combined bed + vegetation with hillshading."""
-        # Placeholder - simplified version
+        """Render combined bed + vegetation with hillshading matching Anim2D_ShadeVeg.py."""
         try:
             zb_data = extract_time_slice(self.nc_data_cache['vars']['zb'], time_idx)
             rhoveg_data = extract_time_slice(self.nc_data_cache['vars']['rhoveg'], time_idx)
             x_data = self.nc_data_cache['x']
             y_data = self.nc_data_cache['y']
             
+            # Normalize vegetation to [0,1]
+            veg_max = np.nanmax(rhoveg_data)
+            veg_norm = rhoveg_data / veg_max if (veg_max is not None and veg_max > 0) else np.clip(rhoveg_data, 0.0, 1.0)
+            veg_norm = np.clip(veg_norm, 0.0, 1.0)
+            
             # Apply hillshade
             x1d = x_data[0, :] if x_data.ndim == 2 else x_data
             y1d = y_data[:, 0] if y_data.ndim == 2 else y_data
-            hillshade = apply_hillshade(zb_data, x1d, y1d)
+            hillshade = apply_hillshade(zb_data, x1d, y1d, az_deg=155.0, alt_deg=5.0)
             
-            # Blend with vegetation
-            combined = hillshade * (1 - 0.3 * rhoveg_data)
+            # Color definitions
+            sand = np.array([1.0, 239.0/255.0, 213.0/255.0])  # light sand
+            darkgreen = np.array([34/255, 139/255, 34/255])
+            ocean = np.array([70/255, 130/255, 180/255])  # steelblue
             
+            # Create RGB array (ny, nx, 3)
+            ny, nx = zb_data.shape
+            rgb = np.zeros((ny, nx, 3), dtype=float)
+            
+            # Base color: blend sand and vegetation
+            for i in range(3):  # R, G, B channels
+                rgb[:, :, i] = sand[i] * (1.0 - veg_norm) + darkgreen[i] * veg_norm
+            
+            # Apply ocean mask: zb < -0.5 and x < 200
+            if x_data is not None:
+                X2d = x_data if x_data.ndim == 2 else np.meshgrid(x1d, y1d)[0]
+                ocean_mask = (zb_data < -0.5) & (X2d < 200)
+                rgb[ocean_mask] = ocean
+            
+            # Apply shading to all RGB channels
+            rgb *= hillshade[:, :, np.newaxis]
+            rgb = np.clip(rgb, 0.0, 1.0)
+            
+            # Plot RGB image
             if x_data is not None and y_data is not None:
-                self.output_ax.pcolormesh(x_data, y_data, combined, shading='auto', cmap='terrain')
+                extent = [x1d.min(), x1d.max(), y1d.min(), y1d.max()]
+                self.output_ax.imshow(rgb, origin='lower', extent=extent, 
+                                     interpolation='nearest', aspect='auto')
                 self.output_ax.set_xlabel('X (m)')
                 self.output_ax.set_ylabel('Y (m)')
             else:
-                self.output_ax.imshow(combined, cmap='terrain', origin='lower', aspect='auto')
+                self.output_ax.imshow(rgb, origin='lower', interpolation='nearest', aspect='auto')
+                self.output_ax.set_xlabel('Grid X Index')
+                self.output_ax.set_ylabel('Grid Y Index')
             
             self.output_ax.set_title(f'Bed + Vegetation (Time step: {time_idx})')
-            self.output_canvas.draw()
+            
+            # Get colorbar limits for vegetation
+            vmin, vmax = 0, veg_max
+            if not self.auto_limits_var.get():
+                try:
+                    vmin_str = self.vmin_entry.get().strip()
+                    vmax_str = self.vmax_entry.get().strip()
+                    vmin = float(vmin_str) if vmin_str else 0
+                    vmax = float(vmax_str) if vmax_str else veg_max
+                except ValueError:
+                    pass  # Use default limits if invalid input
+            
+            # Create a ScalarMappable for the colorbar (showing vegetation density)
+            norm = Normalize(vmin=vmin, vmax=vmax)
+            sm = ScalarMappable(cmap='Greens', norm=norm)
+            sm.set_array(rhoveg_data)
+            
+            # Add colorbar for vegetation density
+            self._update_colorbar(sm, 'rhoveg')
+            
+            self.output_canvas.draw_idle()
         except Exception as e:
             print(f"Failed to render zb+rhoveg: {e}")
+            traceback.print_exc()
     
     def _render_ustar_quiver(self, time_idx):
-        """Render quiver plot of shear velocity."""
-        # Placeholder - simplified version
+        """Render quiver plot of shear velocity with magnitude background."""
         try:
             ustarn = extract_time_slice(self.nc_data_cache['vars']['ustarn'], time_idx)
             ustars = extract_time_slice(self.nc_data_cache['vars']['ustars'], time_idx)
             x_data = self.nc_data_cache['x']
             y_data = self.nc_data_cache['y']
             
+            # Calculate magnitude for background coloring
+            ustar_mag = np.sqrt(ustarn**2 + ustars**2)
+            
             # Subsample for quiver
             step = max(1, min(ustarn.shape) // 25)
             
+            # Get colormap and limits
+            cmap = self.colormap_var.get()
+            vmin, vmax = None, None
+            if not self.auto_limits_var.get():
+                try:
+                    vmin_str = self.vmin_entry.get().strip()
+                    vmax_str = self.vmax_entry.get().strip()
+                    vmin = float(vmin_str) if vmin_str else None
+                    vmax = float(vmax_str) if vmax_str else None
+                except ValueError:
+                    pass  # Use auto limits
+            
             if x_data is not None and y_data is not None:
-                self.output_ax.quiver(x_data[::step, ::step], y_data[::step, ::step],
-                                    ustars[::step, ::step], ustarn[::step, ::step])
+                # Plot background field (magnitude)
+                im = self.output_ax.pcolormesh(x_data, y_data, ustar_mag, 
+                                              shading='auto', cmap=cmap, 
+                                              vmin=vmin, vmax=vmax, alpha=0.7)
+                
+                # Calculate appropriate scaling for arrows
+                # Make arrows about 1/20th of the domain size
+                x1d = x_data[0, :] if x_data.ndim == 2 else x_data
+                y1d = y_data[:, 0] if y_data.ndim == 2 else y_data
+                x_range = x1d.max() - x1d.min()
+                y_range = y1d.max() - y1d.min()
+                domain_size = np.sqrt(x_range**2 + y_range**2)
+                
+                # Calculate typical velocity magnitude (handle masked arrays)
+                valid_mag = np.asarray(ustar_mag[ustar_mag > 0])
+                typical_vel = np.percentile(valid_mag, 75) if valid_mag.size > 0 else 1.0
+                arrow_scale = typical_vel * 20  # Scale factor to make arrows visible
+                
+                # Add quiver plot with black arrows
+                Q = self.output_ax.quiver(x_data[::step, ::step], y_data[::step, ::step],
+                                         ustars[::step, ::step], ustarn[::step, ::step],
+                                         scale=arrow_scale, color='black', width=0.004,
+                                         headwidth=3, headlength=4, headaxislength=3.5,
+                                         zorder=10)
+                
+                # Add quiver key (legend for arrow scale) - placed to the right, above colorbar
+                self.output_ax.quiverkey(Q, 1.1, 1.05, typical_vel,
+                                        f'{typical_vel:.2f} m/s',
+                                        labelpos='N', coordinates='axes',
+                                        color='black', labelcolor='black',
+                                        fontproperties={'size': 9})
+                
                 self.output_ax.set_xlabel('X (m)')
                 self.output_ax.set_ylabel('Y (m)')
             else:
-                self.output_ax.quiver(ustars[::step, ::step], ustarn[::step, ::step])
+                # Create meshgrid for quiver
+                ny, nx = ustarn.shape
+                x_grid, y_grid = np.meshgrid(np.arange(nx), np.arange(ny))
+                
+                # Plot background field (magnitude)
+                im = self.output_ax.imshow(ustar_mag, cmap=cmap, origin='lower', 
+                                          aspect='auto', vmin=vmin, vmax=vmax, alpha=0.7)
+                
+                # Calculate typical velocity magnitude (handle masked arrays)
+                valid_mag = np.asarray(ustar_mag[ustar_mag > 0])
+                typical_vel = np.percentile(valid_mag, 75) if valid_mag.size > 0 else 1.0
+                arrow_scale = typical_vel * 20
+                
+                # Add quiver plot
+                Q = self.output_ax.quiver(x_grid[::step, ::step], y_grid[::step, ::step],
+                                         ustars[::step, ::step], ustarn[::step, ::step],
+                                         scale=arrow_scale, color='black', width=0.004,
+                                         headwidth=3, headlength=4, headaxislength=3.5,
+                                         zorder=10)
+                
+                # Add quiver key - placed to the right, above colorbar
+                self.output_ax.quiverkey(Q, 1.15, 0.95, typical_vel,
+                                        f'{typical_vel:.2f} units',
+                                        labelpos='N', coordinates='axes',
+                                        color='black', labelcolor='black',
+                                        fontproperties={'size': 9})
+                
+                self.output_ax.set_xlabel('Grid X Index')
+                self.output_ax.set_ylabel('Grid Y Index')
             
             self.output_ax.set_title(f'Shear Velocity (Time step: {time_idx})')
-            self.output_canvas.draw()
+            
+            # Update colorbar for magnitude
+            self._update_colorbar(im, 'ustar magnitude')
+            
+            self.output_canvas.draw_idle()
         except Exception as e:
             print(f"Failed to render ustar quiver: {e}")
+            traceback.print_exc()
