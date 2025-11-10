@@ -582,34 +582,21 @@ class WindShear:
         time_start_perturbation = time.time()
         
         # Shear stress perturbation
-        # Avoid division by zero and invalid values
-        # When kx=0 or ky=0 or k=0, set perturbations to zero
+        # Use safe division to avoid zero/invalid values at kx=0 or k=0
+        k_safe = np.where(k == 0, 1.0, k)
+        kx_safe = np.where(kx == 0, 1.0, kx)
         
-        # Create masks for valid computations
-        valid_mask = (k > 0) & (np.abs(kx) > 0)
-        
-        # Initialize perturbation arrays with zeros
-        dtaux_t = np.zeros_like(hs, dtype=complex)
-        dtauy_t = np.zeros_like(hs, dtype=complex)
-        
-        # Only compute where we have valid frequencies
-        if np.any(valid_mask):
-            # Safe division for valid regions only
-            k_valid = k[valid_mask]
-            kx_valid = kx[valid_mask]
-            ky_valid = ky[valid_mask]
-            hs_valid = hs[valid_mask]
-            sigma_valid = sigma[valid_mask]
-            ul2_valid = ul**2
-            
-            # Compute dtaux for valid regions
-            dtaux_t[valid_mask] = hs_valid * kx_valid**2 / k_valid * 2 / ul2_valid * \
-                      (-1. + (2. * np.log(l/z0new) + k_valid**2/kx_valid**2) * sigma_valid * \
-                        sc_kv(1., 2. * sigma_valid) / sc_kv(0., 2. * sigma_valid))
-            
-            # Compute dtauy for valid regions
-            dtauy_t[valid_mask] = hs_valid * kx_valid * ky_valid / k_valid * 2 / ul2_valid * \
-                        2. * np.sqrt(2.) * sigma_valid * sc_kv(1., 2. * np.sqrt(2.) * sigma_valid) / sc_kv(0., 2. * np.sqrt(2.) * sigma_valid)
+        dtaux_t = hs * kx**2 / k_safe * 2 / ul**2 * \
+                  (-1. + (2. * np.log(l/z0new) + k**2/kx_safe**2) * sigma * \
+                    sc_kv(1., 2. * sigma) / sc_kv(0., 2. * sigma))
+
+        dtauy_t = hs * kx * ky / k_safe * 2 / ul**2 * \
+                    2. * np.sqrt(2.) * sigma * sc_kv(1., 2. * np.sqrt(2.) * sigma) / sc_kv(0., 2. * np.sqrt(2.) * sigma)
+
+        # Zero out invalid regions (kx=0 or k=0) where formulation is not valid
+        invalid_mask = (k == 0) | (kx == 0)
+        dtaux_t[invalid_mask] = 0.
+        dtauy_t[invalid_mask] = 0.
         
         gc['dtaux'] = np.real(np.fft.ifft2(dtaux_t))
         gc['dtauy'] = np.real(np.fft.ifft2(dtauy_t))
