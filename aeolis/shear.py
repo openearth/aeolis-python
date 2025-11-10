@@ -544,8 +544,8 @@ class WindShear:
             return
                                 
         ny, nx = gc['z'].shape
-        kx, ky = np.meshgrid(2. * np.pi * np.fft.fftfreq(nx+1, gc['dx'])[1:],
-                             2. * np.pi * np.fft.fftfreq(ny+1, gc['dy'])[1:])
+        kx, ky = np.meshgrid(2. * np.pi * np.fft.fftfreq(nx, gc['dx']),
+                             2. * np.pi * np.fft.fftfreq(ny, gc['dy']))
         
         hs = np.fft.fft2(gc['z'])
         hs = self.filter_highfrequenies(kx, ky, hs, nfilter)
