@@ -15,13 +15,11 @@ import traceback
 import netCDF4
 from tkinter import messagebox, filedialog, Toplevel
 from tkinter import ttk
-import matplotlib.pyplot as plt
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize
 
 from aeolis.gui.utils import (
-    HILLSHADE_AZIMUTH, HILLSHADE_ALTITUDE, 
-    NC_COORD_VARS, VARIABLE_LABELS, VARIABLE_TITLES,
+    NC_COORD_VARS,
     resolve_file_path, extract_time_slice, apply_hillshade
 )
 
@@ -236,7 +234,7 @@ class Output2DVisualizer:
             try:
                 self.output_colorbar_ref[0].update_normal(im)
                 self.output_colorbar_ref[0].set_label(cbar_label)
-            except:
+            except Exception:
                 self.output_colorbar_ref[0] = self.output_fig.colorbar(im, ax=self.output_ax, label=cbar_label)
         else:
             self.output_colorbar_ref[0] = self.output_fig.colorbar(im, ax=self.output_ax, label=cbar_label)
@@ -321,7 +319,7 @@ class Output2DVisualizer:
                 try:
                     if progress_window.winfo_exists():
                         progress_window.destroy()
-                except:
+                except Exception:
                     pass  # Window already destroyed
                 
                 messagebox.showinfo("Success", f"Animation exported to:\n{file_path}")
@@ -337,7 +335,7 @@ class Output2DVisualizer:
                 try:
                     if 'progress_window' in locals() and progress_window.winfo_exists():
                         progress_window.destroy()
-                except:
+                except Exception:
                     pass  # Window already destroyed
         return None
 
@@ -451,7 +449,6 @@ class Output2DVisualizer:
             y1d = y_data[:, 0] if y_data.ndim == 2 else y_data
             x_range = x1d.max() - x1d.min()
             y_range = y1d.max() - y1d.min()
-            domain_size = np.sqrt(x_range**2 + y_range**2)
             
             # Calculate typical velocity magnitude (handle masked arrays)
             valid_mag = np.asarray(ustar_mag[ustar_mag > 0])
