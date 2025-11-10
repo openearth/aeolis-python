@@ -589,7 +589,7 @@ class WindShear:
 
         
         dtauy_t = hs * kx * ky / k * 2 / ul**2 * \
-                    2. * np.sqrt(2.) * sigma * sc_kv(1., 2. * np.sqrt(2.) * sigma)
+                    2. * np.sqrt(2.) * sigma * sc_kv(1., 2. * np.sqrt(2.) * sigma) / sc_kv(0., 2. * np.sqrt(2.) * sigma)
 
         
         gc['dtaux'] = np.real(np.fft.ifft2(dtaux_t))
