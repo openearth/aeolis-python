@@ -213,12 +213,12 @@ class Output1DVisualizer:
             
             # Plot current transect
             if x_data is not None:
-                line = self.transect_ax.plot(x_data, transect_data, 'b-', linewidth=2, 
-                                            label=f'Time: {time_idx}' if self.held_plots else None)
+                self.transect_ax.plot(x_data, transect_data, 'b-', linewidth=2, 
+                                      label=f'Time: {time_idx}' if self.held_plots else None)
                 self.transect_ax.set_xlabel(xlabel)
             else:
-                line = self.transect_ax.plot(transect_data, 'b-', linewidth=2,
-                                            label=f'Time: {time_idx}' if self.held_plots else None)
+                self.transect_ax.plot(transect_data, 'b-', linewidth=2,
+                                      label=f'Time: {time_idx}' if self.held_plots else None)
                 self.transect_ax.set_xlabel('Grid Index')
             
             ylabel = self.get_variable_label(var_name)
@@ -280,7 +280,7 @@ class Output1DVisualizer:
             y_data = self.nc_data_cache_1d['y']
             
             # Plot domain overview with pcolormesh
-            im = self.overview_ax.pcolormesh(x_data, y_data, z_data, shading='auto', cmap='terrain')
+            self.overview_ax.pcolormesh(x_data, y_data, z_data, shading='auto', cmap='terrain')
             
             # Draw transect line
             if direction == 'cross-shore':
@@ -442,7 +442,7 @@ class Output1DVisualizer:
                 try:
                     if progress_window.winfo_exists():
                         progress_window.destroy()
-                except:
+                except Exception:
                     pass  # Window already destroyed
                 
                 messagebox.showinfo("Success", f"Animation exported to:\n{file_path}")
@@ -458,6 +458,6 @@ class Output1DVisualizer:
                 try:
                     if 'progress_window' in locals() and progress_window.winfo_exists():
                         progress_window.destroy()
-                except:
+                except Exception:
                     pass  # Window already destroyed
         return None
