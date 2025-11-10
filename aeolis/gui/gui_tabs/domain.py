@@ -169,17 +169,10 @@ class DomainVisualizer:
             # Choose colormap based on data type
             cmap, label = self._get_colormap_and_label(file_key)
             
-            # Create the plot
-            if x_data is not None and y_data is not None:
-                # Use pcolormesh for 2D grid data with coordinates
-                im = self.ax.pcolormesh(x_data, y_data, z_data, shading='auto', cmap=cmap)
-                self.ax.set_xlabel('X (m)')
-                self.ax.set_ylabel('Y (m)')
-            else:
-                # Use imshow if no coordinate data available
-                im = self.ax.imshow(z_data, cmap=cmap, origin='lower', aspect='auto')
-                self.ax.set_xlabel('Grid X Index')
-                self.ax.set_ylabel('Grid Y Index')
+            # Use pcolormesh for 2D grid data with coordinates
+            im = self.ax.pcolormesh(x_data, y_data, z_data, shading='auto', cmap=cmap)
+            self.ax.set_xlabel('X (m)')
+            self.ax.set_ylabel('Y (m)')
             
             self.ax.set_title(title)
             
@@ -240,34 +233,20 @@ class DomainVisualizer:
             # Try to load x and y grid data if available
             x_data, y_data = self._load_grid_data(xgrid_file, ygrid_file, config_dir)
             
-            # Create the bed elevation plot
-            if x_data is not None and y_data is not None:
-                # Use pcolormesh for 2D grid data with coordinates
-                im = self.ax.pcolormesh(x_data, y_data, bed_data, shading='auto', cmap='terrain')
-                self.ax.set_xlabel('X (m)')
-                self.ax.set_ylabel('Y (m)')
-                
-                # Overlay vegetation as contours where vegetation exists
-                veg_mask = veg_data > 0
-                if np.any(veg_mask):
-                    # Create contour lines for vegetation
-                    self.ax.contour(x_data, y_data, veg_data, levels=[0.5], 
-                                    colors='darkgreen', linewidths=2)
-                    # Fill vegetation areas with semi-transparent green
-                    self.ax.contourf(x_data, y_data, veg_data, levels=[0.5, veg_data.max()], 
-                                     colors=['green'], alpha=0.3)
-            else:
-                # Use imshow if no coordinate data available
-                im = self.ax.imshow(bed_data, cmap='terrain', origin='lower', aspect='auto')
-                self.ax.set_xlabel('Grid X Index')
-                self.ax.set_ylabel('Grid Y Index')
-                
-                # Overlay vegetation
-                veg_mask = veg_data > 0
-                if np.any(veg_mask):
-                    # Create a masked array for vegetation overlay
-                    veg_overlay = np.ma.masked_where(~veg_mask, veg_data)
-                    self.ax.imshow(veg_overlay, cmap='Greens', origin='lower', aspect='auto', alpha=0.5)
+            # Use pcolormesh for 2D grid data with coordinates
+            im = self.ax.pcolormesh(x_data, y_data, bed_data, shading='auto', cmap='terrain')
+            self.ax.set_xlabel('X (m)')
+            self.ax.set_ylabel('Y (m)')
+            
+            # Overlay vegetation as contours where vegetation exists
+            veg_mask = veg_data > 0
+            if np.any(veg_mask):
+                # Create contour lines for vegetation
+                self.ax.contour(x_data, y_data, veg_data, levels=[0.5], 
+                                colors='darkgreen', linewidths=2)
+                # Fill vegetation areas with semi-transparent green
+                self.ax.contourf(x_data, y_data, veg_data, levels=[0.5, veg_data.max()], 
+                                 colors=['green'], alpha=0.3)
             
             self.ax.set_title('Bed Elevation with Vegetation')
             

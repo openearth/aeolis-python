@@ -279,40 +279,28 @@ class Output1DVisualizer:
             x_data = self.nc_data_cache_1d['x']
             y_data = self.nc_data_cache_1d['y']
             
-            # Plot domain overview
-            if x_data is not None and y_data is not None:
-                im = self.overview_ax.pcolormesh(x_data, y_data, z_data, shading='auto', cmap='terrain')
-                
-                # Draw transect line
-                if direction == 'cross-shore':
-                    if x_data.ndim == 2:
-                        x_line = x_data[transect_idx, :]
-                        y_line = y_data[transect_idx, :]
-                    else:
-                        x_line = x_data
-                        y_line = np.full_like(x_data, y_data[transect_idx] if y_data.ndim == 1 else y_data[transect_idx, 0])
-                else:  # along-shore
-                    if y_data.ndim == 2:
-                        x_line = x_data[:, transect_idx]
-                        y_line = y_data[:, transect_idx]
-                    else:
-                        y_line = y_data
-                        x_line = np.full_like(y_data, x_data[transect_idx] if x_data.ndim == 1 else x_data[0, transect_idx])
-                
-                self.overview_ax.plot(x_line, y_line, 'r-', linewidth=2, label='Transect')
-                self.overview_ax.set_xlabel('X (m)')
-                self.overview_ax.set_ylabel('Y (m)')
-            else:
-                im = self.overview_ax.imshow(z_data, cmap='terrain', origin='lower', aspect='auto')
-                
-                # Draw transect line
-                if direction == 'cross-shore':
-                    self.overview_ax.axhline(y=transect_idx, color='r', linewidth=2, label='Transect')
+            # Plot domain overview with pcolormesh
+            im = self.overview_ax.pcolormesh(x_data, y_data, z_data, shading='auto', cmap='terrain')
+            
+            # Draw transect line
+            if direction == 'cross-shore':
+                if x_data.ndim == 2:
+                    x_line = x_data[transect_idx, :]
+                    y_line = y_data[transect_idx, :]
                 else:
-                    self.overview_ax.axvline(x=transect_idx, color='r', linewidth=2, label='Transect')
-                
-                self.overview_ax.set_xlabel('Grid X')
-                self.overview_ax.set_ylabel('Grid Y')
+                    x_line = x_data
+                    y_line = np.full_like(x_data, y_data[transect_idx] if y_data.ndim == 1 else y_data[transect_idx, 0])
+            else:  # along-shore
+                if y_data.ndim == 2:
+                    x_line = x_data[:, transect_idx]
+                    y_line = y_data[:, transect_idx]
+                else:
+                    y_line = y_data
+                    x_line = np.full_like(y_data, x_data[transect_idx] if x_data.ndim == 1 else x_data[0, transect_idx])
+            
+            self.overview_ax.plot(x_line, y_line, 'r-', linewidth=2, label='Transect')
+            self.overview_ax.set_xlabel('X (m)')
+            self.overview_ax.set_ylabel('Y (m)')
             
             self.overview_ax.set_title('Domain Overview')
             self.overview_ax.legend()

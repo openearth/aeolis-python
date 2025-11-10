@@ -204,17 +204,11 @@ class Output2DVisualizer:
             
             cmap = self.colormap_var.get()
             
-            # Plot
-            if x_data is not None and y_data is not None:
-                im = self.output_ax.pcolormesh(x_data, y_data, z_data, shading='auto',
-                                              cmap=cmap, vmin=vmin, vmax=vmax)
-                self.output_ax.set_xlabel('X (m)')
-                self.output_ax.set_ylabel('Y (m)')
-            else:
-                im = self.output_ax.imshow(z_data, cmap=cmap, origin='lower',
-                                          aspect='auto', vmin=vmin, vmax=vmax)
-                self.output_ax.set_xlabel('Grid X Index')
-                self.output_ax.set_ylabel('Grid Y Index')
+            # Plot with pcolormesh (x and y always exist in AeoLiS NetCDF files)
+            im = self.output_ax.pcolormesh(x_data, y_data, z_data, shading='auto',
+                                          cmap=cmap, vmin=vmin, vmax=vmax)
+            self.output_ax.set_xlabel('X (m)')
+            self.output_ax.set_ylabel('Y (m)')
             
             title = self.get_variable_title(var_name)
             self.output_ax.set_title(f'{title} (Time step: {time_idx})')
@@ -226,13 +220,8 @@ class Output2DVisualizer:
             if self.overlay_veg_var.get() and self.nc_data_cache['veg'] is not None:
                 veg_slice = self.nc_data_cache['veg']
                 veg_data = veg_slice[time_idx, :, :] if veg_slice.ndim == 3 else veg_slice[:, :]
-                
-                if x_data is not None and y_data is not None:
-                    self.output_ax.pcolormesh(x_data, y_data, veg_data, shading='auto',
-                                            cmap='Greens', vmin=0, vmax=1, alpha=0.4)
-                else:
-                    self.output_ax.imshow(veg_data, cmap='Greens', origin='lower',
-                                        aspect='auto', vmin=0, vmax=1, alpha=0.4)
+                self.output_ax.pcolormesh(x_data, y_data, veg_data, shading='auto',
+                                        cmap='Greens', vmin=0, vmax=1, alpha=0.4)
             
             self.output_canvas.draw_idle()
             
@@ -394,16 +383,11 @@ class Output2DVisualizer:
             rgb = np.clip(rgb, 0.0, 1.0)
             
             # Plot RGB image
-            if x_data is not None and y_data is not None:
-                extent = [x1d.min(), x1d.max(), y1d.min(), y1d.max()]
-                self.output_ax.imshow(rgb, origin='lower', extent=extent, 
-                                     interpolation='nearest', aspect='auto')
-                self.output_ax.set_xlabel('X (m)')
-                self.output_ax.set_ylabel('Y (m)')
-            else:
-                self.output_ax.imshow(rgb, origin='lower', interpolation='nearest', aspect='auto')
-                self.output_ax.set_xlabel('Grid X Index')
-                self.output_ax.set_ylabel('Grid Y Index')
+            extent = [x1d.min(), x1d.max(), y1d.min(), y1d.max()]
+            self.output_ax.imshow(rgb, origin='lower', extent=extent, 
+                                 interpolation='nearest', aspect='auto')
+            self.output_ax.set_xlabel('X (m)')
+            self.output_ax.set_ylabel('Y (m)')
             
             self.output_ax.set_title(f'Bed + Vegetation (Time step: {time_idx})')
             
@@ -457,72 +441,39 @@ class Output2DVisualizer:
                 except ValueError:
                     pass  # Use auto limits
             
-            if x_data is not None and y_data is not None:
-                # Plot background field (magnitude)
-                im = self.output_ax.pcolormesh(x_data, y_data, ustar_mag, 
-                                              shading='auto', cmap=cmap, 
-                                              vmin=vmin, vmax=vmax, alpha=0.7)
-                
-                # Calculate appropriate scaling for arrows
-                # Make arrows about 1/20th of the domain size
-                x1d = x_data[0, :] if x_data.ndim == 2 else x_data
-                y1d = y_data[:, 0] if y_data.ndim == 2 else y_data
-                x_range = x1d.max() - x1d.min()
-                y_range = y1d.max() - y1d.min()
-                domain_size = np.sqrt(x_range**2 + y_range**2)
-                
-                # Calculate typical velocity magnitude (handle masked arrays)
-                valid_mag = np.asarray(ustar_mag[ustar_mag > 0])
-                typical_vel = np.percentile(valid_mag, 75) if valid_mag.size > 0 else 1.0
-                arrow_scale = typical_vel * 20  # Scale factor to make arrows visible
-                
-                # Add quiver plot with black arrows
-                Q = self.output_ax.quiver(x_data[::step, ::step], y_data[::step, ::step],
-                                         ustars[::step, ::step], ustarn[::step, ::step],
-                                         scale=arrow_scale, color='black', width=0.004,
-                                         headwidth=3, headlength=4, headaxislength=3.5,
-                                         zorder=10)
-                
-                # Add quiver key (legend for arrow scale) - placed to the right, above colorbar
-                self.output_ax.quiverkey(Q, 1.1, 1.05, typical_vel,
-                                        f'{typical_vel:.2f} m/s',
-                                        labelpos='N', coordinates='axes',
-                                        color='black', labelcolor='black',
-                                        fontproperties={'size': 9})
-                
-                self.output_ax.set_xlabel('X (m)')
-                self.output_ax.set_ylabel('Y (m)')
-            else:
-                # Create meshgrid for quiver
-                ny, nx = ustarn.shape
-                x_grid, y_grid = np.meshgrid(np.arange(nx), np.arange(ny))
-                
-                # Plot background field (magnitude)
-                im = self.output_ax.imshow(ustar_mag, cmap=cmap, origin='lower', 
-                                          aspect='auto', vmin=vmin, vmax=vmax, alpha=0.7)
-                
-                # Calculate typical velocity magnitude (handle masked arrays)
-                valid_mag = np.asarray(ustar_mag[ustar_mag > 0])
-                typical_vel = np.percentile(valid_mag, 75) if valid_mag.size > 0 else 1.0
-                arrow_scale = typical_vel * 20
-                
-                # Add quiver plot
-                Q = self.output_ax.quiver(x_grid[::step, ::step], y_grid[::step, ::step],
-                                         ustars[::step, ::step], ustarn[::step, ::step],
-                                         scale=arrow_scale, color='black', width=0.004,
-                                         headwidth=3, headlength=4, headaxislength=3.5,
-                                         zorder=10)
-                
-                # Add quiver key - placed to the right, above colorbar
-                self.output_ax.quiverkey(Q, 1.15, 0.95, typical_vel,
-                                        f'{typical_vel:.2f} units',
-                                        labelpos='N', coordinates='axes',
-                                        color='black', labelcolor='black',
-                                        fontproperties={'size': 9})
-                
-                self.output_ax.set_xlabel('Grid X Index')
-                self.output_ax.set_ylabel('Grid Y Index')
+            # Plot background field (magnitude)
+            im = self.output_ax.pcolormesh(x_data, y_data, ustar_mag, 
+                                          shading='auto', cmap=cmap, 
+                                          vmin=vmin, vmax=vmax, alpha=0.7)
             
+            # Calculate appropriate scaling for arrows
+            x1d = x_data[0, :] if x_data.ndim == 2 else x_data
+            y1d = y_data[:, 0] if y_data.ndim == 2 else y_data
+            x_range = x1d.max() - x1d.min()
+            y_range = y1d.max() - y1d.min()
+            domain_size = np.sqrt(x_range**2 + y_range**2)
+            
+            # Calculate typical velocity magnitude (handle masked arrays)
+            valid_mag = np.asarray(ustar_mag[ustar_mag > 0])
+            typical_vel = np.percentile(valid_mag, 75) if valid_mag.size > 0 else 1.0
+            arrow_scale = typical_vel * 20  # Scale factor to make arrows visible
+            
+            # Add quiver plot with black arrows
+            Q = self.output_ax.quiver(x_data[::step, ::step], y_data[::step, ::step],
+                                     ustars[::step, ::step], ustarn[::step, ::step],
+                                     scale=arrow_scale, color='black', width=0.004,
+                                     headwidth=3, headlength=4, headaxislength=3.5,
+                                     zorder=10)
+            
+            # Add quiver key (legend for arrow scale) - placed to the right, above colorbar
+            self.output_ax.quiverkey(Q, 1.1, 1.05, typical_vel,
+                                    f'{typical_vel:.2f} m/s',
+                                    labelpos='N', coordinates='axes',
+                                    color='black', labelcolor='black',
+                                    fontproperties={'size': 9})
+            
+            self.output_ax.set_xlabel('X (m)')
+            self.output_ax.set_ylabel('Y (m)')
             self.output_ax.set_title(f'Shear Velocity (Time step: {time_idx})')
             
             # Update colorbar for magnitude
