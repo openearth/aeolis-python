@@ -15,25 +15,15 @@ from tkinter import *
 from tkinter import ttk, filedialog, messagebox
 import os
 import numpy as np
-import traceback
 import netCDF4
-import threading
-import logging
-import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from aeolis.constants import DEFAULT_CONFIG
 
 # Import utilities from gui package
 from aeolis.gui.utils import (
-    # Constants
-    HILLSHADE_AZIMUTH, HILLSHADE_ALTITUDE, HILLSHADE_AMBIENT,
-    TIME_UNIT_THRESHOLDS, TIME_UNIT_DIVISORS,
-    OCEAN_DEPTH_THRESHOLD, OCEAN_DISTANCE_THRESHOLD, SUBSAMPLE_RATE_DIVISOR,
-    NC_COORD_VARS, VARIABLE_LABELS, VARIABLE_TITLES,
-    # Utility functions
-    resolve_file_path, make_relative_path, determine_time_unit,
-    extract_time_slice, apply_hillshade
+    VARIABLE_LABELS, VARIABLE_TITLES,
+    resolve_file_path, make_relative_path
 )
 
 # Import GUI tabs
@@ -43,7 +33,6 @@ from aeolis.gui.gui_tabs.output_2d import Output2DVisualizer
 from aeolis.gui.gui_tabs.output_1d import Output1DVisualizer
 from aeolis.gui.gui_tabs.model_runner import ModelRunner
 
-from windrose import WindroseAxes
 
 # Initialize with default configuration
 configfile = "No file selected"
@@ -420,7 +409,7 @@ class AeolisGUI:
                         wind_file = self.wind_file_entry.get()
                         if wind_file and wind_file.strip():
                             self.load_and_plot_wind()
-                except:
+                except Exception:
                     pass  # Silently fail if tabs not yet initialized
                 
                 messagebox.showinfo("Success", f"Configuration loaded from:\n{file_path}")
