@@ -582,15 +582,22 @@ class WindShear:
         time_start_perturbation = time.time()
         
         # Shear stress perturbation
+        # Avoid division by zero at DC component (kx=0, ky=0)
+        # Set a small value to avoid division by zero, then set DC to 0 after calculation
+        k_safe = np.where(k == 0, 1.0, k)
+        kx_safe = np.where(kx == 0, 1.0, kx)
         
-        dtaux_t = hs * kx**2 / k * 2 / ul**2 * \
-                  (-1. + (2. * np.log(l/z0new) + k**2/kx**2) * sigma * \
+        dtaux_t = hs * kx**2 / k_safe * 2 / ul**2 * \
+                  (-1. + (2. * np.log(l/z0new) + k**2/kx_safe**2) * sigma * \
                     sc_kv(1., 2. * sigma) / sc_kv(0., 2. * sigma))
 
         
-        dtauy_t = hs * kx * ky / k * 2 / ul**2 * \
+        dtauy_t = hs * kx * ky / k_safe * 2 / ul**2 * \
                     2. * np.sqrt(2.) * sigma * sc_kv(1., 2. * np.sqrt(2.) * sigma) / sc_kv(0., 2. * np.sqrt(2.) * sigma)
 
+        # Set DC component to zero (no perturbation at zero frequency)
+        dtaux_t[k == 0] = 0.
+        dtauy_t[k == 0] = 0.
         
         gc['dtaux'] = np.real(np.fft.ifft2(dtaux_t))
         gc['dtauy'] = np.real(np.fft.ifft2(dtauy_t))
@@ -668,8 +675,11 @@ class WindShear:
         if nfilter is not None:
             n1 = np.min(nfilter)
             n2 = np.max(nfilter)
-            px = 2 * np.pi / self.cgrid['dx'] / np.abs(kx)
-            py = 2 * np.pi / self.cgrid['dy'] / np.abs(ky)
+            # Avoid division by zero at DC component (kx=0, ky=0)
+            kx_safe = np.where(kx == 0, 1.0, kx)
+            ky_safe = np.where(ky == 0, 1.0, ky)
+            px = 2 * np.pi / self.cgrid['dx'] / np.abs(kx_safe)
+            py = 2 * np.pi / self.cgrid['dy'] / np.abs(ky_safe)
             s1 =  n1 / np.log(1. / .01 - 1.)
             s2 = -n2 / np.log(1. / .99 - 1.)
             f1 = 1. / (1. + np.exp(-(px + n1 - n2) / s1))
