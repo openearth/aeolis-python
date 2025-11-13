@@ -211,7 +211,7 @@ The refactoring focused on code quality without changing functionality. Here are
 1. **Phase 4 (Suggested)**: Split into multiple modules
    - `gui/main.py` - Main entry point
    - `gui/config_manager.py` - Configuration I/O
-   - `gui/gui_tabs/` - Tab modules for different visualizations
+   - `gui/visualizers.py` - Plotting functions
    - `gui/utils.py` - Utility functions
 
 2. **Phase 5 (Suggested)**: Add unit tests
