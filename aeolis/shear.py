@@ -591,7 +591,7 @@ class WindShear:
                     sc_kv(1., 2. * sigma) / sc_kv(0., 2. * sigma))
 
         dtauy_t = hs * kx * ky / k_safe * 2 / ul**2 * \
-                    2. * np.sqrt(2.) * sigma * sc_kv(1., 2. * np.sqrt(2.) * sigma) / sc_kv(0., 2. * np.sqrt(2.) * sigma)
+                    2. * np.sqrt(2.) * sigma * sc_kv(1., 2. * np.sqrt(2.) * sigma)
 
         # Zero out invalid regions (kx=0 or k=0) where formulation is not valid
         invalid_mask = (k == 0) | (kx == 0)
