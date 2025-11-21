@@ -660,7 +660,7 @@ def _solve_quadrant1(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited,
                 visited[n, s] = True
                 quad[n, s] = 1
 
-
+ 
 @njit(cache=True)
 def _solve_quadrant2(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited, quad, nf):
     """Solve second quadrant (positive n-flow, negative s-flow) with Numba optimization."""

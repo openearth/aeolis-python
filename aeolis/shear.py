@@ -899,19 +899,33 @@ class WindShear:
                               xi.reshape((-1,1))), axis=1)
 
         
-        # Interpolate 
-        pad_w = np.maximum(np.shape(x)[0], np.shape(x)[1])
-        x_pad = np.pad(x, ((pad_w, pad_w), (pad_w, pad_w)), 'reflect', reflect_type='odd')
-        y_pad = np.pad(y, ((pad_w, pad_w), (pad_w, pad_w)), 'reflect', reflect_type='odd')
-        z_pad = np.pad(z, ((pad_w, pad_w), (pad_w, pad_w)), 'edge')
-
+        # Interpolate using RegularGridInterpolator with nearest neighbor (including extrapolation)
         if self.istransect:
-            zi = np.interp(xi.flatten(), x_pad.flatten(), z_pad.flatten()).reshape(xi.shape)
+            # 1D nearest-neighbor interpolation along x with extrapolation
+            # Use scipy.interpolate.interp1d(kind='nearest') to mirror RGI 'nearest' behavior
+            f1d = scipy.interpolate.interp1d(
+                x.flatten(),
+                z.flatten(),
+                kind='nearest',
+                bounds_error=False,
+                fill_value='extrapolate'
+            )
+            zi = f1d(xi.flatten()).reshape(xi.shape)
         else:
-            # in the scipy 1.10 version the regular grid interpolator does not work with non c-contigous arrays.
-            # Here we make a copy as a dirty solution feeding the interpolator with ordered copies             
-            inter = scipy.interpolate.RegularGridInterpolator((y_pad[:,0].copy(order='C'), x_pad[0,:].copy(order='C')), z_pad, bounds_error = False, fill_value = z0)
-            zi = inter(xyi).reshape(xi.shape)
+            # Prepare monotonic coordinate vectors
+            y_vec = y[:, 0].copy(order='C')
+            x_vec = x[0, :].copy(order='C')
+            z_c = z.copy(order='C')
+
+            # RegularGridInterpolator with nearest neighbor; allow extrapolation by setting fill_value=None
+            rgi = scipy.interpolate.RegularGridInterpolator(
+                (y_vec, x_vec), z_c,
+                method='nearest', bounds_error=False, fill_value=None
+            )
+
+            # Query points as (y, x) pairs
+            pts = np.column_stack((yi.flatten(), xi.flatten()))
+            zi = rgi(pts).reshape(xi.shape)
             
         
         return zi
