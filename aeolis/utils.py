@@ -525,11 +525,14 @@ def sweep(Ct, Cu, mass, dt, Ts, ds, dn, us, un, w, zb=None, zne=None, rhog=2650.
 
     # ufn[:,:,:] = ufn[-2,:,:]
 
-    # also correct for the potential gradients at the boundary cells in the equilibrium concentrations
-    Cu[:,0,:]  = Cu[:,1,:]
-    Cu[:,-1,:] = Cu[:,-2,:]
-    Cu[0,:,:]  = Cu[1,:,:]
-    Cu[-1,:,:] = Cu[-2,:,:]
+    # NOTE: Do NOT modify Cu here - it should reflect the actual equilibrium concentration
+    # computed by the transport module. Copying from interior cells can create artificial
+    # peaks at boundaries, especially at downwind boundaries where Cu may naturally be lower
+    # due to supply limitations.
+    # REMOVED: Cu[:,0,:]  = Cu[:,1,:]
+    # REMOVED: Cu[:,-1,:] = Cu[:,-2,:]
+    # REMOVED: Cu[0,:,:]  = Cu[1,:,:]
+    # REMOVED: Cu[-1,:,:] = Cu[-2,:,:]
     
     # #boundary values
     # ufs[:,0, :]  = us[:,0, :]
