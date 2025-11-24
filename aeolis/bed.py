@@ -346,7 +346,7 @@ def update(s, p):
         new_zb = s['zb'] + dz
         
         # Ensure bed level does not drop below non-erodible layer
-        if p['ne_file'] is not None:
+        if p['ne_file'] is not None and 'zne' in s and s['zne'] is not None:
             # Where new bed would be below non-erodible layer, limit it to zne
             ix_below = new_zb < s['zne']
             if np.any(ix_below):
