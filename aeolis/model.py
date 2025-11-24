@@ -1706,7 +1706,8 @@ class AeoLiS(IBmi):
                     Ct[0,:,0] =  -2                
                     Ct[-1,:,0] =  -2
 
-                Ct, pickup = sweep(Ct, s['Cu'].copy(), s['mass'].copy(), self.dt, p['T'], s['ds'], s['dn'], s['us'], s['un'],w)
+                Ct, pickup = sweep(Ct, s['Cu'].copy(), s['mass'].copy(), self.dt, p['T'], s['ds'], s['dn'], s['us'], s['un'], w, 
+                                  zb=s['zb'], zne=s['zne'], rhog=p['rhog'], porosity=p['porosity'])
 
         qs = Ct * s['us'] 
         qn = Ct * s['un'] 

@@ -453,7 +453,7 @@ def calc_mean_grain_size(p, s):
 # This function acts as an orchestrator, delegating work to Numba-compiled helper functions.
 # Decorating the orchestrator itself with njit provides no performance benefit,
 # since most of the computation is already handled by optimized Numba functions.
-def sweep(Ct, Cu, mass, dt, Ts, ds, dn, us, un, w):
+def sweep(Ct, Cu, mass, dt, Ts, ds, dn, us, un, w, zb=None, zne=None, rhog=2650., porosity=0.4):
 
 
     pickup = np.zeros(Cu.shape)
@@ -564,19 +564,19 @@ def sweep(Ct, Cu, mass, dt, Ts, ds, dn, us, un, w):
         # In the last quadrant we take converging and diverging cells into account. 
 
         # The First quadrant (Numba-optimized)
-        _solve_quadrant1(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited, quad, nf)
+        _solve_quadrant1(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited, quad, nf, zb, zne, rhog, porosity)
         
         # The second quadrant (Numba-optimized)
-        _solve_quadrant2(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited, quad, nf)
+        _solve_quadrant2(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited, quad, nf, zb, zne, rhog, porosity)
         
         # The third quadrant (Numba-optimized)
-        _solve_quadrant3(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited, quad, nf)
+        _solve_quadrant3(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited, quad, nf, zb, zne, rhog, porosity)
         
         # The fourth quadrant (Numba-optimized)
-        _solve_quadrant4(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited, quad, nf)
+        _solve_quadrant4(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited, quad, nf, zb, zne, rhog, porosity)
         
         # Generic stencil for remaining cells including boundaries (Numba-optimized)
-        _solve_generic_stencil(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited, quad, nf)
+        _solve_generic_stencil(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited, quad, nf, zb, zne, rhog, porosity)
 
         # check the boundaries of the pickup matrix for unvisited cells
         # print(np.shape(visited[0,:]==False))
@@ -617,7 +617,7 @@ def sweep(Ct, Cu, mass, dt, Ts, ds, dn, us, un, w):
 
 
 @njit(cache=True)
-def _solve_quadrant1(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited, quad, nf):
+def _solve_quadrant1(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited, quad, nf, zb, zne, rhog, porosity):
     """Solve first quadrant (positive flow in both directions) with Numba optimization."""
     for n in range(1, Ct.shape[0]):
         for s in range(1, Ct.shape[1]):
@@ -657,12 +657,46 @@ def _solve_quadrant1(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited,
                         
                         Ct[n, s, f] = num_limited / den_limited
                 
+                # Apply non-erodible layer constraint if zb and zne are provided
+                if zb is not None and zne is not None:
+                    # Calculate total pickup mass for this cell
+                    total_pickup = 0.0
+                    for f in range(nf):
+                        total_pickup += pickup[n, s, f]
+                    
+                    # Calculate the bed level change from pickup
+                    dz = total_pickup / (rhog * (1.0 - porosity))
+                    
+                    # Check if bed would drop below non-erodible layer
+                    if zb[n, s] - dz < zne[n, s]:
+                        # Limit pickup to prevent erosion below non-erodible layer
+                        max_dz = max(0.0, zb[n, s] - zne[n, s])
+                        max_pickup_total = max_dz * rhog * (1.0 - porosity)
+                        
+                        if total_pickup > 0.0:
+                            scale_factor = max_pickup_total / total_pickup
+                            
+                            # Scale down pickup for all fractions proportionally
+                            for f in range(nf):
+                                pickup[n, s, f] *= scale_factor
+                                
+                                # Recompute Ct with limited pickup
+                                num_limited = (Ct[n - 1, s, f] * ufn[n, s, f] * ds[n, s] + 
+                                              Ct[n, s - 1, f] * ufs[n, s, f] * dn[n, s] + 
+                                              pickup[n, s, f] * ds[n, s] * dn[n, s] / dt)
+                                
+                                den_limited = (ufn[n + 1, s, f] * ds[n, s] + 
+                                              ufs[n, s + 1, f] * dn[n, s])
+                                
+                                if den_limited > 0.0:
+                                    Ct[n, s, f] = num_limited / den_limited
+                
                 visited[n, s] = True
                 quad[n, s] = 1
 
 
 @njit(cache=True)
-def _solve_quadrant2(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited, quad, nf):
+def _solve_quadrant2(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited, quad, nf, zb, zne, rhog, porosity):
     """Solve second quadrant (positive n-flow, negative s-flow) with Numba optimization."""
     for n in range(1, Ct.shape[0]):
         for s in range(Ct.shape[1] - 2, -1, -1):
@@ -702,12 +736,46 @@ def _solve_quadrant2(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited,
                         
                         Ct[n, s, f] = num_limited / den_limited
                 
+                # Apply non-erodible layer constraint if zb and zne are provided
+                if zb is not None and zne is not None:
+                    # Calculate total pickup mass for this cell
+                    total_pickup = 0.0
+                    for f in range(nf):
+                        total_pickup += pickup[n, s, f]
+                    
+                    # Calculate the bed level change from pickup
+                    dz = total_pickup / (rhog * (1.0 - porosity))
+                    
+                    # Check if bed would drop below non-erodible layer
+                    if zb[n, s] - dz < zne[n, s]:
+                        # Limit pickup to prevent erosion below non-erodible layer
+                        max_dz = max(0.0, zb[n, s] - zne[n, s])
+                        max_pickup_total = max_dz * rhog * (1.0 - porosity)
+                        
+                        if total_pickup > 0.0:
+                            scale_factor = max_pickup_total / total_pickup
+                            
+                            # Scale down pickup for all fractions proportionally
+                            for f in range(nf):
+                                pickup[n, s, f] *= scale_factor
+                                
+                                # Recompute Ct with limited pickup
+                                num_limited = (Ct[n - 1, s, f] * ufn[n, s, f] * ds[n, s] + 
+                                              -Ct[n, s + 1, f] * ufs[n, s + 1, f] * dn[n, s] + 
+                                              pickup[n, s, f] * ds[n, s] * dn[n, s] / dt)
+                                
+                                den_limited = (ufn[n + 1, s, f] * ds[n, s] + 
+                                              -ufs[n, s, f] * dn[n, s])
+                                
+                                if den_limited > 0.0:
+                                    Ct[n, s, f] = num_limited / den_limited
+                
                 visited[n, s] = True
                 quad[n, s] = 2
 
 
 @njit(cache=True)
-def _solve_quadrant3(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited, quad, nf):
+def _solve_quadrant3(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited, quad, nf, zb, zne, rhog, porosity):
     """Solve third quadrant (negative flow in both directions) with Numba optimization."""
     for n in range(Ct.shape[0] - 2, -1, -1):
         for s in range(Ct.shape[1] - 2, -1, -1):
@@ -747,12 +815,46 @@ def _solve_quadrant3(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited,
                         
                         Ct[n, s, f] = num_limited / den_limited
                 
+                # Apply non-erodible layer constraint if zb and zne are provided
+                if zb is not None and zne is not None:
+                    # Calculate total pickup mass for this cell
+                    total_pickup = 0.0
+                    for f in range(nf):
+                        total_pickup += pickup[n, s, f]
+                    
+                    # Calculate the bed level change from pickup
+                    dz = total_pickup / (rhog * (1.0 - porosity))
+                    
+                    # Check if bed would drop below non-erodible layer
+                    if zb[n, s] - dz < zne[n, s]:
+                        # Limit pickup to prevent erosion below non-erodible layer
+                        max_dz = max(0.0, zb[n, s] - zne[n, s])
+                        max_pickup_total = max_dz * rhog * (1.0 - porosity)
+                        
+                        if total_pickup > 0.0:
+                            scale_factor = max_pickup_total / total_pickup
+                            
+                            # Scale down pickup for all fractions proportionally
+                            for f in range(nf):
+                                pickup[n, s, f] *= scale_factor
+                                
+                                # Recompute Ct with limited pickup
+                                num_limited = (-Ct[n + 1, s, f] * ufn[n + 1, s, f] * dn[n, s] + 
+                                              -Ct[n, s + 1, f] * ufs[n, s + 1, f] * dn[n, s] + 
+                                              pickup[n, s, f] * ds[n, s] * dn[n, s] / dt)
+                                
+                                den_limited = (-ufn[n, s, f] * dn[n, s] + 
+                                              -ufs[n, s, f] * dn[n, s])
+                                
+                                if den_limited > 0.0:
+                                    Ct[n, s, f] = num_limited / den_limited
+                
                 visited[n, s] = True
                 quad[n, s] = 3
 
 
 @njit(cache=True)
-def _solve_quadrant4(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited, quad, nf):
+def _solve_quadrant4(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited, quad, nf, zb, zne, rhog, porosity):
     """Solve fourth quadrant (negative n-flow, positive s-flow) with Numba optimization."""
     for n in range(Ct.shape[0] - 2, -1, -1):
         for s in range(1, Ct.shape[1]):
@@ -792,12 +894,46 @@ def _solve_quadrant4(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited,
                         
                         Ct[n, s, f] = num_limited / den_limited
                 
+                # Apply non-erodible layer constraint if zb and zne are provided
+                if zb is not None and zne is not None:
+                    # Calculate total pickup mass for this cell
+                    total_pickup = 0.0
+                    for f in range(nf):
+                        total_pickup += pickup[n, s, f]
+                    
+                    # Calculate the bed level change from pickup
+                    dz = total_pickup / (rhog * (1.0 - porosity))
+                    
+                    # Check if bed would drop below non-erodible layer
+                    if zb[n, s] - dz < zne[n, s]:
+                        # Limit pickup to prevent erosion below non-erodible layer
+                        max_dz = max(0.0, zb[n, s] - zne[n, s])
+                        max_pickup_total = max_dz * rhog * (1.0 - porosity)
+                        
+                        if total_pickup > 0.0:
+                            scale_factor = max_pickup_total / total_pickup
+                            
+                            # Scale down pickup for all fractions proportionally
+                            for f in range(nf):
+                                pickup[n, s, f] *= scale_factor
+                                
+                                # Recompute Ct with limited pickup
+                                num_limited = (Ct[n, s - 1, f] * ufs[n, s, f] * dn[n, s] + 
+                                              -Ct[n + 1, s, f] * ufn[n + 1, s, f] * dn[n, s] + 
+                                              pickup[n, s, f] * ds[n, s] * dn[n, s] / dt)
+                                
+                                den_limited = (ufs[n, s + 1, f] * dn[n, s] + 
+                                              -ufn[n, s, f] * dn[n, s])
+                                
+                                if den_limited > 0.0:
+                                    Ct[n, s, f] = num_limited / den_limited
+                
                 visited[n, s] = True
                 quad[n, s] = 4
 
 
 @njit(cache=True)
-def _solve_generic_stencil(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited, quad, nf):
+def _solve_generic_stencil(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited, quad, nf, zb, zne, rhog, porosity):
     """Solve remaining cells with generic stencil using conditionals (Numba-optimized)."""
     for n in range(Ct.shape[0] - 2, -1, -1):
         for s in range(1, Ct.shape[1]):
@@ -867,6 +1003,58 @@ def _solve_generic_stencil(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, vi
                             den_lim += -ufs[n, s, f] * dn[n, s]
                         
                         Ct[n, s, f] = num_lim / den_lim
+                
+                # Apply non-erodible layer constraint if zb and zne are provided
+                if zb is not None and zne is not None:
+                    # Calculate total pickup mass for this cell
+                    total_pickup = 0.0
+                    for f in range(nf):
+                        total_pickup += pickup[n, s, f]
+                    
+                    # Calculate the bed level change from pickup
+                    dz = total_pickup / (rhog * (1.0 - porosity))
+                    
+                    # Check if bed would drop below non-erodible layer
+                    if zb[n, s] - dz < zne[n, s]:
+                        # Limit pickup to prevent erosion below non-erodible layer
+                        max_dz = max(0.0, zb[n, s] - zne[n, s])
+                        max_pickup_total = max_dz * rhog * (1.0 - porosity)
+                        
+                        if total_pickup > 0.0:
+                            scale_factor = max_pickup_total / total_pickup
+                            
+                            # Scale down pickup for all fractions proportionally and recompute Ct
+                            for f in range(nf):
+                                pickup[n, s, f] *= scale_factor
+                                
+                                # Recompute with limited pickup
+                                num_lim = pickup[n, s, f] * ds[n, s] * dn[n, s] / dt
+                                den_lim = 0.0
+                                
+                                if ufn[n, s, 0] > 0:
+                                    num_lim += Ct[n - 1, s, f] * ufn[n, s, f] * ds[n, s]
+                                
+                                if ufs[n, s, 0] > 0:
+                                    num_lim += Ct[n, s - 1, f] * ufs[n, s, f] * dn[n, s]
+                                
+                                if ufn[n + 1, s, 0] < 0:
+                                    num_lim += -Ct[n + 1, s, f] * ufn[n + 1, s, f] * dn[n, s]
+                                elif ufn[n + 1, s, 0] > 0:
+                                    den_lim += ufn[n + 1, s, f] * ds[n, s]
+                                
+                                if ufs[n, s + 1, 0] < 0:
+                                    num_lim += -Ct[n, s + 1, f] * ufs[n, s + 1, f] * dn[n, s]
+                                elif ufs[n, s + 1, 0] > 0:
+                                    den_lim += ufs[n, s + 1, f] * dn[n, s]
+                                
+                                if ufn[n, s, 0] < 0:
+                                    den_lim += -ufn[n, s, f] * dn[n, s]
+                                
+                                if ufs[n, s, 0] < 0:
+                                    den_lim += -ufs[n, s, f] * dn[n, s]
+                                
+                                if den_lim > 0.0:
+                                    Ct[n, s, f] = num_lim / den_lim
                 
                 visited[n, s] = True
                 quad[n, s] = 5

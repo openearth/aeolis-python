@@ -342,8 +342,22 @@ def update(s, p):
         # s['dzb'] = dm[:, 0].reshape((ny + 1, nx + 1))
         s['dzb'] = dz.copy()
 
-        # redistribute sediment from inactive zone to marine interaction zone
-        s['zb'] += dz
+        # Apply bed update
+        new_zb = s['zb'] + dz
+        
+        # Ensure bed level does not drop below non-erodible layer
+        if p['ne_file'] is not None:
+            # Where new bed would be below non-erodible layer, limit it to zne
+            ix_below = new_zb < s['zne']
+            if np.any(ix_below):
+                # Limit the bed level change to prevent going below zne
+                new_zb[ix_below] = s['zne'][ix_below]
+                # Update dzb to reflect the actual change
+                s['dzb'][ix_below] = new_zb[ix_below] - s['zb'][ix_below]
+        
+        # Update bed level
+        s['zb'] = new_zb
+        
         if p['process_tide']:
             s['zs'] += dz #???
     
