@@ -359,7 +359,8 @@ def update(s, p):
         s['zb'] = new_zb
         
         if p['process_tide']:
-            s['zs'] += dz #???
+            # Use actual bed level change (s['dzb']) instead of originally calculated dz
+            s['zs'] += s['dzb']
     
     return s
 
