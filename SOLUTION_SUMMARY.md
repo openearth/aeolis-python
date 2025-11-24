@@ -30,9 +30,9 @@ At the downwind boundary:
 
 ## Solution Implementation
 
-A dual-layer defensive approach was implemented:
+A targeted boundary-focused approach was implemented:
 
-### Layer 1: Prevention in Sweep Solver
+### Layer 1: Prevention in Sweep Solver (Boundary-Only)
 
 Modified `aeolis/utils.py`:
 
@@ -43,13 +43,16 @@ Modified `aeolis/utils.py`:
    - `porosity`: Bed porosity
 
 2. Updated all quadrant solvers and generic stencil to:
-   - Calculate total pickup for each cell
+   - **Apply constraint ONLY at domain boundaries** (edges of grid)
+   - Calculate total pickup for each boundary cell
    - Convert pickup to bed level change: `dz = total_pickup / (rhog * (1 - porosity))`
    - Check if `zb - dz < zne`
    - If true, limit pickup to: `max_pickup = (zb - zne) * rhog * (1 - porosity)`
    - Scale down pickup proportionally for all fractions
 
-This prevents the solver from calculating excessive pickup in the first place.
+3. Added post-processing constraint for boundary cells that receive copied pickup values
+
+This prevents excessive pickup at domain boundaries where the problem occurs.
 
 ### Layer 2: Safety Net in Bed Update
 

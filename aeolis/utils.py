@@ -582,6 +582,30 @@ def sweep(Ct, Cu, mass, dt, Ts, ds, dn, us, un, w, zb=None, zne=None, rhog=2650.
         # print(np.shape(visited[0,:]==False))
         pickup[0,:,0] = pickup[1,:,0].copy() 
         pickup[-1,:,0] = pickup[-2,:,0].copy() 
+        
+        # Apply non-erodible layer constraint to boundary cells that were set by copying
+        if zb is not None and zne is not None:
+            for boundary_row in [0, Ct.shape[0] - 1]:
+                for s in range(Ct.shape[1]):
+                    # Calculate total pickup for this cell
+                    total_pickup = 0.0
+                    for f in range(nf):
+                        total_pickup += pickup[boundary_row, s, f]
+                    
+                    if total_pickup > 0:
+                        # Calculate bed level change
+                        dz = total_pickup / (rhog * (1.0 - porosity))
+                        
+                        # Check if bed would drop below non-erodible layer
+                        if zb[boundary_row, s] - dz < zne[boundary_row, s]:
+                            # Limit pickup
+                            max_dz = max(0.0, zb[boundary_row, s] - zne[boundary_row, s])
+                            max_pickup_total = max_dz * rhog * (1.0 - porosity)
+                            
+                            if total_pickup > 0.0:
+                                scale_factor = max_pickup_total / total_pickup
+                                for f in range(nf):
+                                    pickup[boundary_row, s, f] *= scale_factor
                 
         k+=1
     
@@ -657,8 +681,12 @@ def _solve_quadrant1(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited,
                         
                         Ct[n, s, f] = num_limited / den_limited
                 
-                # Apply non-erodible layer constraint if zb and zne are provided
-                if zb is not None and zne is not None:
+                # Apply non-erodible layer constraint at domain boundaries only
+                # Check if cell is at a boundary (any edge of domain)
+                is_boundary = (n == 1 or n == Ct.shape[0] - 1 or 
+                              s == 1 or s == Ct.shape[1] - 1)
+                
+                if zb is not None and zne is not None and is_boundary:
                     # Calculate total pickup mass for this cell
                     total_pickup = 0.0
                     for f in range(nf):
@@ -736,8 +764,12 @@ def _solve_quadrant2(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited,
                         
                         Ct[n, s, f] = num_limited / den_limited
                 
-                # Apply non-erodible layer constraint if zb and zne are provided
-                if zb is not None and zne is not None:
+                # Apply non-erodible layer constraint at domain boundaries only
+                # Check if cell is at a boundary (edges of domain)
+                is_boundary = (n == 1 or n == Ct.shape[0] - 1 or 
+                              s == 1 or s == Ct.shape[1] - 2)
+                
+                if zb is not None and zne is not None and is_boundary:
                     # Calculate total pickup mass for this cell
                     total_pickup = 0.0
                     for f in range(nf):
@@ -815,8 +847,12 @@ def _solve_quadrant3(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited,
                         
                         Ct[n, s, f] = num_limited / den_limited
                 
-                # Apply non-erodible layer constraint if zb and zne are provided
-                if zb is not None and zne is not None:
+                # Apply non-erodible layer constraint at domain boundaries only
+                # Check if cell is at a boundary (edges of domain)
+                is_boundary = (n == 0 or n == Ct.shape[0] - 2 or 
+                              s == 0 or s == Ct.shape[1] - 2)
+                
+                if zb is not None and zne is not None and is_boundary:
                     # Calculate total pickup mass for this cell
                     total_pickup = 0.0
                     for f in range(nf):
@@ -894,8 +930,12 @@ def _solve_quadrant4(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, visited,
                         
                         Ct[n, s, f] = num_limited / den_limited
                 
-                # Apply non-erodible layer constraint if zb and zne are provided
-                if zb is not None and zne is not None:
+                # Apply non-erodible layer constraint at domain boundaries only
+                # Check if cell is at a boundary (edges of domain)
+                is_boundary = (n == 0 or n == Ct.shape[0] - 2 or 
+                              s == 1 or s == Ct.shape[1] - 1)
+                
+                if zb is not None and zne is not None and is_boundary:
                     # Calculate total pickup mass for this cell
                     total_pickup = 0.0
                     for f in range(nf):
@@ -1004,8 +1044,12 @@ def _solve_generic_stencil(Ct, Cu, mass, pickup, dt, Ts, ds, dn, ufs, ufn, w, vi
                         
                         Ct[n, s, f] = num_lim / den_lim
                 
-                # Apply non-erodible layer constraint if zb and zne are provided
-                if zb is not None and zne is not None:
+                # Apply non-erodible layer constraint at domain boundaries only
+                # Check if cell is at a boundary (edges of domain)  
+                is_boundary = (n == 0 or n == Ct.shape[0] - 2 or 
+                              s == 1 or s == Ct.shape[1] - 1)
+                
+                if zb is not None and zne is not None and is_boundary:
                     # Calculate total pickup mass for this cell
                     total_pickup = 0.0
                     for f in range(nf):
