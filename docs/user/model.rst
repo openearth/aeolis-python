@@ -750,3 +750,153 @@ content [mg/g]. Currently, no model is implemented that predicts the
 instantaneous salt content. The spatial varying salt content needs to
 be specified by the user, for example through the BMI interface.
 
+
+Simulation of Avalanching
+-------------------------
+
+Avalanching is a gravity-driven process that redistributes sediment when 
+bed slopes exceed critical angles of repose. In coastal dune environments, 
+avalanching is an important process that shapes dune morphology, 
+particularly on steep dune faces where wind-driven sediment accumulation 
+can create unstable slopes.
+
+Angle of Repose
+^^^^^^^^^^^^^^^
+
+The angle of repose represents the steepest angle at which a granular 
+material can be piled without slumping. Two critical angles are defined:
+
+- **Static angle of repose** (:math:`\theta_{\mathrm{stat}}`): The maximum 
+  angle at which sediment can remain stable. If the bed slope exceeds this 
+  angle, avalanching is triggered.
+
+- **Dynamic angle of repose** (:math:`\theta_{\mathrm{dyn}}`): The angle 
+  to which the slope relaxes during avalanching. Once avalanching begins, 
+  it continues until all slopes are reduced below this threshold.
+
+Typical values for dry sand are :math:`\theta_{\mathrm{stat}} = 34°` and 
+:math:`\theta_{\mathrm{dyn}} = 33°`. These values can potentially vary 
+spatially depending on factors such as moisture content and vegetation 
+roots, though this functionality is not yet fully implemented in the 
+current version.
+
+The critical slope is computed from the angle of repose:
+
+.. math::
+   :label: tan-critical
+   
+   S_{\mathrm{crit}} = \tan(\theta_{\mathrm{dyn}})
+
+Avalanche Triggering and Iteration
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The avalanching process is simulated using an iterative relaxation scheme. 
+At each iteration, the algorithm:
+
+1. Computes the downslope gradient at each grid cell in both the 
+   x-direction and y-direction
+2. Determines the total gradient magnitude
+3. Checks if any slopes exceed the critical dynamic slope
+4. If slopes exceed the threshold, computes sediment fluxes and updates 
+   bed elevations
+5. Repeats until all slopes are below the critical threshold or the 
+   maximum number of iterations is reached
+
+The downslope gradient is computed by comparing the bed elevation at 
+each cell with its neighbors:
+
+.. math::
+   :label: grad-down
+   
+   \nabla h_{\downarrow,x} = \frac{\Delta z_x}{\Delta s} \quad ; \quad 
+   \nabla h_{\downarrow,y} = \frac{\Delta z_y}{\Delta n}
+
+where :math:`\Delta z_x` and :math:`\Delta z_y` are the elevation 
+differences in the downslope direction, and :math:`\Delta s` and 
+:math:`\Delta n` are the grid cell sizes in the x and y directions, 
+respectively.
+
+The total gradient magnitude is:
+
+.. math::
+   :label: grad-mag
+   
+   |\nabla h| = \sqrt{\nabla h_{\downarrow,x}^2 + \nabla h_{\downarrow,y}^2}
+
+Sediment Flux Computation
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When the local slope exceeds the critical slope, a sediment flux is 
+computed to redistribute material downslope. The flux is proportional 
+to the excess slope:
+
+.. math::
+   :label: slope-diff
+   
+   \Delta S = \tanh(|\nabla h|) - \tanh(0.9 \cdot S_{\mathrm{crit}})
+
+The factor of 0.9 provides numerical stability by ensuring the target 
+slope is slightly below the critical value. The use of the hyperbolic 
+tangent function provides smooth behavior and prevents unrealistically 
+large fluxes on very steep slopes.
+
+The flux components in each direction are:
+
+.. math::
+   :label: flux-components
+   
+   F_x = \Delta S \cdot \nabla h_{\downarrow,x} \quad ; \quad 
+   F_y = \Delta S \cdot \nabla h_{\downarrow,y}
+
+Bed Level Update
+^^^^^^^^^^^^^^^^
+
+The bed level is updated based on the balance of incoming and outgoing 
+fluxes at each cell. The total outgoing flux from a cell is the sum of 
+positive flux components in all directions:
+
+.. math::
+   :label: q-out
+   
+   q_{\mathrm{out}} = \max(F_x, 0) + \max(-F_x, 0) + \max(F_y, 0) + \max(-F_y, 0)
+
+The incoming flux is computed from the fluxes of neighboring cells that 
+flow into the current cell. The bed level update follows:
+
+.. math::
+   :label: zb-update-ava
+   
+   z_b^{n+1} = z_b^n + E \cdot (q_{\mathrm{in}} - q_{\mathrm{out}})
+
+where :math:`E` is a relaxation factor (default value 0.1) that controls 
+the rate of bed adjustment per iteration. A smaller value provides more 
+stable iterations but requires more iterations to converge.
+
+Non-erodible Layer Interaction
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The avalanching algorithm respects the presence of a non-erodible layer. 
+Cells where the non-erodible layer elevation (:math:`z_{\mathrm{ne}}`) is 
+at or above the current bed level (:math:`z_b`) are excluded from the 
+avalanching calculation:
+
+.. math::
+   :label: ne-condition
+   
+   \text{if } z_{\mathrm{ne}} \geq z_b \text{, then avalanching is disabled}
+
+This prevents unrealistic erosion of hard substrates or rock outcrops.
+
+Model Parameters
+^^^^^^^^^^^^^^^^
+
+The avalanching process is controlled by the following configuration 
+parameters:
+
+- ``process_avalanche``: Boolean to enable/disable the avalanching process 
+  (default: ``False``)
+- ``theta_dyn``: Dynamic angle of repose in degrees (default: ``33°``)
+- ``theta_stat``: Static angle of repose in degrees (default: ``34°``)
+- ``max_iter_ava``: Maximum number of iterations for the avalanching loop 
+  (default: ``1000``)
+

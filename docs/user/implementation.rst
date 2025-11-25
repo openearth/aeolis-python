@@ -701,6 +701,122 @@ and the groundwater elevation is set equal to the bed elevation. On the landward
 a no-flow condition, :math:`\frac{{\partial \eta }}{{\partial t}} = 0` (Neumann condition), or constant head, :math:`\eta = constant` (Dirichlet condition), is prescribed.
 
 
+Avalanching algorithm
+---------------------
+
+The avalanching module simulates the gravity-driven redistribution of sediment 
+when bed slopes exceed critical angles. The implementation uses an iterative 
+relaxation scheme optimized with Numba JIT compilation for performance.
+
+Algorithm structure
+^^^^^^^^^^^^^^^^^^^
+
+The avalanching algorithm iterates until either all slopes are below the 
+critical dynamic slope or the maximum number of iterations is reached. 
+Each iteration consists of three main phases:
+
+**Phase 1: Gradient computation**
+
+For each grid cell :math:`(i, j)`, the downslope gradient is computed in both 
+the x and y directions:
+
+.. math::
+   :label: grad-x-impl
+   
+   \nabla h_{\downarrow,x,i,j} = \begin{cases}
+   \frac{z_{b,i,j-1} - z_{b,i,j}}{\Delta s_{i,j}} & \text{if } z_{b,i,j+1} > z_{b,i,j-1} \\
+   \frac{z_{b,i,j} - z_{b,i,j+1}}{\Delta s_{i,j}} & \text{otherwise}
+   \end{cases}
+
+.. math::
+   :label: grad-y-impl
+   
+   \nabla h_{\downarrow,y,i,j} = \begin{cases}
+   \frac{z_{b,i-1,j} - z_{b,i,j}}{\Delta n_{i,j}} & \text{if } z_{b,i+1,j} > z_{b,i-1,j} \\
+   \frac{z_{b,i,j} - z_{b,i+1,j}}{\Delta n_{i,j}} & \text{otherwise}
+   \end{cases}
+
+The gradient is set to zero at domain boundaries and for cells where the 
+non-erodible layer is at or above the bed level (:math:`z_{\mathrm{ne}} \geq z_b`).
+
+**Phase 2: Flux computation**
+
+If the gradient magnitude :math:`|\nabla h|_{i,j}` exceeds the critical 
+slope :math:`\tan(\theta_{\mathrm{dyn}})`, a flux is computed:
+
+.. math::
+   :label: flux-impl
+   
+   \begin{aligned}
+   \Delta S_{i,j} &= \tanh(|\nabla h|_{i,j}) - \tanh(0.9 \cdot \tan(\theta_{\mathrm{dyn}})) \\
+   F_{x,i,j} &= \Delta S_{i,j} \cdot \nabla h_{\downarrow,x,i,j} \\
+   F_{y,i,j} &= \Delta S_{i,j} \cdot \nabla h_{\downarrow,y,i,j}
+   \end{aligned}
+
+**Phase 3: Bed level update**
+
+The outgoing flux from each cell is:
+
+.. math::
+   :label: qout-impl
+   
+   q_{\mathrm{out},i,j} = \max(F_{x,i,j}, 0) + \max(-F_{x,i,j}, 0) + 
+                          \max(F_{y,i,j}, 0) + \max(-F_{y,i,j}, 0)
+
+The incoming flux is the sum of contributions from neighboring cells with 
+periodic boundary conditions in the lateral direction:
+
+.. math::
+   :label: qin-impl
+   
+   q_{\mathrm{in},i,j} = q_{\mathrm{west}} + q_{\mathrm{east}} + 
+                         q_{\mathrm{north}} + q_{\mathrm{south}}
+
+where:
+
+.. math::
+   
+   \begin{aligned}
+   q_{\mathrm{west},i,j} &= \max(F_{x,i,j-1}, 0) \\
+   q_{\mathrm{east},i,j} &= \max(-F_{x,i,j+1}, 0) \\
+   q_{\mathrm{north},i,j} &= \max(F_{y,i-1,j}, 0) \\
+   q_{\mathrm{south},i,j} &= \max(-F_{y,i+1,j}, 0)
+   \end{aligned}
+
+The bed level is updated using a relaxation factor :math:`E`:
+
+.. math::
+   :label: update-impl
+   
+   z_{b,i,j}^{n+1} = z_{b,i,j}^n + E \cdot (q_{\mathrm{in},i,j} - q_{\mathrm{out},i,j})
+
+Convergence criterion
+^^^^^^^^^^^^^^^^^^^^^
+
+The iteration terminates when:
+
+.. math::
+   :label: converge-impl
+   
+   \max_{i,j}(|\nabla h|_{i,j}) < \tan(\theta_{\mathrm{dyn}})
+
+or when the maximum number of iterations ``max_iter_ava`` is reached.
+
+Post-processing
+^^^^^^^^^^^^^^^
+
+After the avalanching loop completes, the water level :math:`z_s` is 
+updated to ensure consistency with the new bed level:
+
+.. math::
+   :label: water-update
+   
+   z_{s,i,j} = \begin{cases}
+   z_{b,i,j} & \text{if } z_{b,i,j} > \text{SWL}_{i,j} \\
+   \text{SWL}_{i,j} & \text{otherwise}
+   \end{cases}
+
+
 Basic Model Interface (BMI)
 ---------------------------
 
