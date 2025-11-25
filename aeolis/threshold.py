@@ -234,9 +234,11 @@ def compute_moisture(s, p):
     else:
         logger.log_and_raise('Unknown moisture formulation [%s]' % p['method_moist'], exc=ValueError)
 
+    th_mg = (p['max_moist']/100 * p['rhow'] / (p['rhog'] * (1. - p['porosity'])))
     # should be .04 according to Pye and Tsoar
-    # should be .64 according to Delgado-Fernandez (10% vol.)
-    ix = mg > 0.064
+    # should be .064 according to Delgado-Fernandez (10% vol.)
+    # .097 corresponds to 15%
+    ix = mg > th_mg
     s['uth'][ix] = np.inf
     
     return s

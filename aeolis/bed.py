@@ -105,8 +105,14 @@ def initialize(s, p):
             for j in range(nf):
                 s['mass'][:,:,i,j] = p['rhog'] * (1. - p['porosity']) \
                                      * s['thlyr'][:,:,i] * gs[j]
-    else:
-        s['mass'][:,:,:,:] = p['bedcomp_file'].reshape(s['mass'].shape)                
+    else:      
+        # if a quasi 2D domain is used, the bedcomp_file is reshaped to fit the domain
+        if s['mass'].shape[0] == 3:
+            s['mass'][0,:,:,:] = p['bedcomp_file'].reshape(s['mass'].shape[1:])
+            s['mass'][1,:,:,:] = p['bedcomp_file'].reshape(s['mass'].shape[1:])
+            s['mass'][2,:,:,:] = p['bedcomp_file'].reshape(s['mass'].shape[1:])                                                      
+        else:
+            s['mass'][:,:,:,:] = p['bedcomp_file'].reshape(s['mass'].shape)                
 
     # initialize masks
     for k, v in p.items():
@@ -196,7 +202,7 @@ def mixtoplayer(s, p):
 
 
 def wet_bed_reset(s, p):
-    ''' Text
+    ''' Reset wet bed to initial bed level if the total water level is above the bed level.
 
 
 
@@ -305,8 +311,11 @@ def update(s, p):
     if p['grain_dist'].ndim == 2: 
         m[ix_ero,-1,:] -= dm[ix_ero,:] * normalize(p['grain_dist'][-1,:])[np.newaxis,:].repeat(np.sum(ix_ero), axis=0)
     elif type(p['bedcomp_file']) == np.ndarray:
-        gs = p['bedcomp_file'].reshape((-1,nl,nf))
-        m[ix_ero,-1,:] -= dm[ix_ero,:] * normalize(gs[ix_ero,-1, :], axis=1)
+        gs = np.zeros(s['mass'].shape)
+        gs[0,:,:,:] = p['bedcomp_file'].reshape((-1,nl,nf))
+        gs[1,:,:,:] = p['bedcomp_file'].reshape((-1,nl,nf))
+        gs[2,:,:,:] = p['bedcomp_file'].reshape((-1,nl,nf))
+        m[ix_ero,-1,:] -= dm[ix_ero,:] * normalize(gs.reshape((-1,nl,nf))[ix_ero,-1, :], axis=1)
     else:
         m[ix_ero,-1,:] -= dm[ix_ero,:] * normalize(p['grain_dist'])[np.newaxis,:].repeat(np.sum(ix_ero), axis=0)
     # remove tiny negatives
@@ -322,6 +331,9 @@ def update(s, p):
     
     # reshape mass matrix
     s['mass'] = m.reshape((ny+1,nx+1,nl,nf))
+
+    # Store toplayer of 'mass' variable (ilayer = 0)
+    s['masstop'][:,:,:] = s['mass'][:,:,0,:].copy()
 
     # update bathy
     if p['process_bedupdate']:

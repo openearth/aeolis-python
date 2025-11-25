@@ -100,8 +100,8 @@ class TestAeoLiSRunner:
 
     def test_parse_callback_from_module(self):
         """Test if the callback function can be loaded from a file"""
-        runner = AeoLiSRunner("aeolis.txt")
-        callback = runner.parse_callback("callback_example.py:mock_callback")
+        runner = AeoLiSRunner("aeolis/tests/aeolis.txt")
+        callback = runner.parse_callback("aeolis/tests/callback_example.py:mock_callback")
         assert callable(callback)
         assert callback.__name__ == "mock_callback"
         assert callback() == True

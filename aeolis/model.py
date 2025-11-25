@@ -189,7 +189,7 @@ class AeoLiS(IBmi):
         self.p = aeolis.inout.read_configfile(self.configfile)
         aeolis.inout.check_configuration(self.p)
 
-        # set nx, ny and nfractions
+        # set nx, ny and nfractions and make 1D into quasi 2D
         if self.p['xgrid_file'].ndim == 2:
             self.p['ny'], self.p['nx'] = self.p['xgrid_file'].shape
             
@@ -198,9 +198,34 @@ class AeoLiS(IBmi):
             self.p['ny'] -= 1
             
         else:
-            self.p['nx'] = len(self.p['xgrid_file'])
-            self.p['nx'] -= 1 
-            self.p['ny'] = 0
+            if 0:
+                #this is the old 1D stuff
+                self.p['nx'] = len(self.p['xgrid_file'])
+                self.p['nx'] -= 1 
+                self.p['ny'] = 0
+
+            if 1:
+                # this is the new quasi 2D stuff
+                # this is where we make the 1D grid into a 2D grid to ensure process compatibility
+                
+                # define size of 2D grid 3 is minumum, variable defined for debugging purposes
+                qnr = 3
+                
+                self.p['xgrid_file'] = np.transpose(np.stack([self.p['xgrid_file'] for i in range (qnr)],axis=1))
+                
+                # redefine shape
+                self.p['ny'], self.p['nx'] = self.p['xgrid_file'].shape
+
+                # repeat the above for ygrid_file assume dy is equal to dx
+                dy = self.p['xgrid_file'][1,2]-self.p['xgrid_file'][1,1]
+                self.p['ygrid_file'] = np.transpose(np.stack([self.p['ygrid_file'] + i * dy for i in range(qnr)], axis=1))
+                
+                # repeat the above for bed_file
+                self.p['bed_file'] = np.transpose(np.stack([self.p['bed_file'] for i in range (qnr)],axis=1))
+
+                # change from number of points to number of cells
+                self.p['nx'] -= 1  
+                self.p['ny'] -= 1
 
         #self.p['nfractions'] = len(self.p['grain_dist'])
         self.p['nfractions'] = len(self.p['grain_size'])
@@ -266,10 +291,9 @@ class AeoLiS(IBmi):
 
         '''
 
-        self.p['_time'] = self.t    
+        self.p['_time'] = self.t 
+  
 
-        # here are going to make a change
-        #     
         
         # store previous state
         self.l = self.s.copy()
@@ -1631,7 +1655,12 @@ class AeoLiS(IBmi):
                 w = w_init.copy()
             else:
                 # use initial guess for first time step
-                w = p['grain_dist'].reshape((1,1,-1))
+                # when p['grain_dist'] has 2 dimensions take the first row otherwise take the only row
+                if len(p['grain_dist'].shape) == 2:
+                    w = p['grain_dist'][0,:].reshape((1,1,-1))
+                else:
+                    w = p['grain_dist'].reshape((1,1,-1))
+                    
                 w = w.repeat(p['ny']+1, axis=0)
                 w = w.repeat(p['nx']+1, axis=1)
         else:
@@ -1677,46 +1706,8 @@ class AeoLiS(IBmi):
                     Ct[0,:,0] =  -2                
                     Ct[-1,:,0] =  -2
 
-                # Ct, pickup = sweep(s['Cu'].copy(), s['mass'].copy(), self.dt, p['T'], s['ds'], s['dn'], s['us'], s['un'] )
-                Ct, pickup = sweep3(Ct, s['Cu'].copy(), s['mass'].copy(), self.dt, p['T'], s['ds'], s['dn'], s['us'], s['un'] )
+                Ct, pickup = sweep(Ct, s['Cu'].copy(), s['mass'].copy(), self.dt, p['T'], s['ds'], s['dn'], s['us'], s['un'],w)
 
-            if 0:
-                #define 4 quadrants based on wind directions
-                ix1 = ((s['us'][:,:,0]>=0) & (s['un'][:,:,0]>=0))
-                ix2 = ((s['us'][:,:,0]<0) & (s['un'][:,:,0]>=0))
-                ix3 = ((s['us'][:,:,0]<0) & (s['un'][:,:,0]<0))
-                ix4 = ((s['us'][:,:,0]>0) & (s['un'][:,:,0]<0))
-                
-                # initiate solution matrix including ghost cells to accomodate boundaries
-                Ct_s = np.zeros((Ct.shape[0]+2,Ct.shape[1]+2))
-                # populate solution matrix with previous concentration results
-                Ct_s[1:-1,1:-1] = Ct[:,:,i]
-                
-                #set upwind boundary condition
-                Ct_s[:,0:2]=0
-                #circular boundary condition in lateral directions
-                Ct_s[0,:]=Ct_s[-2,:]
-                Ct_s[-1,:]=Ct_s[1,:]
-                # using the Euler forward scheme we can calculate pickup first based on the previous timestep
-                # there is no need for iteration
-                pickup[:,:,i] = self.dt*(np.minimum(s['Cu'][:,:,i],s['mass'][:,:,0,i]+Ct[:,:,i])-Ct[:,:,i])/Ts
-                
-                #solve for all 4 quadrants in one step using logical indexing
-                Ct_s[1:-1,1:-1] = Ct_s[1:-1,1:-1] + \
-                    ix1*(-self.dt*s['us'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[1:-1,:-2])/s['ds'] \
-                         -self.dt*s['un'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[:-2,1:-1])/s['dn']) +\
-                    ix2*(+self.dt*s['us'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[1:-1,2:])/s['ds'] \
-                         -self.dt*s['un'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[:-2,1:-1])/s['dn']) +\
-                    ix3*(+self.dt*s['us'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[1:-1,2:])/s['ds'] \
-                         +self.dt*s['un'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[2:,1:-1])/s['dn']) +\
-                    ix4*(-self.dt*s['us'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[1:-1,:-2])/s['ds'] \
-                         +self.dt*s['un'][:,:,i]*(Ct_s[1:-1,1:-1]-Ct_s[2:,1:-1])/s['dn']) \
-                    + pickup[:,:,i]
-                
-                # define Ct as a subset of Ct_s (eliminating the boundaries)
-                Ct[:,:,i] = Ct_s[1:-1,1:-1] 
-         
-    
         qs = Ct * s['us'] 
         qn = Ct * s['un'] 
         q = np.hypot(qs, qn)
