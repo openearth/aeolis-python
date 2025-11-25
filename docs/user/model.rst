@@ -777,8 +777,9 @@ material can be piled without slumping. Two critical angles are defined:
 Typical values for dry sand are :math:`\theta_{\mathrm{stat}} = 34°` and 
 :math:`\theta_{\mathrm{dyn}} = 33°`. These values can potentially vary 
 spatially depending on factors such as moisture content and vegetation 
-roots, though this functionality is not yet fully implemented in the 
-current version.
+roots. In the current implementation, the angle of repose is set as a 
+constant parameter; future development may include spatial variation 
+based on local bed surface properties.
 
 The critical slope is computed from the angle of repose:
 
@@ -899,4 +900,10 @@ parameters:
 - ``theta_stat``: Static angle of repose in degrees (default: ``34°``)
 - ``max_iter_ava``: Maximum number of iterations for the avalanching loop 
   (default: ``1000``)
+
+.. note::
+   
+   The relaxation factor :math:`E` (default value 0.1), which controls the 
+   rate of bed adjustment per iteration, is currently set internally in 
+   the code and is not configurable through the model configuration file.
 

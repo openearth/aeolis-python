@@ -816,6 +816,9 @@ updated to ensure consistency with the new bed level:
    \text{SWL}_{i,j} & \text{otherwise}
    \end{cases}
 
+where :math:`\text{SWL}` [m] is the still water level above the reference 
+datum (see :ref:`model` for details on water level definitions).
+
 
 Basic Model Interface (BMI)
 ---------------------------
