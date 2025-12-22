@@ -28,13 +28,12 @@ from __future__ import absolute_import, division
 import logging
 from scipy import ndimage, misc
 import numpy as np
+import math
 from aeolis.wind import *
-import aeolis.rotation
 
 # package modules
 import aeolis.wind
-
-import numpy as np
+#from aeolis.utils import *
 
 # initialize logger
 logger = logging.getLogger(__name__)
@@ -57,46 +56,336 @@ def initialize (s,p):
     '''
     
     if p['veg_file'] is not None:
-        s['rhoveg'][:, :] = p['veg_file']
-
-        if np.isnan(s['rhoveg'][0, 0]):
-            s['rhoveg'][:,:] = 0.
-
-    ix = s['rhoveg'] < 0
-    s['rhoveg'][ix] *= 0.
-    s['hveg'][:,:] = p['hveg_max']*np.sqrt(s['rhoveg'])
-
-    # Change dtype of array to bool for germinate and lateral
-    s['vegetated'] = s['vegetated'].astype('bool') 
-    s['germinate'] = s['germinate'].astype('bool') 
-    s['lateral'] = s['lateral'].astype('bool') 
-
-    # Fill these
-    s['vegetated'] = (s['rhoveg']>0)
-    s['germinate'][:,:] = False
-    s['lateral'][:,:] = False
-
-    if p['vegshear_type'] == 'okin':
-        s['okin'] = aeolis.rotation.rotationClass(s['x'], s['y'], s['zb'],
-                                        dx=p['dx'], dy=p['dy'],
-                                        buffer_width=100)
+        if p['process_vegflex']:
+            print('VefFlex = T -> Veg is not initialized in def initialize')
+        else:
+            print('VefFlex = F -> Veg is initialized in def initialize')
+            s['rhoveg'][:, :] = p['veg_file']
+    
+            if np.isnan(s['rhoveg'][0, 0]):
+                s['rhoveg'][:,:] = 0.
+    
+            ix = s['rhoveg'] < 0
+            s['rhoveg'][ix] *= 0.
+            s['hveg'][:,:] = p['hveg_max']*np.sqrt(s['rhoveg'])
+    
+            s['germinate'][:,:] = (s['rhoveg']>0)
+            s['lateral'][:,:] = 0.
 
     return s
 
+def VegPositionWrite(s,p):
+    # Check if 1D or 2D
+    if p['ny'] == 0:
+        print('VegPositionWrite1D')
+        # Computation of the DownScaling factor
+        # -------------------------------------
+        ResolutionVeg = 0.001
+        Resolution = np.around(p['xgrid_file'][1] - p['xgrid_file'][0], decimals=2)
+        DownScale = np.round(Resolution / ResolutionVeg)
+        nbCell = DownScale * DownScale
+        # Computation of the surface according to the method
+        # ---------------------------------------------------
+        # No Wind Speed: Ammophila arenaria = 11411.19 mm² | Ammophila breviliglata = 22225.37 mm² | Leymus mollis = 35952.50 mm²
+        VegSurface = ((p['stem_diam'] * p['stem_height']) + (
+                    (p['leaf_width'] * p['leaf_height_adjusted']) * p['leafToStem'])) * 1000000  # mm²
+        NbPlante = np.ceil((p['veg_file']*nbCell)/VegSurface)
+        
+        # Find index (x) of cell with vegetation
+        #-----------------------------------------
+        indices = np.where(NbPlante > 0)
+        posX = indices[0]  # Index in x
+    
+        # Repeat the positions as many times as the number of plants in each cell
+        #------------------------------------------------------------------------
+        PlanteRepeat = NbPlante[indices].astype(np.int64)  # The cell values represent the number of plants
+        VegPosXUpS = np.repeat(posX, PlanteRepeat)
+        
+        # Conversion of VegPos depending on the resolution to the 1mm resolution
+        #-----------------------------------------------------------------------
+        VegPosX = (p['xgrid_file'][VegPosXUpS] - p['xgrid_file'][0]) / ResolutionVeg
+        
+        # Saving the results
+        #-------------------
+        p['veg_posx'] = VegPosX 
+        
+    else:
+        print('VegPositionWrite2D')
+        # Computation of the DownScaling factor
+        # -------------------------------------
+        ResolutionVeg = 0.001
+        Resolution = np.around(p['xgrid_file'][0, 1] - p['xgrid_file'][0, 0], decimals=1)
+        DownScale = np.round(Resolution / ResolutionVeg)
+        nbCell = DownScale * DownScale
+        # Computation of the surface according to the method
+        # ---------------------------------------------------
+        # No Wind Speed: Ammophila arenaria = 11411.19 mm² | Ammophila breviliglata = 22225.37 mm² | Leymus mollis = 35952.50 mm²
+        VegSurface = ((p['stem_diam'] * p['stem_height']) + (
+                    (p['leaf_width'] * p['leaf_height_adjusted']) * p['leafToStem'])) * 1000000  # mm²
+        NbPlante = np.ceil((p['veg_file']*nbCell)/VegSurface)
+        
+        # Find index (x,y) of cell with vegetation
+        #-----------------------------------------
+        indices = np.where(NbPlante > 0)
+        posX = indices[1]  # Index in x
+        posY = indices[0]  # Index in y
+    
+        # Repeat the positions as many times as the number of plants in each cell
+        #------------------------------------------------------------------------
+        PlanteRepeat = NbPlante[indices].astype(np.int64)  # The cell values represent the number of plants
+        VegPosXUpS = np.repeat(posX, PlanteRepeat)
+        VegPosYUpS = np.repeat(posY, PlanteRepeat)
+        
+        # Conversion of VegPos depending on the resolution to the 1mm resolution
+        #-----------------------------------------------------------------------
+        VegPosX = (p['xgrid_file'][0,VegPosXUpS] - p['xgrid_file'][0,0]) / ResolutionVeg
+        VegPosY = (p['ygrid_file'][VegPosYUpS,0] - p['ygrid_file'][0,0]) / ResolutionVeg
+        
+        # Saving the results
+        #-------------------
+        p['veg_posx'] = VegPosX
+        p['veg_posy'] = VegPosY
+    
+    return s
+
+
+    
+
+def VegFlexure(s, p):
+    if p['ny'] == 0:
+        print('VegUpdate1D')    
+        if p['vegnumb_file'].any():
+            print('vegnum_file is here')
+            print("wind = ",s['uw'][0,0])
+        
+            
+    #     # Check if vegetation positions are in aeolis.txt or not
+    #     if np.isscalar(p['veg_posx']) and p['veg_posx'] == 0:
+    #         s = VegPositionWrite(s,p)  
+        # print("wind = ",s['uw'][0,0])
+        # Adjust leaf height dependig on wind speed
+        # ------------------------------------------
+            if s['uw'][0,0] ==0:
+                p['leaf_height_adjusted'] = p['leaf_height']
+            else:
+                Flexure = p['flexure_a'] * s['uw'][0,0]+ p['flexure_b'] * p['veg_density'] + p['flexure_c']
+                p['leaf_height_adjusted'] = p['leaf_height'] * (Flexure/100)
+        
+            # Check if the ajusted height is higher to initial height or inf to 0
+            # --------------------------------------------------------------------
+            if p['leaf_height_adjusted'] > p['leaf_height']:
+                p['leaf_height_adjusted'] = p['leaf_height']
+            elif p['leaf_height_adjusted'] < 0:
+                p['leaf_height_adjusted'] = 0;
+        
+            # Computation of the surface according to the method
+            # ---------------------------------------------------
+            VegSurface = ((p['stem_diam'] * p['stem_height']) + (
+                        (p['leaf_width'] * p['leaf_height_adjusted']) * p['leafToStem'])) * 1000000  # mm²
+            # VegSurfaceRayon = np.sqrt(VegSurface / np.pi) # mm
+        
+            # Computation of the DownScaling factor
+            # -------------------------------------
+            ResolutionVeg = 0.001
+            Resolution = np.around(p['xgrid_file'][1] - p['xgrid_file'][0], decimals=2)
+            DownScale = np.round(Resolution / ResolutionVeg)
+            nbCell = DownScale * DownScale
+           
+            # Initialisation of the VegGridCount
+            #-----------------------------------
+            veg1D = np.zeros(p['xgrid_file'].shape)
+            veg1D = ((p['vegnumb_file']*VegSurface)/nbCell)/100
+            veg1D[veg1D > 1] = 1
+            
+            s['rhovegadjusted'] = veg1D
+            
+        
+            if np.isnan(s['rhoveg'][0, 0]):
+                s['rhoveg'][:,:] = 0.
+        
+            #ix = s['rhoveg'] < 0.03
+            #s['rhoveg'][ix] *= 0.
+            
+            s['hvegadjusted'][:,:] = p['hveg_max']*np.sqrt(s['rhovegadjusted'])
+        
+            s['germinate'][:,:] = (s['rhovegadjusted']>0)
+            s['lateral'][:,:] = 0.
+            
+            return s
+     
+        else:
+            print('vegnum_file 1D not here')
+    
+    # # Conversion of VegPos depending on the resolution
+    #     #------------------------------------------------- 
+    #     VegPosXUpS = np.floor((p['xgrid_file'][0] + (p['veg_posx'] * ResolutionVeg)) / Resolution) * Resolution
+    #     #VegPosYUpS = np.floor((p['ygrid_file'][0,0] + (p['veg_posy'] * ResolutionVeg)) / Resolution) * Resolution
+        
+    #     # Initialisation of the VegGridCount
+    #     #-----------------------------------
+    #     veg1D = np.zeros(p['xgrid_file'].shape)
+        
+    #     # Iterate over plant positions and update the grid
+    #     #-------------------------------------------------
+    #     for i in range(len(VegPosXUpS)):
+    #         # Calculate the cell index corresponding to the plant position
+    #         indX = int((VegPosXUpS[i] - p['xgrid_file'][0]) / Resolution)
+    #         #indY = int((VegPosYUpS[i] - p['ygrid_file'][0,0]) / Resolution)
+    #         # Update the corresponding cell value
+    #         veg1D[indX] += 1
+        
+    #     veg1D = (veg1D*VegSurface)/nbCell
+    #     veg1D[veg1D > 1] = 1
+      
+    #     s['rhovegadjusted'][:, :] = veg1D
+        
+    
+    #     if np.isnan(s['rhoveg'][0, 0]):
+    #         s['rhoveg'][:,:] = 0.
+    
+    #     #ix = s['rhoveg'] < 0.03
+    #     #s['rhoveg'][ix] *= 0.
+        
+    #     s['hvegadjusted'][:,:] = p['hveg_max']*np.sqrt(s['rhovegadjusted'])
+    
+    #     s['germinate'][:,:] = (s['rhovegadjusted']>0)
+    #     s['lateral'][:,:] = 0.
+        
+    #     return s
+    
+    elif p['ny'] > 0:
+        print('VegUpdate2D')
+        # Check if vegetation numbers are in aeolis.txt or not
+        if p['vegnumb_file'].any():
+            print('vegnum_file is here')
+            print("wind = ",s['uw'][0,0])
+            # Adjust leaf height dependig on wind speed
+            # ------------------------------------------
+            if s['uw'][0,0] == 0:
+                p['leaf_height_adjusted'] = p['leaf_height']
+            else:
+                Flexure = p['flexure_a'] * s['uw'][0,0]+ p['flexure_b'] * p['veg_density'] + p['flexure_c']
+                p['leaf_height_adjusted'] = p['leaf_height'] * (Flexure/100)
+        
+            # Check if the ajusted height is higher to initial height or inf to 0
+            # --------------------------------------------------------------------
+            if p['leaf_height_adjusted'] > p['leaf_height']:
+                p['leaf_height_adjusted'] = p['leaf_height']
+            elif p['leaf_height_adjusted'] < 0:
+                p['leaf_height_adjusted'] = 0;
+        
+            # Computation of the surface according to the method
+            # ---------------------------------------------------
+            VegSurface = ((p['stem_diam'] * p['stem_height']) + (
+                        (p['leaf_width'] * p['leaf_height_adjusted']) * p['leafToStem'])) * 1000000  # mm²
+            
+            # Computation of the DownScaling factor
+            # -------------------------------------
+            ResolutionVeg = 0.001
+            Resolution = np.around(p['xgrid_file'][0, 1] - p['xgrid_file'][0, 0], decimals=1)
+            DownScale = np.round(Resolution / ResolutionVeg)
+            nbCell = DownScale * DownScale
+            
+            # Initialisation of the VegGridCount
+            #-----------------------------------
+            veg2D = np.zeros(p['xgrid_file'].shape)
+            veg2D = ((p['vegnumb_file']*VegSurface)/nbCell)/100
+            veg2D[veg2D > 1] = 1
+            
+            s['rhovegadjusted'][:, :] = veg2D
+            
+        
+            if np.isnan(s['rhovegadjusted'][0, 0]):
+                s['rhovegadjusted'][:,:] = 0.
+        
+            #ix = s['rhoveg'] < 0.03
+            #s['rhoveg'][ix] *= 0.
+            
+            s['hvegadjusted'][:,:] = p['hveg_max']*np.sqrt(s['rhovegadjusted'])
+        
+            s['germinate'][:,:] = (s['rhovegadjusted']>0)
+            s['lateral'][:,:] = 0.
+            
+            return s
+                            
+        else:
+            print('vegnum_file 2D not here')
+                       
+            
+            # # Check if vegetation positions are in aeolis.txt or not
+            # if (p['veg_posx'] == 0).any() and (p['veg_posy'] == 0).any():
+            #     s = VegPositionWrite(s,p)
+            # print("wind = ",s['uw'][0,0])
+            # # Adjust leaf height dependig on wind speed
+            # # ------------------------------------------
+            # if s['uw'][0,0] == 0:
+            #     p['leaf_height_adjusted'] = p['leaf_height']
+            # else:
+            #     Flexure = p['flexure_a'] * s['uw'][0,0]+ p['flexure_b'] * p['veg_density'] + p['flexure_c']
+            #     p['leaf_height_adjusted'] = p['leaf_height'] * (Flexure/100)
+        
+            # # Check if the ajusted height is higher to initial height or inf to 0
+            # # --------------------------------------------------------------------
+            # if p['leaf_height_adjusted'] > p['leaf_height']:
+            #     p['leaf_height_adjusted'] = p['leaf_height']
+            # elif p['leaf_height_adjusted'] < 0:
+            #     p['leaf_height_adjusted'] = 0;
+        
+            # # Computation of the surface according to the method
+            # # ---------------------------------------------------
+            # VegSurface = ((p['stem_diam'] * p['stem_height']) + (
+            #             (p['leaf_width'] * p['leaf_height_adjusted']) * p['leafToStem'])) * 1000000  # mm²
+            # # VegSurfaceRayon = np.sqrt(VegSurface / np.pi) # mm
+        
+            # # Computation of the DownScaling factor
+            # # -------------------------------------
+            # ResolutionVeg = 0.001
+            # Resolution = np.around(p['xgrid_file'][0, 1] - p['xgrid_file'][0, 0], decimals=1)
+            # DownScale = np.round(Resolution / ResolutionVeg)
+            # nbCell = DownScale * DownScale
+        
+            # # Conversion of VegPos depending on the resolution
+            # #------------------------------------------------- 
+            # VegPosXUpS = np.floor((p['xgrid_file'][0,0] + (p['veg_posx'] * ResolutionVeg)) / Resolution) * Resolution
+            # VegPosYUpS = np.floor((p['ygrid_file'][0,0] + (p['veg_posy'] * ResolutionVeg)) / Resolution) * Resolution
+            
+            # # Initialisation of the VegGridCount
+            # #-----------------------------------
+            # veg2D = np.zeros(p['xgrid_file'].shape)
+            
+            # # Iterate over plant positions and update the grid
+            # #-------------------------------------------------
+            # for i in range(len(VegPosXUpS)):
+            #     # Calculate the cell index corresponding to the plant position
+            #     indX = int((VegPosXUpS[i] - p['xgrid_file'][0,0]) / Resolution)
+            #     indY = int((VegPosYUpS[i] - p['ygrid_file'][0,0]) / Resolution)
+            #     # Update the corresponding cell value
+            #     veg2D[indY, indX] += 1
+            
+            # veg2D = (veg2D*VegSurface)/nbCell
+            # veg2D[veg2D > 1] = 1
+            
+            # s['rhovegadjusted'][:, :] = veg2D
+            
+        
+            # if np.isnan(s['rhovegadjusted'][0, 0]):
+            #     s['rhovegadjusted'][:,:] = 0.
+        
+            # #ix = s['rhoveg'] < 0.03
+            # #s['rhoveg'][ix] *= 0.
+            
+            # s['hvegadjusted'][:,:] = p['hveg_max']*np.sqrt(s['rhovegadjusted'])
+        
+            # s['germinate'][:,:] = (s['rhovegadjusted']>0)
+            # s['lateral'][:,:] = 0.
+            
+            return s
+
+
+
 def vegshear(s, p):
     if p['vegshear_type'] == 'okin':
-
-        okin_params = {
-            'okin_c1_veg': p['okin_c1_veg'],
-            'okin_initialred_veg': p['okin_initialred_veg']
-        }
-
-        s['okin'](x=s['x'], y=s['y'], z=s['zb'], udir=s['udir'][0, 0], ustar=s['ustar'], tau=s['tau'], hveg=s['hveg'], type_flag = 1, params=okin_params)
-
-        s['ustar'] = s['okin'].get_ustar()
-        s['ustars'] = - s['ustar'] * np.sin((-p['alfa'] + s['udir']) / 180. * np.pi)
-        s['ustarn'] = - s['ustar'] * np.cos((-p['alfa'] + s['udir']) / 180. * np.pi)
-
+        s = vegshear_okin(s, p)
     else:
         s = vegshear_raupach(s, p)
 
@@ -104,42 +393,106 @@ def vegshear(s, p):
 
     return s
 
+def adjustment_length(s, p):
+    #print('VegLag')
+    if p['process_veglag']:
+        #print('VegLag in if')
+        RhoVeg = p['veg_density'] 
+        if p['process_vegflex']: 
+            s = VegFlexure(s, p)
+            CanopyHeight = p['leaf_height_adjusted'] + p['stem_height']
+            zp = s['hvegadjusted']
+        else:
+            CanopyHeight = p['h_canopy']
+            zp = s['hveg']
+        StretchHeight = p['h_stretch']
+        StemDiam = p['stem_diam']
+        LeafWidth = p['leaf_width']
+        LeafThickness = p['leaf_thick']
+        alpha = p['leafToStem']
+        u = s['uw']  # chagne to 'uw' np.asarray([14.])
+        theta = s['udir'][0, 0]
+        theta = np.radians(theta)
+
+        # Intialize other grid parameters
+        x = s['x'][0, :]
+        dx = s['x'][0, 1] - s['x'][0, 0]
+
+        # Wind parameters
+        u_10 = u[0, 0]
+        zref = p['z']
+        kappa = p['kappa']
+        d = p['grain_size']
+        nu = p['v']
+        z0 = p['k']  # 2 * d[0]/30.
+        z0 = float(z0)
+        # find windspeed at canopy
+        ustar = u_10 * kappa / np.log(zref / z0)
+
+        # Calcualte canopy length
+        posVeg = np.where(zp != 0)
+        if len(posVeg[0]) > 0:
+            posVegStart = np.min(posVeg[1])
+            posVegEnd = np.max(posVeg[1])
+            PatchLength = (posVegEnd - posVegStart) * dx
+            PatchLength = np.abs(PatchLength)
+        else:
+            PatchLength = 0
+
+        # Approximate solid volume fraciton and lateral cover
+        SVF = alpha * RhoVeg * LeafThickness * LeafWidth * (StretchHeight / CanopyHeight)
+
+        # Lateral cover
+        LC = alpha * RhoVeg * LeafWidth * StretchHeight  # lateral cover approximation
+
+        # Calculate element drag coefficent
+        U_canopy = (ustar / kappa) * (np.log(CanopyHeight / z0))
+        Reynolds = U_canopy * StemDiam / nu
+        Cd = 1 + 10 * Reynolds ** (-2 / 3)
+        CanopyDragLength = (2 * (1 - SVF) * CanopyHeight) / (Cd * LC)
+
+        # Use empirical relation to determine deposition lag
+        lag = .95 * CanopyDragLength - 0.09  # with HespData
+        # lag = 4.48 * CanopyDragLength  - 1.29 # Hesp + John data
+
+        # Correct lag is out of range
+        # if lag > PatchLength:
+        #     lag = PatchLength
+        # elif lag < 0:
+        #     lag = 0
+
+    else:
+        lag = 0
+    print("lag = ",lag)
+    return lag
 
 def germinate(s,p):
     ny = p['ny']
     
     # time [year]
     n = (365.25*24.*3600. / (p['dt_opt'] * p['accfac']))
-
-    # Compute dhveg_max to determine a minimum threshold of rhoveg to be considered "vegetated"
-    dhveg_max = p['V_ver'] * (p['dt_opt'] * p['accfac']) / (365.25*24.*3600.)
-    drhoveg_max = (dhveg_max/p['hveg_max'])**2
-
-    # Determine which cells are already germinated before
-    # s['germinate'][:, :] = False
-    s['germinate'][:, :] = (s['rhoveg'] > 0.5 * drhoveg_max)
-
-    # Germination (convert from /year to /timestep)
-    # p_germinate_year = p['germinate']                                
-    p_germinate_dt = 1-(1-p['germinate']  )**(1./n)
-
-    # random_prob = np.zeros((s['germinate'].shape))
-    random_prob = np.random.random((s['germinate'].shape))
     
-    # Germinate new cells (only if no erosion, dzb>=0) and add to vegetated
-    s['germinate'] = (s['dzbveg'] >= 0.) * (random_prob <= p_germinate_dt)
-    s['vegetated'] = np.logical_or(s['germinate'], s['vegetated'])
-    # s['germinate'] = np.minimum(s['germinate'], 1.)
+    # Determine which cells are already germinated before
+    s['germinate'][:, :] = (s['rhoveg'] > 0.)
+    
+    # Germination
+    p_germinate_year = p['germinate']                                
+    p_germinate_dt = 1-(1-p_germinate_year)**(1./n)
+    germination = np.random.random((s['germinate'].shape))
+    
+    # Germinate new cells
+    germinate_new = (s['dzbveg'] >= 0.) * (germination <= p_germinate_dt)
+    s['germinate'] += germinate_new.astype(float)
+    s['germinate'] = np.minimum(s['germinate'], 1.)
 
-    # Lateral expansion
+    # Lateral expension
     if ny > 1:
         dx = s['ds'][2,2]
     else:
         dx = p['dx']
 
-    # p_lateral_year = p['lateral']  
-    # Lateral propagation (convert from /year to /timestep)
-    p_lateral_dt = 1-(1-p['lateral'] )**(1./n)
+    p_lateral_year = p['lateral']  
+    p_lateral_dt = 1-(1-p_lateral_year)**(1./n)
     p_lateral_cell = 1 - (1-p_lateral_dt)**(1./dx)
     
     drhoveg = np.zeros((p['ny']+1, p['nx']+1, 4))
@@ -155,35 +508,23 @@ def germinate(s,p):
     
     p_lateral = p_lateral_cell * s['drhoveg']
     
-    s['vegetated'] = np.logical_or((random_prob <= p_lateral), s['vegetated'])
-    # s['lateral'] = np.minimum(s['lateral'], 1.)
+    s['lateral'] += (germination <= p_lateral)
+    s['lateral'] = np.minimum(s['lateral'], 1.)
 
     return s
 
-
 def grow (s, p): #DURAN 2006
     
-    # ix = np.logical_or(s['germinate'] != 0., s['lateral'] != 0.) * ( p['V_ver'] > 0.)
-    # ix = np.logical_or(s['germinate'], s['lateral']) * ( p['V_ver'] > 0.)
-    ix = s['vegetated'] * ( p['V_ver'] > 0.)
-
-    # Vegetation growth
-    vertical_growth = np.zeros(np.shape(s['hveg']))
-    vertical_growth[ix] = p['V_ver'] * (1 - s['hveg'][ix] / p['hveg_max'])
-    vertical_growth = apply_mask(vertical_growth, s['vver_mask'])
-
+    ix = np.logical_or(s['germinate'] != 0., s['lateral'] != 0.) * ( p['V_ver'] > 0.)
+                                                    
     # Reduction of vegetation growth due to sediment burial
-    dhveg_burial = np.abs(s['dzbveg']-p['dzb_opt']) * p['veg_gamma']
+    s['dhveg'][ix] = p['V_ver'] * (1 - s['hveg'][ix] / p['hveg_max']) - np.abs(s['dzbveg'][ix]-p['dzb_opt']) * p['veg_gamma']  # m/year
 
-    # Compute change in vegetation height
-    s['dhveg'][ix] = vertical_growth[ix] - dhveg_burial[ix]  # m/year
-
-    # Adding height and convert to vegetation density (rhoveg)
+    # Adding growth
     if p['veggrowth_type'] == 'orig': #based primarily on vegetation height
         s['hveg'] += s['dhveg']*(p['dt_opt'] * p['accfac']) / (365.25*24.*3600.)
         s['hveg'] = np.maximum(np.minimum(s['hveg'], p['hveg_max']), 0.)
         s['rhoveg'] = (s['hveg']/p['hveg_max'])**2
-
     else:
         t_veg = p['t_veg']/365
         v_gam = p['v_gam']
@@ -203,114 +544,373 @@ def grow (s, p): #DURAN 2006
         s['hveg'][:,:] = p['hveg_max']*np.sqrt(s['rhoveg'])
 
     # Plot has to vegetate again after dying
-    dhveg_max = p['V_ver'] * (p['dt_opt'] * p['accfac']) / (365.25*24.*3600.)
-    drhoveg_max = (dhveg_max/p['hveg_max'])**2
-    s['vegetated'] *= (s['rhoveg'] >= 0.5 * drhoveg_max)
-    # s['germinate'] *= (s['rhoveg']!=0.)
-    # s['lateral'] *= (s['rhoveg']!=0.)
+    s['germinate'] *= (s['rhoveg']!=0.)
+    s['lateral'] *= (s['rhoveg']!=0.)
 
     # Dying of vegetation due to hydrodynamics (Dynamic Vegetation Limit)
-    # if p['process_tide']:
-    #     s['rhoveg']     *= (s['zb'] +0.01 >= s['zs'])
-    #     s['hveg']       *= (s['zb'] +0.01 >= s['zs'])
-    #     s['germinate']  *= (s['zb'] +0.01 >= s['zs'])
-    #     s['lateral']    *= (s['zb'] +0.01 >= s['zs'])
-
     if p['process_tide']:
-        ix_flooded = (s['zb'] < s['TWL'])
-        s['rhoveg'][ix_flooded]     = 0. 
-        s['hveg'][ix_flooded]       = 0.
-        s['vegetated'][ix_flooded]  = False
-        # s['lateral'][ix_flooded]    = False
+        s['rhoveg']     *= (s['zb'] +0.01 >= s['zs'])
+        s['hveg']       *= (s['zb'] +0.01 >= s['zs'])
+        s['germinate']  *= (s['zb'] +0.01 >= s['zs'])
+        s['lateral']    *= (s['zb'] +0.01 >= s['zs'])
 
     ix = s['zb'] < p['veg_min_elevation']
     s['rhoveg'][ix] = 0
     s['hveg'][ix] = 0
-    s['vegetated'][ix] = False
-    # s['lateral'][ix] = False
+    s['germinate'][ix] = 0
+    s['lateral'][ix] = 0
 
     return s
-
 
 def vegshear_okin(s, p):
-    #Approach to calculate shear reduction in the lee of plants using the general approach of:
-    #Okin (2008), JGR, A new model of wind erosion in the presence of vegetation
-    #Note that implementation only works in 1D currently
-
-    #Initialize shear variables and other grid parameters
-    ustar = s['ustar'].copy()
-    ustars = s['ustars'].copy()
-    ustarn = s['ustarn'].copy()
-    ets = np.zeros(s['zb'].shape)
-    etn = np.zeros(s['zb'].shape)
-    ix = ustar != 0
-    ets[ix] = ustars[ix] / ustar[ix]
-    etn[ix] = ustarn[ix] / ustar[ix]
-    udir = s['udir'][0,0] + 180
-
-    x = s['x'][0,:]
-    zp = s['hveg'][0,:]
-    red = np.zeros(x.shape)
-    red_all = np.zeros(x.shape)
-    nx = x.size
-    c1 = p['okin_c1_veg']
-    intercept = p['okin_initialred_veg']
-
-    if udir < 0:
-        udir = udir + 360
-
-    if udir > 360:
-        udir = udir - 360
-
-    #Calculate shear reduction by looking through all cells that have plants present and looking downwind of those features
-    for igrid in range(nx):
-
-        if zp[igrid] > 0:         # only look at cells with a roughness element
-            mult = np.ones(x.shape)
-            h = zp[igrid] #vegetation height at the appropriate cell
-
+    # Okin 1D
+    if p['ny'] == 0:
+        print('Okin1D')
+        # Approach to calculate shear reduction in the lee of plants using the general approach of:
+        # Okin (2008), JGR, A new model of wind erosion in the presence of vegetation
+        # Note that implementation only works in 1D currently
+        # print('Okin1D')
+        # Initialize shear variables and other grid parameters
+        ustar = s['ustar'].copy()
+        ustars = s['ustars'].copy()
+        ustarn = s['ustarn'].copy()
+        ets = np.zeros(s['zb'].shape)
+        etn = np.zeros(s['zb'].shape)
+        ix = ustar != 0
+        ets[ix] = ustars[ix] / ustar[ix]
+        etn[ix] = ustarn[ix] / ustar[ix]
+        udir = s['udir'][0, 0] + 180
+    
+        # intialize other grid parameters
+        x = s['x'][0, :]
+        dx = s['x'][0, 1] - s['x'][0, 0]
+        if p['process_vegflex']:
+            s = VegFlexure(s, p)
+            zp = s['hvegadjusted'][0,:]
+        else:
+            zp = s['hveg'][0, :]
+    
+        red = np.zeros(x.shape)
+        red_all = np.zeros(x.shape)
+        nx = x.size
+    
+        # okin model defaults - hardcoded for now
+        c1 = p['okin_c1_veg']
+        if p['process_okinR0var']:
+            print('OkinR0var')
+            #intercept = p['okin_initialred_vegLow'] + (p['okin_initialred_vegHigh']-p['okin_initialred_vegLow']) * ((s['uw'][0,0] - 5.97) / (9.58 - 5.97))                 
+        else:            
+            intercept = p['okin_initialred_veg']
+        
+        print("R0 = ",intercept)
+    
+        # adjustment length modification variables
+        lag = adjustment_length(s, p)
+    
+        # Find index of vegetation
+        zplag = zp.copy()
+        posVeg = np.where(zplag != 0)[0]
+    
+        # If vegetation is present in zplag -> apply the lag
+        if len(posVeg) > 0:
+            posVegStart = posVeg[0]
+            posVegEnd = posVeg[-1]
+    
+            # Orientation of the lag length depending on wind direction
             if udir >= 180 and udir <= 360:
-                xrel = -(x - x[igrid])
+                zplag[int(posVegEnd) - int(lag / dx): int(posVegEnd)] = 0
             else:
-                xrel = x - x[igrid]
+                zplag[int(posVegStart): int(posVegStart) + int(lag / dx)] = 0
+    
+        for igrid in range(nx):
+    
+            # only look at cells with a roughness element
+            if zplag[igrid] > 0:
+                # local parameters
+                mult = np.ones(x.shape)
+                h = zplag[igrid]
+    
+                if udir >= 180 and udir <= 360:
+                    xrel = -(x - x[igrid])
+                    # print('loop1')
+                    # for igrid2 in range(nx-1):
+                    # if edge[igrid2] == -1 and edge[igrid2-1] == 0:
+                    #  deadzone[igrid2 - int(lag/dx) + 1:igrid2 + 1:1] = 1
+                else:
+                    xrel = x - x[igrid]
+                    # for igrid2 in range(nx - 1):
+                    # if edge[igrid2] == 1 and edge[igrid2 + 1] == 0:
+                    #  realedge = igrid2 + 1
+                    #  deadzone[realedge:realedge + int(lag/dx):1] = 1
+    
+                for igrid2 in range(nx):
+    
+                    if xrel[igrid2] >= 0 and xrel[igrid2] / h < 20:  # and deadzone[igrid2] !=1:
+    
+                        # apply okin model
+                        mult[igrid2] = intercept + (1 - intercept) * (1 - math.exp(-xrel[igrid2] * c1 / h))
+                        # print('Okin runing')
+                    # else:
+                    # print('No okin')
+    
+                red = 1 - mult
+    
+                # fix potential issues for summation
+                ix = red < 0.00001
+                red[ix] = 0
+                ix = red > 1
+                red[ix] = 1
+                ix = xrel < 0
+                red[ix] = 0
+    
+                # combine all reductions between plants
+                red_all = red_all + red
+    
+        # cant have more than 100% reduction
+        ix = red_all > 1
+        red_all[ix] = 1
+    
+        # convert to a multiple
+        mult_all = 1 - red_all
+        ix = mult_all < 0.001
+        mult_all[ix] = 0.001
+    
+        s['ustar'][0, :] = s['ustar'][0, :] * mult_all
+        s['ustars'][0, :] = s['ustar'][0, :] * ets[0, :]
+        s['ustarn'][0, :] = s['ustar'][0, :] * etn[0, :]
+        
+        return s
+    
+    elif p['ny'] > 1:
+        print('Okin2D')
+        # Okin 2D
+        # Approach to calculate shear reduction in the lee of plants using the general approach of:
+        # Okin (2008), JGR, A new model of wind erosion in the presence of vegetation
+        # print('Okin2D')
+        # Initialize shear variables and other grid parameters
+        ustar = s['ustar'].copy()
+        ustars = s['ustars'].copy()
+        ustarn = s['ustarn'].copy()
+        ets = np.zeros(s['zb'].shape)
+        etn = np.zeros(s['zb'].shape)
+        ix = ustar != 0
+        ets[ix] = ustars[ix] / ustar[ix]
+        etn[ix] = ustarn[ix] / ustar[ix]
+        udir = s['udir'][0, 0] + 180
 
-            for igrid2 in range(nx):
+        # Intialize other grid parameters
+        x = s['x'][:, :]
+        dx = s['x'][0, 1] - s['x'][0, 0]
+        nx = x[1, :].size
+        y = s['y'][:, :]
+        dy = s['y'][1, 0] - s['y'][0, 0]
+        ny = y[:, 1].size
 
-                if xrel[igrid2] >= 0 and xrel[igrid2]/h < 20:
+        if p['process_vegflex']:
+            s = VegFlexure(s, p)
+            zp = s['hvegadjusted'][:,:]
+        else:
+            zp = s['hveg'][:, :]
+        red = np.zeros(x.shape)
+        red_all = np.zeros(x.shape)
+        mult_all = np.zeros(x.shape)
 
-                    # apply okin model
-                    mult[igrid2] = intercept + (1 - intercept) * (1 - np.exp(-xrel[igrid2] * c1 / h))
+        # Okin model defaults
+        c1 = p['okin_c1_veg']
+        if p['process_okinR0var']:
+            print('OkinR0var')
+            intercept = p['okin_initialred_vegLow'] + (p['okin_initialred_vegHigh']-p['okin_initialred_vegLow']) * ((s['uw'][0,0] - 5.97) / (9.58 - 5.97))
+        else:            
+            intercept = p['okin_initialred_veg']
+        
+        print("R0 = ",intercept)
+        # Adjustment length modification variables
+        lag = adjustment_length(s, p)
 
-            red = 1 - mult
+        if udir < 360:
+            udir = udir + 360
 
-            # fix potential issues for summation
-            ix = red < 0.00001
-            red[ix] = 0
-            ix = red > 1
-            red[ix] = 1
-            ix = xrel < 0
-            red[ix] = 0
+        if udir > 360:
+            udir = udir - 360
+        # START OF THE OKIN MODEL LOOP
+        # Calculate shear reduction by looking through all cells that have plants present
+        # and looking downwind of those features
+        # For each cross-shore transect
+        for jgrid in range(ny):
+            # Create zplag where the lag max will be applied
+            zplag = zp.copy()[jgrid]
+            # Find index of vegetation
+            posVeg = np.where(zplag != 0)[0]
 
-            # combine all reductions between plants
-            red_all = red_all + red
+            # If vegetation is present in zplag -> apply the lag
+            if len(posVeg) > 0:
+                posVegStart = posVeg[0]
+                posVegEnd = posVeg[-1]
+                # Orientation of the lag length depending on wind direction
+                if udir >= 180 and udir <= 360:
+                    zplag[int(posVegEnd) - int(lag / dx): int(posVegEnd)] = 0
+                else:
+                    zplag[int(posVegStart): int(posVegStart) + int(lag / dx)] = 0
 
-    # cant have more than 100% reduction
-    ix = red_all > 1
-    red_all[ix] = 1
+                # For each cell of one cross-hore transect
+                for igrid in range(nx):
 
-    #update shear velocity according to Okin (note does not operate on shear stress)
-    mult_all = 1 - red_all
-    ustarveg = s['ustar'][0,:] * mult_all
-    ix = ustarveg < 0.01
-    ustarveg[ix] = 0.01 #some small number so transport code doesnt crash
+                    if zplag[igrid] > 0:
+                        # only look at cells with a roughness element
+                        mult = np.ones(nx)
+                        h = zplag[igrid]  # vegetation height at the appropriate cell
 
-    s['ustar'][0,:] = ustarveg
-    s['ustars'][0,:] = s['ustar'][0,:] * ets[0,:]
-    s['ustarn'][0,:] = s['ustar'][0,:] * etn[0,:]
+                        if udir >= 180 and udir <= 360:
+                            xrel = -(x[jgrid, :] - x[jgrid, igrid])
+                        else:
+                            xrel = x[jgrid, :] - x[jgrid, igrid]
 
-    return s
+                        for igrid2 in range(nx):
 
+                            if xrel[igrid2] >= 0 and xrel[igrid2] / h < 20:
+                                # apply okin model
+                                mult[igrid2] = intercept + (1 - intercept) * (1 - math.exp(-xrel[igrid2] * c1 / h))
 
+                        red[jgrid, :] = 1 - mult
+
+                        # fix potential issues for summation
+                        ix = red[jgrid, :] < 0.00001
+                        red[jgrid, ix] = 0
+                        ix = red[jgrid, :] > 1
+                        red[jgrid, ix] = 1
+                        ix = xrel < 0
+                        red[jgrid, ix] = 0
+
+                        # combine all reductions between plants
+                        red_all[jgrid, :] = red_all[jgrid, :] + red[jgrid, :]
+
+                # cant have more than 100% reduction
+                ix = red_all[jgrid, :] > 1
+                red_all[jgrid, ix] = 1
+
+                # update shear velocity according to Okin (note does not operate on shear stress)
+                mult_all[jgrid, :] = 1 - red_all[jgrid, :]
+                ustarveg = s['ustar'][jgrid, :] * mult_all[jgrid, :]
+                ix = ustarveg < 0.01
+                ustarveg[ix] = 0.01  # some small number so transport code doesnt crash
+
+                s['ustar'][jgrid, :] = ustarveg
+                s['ustars'][jgrid, :] = s['ustar'][jgrid, :] * ets[jgrid, :]
+                s['ustarn'][jgrid, :] = s['ustar'][jgrid, :] * etn[jgrid, :]
+
+        return s
+
+# def vegshear_okin2d(s, p):
+#     # Approach to calculate shear reduction in the lee of plants using the general approach of:
+#     # Okin (2008), JGR, A new model of wind erosion in the presence of vegetation
+#     # print('Okin2D')
+#     # Initialize shear variables and other grid parameters
+#     ustar = s['ustar'].copy()
+#     ustars = s['ustars'].copy()
+#     ustarn = s['ustarn'].copy()
+#     ets = np.zeros(s['zb'].shape)
+#     etn = np.zeros(s['zb'].shape)
+#     ix = ustar != 0
+#     ets[ix] = ustars[ix] / ustar[ix]
+#     etn[ix] = ustarn[ix] / ustar[ix]
+#     udir = s['udir'][0, 0] + 180
+
+#     # Intialize other grid parameters
+#     x = s['x'][:, :]
+#     dx = s['x'][0, 1] - s['x'][0, 0]
+#     nx = x[1, :].size
+#     y = s['y'][:, :]
+#     dy = s['y'][1, 0] - s['y'][0, 0]
+#     ny = y[:, 1].size
+
+#     if p['process_vegflex']:
+#         s,LeafHeightAdjusted = VegFlexure(s, p)
+#         zp = s['hvegadjusted'][:,:]
+#     else:
+#         zp = s['hveg'][:, :]
+#     red = np.zeros(x.shape)
+#     red_all = np.zeros(x.shape)
+#     mult_all = np.zeros(x.shape)
+
+#     # Okin model defaults
+#     c1 = p['okin_c1_veg']
+#     intercept = p['okin_initialred_veg']
+
+#     # Adjustment length modification variables
+#     lag = adjustment_length(s, p, LeafHeightAdjusted)
+
+#     if udir < 360:
+#         udir = udir + 360
+
+#     if udir > 360:
+#         udir = udir - 360
+#     # START OF THE OKIN MODEL LOOP
+#     # Calculate shear reduction by looking through all cells that have plants present
+#     # and looking downwind of those features
+#     # For each cross-shore transect
+#     for jgrid in range(ny):
+#         # Create zplag where the lag max will be applied
+#         zplag = zp.copy()[jgrid]
+#         # Find index of vegetation
+#         posVeg = np.where(zplag != 0)[0]
+
+#         # If vegetation is present in zplag -> apply the lag
+#         if len(posVeg) > 0:
+#             posVegStart = posVeg[0]
+#             posVegEnd = posVeg[-1]
+#             # Orientation of the lag length depending on wind direction
+#             if udir >= 180 and udir <= 360:
+#                 zplag[int(posVegEnd) - int(lag / dx): int(posVegEnd)] = 0
+#             else:
+#                 zplag[int(posVegStart): int(posVegStart) + int(lag / dx)] = 0
+
+#             # For each cell of one cross-hore transect
+#             for igrid in range(nx):
+
+#                 if zplag[igrid] > 0:
+#                     # only look at cells with a roughness element
+#                     mult = np.ones(nx)
+#                     h = zplag[igrid]  # vegetation height at the appropriate cell
+
+#                     if udir >= 180 and udir <= 360:
+#                         xrel = -(x[jgrid, :] - x[jgrid, igrid])
+#                     else:
+#                         xrel = x[jgrid, :] - x[jgrid, igrid]
+
+#                     for igrid2 in range(nx):
+
+#                         if xrel[igrid2] >= 0 and xrel[igrid2] / h < 20:
+#                             # apply okin model
+#                             mult[igrid2] = intercept + (1 - intercept) * (1 - math.exp(-xrel[igrid2] * c1 / h))
+
+#                     red[jgrid, :] = 1 - mult
+
+#                     # fix potential issues for summation
+#                     ix = red[jgrid, :] < 0.00001
+#                     red[jgrid, ix] = 0
+#                     ix = red[jgrid, :] > 1
+#                     red[jgrid, ix] = 1
+#                     ix = xrel < 0
+#                     red[jgrid, ix] = 0
+
+#                     # combine all reductions between plants
+#                     red_all[jgrid, :] = red_all[jgrid, :] + red[jgrid, :]
+
+#             # cant have more than 100% reduction
+#             ix = red_all[jgrid, :] > 1
+#             red_all[jgrid, ix] = 1
+
+#             # update shear velocity according to Okin (note does not operate on shear stress)
+#             mult_all[jgrid, :] = 1 - red_all[jgrid, :]
+#             ustarveg = s['ustar'][jgrid, :] * mult_all[jgrid, :]
+#             ix = ustarveg < 0.01
+#             ustarveg[ix] = 0.01  # some small number so transport code doesnt crash
+
+#             s['ustar'][jgrid, :] = ustarveg
+#             s['ustars'][jgrid, :] = s['ustar'][jgrid, :] * ets[jgrid, :]
+#             s['ustarn'][jgrid, :] = s['ustar'][jgrid, :] * etn[jgrid, :]
+
+#     return s
 def vegshear_raupach(s, p):
     ustar = s['ustar'].copy()
     ustars = s['ustars'].copy()
@@ -341,68 +941,3 @@ def vegshear_raupach(s, p):
 
     return s
 
-def compute_okin_shear(xgrd, ustar,  hveg, okin_params):
-    #Approach to calculate shear reduction in the lee of plants using the general approach of:
-    #Okin (2008), JGR, A new model of wind erosion in the presence of vegetation
-    #Note that implementation only works in 1D currently
-
-    #Initialize shear variables and other grid parameters
-    ny, nx = xgrd.shape
-    ustar_okin = ustar.copy()
-
-    c1 = okin_params['okin_c1_veg']
-    intercept = okin_params['okin_initialred_veg']
-    if intercept > 1:
-        intercept = 1
-
-    #Calculate shear reduction by looking through all cells that have plants present and looking downwind of those features
-    for igridy in range(ny):
-        zp = hveg[igridy, :]
-        x = xgrd[igridy, :]
-        red_all = np.zeros(x.size)
-
-        for igrid in range(nx):
-
-            if zp[igrid] > 0:         # only look at cells with a roughness element
-                mult = np.ones(x.size)
-                red = np.zeros(x.size)
-                h = zp[igrid] #vegetation height at the appropriate cell
-
-                xrel = x - x[igrid]
-                #xrel = -xrel
-                for igrid2 in range(nx):
-
-                    if xrel[igrid2] >= 0:
-                        # apply okin model
-                        mult[igrid2] = intercept + (1 - intercept) * (1 - np.exp(-xrel[igrid2] * c1 / h))
-                    else:
-                        mult[igrid2] = 1
-
-                red = 1 - mult
-
-                # fix potential issues for summation
-                ix = red < 0.00001
-                red[ix] = 0
-                ix = red > 1
-                red[ix] = 1
-                ix = xrel < 0
-                red[ix] = 0
-
-                # combine all reductions between plants
-                red_all = red_all + red
-
-        # cant have more than 100% reduction
-        ifix = red_all > 1
-        red_all[ifix] = 1
-
-        #update shear velocity according to Okin (note does not operate on shear stress)
-        mult_all = 1 - red_all
-
-        ustarveg = ustar_okin[igridy, :] * mult_all
-
-        ix = ustarveg < 0.01
-        ustarveg[ix] = 0.01 #some small number so transport code doesnt crash
-
-        ustar_okin[igridy,:] = ustarveg
-
-    return ustar_okin

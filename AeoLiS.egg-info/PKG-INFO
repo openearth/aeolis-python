@@ -1,0 +1,64 @@
+Metadata-Version: 2.4
+Name: AeoLiS
+Version: 2.1.0
+Summary: A process-based model for simulating supply-limited aeolian sediment transport
+Home-page: http://aeolis.readthedocs.io/
+Author: Sierd de Vries
+Author-email: sierd.devries@tudelft.nl
+License: GNU GPLv3
+Keywords: aeolian sediment transport coastal model deltares tudelft
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: GNU General Public License v3 (GPLv3)
+Classifier: Natural Language :: English
+Classifier: Operating System :: MacOS :: MacOS X
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Operating System :: POSIX
+Classifier: Operating System :: Unix
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Topic :: Scientific/Engineering :: Physics
+Requires-Python: >=3.7, <4
+License-File: LICENSE.txt
+Requires-Dist: docopt==0.6.1
+Requires-Dist: bmi-python
+Requires-Dist: netCDF4
+Requires-Dist: scipy
+Requires-Dist: numpy<1.24,>=1.18
+Requires-Dist: matplotlib
+Requires-Dist: numba
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: home-page
+Dynamic: keywords
+Dynamic: license
+Dynamic: license-file
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+AeoLiS
+======
+
+AeoLiS is a process-based model for simulating aeolian sediment
+transport in situations where supply-limiting factors are important,
+like in coastal environments. Supply-limitations currently supported
+are soil moisture contents, sediment sorting and armouring, bed slope
+effects, air humidity and roughness elements.
+
+The maintenance and development is done by the AEOLIS developer team:
+Current members are:
+`Bart van Westen <Bart.vanWesten@deltares.nl>`_ at Deltares, 
+`Nick Cohn <nick.cohn@usace.army.mil>`_ at U.S. Army Engineer Research and Development Center (ERDC), 
+`Sierd de Vries <Sierd.deVries@tudelft.nl>`_ (founder) at Delft University of Technology,
+`Christa van IJzendoorn <C.O.vanIJzendoorn@tudelft.nl>`_ at Delft University of Technology,
+`Caroline Hallin <E.C.Hallin@tudelft.nl>`_ at Delft University of Technology,
+`Glenn Strypsteen <glenn.strypsteen@kuleuven.be>`_ at Katholieke Universiteit Leuven and
+`Janelle Skaden <Janelle.E.Skaden@usace.army.mil>`_ at U.S. Army Engineer Research and Development Center (ERDC).
+
+Previous members are:
+`Bas Hoonhout <bas@hoonhout.com>`_ (founder), Tom Pak, Pieter Rauwoens and Lisa Meijer
