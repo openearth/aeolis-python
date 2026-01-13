@@ -148,8 +148,8 @@ def interpolate(s, p, t):
     s = velocity_stress(s,p)
         
     s['ustar0'] = s['ustar'].copy()
-    s['ustars0'] = s['ustar'].copy()
-    s['ustarn0'] = s['ustar'].copy()
+    s['ustars0'] = s['ustars'].copy()
+    s['ustarn0'] = s['ustarn'].copy()
         
     s['tau0'] = s['tau'].copy()
     s['taus0'] = s['taus'].copy()
