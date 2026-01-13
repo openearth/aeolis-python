@@ -125,7 +125,8 @@ def write_configfile(configfile, p=None):
     '''Write model configuration file
 
     Writes model configuration to file. If no model configuration is
-    given, the default configuration is written to file. Any
+    given, the default configuration is written to file. Preserves
+    the structure and organization from DEFAULT_CONFIG. Any
     parameters with a name ending with `_file` and holding a matrix
     are treated as separate files. The matrix is then written to an
     ASCII file using the ``numpy.savetxt`` function and the parameter
@@ -153,24 +154,124 @@ def write_configfile(configfile, p=None):
     if p is None:
         p = DEFAULT_CONFIG.copy()
 
-    fmt = '%%%ds = %%s\n' % np.max([len(k) for k in p.keys()])
+    # Parse constants.py to extract section headers, order, and comments
+    import aeolis.constants
+    constants_file = aeolis.constants.__file__
+    
+    section_headers = []
+    section_order = {}
+    comments = {}
+    
+    with open(constants_file, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+    
+    # Find DEFAULT_CONFIG definition
+    in_default_config = False
+    current_section = None
+    current_keys = []
+    
+    for line in lines:
+        # Check if we're entering DEFAULT_CONFIG
+        if 'DEFAULT_CONFIG' in line and '=' in line and '{' in line:
+            in_default_config = True
+            continue
         
+        # Check if we're exiting DEFAULT_CONFIG
+        if in_default_config and line.strip().startswith('}'):
+            # Save last section
+            if current_section and current_keys:
+                section_order[current_section] = current_keys
+            break
+        
+        if in_default_config:
+            # Check for section header (starts with # ---)
+            if line.strip().startswith('# ---') and len(line.strip()) > 10:
+                # Save previous section
+                if current_section and current_keys:
+                    section_order[current_section] = current_keys
+                    current_keys = []
+                
+                # Extract new section name (between # --- and ---)
+                text = line.strip()[5:].strip().rstrip('- #')
+                current_section = text
+                section_headers.append(current_section)
+            
+            # Check for parameter definition (contains ':' and not a comment-only line)
+            elif ':' in line and "'" in line and not line.strip().startswith('#'):
+                # Extract parameter name
+                param_match = re.search(r"'([^']+)'", line)
+                if param_match:
+                    param_name = param_match.group(1)
+                    current_keys.append(param_name)
+                    
+                    # Extract comment (after #)
+                    if '#' in line.split(':')[1]:
+                        comment_part = line.split('#')[1].strip()
+                        comments[param_name] = comment_part
+    
+    # Determine column widths for formatting
+    max_key_len = max(len(k) for k in p.keys()) if p else 30
+    
     with open(configfile, 'w') as fp:
-
+        # Write header
         fp.write('%s\n' % ('%' * 70))
         fp.write('%%%% %-64s %%%%\n' % 'AeoLiS model configuration')
         fp.write('%%%% Date: %-58s %%%%\n' % time.strftime('%Y-%m-%d %H:%M:%S'))
         fp.write('%s\n' % ('%' * 70))
         fp.write('\n')
         
-        for k, v in sorted(p.items()):
-            if k.endswith('_file') and isiterable(v):
-                fname = '%s.txt' % k.replace('_file', '')
-                backup(fname)
-                np.savetxt(fname, v)
-                fp.write(fmt % (k, fname))
-            else:
-                fp.write(fmt % (k, print_value(v, fill='')))
+        # Write each section
+        for section in section_headers:
+            if section not in section_order:
+                continue
+            
+            keys_in_section = section_order[section]
+            section_keys = [k for k in keys_in_section if k in p]
+            
+            if not section_keys:
+                continue
+            
+            # Write section header
+            fp.write('%% %s %s %s %% \n' % ('-' * 15, section, '-' * 15))
+            # fp.write('%% %s\n' % ('-' * 70))
+            
+            # Write each key in this section
+            for key in section_keys:
+                value = p[key]
+
+                # Skip this key if its value matches the default
+                if key in DEFAULT_CONFIG and np.all(value == DEFAULT_CONFIG[key]) :
+                    continue
+                
+                comment = comments.get(key, '')
+                
+                # Format the value
+                formatted_value = print_value(value, fill='None')
+                
+                # Write the line with proper formatting
+                fp.write('{:<{width}} = {:<20} % {}\n'.format(
+                    key, formatted_value, comment, width=max_key_len
+                ))
+            
+            fp.write('\n')  # Blank line between sections
+        
+        # Write any remaining keys not in the section order
+        remaining_keys = [k for k in p.keys() if k not in sum(section_order.values(), [])]
+        if remaining_keys:
+            fp.write('%% %s %s\n' % ('-' * 15, 'Additional Parameters'))
+            # fp.write('%% %s\n' % ('-' * 70))
+            for key in sorted(remaining_keys):
+                value = p[key]
+                
+                # Skip this key if its value matches the default
+                if key in DEFAULT_CONFIG and np.all(value == DEFAULT_CONFIG[key]):
+                    continue
+                
+                comment = comments.get(key, '')               
+                formatted_value = print_value(value, fill='None')
+                fp.write('{:<{width}} = {:<20} %% {}\n'.format(
+                    key, formatted_value, comment, width=max_key_len
+                ))
 
 
 def check_configuration(p):
@@ -281,7 +382,11 @@ def parse_value(val, parse_files=True, force_list=False):
         
     val = val.strip()
     
-    if ' ' in val or force_list:
+    # Check for datetime patterns (YYYY-MM-DD HH:MM:SS or similar)
+    # Treat as string if it matches datetime format
+    if re.match(r'^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}(:\d{2})?', val):
+        return val
+    elif ' ' in val or force_list:
         return np.asarray([parse_value(x) for x in val.split(' ')])
     elif re.match('^[TF]$', val):
         return val == 'T'
