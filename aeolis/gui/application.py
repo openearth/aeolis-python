@@ -445,7 +445,9 @@ class AeolisGUI:
         try:
             # Update dictionary with current entry values
             for field, entry in self.entries.items():
-                self.dic[field] = entry.get()
+                value = entry.get()
+                # Convert empty strings and whitespace-only strings to None
+                self.dic[field] = None if value.strip() == '' else value
             
             # Write the configuration file
             aeolis.inout.write_configfile(save_path, self.dic)

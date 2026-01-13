@@ -67,7 +67,8 @@ def interpolate(s, p, t):
     if p['process_tide']:
         # Check if SWL or zs are not provided by some external model
         # In that case, skip initialization
-        if ('zs' not in p['external_vars']) :
+        if not p['external_vars'] or('zs' not in p['external_vars']) :
+           
             if p['tide_file'] is not None:
                 s['SWL'][:,:] = interp_circular(t,
                                             p['tide_file'][:,0],
@@ -101,7 +102,7 @@ def interpolate(s, p, t):
 
     # Check if Hs or Tp are not provided by some external model
     # In that case, skip initialization
-    if ('Hs' not in p['external_vars']) and ('Tp' not in p['external_vars']):
+    if not p['external_vars'] or (('Hs' not in p['external_vars']) and ('Tp' not in p['external_vars'])):
 
         if p['process_wave'] and p['wave_file'] is not None:
 
