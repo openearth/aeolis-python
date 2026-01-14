@@ -67,7 +67,7 @@ def interpolate(s, p, t):
     if p['process_tide']:
         # Check if SWL or zs are not provided by some external model
         # In that case, skip initialization
-        if not p['external_vars'] or('zs' not in p['external_vars']) :
+        if not p['external_vars'] or ('zs' not in p['external_vars']) :
            
             if p['tide_file'] is not None:
                 s['SWL'][:,:] = interp_circular(t,
@@ -159,7 +159,7 @@ def interpolate(s, p, t):
 
     if p['process_runup']:
         ny = p['ny']
-        if ('Hs' in p['external_vars']):
+        if p['external_vars'] and ('Hs' in p['external_vars']):
 
             eta, sigma_s, R = calc_runup_stockdon(s['Hs'], s['Tp'], p['beach_slope'])
             s['R'][:] = R

@@ -121,7 +121,7 @@ def read_configfile(configfile, parse_files=True, load_defaults=True):
     return p
 
 
-def write_configfile(configfile, p=None):
+def write_configfile(configfile, p=None, include_defaults=False):
     '''Write model configuration file
 
     Writes model configuration to file. If no model configuration is
@@ -138,6 +138,9 @@ def write_configfile(configfile, p=None):
         Model configuration file
     p : dict, optional
         Dictionary with model configuration parameters
+    include_defaults : bool, optional
+        If True, write all parameters including defaults; if False, skip
+        parameters equal to the default values
 
     Returns
     -------
@@ -153,6 +156,22 @@ def write_configfile(configfile, p=None):
 
     if p is None:
         p = DEFAULT_CONFIG.copy()
+
+    # Helper: safely determine if a value equals the default without broadcasting errors
+    def _is_default_value(key, value):
+        if key not in DEFAULT_CONFIG:
+            return False
+
+        default = DEFAULT_CONFIG[key]
+
+        try:
+            return np.array_equal(np.asarray(value, dtype=object),
+                                  np.asarray(default, dtype=object))
+        except Exception:
+            try:
+                return value == default
+            except Exception:
+                return False
 
     # Parse constants.py to extract section headers, order, and comments
     import aeolis.constants
@@ -239,8 +258,8 @@ def write_configfile(configfile, p=None):
             for key in section_keys:
                 value = p[key]
 
-                # Skip this key if its value matches the default
-                if key in DEFAULT_CONFIG and np.all(value == DEFAULT_CONFIG[key]) :
+                # Skip this key if its value matches the default and skipping is allowed
+                if not include_defaults and _is_default_value(key, value):
                     continue
                 
                 comment = comments.get(key, '')
@@ -263,8 +282,8 @@ def write_configfile(configfile, p=None):
             for key in sorted(remaining_keys):
                 value = p[key]
                 
-                # Skip this key if its value matches the default
-                if key in DEFAULT_CONFIG and np.all(value == DEFAULT_CONFIG[key]):
+                # Skip this key if its value matches the default and skipping is allowed
+                if not include_defaults and _is_default_value(key, value):
                     continue
                 
                 comment = comments.get(key, '')               
