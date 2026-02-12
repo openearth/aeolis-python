@@ -1,0 +1,198 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% AeoLiS model configuration          default values within ()     %%
+%% Date: 2023-11-07                                                 %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% -------------------- [Timing] ----------------------------- %%
+dt                      = 3600                            % (60) [s] Timeinterval between timesteps    
+tstart                  = 0                    	     	  % (0.)[s] Starting time of the simulation
+tstop                   = 812862000                       % (3600)[s] End time of the simulation - 812862000 two years: 94608000
+restart                 = None                            % (None) [s] Interval for which to write restart files
+refdate                 = 1997-09-17                      % ('2020-01-01 00:00')[-] Reference datetime in netCDF output
+
+%% -------------------- [Grid files *.grd] ------------------- %%
+xgrid_file              = input_files/x_ext.grd             % (None) Filename of ASCII file with x-coordinates of grid cells
+ygrid_file              = input_files/y_ext.grd             % (None) Filename of ASCII file with y-coordinates of grid cells
+bed_file                = input_files/z_ext.grd             % (None) Filename of ASCII file with bed level heights of grid cells
+ne_file                 = input_files/ne_ext.grd            % (None) Filename of ASCII file with non-erodible layer
+veg_file                = input_files/q_veg_ext.grd         % (None) Filename of ASCII file with initial vegetation density
+threshold_file          = None                            % (None) Filename of ASCII file with shear velocity threshold
+fence_file              = None                            % (None) Filename of ASCII file with sand fence location/height (above the bed)
+wave_mask               = None                            % (None) Filename of ASCII file with mask for wave height
+tide_mask               = None                            % (None) Filename of ASCII file with mask for tidal elevation
+threshold_mask          = None                            % (None) Filename of ASCII file with mask for the shear velocity threshold
+
+%% -------------------- [Time series *.txt] ------------------ %%
+tide_file               = input_files/tide.txt             % (None) Filename of ASCII file with time series of water levels
+wave_file               = input_files/wave.txt            % (None) Filename of ASCII file with time series of wave heights (and periods)
+wind_file               = input_files/wind_nooffshore.txt             % (None) Filename of ASCII file with time series of wind velocity and direction
+bedcomp_file            = None                            % (None) Filename of ASCII file with initial bed composition
+meteo_file              = None            		  % (None) Filename of ASCII file with time series of meteorlogical conditions
+
+%% -------------------- [Output] ----------------------------- %%    
+output_times            = 172800                          % (60)[s] Timeinterval [s] between *.nc output file
+output_file             = None                            % (None)[-] Name of the *.nc output file
+output_vars             = zb                              % ('zb', 'zs','Ct', 'Cu','uw', 'udir','uth', 'mass','', 'w') [-] List of output variables for in *.nc output file
+visualization           = F                               % (F) [T/F] Enable the generation of figures visualizing model initialization
+
+%% -------------------- [Flags Processes] -------------------- %%
+process_wind            = T                               % (T) [T/F] Enable the process of wind 
+process_threshold       = T                               % (T) [T/F] Enable the process of threshold
+process_transport       = T                               % (T) [T/F] Enable the process of transport
+process_bedupdate       = T                               % (T) [T/F] Enable the process of bed updating
+process_shear           = F                               % (F) [T/F] Enable the process of wind shear
+process_tide            = T                               % (F) [T/F] Enable the process of tides
+process_wave            = T                               % (F) [T/F] Enable the process of waves
+process_runup           = T                               % (F) [T/F] Enable the process of wave runup
+process_moist           = T                               % (F) [T/F] Enable the process of moist
+process_mixtoplayer     = F                               % (F) [T/F] Enable the process of mixing
+process_sediment_supply	= T
+process_meteo           = F                               % (F) [T/F] Enable the process of meteo
+process_avalanche       = T                               % (F) [T/F] Enable the process of avalanching
+process_separation      = F                               % (F) [T/F] Enable the including of separation bubble
+process_vegetation      = T                               % (F) [T/F] Enable the process of vegetation
+process_fences          = F                               % (F) [T/F] Enable the process of sand fencing
+process_dune_erosion    = T                               % (F) [T/F] Enable the process of wave-driven dune erosion
+process_groundwater     = F                               % (F) [T/F] Enable the process of groundwater
+process_seepage_face    = F                               % (F) [T/F] Enable the process of groundwater seepage
+process_scanning        = F                               % (F) [T/F] Enable the process of scanning curves
+
+%% -------------------- [Flags Threshold] -------------------- %%
+th_grainsize            = T                               % (T) [T/F] Enable wind velocity threshold based on grainsize
+th_bedslope             = T                               % (F) [T/F] Enable wind velocity threshold based on bedslope
+th_moisture             = T                               % (F) [T/F] Enable wind velocity threshold based on moisture
+th_roughness            = T                               % (F) [T/F] Enable wind velocity threshold based on roughness
+th_nelayer              = T                               % (F) [T/F] Enable wind velocity threshold based on a non-erodible layer
+
+%% -------------------- [General physics] -------------------- %%
+g                       = 9.81                            % (9.81) [m/s^2] Gravitational constant
+v                       = 0.000015                        % (0.000015) [m^2/s] Air viscosity  
+rhoa                    = 1.225                           % (1.225) [kg/m^3] Air density
+rhog                    = 2650.0                          % (2650.) [kg/m^3] Grain density
+rhow                    = 1025.0                          % (1025.) [kg/m^3] Water density
+porosity                = 0.4                             % (0.4) [-] Sediment porosity
+cpair                   = 0.0010035                       % (0.0010035) [MJ/kg/oC] Specific heat capacity air
+
+%% -------------------- [Sediment] --------------------------- %%
+nlayers                 = 3                               % (3) [-] Number of bed layers
+layer_thickness         = 0.05000                         % (0.01) [m] Thickness of bed layers
+nfractions              = 1                               % (1) [-] Number of sediment fractions
+grain_dist              = 1.0                             % (1.) [-] Initial distribution of sediment fractions
+grain_size              = 0.00021                         % (0.000225) [m] Average grain size of each sediment fraction
+
+%% -------------------- [Wind and shear] --------------------- %%
+wind_convention         = nautical                        % (nautical ) [-] Convention used for the wind direction in the input files (cartesian or nautical)
+alfa                    = 0                             % (0)[deg] Real-world grid cell orientation wrt the North (clockwise)
+method_roughness        = constant_nikuradse		          % (constant) [-] Name of method to compute roughness
+k                       = 0.03                            % (0.001) [m] Bed roughness
+z                       = 10.                             % (10.) [m] Measurement height of wind velocity
+kappa                   = 0.41                            % (0.41) [-] Von Kármán constant
+h                       = None                            % (None) [m] Representative height of saltation layer
+L                       = 100.                            % (100.) [m] Typical length scale of dune feature (perturbation)
+l                       = 10.                             % (10.) [m] Inner layer height (perturbation)
+    
+%% -------------------- [Transport] -------------------------- %%
+bi                      = 1.                              % (1.) [-] Bed interaction factor
+method_transport        = bagnold		          % (bagnold) [-] Name of method to compute equilibrium sediment transport rate
+method_grainspeed       = duran		                  % (windspeed) Name of method to assume/compute grainspeed (windspeed, duran, constant)
+Aa                      = 0.085                           % (0.085) [-] Constant in formulation for wind velocity threshold based on grain size
+Cb                      = 1.5                             % (1.5) [-] Constant in bagnold formulation for equilibrium sediment concentration
+Ck                      = 2.78                            % (2.78) [-] Constant in kawamura formulation for equilibrium sediment concentration
+Cl                      = 6.7                             % (6.7) [-] Constant in lettau formulation for equilibrium sediment concentration
+Cdk                     = 5.0                             % (5.) [-] Constant in DK formulation for equilibrium sediment concentration
+
+%% -------------------- [Solver] ----------------------------- %%
+T                       = 1.                              % (1.) [s] Adaptation time scale in advection equation
+solver                  = pieter                          % ('trunk') [-] Numerical solver of advection scheme
+CFL                     = 1.                              % (1.) [-] CFL number to determine time step in explicit scheme
+accfac                  = 1.                              % (1.) [-] Numerical acceleration factor
+scheme                  = euler_backward                  % (euler_backward) [-] Name of numerical scheme (euler_forward, euler_backward or crank_nicolson)
+max_error               = 0.000001                        % (0.000001) [-] Maximum error at which to quit iterative solution in implicit numerical schemes
+max_iter                = 1000                            % (1000) [-] Maximum number of iterations at which to quit iterative solution in implicit numerical schemes
+max_bedlevel_change     = 999                             % (999) [m] Maximum bedlevel change after one timestep. Next timestep dt will be modified (use 999. if not used)
+
+%% -------------------- [Boundary conditions] ---------------- %%
+boundary_onshore        = gradient                        % (gradient) [-] Name of onshore boundary conditions (flux, constant, uniform, gradient)
+boundary_lateral        = circular                        % (circular) [-] Name of lateral boundary conditions (circular, constant ==noflux)
+boundary_offshore       = constant                        % (constant) [-] Name of offshore boundary conditions (flux, constant, uniform, gradient)
+offshore_flux           = 0.                              % (0.) [-] Factor to determine offshore boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
+constant_offshore_flux  = 0.                              % (0.) [kg/m/s] Constant input flux at offshore boundary
+onshore_flux            = 0.                              % (0.) [-] Factor to determine onshore boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
+constant_onshore_flux   = 0.                              % (0.) [kg/m/s] Constant input flux at offshore boundary
+lateral_flux            = 0.                              % (0.) [-] Factor to determine lateral boundary flux as a function of Q0 (= 1 for saturated flux , = 0 for noflux)
+sedimentinput           = 0.                              % (0.) [-] Constant boundary sediment influx (only used in solve_pieter)
+
+%% -------------------- [Rotating shear-grid] ---------------- %%
+dx                      = 1.000                           % (1.) [m] Size of dimension of the computational grid that is generated for a rotating shear computation in x-direction
+dy                      = 1.000                           % (1.) [m] Size of dimension of the computational grid that is generated for a rotating shear computation in x-direction
+
+%% -------------------- [Vegetation] ------------------------- %%    
+sigma                   = 4.2                             % (4.2) [-] Ratio between basal area and frontal area of roughness elements
+beta                    = 130.                            % (130.) [-] Ratio between drag coefficient of roughness elements and bare surface
+gamma_vegshear          = 16.                             % (16.) [-] Roughness factor for the shear stress reduction by vegetation
+avg_time                = 86400.                          % (86400) [s] Indication of the time period over which the bed level change is averaged for vegetation growth
+dzb_interval            = 86400.                          % (86400) [s] Interval used for calcuation of vegetation growth
+hveg_max                = 0.3                               % (1.) [m] Max height of vegetation
+dzb_opt                 = 0                               % (0.) [m/year] Sediment burial for optimal growth
+V_ver                   = 0.75                              % (0.) [m/year] Vertical growth
+V_lat                   = 0.5                              % (1.) [m/year] Lateral growth
+germinate               = 1.                              % (0.) [1/year] Possibility of germination per year
+lateral                 = 1.                              % (0.) [1/year] Possibility of lateral expension per year
+veg_gamma               = 1.                              % (1.) [-] Constant on influence of sediment burial
+veg_sigma               = 0.8                             % (0.8) [-] Sigma in gaussian distrubtion of vegetation cover filter
+veg_min_elevation	= 4.398
+vegshear_type           = raupach                         % (raupach) [-] Choose the Raupach grid based solver (1D or 2D) or the Okin approach (1D only)
+okin_c1_veg             = 0.48                            % (0.48) [-] x/h spatial reduction factor in Okin model for use with vegetation 
+okin_initialred_veg     = 0.32                            % (0.32) [-] initial shear reduction factor in Okin model for use with vegetation 
+
+%% -------------------- [Fences] ----------------------------- %%
+okin_c1_fence           = 0.48                            % (0.48) [-] x/h spatial reduction factor in Okin model for use with sand fence module
+okin_initialred_fence   = 0.32                            % (0.32) [-] initial shear reduction factor in Okin model for use with sand fence module
+    
+%% -------------------- [Separation] ------------------------- %%    
+c_b                     = 0.2                             % (0.2) [-] Slope at the leeside of the separation bubble # c = 0.2 according to Durán 2010 (Sauermann 2001: c = 0.25 for 14 degrees)
+mu_b                    = 30                              % (30) [deg] Minimum required slope for the start of flow separation
+
+%% -------------------- [Soil moisture] ---------------------- %%           
+Tdry                    = 5400.000                        % (5400.) [s] Adaptation time scale for soil drying
+eps                     = 0.001                           % (0.001) [m] Minimum water depth to consider a cell "flooded"
+method_moist_process    = infiltration                   % (infiltration) Name of method to compute soil moisture content(infiltration or surface_moisture)
+method_moist_threshold  = belly_johnson                   % (belly_johnson) [-] Name of method to compute wind velocity threshold based on soil moisture content
+fc                      = 0.11                            % (0.11) [-] Moisture content at field capacity (volumetric)
+w1_5                    = 0.02                            % (0.02) [-] Moisture content at wilting point (gravimetric)
+resw_moist              = 0.01                            % (0.01) [-] Residual soil moisture content (volumetric)
+resd_moist              = 0.01                            % (0.01) [-] Residual soil moisture content (volumetric) 
+satw_moist              = 0.30                            % (0.35) [-] Satiated soil moisture content (volumetric)
+satd_moist              = 0.30                            % (0.5) [-] Satiated soil moisture content (volumetric)
+nw_moist                = 5.0                             % (2.3) [-] Pore-size distribution index in the soil water retention function
+nd_moist                = 13.7                            % (4.5) [-] Pore-size distribution index in the soil water retention function 
+mw_moist                = 0.80                            % (0.57) [-] m, van Genucthen param (can be approximated as 1-1/n)
+md_moist                = 0.40                            % (0.42) [-] m, van Genucthen param (can be approximated as 1-1/n)
+alfaw_moist             = 0.058                           % (-0.07) [cm^-1] Inverse of the air-entry value for a wetting branch of the soil water retention function 
+alfad_moist             = 0.038                           % (-0.035) [cm^-1] Inverse of the air-entry value for a drying branch of the soil water retention function 
+K_gw                    = 0.0001                          % (0.00078) [m/s] Hydraulic conductivity
+ne_gw                   = 0.3                             % (0.3) [-] Effective porosity/specific yield         
+D_gw                    = 12                              % (12) [m] Aquifer depth
+Cl_gw                   = 0.2                             % (0.7) [m] Groundwater overheight due to runup
+in_gw                   = 0                               % (0) [m] Initial groundwater level
+tfac_gw                 = 30                              % (10) [-] Reduction factor for time step in ground water calculations
+
+%% -------------------- [Waves] ------------------------------ %%
+xi                      = .3                              % (0.3) [-] Surf similarity parameter
+facDOD                  = .1                              % (0.1) [-] Ratio between depth of disturbance and local wave height    
+
+%% -------------------- [Avalanching] ------------------------ %%
+theta_dyn               = 33.                             % (33.) [degrees] Initial Dynamic angle of repose, critical dynamic slope for avalanching
+theta_stat              = 34.                             % (34.) [degrees] Initial Static angle of repose, critical static slope for avalanching
+max_iter_ava            = 1000                            % [-] Maximum number of iterations at which to quit iterative solution in avalanching calculation
+
+%% -------------------- [Dune Erosion] ------------------------ %%
+beach_slope             = 0.0156			  % Based on data analysis
+dune_toe_elevation      = 4.398				  % Based on data analysis
+Cs 			= 0.0011 			  % Cs is a nondimensional calibration coefficient dependent on grain size and wave height, used in dune erosion module Palmsten and Holman (2011) equation
+
+%%---------------------[Sediment supply] ------------------------%%
+method_sed_supply	= constant_SCR_variable_tanB
+zshoreline          = 0
+xshoreline          = 0
+shoreline_change_rate	= 2.87			  	  % Elevation added to beach during process sed supply (shoreline change rate in m/yr) 0.00000515

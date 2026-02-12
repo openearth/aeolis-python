@@ -750,3 +750,60 @@ content [mg/g]. Currently, no model is implemented that predicts the
 instantaneous salt content. The spatial varying salt content needs to
 be specified by the user, for example through the BMI interface.
 
+Beach evolution parameters
+---------------
+The description of implementation of beach sediment supply function is based on :cite:`Heminway2025`:. 
+
+Beach shape and size contributes to the overall sediment supply available 
+for aeolian sediment transport. AeoLiS includes numerous approaches to 
+represent temporal and spatial variability in sediment supply related to beach 
+evolution (Figure 1a-d). These approaches do not explicitly currently account 
+for wave-driven processes and their role on beach shape and volume changes, 
+however the available methods are meant to mimic realistic expected behaviors
+and avoid the need to couple model interfaces with external tools. For the 
+purposes of this beach sediment supply function, the shoreline is defined as 
+the seaward boundary of the beach profile (default xshoreline and zshoreline 
+are 0 m; e.g., Figure 1e-f)) and shoreline change rate (SCR) is the rate of 
+change at the 0 m contour. Four specific methods, specified in the input file 
+as `method_sed_supply`, are implemented, as follows below:
+
+`wet_bed_reset`maintains stability of the bed by assuming any beach volume
+loss from aeolian sediment transport below the maximum wave runup level 
+is replenished by marine processes. This assumption means the inundated 
+beach profile is continuously reset to its initial morphology (Figure 1a). 
+Input dune toe elevation and beach slope are not used in this method. 
+
+`vertical_beach_growth`` converts a user input horizontal `shoreline_change_rate` 
+(at the 0 m contour) into a vertical beach accretion rate with the following equation: 
+
+.. math::
+   :label: SCR
+
+   \textit{vrate} = **shoreline_change_rate** \cos\left(\frac{\pi}{2} - \tan^{-1}(\textit{**beach_slope**})\right)
+
+The `vertical_beach_growth` method models a linear beach with increased elevation every time step (Figure 1c). 
+The beach maintains a fixed input `beach_slope` throughout the simulation and has an upper bound of the 
+input `dune_toe_elevation` (Figure 1g-h). Though this method simulates sediment supply to the dune, it is 
+important to note that over longer simulation time, the beach width is not maintained. 
+
+`constant_SCR_constant_tanB` simulates horizontal and vertical shoreline change 
+using a fixed input `beach_slope` and fixed input `dune_toe_elevation`. Like method `vertical_beach_growth`, 
+`constant_SCR_constant_tanB` generates a new linear beach profile at each timestep, based on the input `beach_slope` 
+and upper bounded by the input `dune_toe_elevation`. However, this method also extends the beach seaward 
+to maintain the beach width throughout the simulation (Figure 1b), resulting in the evolution of both 
+shoreline elevation and position (Figure 1e-f). To use `constant_SCR_constant_tanB` correctly, 
+it is important to note that the initial input grids must have extra seaward x-domain added to allow the beach to prograde.  
+
+`constant_SCR_variable_tanB` simulates horizontal shoreline change while allowing the beach slope 
+to evolve with the shoreline position and dune toe elevation to vary slightly with the upper bound 
+of the input `dune_toe_elevation` (Figure 1d-h). A new beach slope is calculated and used to generate 
+a linear beach each timestep. Similar to the `constant_SCR_constant_tanB`, the x-domain of the input 
+files must be extended seaward to implement this method. This method simulates more natural beach 
+and dune evolution than the other methods available. 
+
+.. _fig-SCR_example:
+
+.. figure:: /images/sediment_supply_figure.png
+   :align: center
+
+   Modeled dune profile evolution for the different methods of sediment supply function are shown in a-b. The black profile represents the final measured field profile for this case study. The evolution of shoreline position (e), shoreline elevation (f), dune toe elevation (g), beach slope (h) and change in dune volume through the simulation time (i) are shown below.
