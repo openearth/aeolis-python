@@ -12,7 +12,7 @@ exclude = [
 
 [project]
 name = "aeolis"
-version = "3.0.0.rc3"
+version = "3.0.1"
 authors = [
   { name="Sierd de Vries", email="sierd.devries@tudelft.nl" },
 ]
@@ -22,7 +22,7 @@ maintainers = [
 ]
 description = "A process-based model for simulating supply-limited aeolian sediment transport"
 readme = "README.md"
-requires-python = ">=3.9, <4"
+requires-python = ">=3.9, <3.14"
 license = {file = "LICENSE.txt"}
 keywords = ["aeolian sediment", "transport", "model", "deltares", "tudelft"]
 dependencies = [
@@ -31,9 +31,10 @@ dependencies = [
   "bmi-python",
   "netCDF4",
   "scipy",
-  "numpy<1.24,>=1.18",
+  "numpy",
   "matplotlib",
   "numba",
+  "windrose",
 ]
 classifiers = [
   "Development Status :: 5 - Production/Stable",

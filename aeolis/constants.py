@@ -98,9 +98,8 @@ MODEL_STATE = {
         'ustarn',                           # [m/s] Component of shear velocity in y-direction by wind
         'ustar0',                           # [m/s] Initial shear velocity (without perturbation)
         'zsep',                             # [m] Z level of polynomial that defines the separation bubble
-        'hsep',                             # [m] Height of separation bubbel = difference between z-level of zsep and of the bed level zb
-        'theta_stat',                       # [degrees] Updated, spatially varying static angle of repose
-        'theta_dyn',                        # [degrees] Updated, spatially varying dynamic angle of repose
+        'hsep',                             # [m] Height of separation bubble = difference between z-level of zsep and of the bed level zb
+        'theta_dyn',                        # [degrees] spatially varying dynamic angle of repose for avalanching
         'rhoveg',                           # [-] Vegetation cover
         'drhoveg',                          # Change in vegetation cover
         'hveg',                             # [m] height of vegetation
@@ -174,8 +173,7 @@ DEFAULT_CONFIG = {
     'process_runup'                 : False,              # Enable the process of wave runup
     'process_moist'                 : False,              # Enable the process of moist
     'process_mixtoplayer'           : False,              # Enable the process of mixing 
-    # 'process_wet_bed_reset'         : False,              # Enable the process of bed-reset in the intertidal zone
-    'process_sediment_supply'       : False,              # Enable the process of beach sediment supply
+    'process_wet_bed_reset'         : False,              # Enable the process of bed-reset in the intertidal zone
     'process_meteo'                 : False,              # Enable the process of meteo
     'process_salt'                  : False,              # Enable the process of salt
     'process_humidity'              : False,              # Enable the process of humidity
@@ -301,7 +299,6 @@ DEFAULT_CONFIG = {
     'hveg_max'                      : 1.,                 # [m] Max height of vegetation
     'dzb_opt'                       : 0.,                 # [m/year] Sediment burial for optimal growth
     'V_ver'                         : 0.,                 # [m/year] Vertical growth potential
-    'V_lat'                         : 0.,                 # [m/year] Lateral growth
     'germinate'                     : 0.,                 # [1/year] Possibility of germination per year
     'lateral'                       : 0.,                 # [1/year] Posibility of lateral expension per year
     'veg_gamma'                     : 1.,                 # [-] Constant on influence of sediment burial
@@ -333,7 +330,7 @@ DEFAULT_CONFIG = {
     'alfa'                          : 0,                  # [deg] Real-world grid cell orientation wrt the North (clockwise)
     'dune_toe_elevation'            : 3,                  # Choose dune toe elevation, only used in the PH12 dune erosion solver
     'beach_slope'                   : 0.1,                # Define the beach slope, only used in the PH12 dune erosion solver
-    'veg_min_elevation'             : 3,                  # Choose the minimum elevation where vegetation can grow
+    'veg_min_elevation'             : -10.,               # Minimum elevation (m) where vegetation can grow; default -10 disables restriction (allows vegetation everywhere). Set to a higher value to enforce a minimum elevation for vegetation growth.
     'vegshear_type'                 : 'raupach',          # Choose the Raupach grid based solver (1D or 2D) or the Okin approach (1D only)
     'okin_c1_veg'                   : 0.48,               #x/h spatial reduction factor in Okin model for use with vegetation
     'okin_c1_fence'                 : 0.48,               #x/h spatial reduction factor in Okin model for use with sand fence module
@@ -343,10 +340,6 @@ DEFAULT_CONFIG = {
     'rhoveg_max'                    : 0.5,                #maximum vegetation density, only used in duran and moore 14 formulation
     't_veg'                         : 3,                  #time scale of vegetation growth (days), only used in duran and moore 14 formulation
     'v_gam'                         : 1,                  # only used in duran and moore 14 formulation
-    'method_sed_supply'             :'vertical_beach_growth', # Name of method to comput sediment supply (wet_bed_reset, vertical_beach_growth, constant_SCR_constant_tanB, constant_SCR_variable_tanB)
-    'shoreline_change_rate'         : 0,                  # Elevation added to beach during process sed supply (shoreline change rate m/year)
-    'zshoreline'                    : 0,                  # Elevation where beach profile ends and shoreline change rate is applied           
-    'xshoreline'                    : 0,                  # Cross-shore position where beach profile ends and shoreline change rate is applied  
 }
 
 REQUIRED_CONFIG = ['nx', 'ny']
