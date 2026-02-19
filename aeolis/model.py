@@ -353,8 +353,12 @@ class AeoLiS(IBmi):
         self.s = aeolis.avalanching.angele_of_repose(self.s, self.p)
         self.s = aeolis.avalanching.avalanche(self.s, self.p)
         
-        # reset original bed in marine zone (wet)
-        self.s = aeolis.bed.wet_bed_reset(self.s, self.p)
+        
+        # # reset original bed in marine zone (wet)
+        # self.s = aeolis.bed.wet_bed_reset(self.s, self.p)
+
+        # either wet bed reset or positive shoreline change 
+        self.s = aeolis.bed.sediment_supply(self.s, self.p)
 
         # calculate average bed level change over time
         self.s = aeolis.bed.average_change(self.l, self.s, self.p)
