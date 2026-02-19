@@ -69,7 +69,9 @@ vanWesten2024/parabolic
 <description>
 
 
+longterm_dune_growth - 1D 27-year simulation from Long Beach Penninsula, Washington, USA (LBP)
 
+The beach-dune system on LBP has been rapidly prograding over the past three decades. This example uses the newly process_sediment_supply function in AeoLiS to hindcast almost 3 decades of dune evolution. 
 
 
 

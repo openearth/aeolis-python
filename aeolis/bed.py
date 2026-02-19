@@ -32,6 +32,7 @@ import numpy as np
 import aeolis.gridparams
 from matplotlib import pyplot as plt
 from numba import njit
+import math
 
 # package modules
 from aeolis.utils import *
@@ -125,7 +126,7 @@ def initialize(s, p):
     # initialize threshold
     if p['threshold_file'] is not None:
         s['uth'] = p['threshold_file'][:,:,np.newaxis].repeat(nf, axis=-1)
-        
+
     return s
 
 
@@ -197,14 +198,40 @@ def mixtoplayer(s, p):
 
         
             s['mass'][ix] = mass[ix]
-            
     return s
 
 
-def wet_bed_reset(s, p):
-    ''' Reset wet bed to initial bed level if the total water level is above the bed level.
+# def wet_bed_reset(s, p): **** Now part of def sediment_supply ****
+#     ''' Reset wet bed to initial bed level if the total water level is above the bed level.
 
 
+
+#     Parameters
+#     ----------
+#     s : dict
+#         Spatial grids
+#     p : dict
+#         Model configuration parameters
+
+#     Returns
+#     -------
+#     dict
+#         Spatial grids
+
+#     '''
+
+#     if p['process_wet_bed_reset']:
+        
+#         Tbedreset = p['dt_opt'] / p['Tbedreset']
+        
+#         ix = s['TWL'] > (s['zb'])
+#         s['zb'][ix] += (s['zb0'][ix] - s['zb'][ix]) * Tbedreset
+            
+#     return s
+
+
+def sediment_supply(s, p):
+    ''' Increase elevation of beach topography.
 
     Parameters
     ----------
@@ -219,19 +246,94 @@ def wet_bed_reset(s, p):
         Spatial grids
 
     '''
+        
+    if p['process_sediment_supply']:
 
-    if p['process_wet_bed_reset']:
-        
-        Tbedreset = p['dt_opt'] / p['Tbedreset']
-        
-        ix = s['TWL'] > (s['zb'])
-        s['zb'][ix] += (s['zb0'][ix] - s['zb'][ix]) * Tbedreset
+        if p['method_sed_supply'] == 'wet_bed_reset':            
+            Tbedreset = p['dt_opt'] / p['Tbedreset']
             
+            ix = s['TWL'] > (s['zb'])
+            s['zb'][ix] += (s['zb0'][ix] - s['zb'][ix]) * Tbedreset
+
+        if p['method_sed_supply'] == 'vertical_beach_growth':
+            beach_inc = p['shoreline_change_rate']*math.cos((math.pi/2)-math.atan(p['beach_slope']))
+            vrate = (beach_inc*(1/365.25/24/3600))*p['dt'] #(m/timestep)
+            ny, nx = s['zb'].shape  
+
+            for iy in range(ny):
+                x_all = s['x'][iy,:]
+                zb_all = s['zb'][iy,:]               
+                xi =  (zb_all < p['dune_toe_elevation'])
+                beach_z = zb_all[xi]
+                b = beach_z[0] + vrate
+                x = x_all[xi] 
+                slope = p['beach_slope']
+                new_beach = slope*x + b 
+                s['zb'][iy,xi] = new_beach    
+
+        if p['method_sed_supply'] == 'constant_SCR_constant_tanB':
+
+            beach_inc = p['shoreline_change_rate']*math.cos((math.pi/2)-math.atan(p['beach_slope']))
+            vrate = (beach_inc/(365.25*24*3600))*p['dt'] #(m/timestep)
+            ny, nx = s['zb'].shape  
+
+            for iy in range(ny):
+
+                x_all = s['x'][iy,:]
+                zb_all = s['zb'][iy,:]
+
+                xi = zb_all < p['dune_toe_elevation']
+                beach_z = zb_all[xi]
+                x = x_all[xi]
+
+                xi3 = np.where(beach_z > p['zshoreline'])
+                xi3 = xi3[0][0]
+                b = beach_z[xi3] + vrate
+
+                new_temp_beach = p['beach_slope']*(x-x[xi3]) + b
+
+                xi2 = new_temp_beach <= np.min(zb_all)
+                new_temp_beach[xi2] = np.min(zb_all)
+
+                s['zb'][iy,xi]= new_temp_beach
+
+        if p['method_sed_supply'] == 'constant_SCR_variable_tanB':
+            beach_inc = p['shoreline_change_rate']*math.cos((math.pi/2)-math.atan(p['beach_slope']))
+            vrate = (beach_inc/(365.25*24*3600))*p['dt'] #(m/timestep)
+            hrate = (p['shoreline_change_rate']/(365.25*24*3600))*p['dt'] #(m/timestep)
+            ny, nx = s['zb'].shape        
+
+            for iy in range(ny):
+                x_all = s['x'][iy,:]
+                zb_all = s['zb'][iy,:]
+
+                xi = zb_all <= p['dune_toe_elevation']
+                beach_z = zb_all[xi]
+
+                x = x_all[xi]
+
+                xi3 = np.where(beach_z > p['zshoreline'])
+                xi3 = xi3[0][0]
+                beach_x = x-x[xi3]
+
+                xy1 = ((np.min(x[xi3])),np.min(beach_z[xi3]))
+                xy2 = (np.max(x), np.max(beach_z))
+
+                new_slope = (xy2[1]-xy1[1])/(xy2[0]-(xy1[0]))
+                b = np.min(beach_z[xi3]) + vrate
+                new_temp_beach = new_slope*(beach_x) + b
+
+                xi2 = new_temp_beach <= np.min(zb_all)
+                new_temp_beach[xi2] = np.min(zb_all)
+
+                xi4 = new_temp_beach > p['dune_toe_elevation']
+                new_temp_beach[xi4] = p['dune_toe_elevation']
+                s['zb'][iy,xi]= new_temp_beach
     return s
 
 
-
 def update(s, p):
+
     '''Update bathymetry and bed composition
 
     Update bed composition by moving sediment fractions between bed
@@ -346,7 +448,7 @@ def update(s, p):
         s['zb'] += dz
         if p['process_tide']:
             s['zs'] += dz #???
-    
+
     return s
 
 
@@ -496,7 +598,6 @@ def average_change(l, s, p):
     if p['_time'] < p['avg_time']:
         s['dzbveg'] *= 0.
     
-    
     return s
 
 @njit
@@ -535,5 +636,5 @@ def arrange_layers(m,dm,d,nl,ix_ero,ix_dep):
     m[ix_dep,-1,:] -= dm[ix_dep,:] * d[ix_dep,-1,:]
 
     return m
-    
+
 
