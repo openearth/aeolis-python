@@ -230,7 +230,7 @@ def mixtoplayer(s, p):
 #     return s
 
 
-def sediment_supply(s, p):
+def wet_supply(s, p):
     ''' Increase elevation of beach topography.
 
     Parameters
@@ -247,15 +247,17 @@ def sediment_supply(s, p):
 
     '''
         
-    if p['process_sediment_supply']:
+    if p['process_wet_supply'] or p['process_wet_bed_reset']:
 
-        if p['method_sed_supply'] == 'wet_bed_reset':            
+        if p['method_wet_supply'] == 'wet_bed_reset':            
             Tbedreset = p['dt_opt'] / p['Tbedreset']
             
             ix = s['TWL'] > (s['zb'])
             s['zb'][ix] += (s['zb0'][ix] - s['zb'][ix]) * Tbedreset
 
-        if p['method_sed_supply'] == 'vertical_beach_growth':
+    if p['process_wet_supply']:
+
+        if p['method_wet_supply'] == 'vertical_beach_growth':
             beach_inc = p['shoreline_change_rate']*math.cos((math.pi/2)-math.atan(p['beach_slope']))
             vrate = (beach_inc*(1/365.25/24/3600))*p['dt'] #(m/timestep)
             ny, nx = s['zb'].shape  
@@ -271,7 +273,7 @@ def sediment_supply(s, p):
                 new_beach = slope*x + b 
                 s['zb'][iy,xi] = new_beach    
 
-        if p['method_sed_supply'] == 'constant_SCR_constant_tanB':
+        if p['method_wet_supply'] == 'constant_SCR_constant_tanB':
 
             beach_inc = p['shoreline_change_rate']*math.cos((math.pi/2)-math.atan(p['beach_slope']))
             vrate = (beach_inc/(365.25*24*3600))*p['dt'] #(m/timestep)
@@ -297,7 +299,7 @@ def sediment_supply(s, p):
 
                 s['zb'][iy,xi]= new_temp_beach
 
-        if p['method_sed_supply'] == 'constant_SCR_variable_tanB':
+        if p['method_wet_supply'] == 'constant_SCR_variable_tanB':
             beach_inc = p['shoreline_change_rate']*math.cos((math.pi/2)-math.atan(p['beach_slope']))
             vrate = (beach_inc/(365.25*24*3600))*p['dt'] #(m/timestep)
             hrate = (p['shoreline_change_rate']/(365.25*24*3600))*p['dt'] #(m/timestep)
@@ -602,8 +604,8 @@ def average_change(l, s, p):
 
 @njit
 def arrange_layers(m,dm,d,nl,ix_ero,ix_dep):
-    '''Arranges mass redistrubution between layers. 
-    This function is called in the bed.update fucntion to speed up code using numba
+    '''Arranges mass redistribution between layers. 
+    This function is called in the bed.update function to speed up code using numba
     
     
 
@@ -612,7 +614,7 @@ def arrange_layers(m,dm,d,nl,ix_ero,ix_dep):
     m       :   array
                 mass in layers
     dm      :   array
-                total mass exchanged between layers derrived from pickup
+                total mass exchanged between layers derived from pickup
     d       :   array
                 normalized mass in layers
     nl      :   int
