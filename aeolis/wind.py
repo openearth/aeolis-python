@@ -72,11 +72,12 @@ def initialize(s, p):
     
     if p['process_shear']:
         if p['ny'] > 0:
-            if p['method_shear'] == 'fft':
+            if p['method_shear'] in ('fft', 'spatial'):
                 s['shear'] = aeolis.shear.WindShear(s['x'], s['y'], s['zb'],
                                                     dx=p['dx'], dy=p['dy'],
                                                     L=p['L'], l=p['l'], z0=z0,
-                                                    buffer_width=p['buffer_width'])
+                                                    buffer_width=p['buffer_width'],
+                                                    method=p['method_shear'])
             else:
                 s['shear'] = aeolis.rotation.rotationClass(s['x'], s['y'], s['zb'],
                                                           dx=p['dx'], dy=p['dy'],

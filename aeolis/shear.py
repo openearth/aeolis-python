@@ -35,6 +35,7 @@ import os
 #import scipy.interpolate as spint
 #import scipy.spatial.qhull as qhull
 import time
+from numba import njit
 
 # package modules
 from aeolis.utils import *
@@ -90,7 +91,7 @@ class WindShear:
     
     
     def __init__(self, x, y, z, dx, dy, L, l, z0,
-                 buffer_width, buffer_relaxation=None):
+                 buffer_width, buffer_relaxation=None, method='fft'):
         '''Class initialization
             
         Parameters
@@ -120,6 +121,10 @@ class WindShear:
             Height of inner layer (default: 10)
         z0 : float, optional
             Aerodynamic roughness (default: .001)
+        method : str, optional
+            Method to compute wind shear perturbation. Options are
+            ``'fft'`` (default, 2D FFT-based Weng et al. approach) and
+            ``'spatial'`` (loop-based Cauchy sweep that avoids FFT).
 
         '''
         
@@ -140,6 +145,11 @@ class WindShear:
         self.L = L
         self.l = l
         self.z0 = z0
+
+        # Method for shear perturbation computation
+        if method not in ('fft', 'spatial'):
+            raise ValueError("method must be 'fft' or 'spatial', got %r" % method)
+        self.method = method
        
 
     def __call__(self, x, y, z, taux, tauy, u0, udir, 
@@ -229,7 +239,10 @@ class WindShear:
             gc['z'] = np.maximum(gc['z'], zsep)
                     
         # Compute wind shear stresses on computational grid 
-        self.compute_shear(u0, nfilter=(1., 2.))
+        if self.method == 'spatial':
+            self.compute_shear_spatial(u0, nfilter=(1., 2.))
+        else:
+            self.compute_shear(u0, nfilter=(1., 2.))
         
         # Add shear
         self.add_shear()
@@ -627,8 +640,126 @@ class WindShear:
         gc['dtauy'] = np.real(np.fft.ifft2(dtauy_t))
         
 
-        
-        
+
+    def compute_shear_spatial(self, u0, nfilter=(1., 2.)):
+        '''Compute wind shear perturbation using a spatial sweep algorithm.
+
+        Implements the same Weng et al. (1991) perturbation theory as
+        :func:`compute_shear` but avoids the 2-D FFT entirely.  Instead the
+        computation is broken into a row-by-row (y-constant) sweep in the
+        wind (x) direction using a discrete Cauchy / Hilbert-transform kernel,
+        analogous to the sweeping algorithm used for the sediment-concentration
+        field ``Ct``.
+
+        For each y-row the streamwise shear perturbation ``dtaux`` is
+        computed as the Cauchy principal-value integral of the streamwise bed
+        slope, and the cross-wind perturbation ``dtauy`` is computed as the
+        same integral applied to the cross-wind bed slope.  The amplitude
+        coefficients are derived directly from the inner-layer parameters of
+        the Weng et al. theory (``L``, ``l``, ``z0``).
+
+        High-frequency topographic features are suppressed with a spatial
+        Gaussian filter (replacing the FFT-based filter used in
+        :func:`compute_shear`).
+
+        .. note::
+            The computational cost scales as O(ny × nx²) because for each
+            of the ny × nx cells the kernel sums over all nx other cells in
+            the same row.  For large grids this is more expensive than the
+            FFT method (O(ny × nx × log nx)).  The inner loop is compiled
+            with Numba to keep the constant factor small, but for grids
+            significantly larger than ~200 × 200 cells the FFT method may
+            be preferable on performance grounds.
+
+        Parameters
+        ----------
+        u0 : float
+            Free-flow wind speed
+        nfilter : 2-tuple
+            Width of the Gaussian pre-filter applied to the topography
+            (in grid cells).  Corresponds to the wavenumber range used in
+            :func:`filter_highfrequenies`.
+        '''
+        gc = self.cgrid
+        gi = self.igrid
+
+        if u0 == 0.:
+            gc['dtaux'] = np.zeros(gc['z'].shape)
+            gc['dtauy'] = np.zeros(gc['z'].shape)
+            return
+
+        ny, nx = gc['z'].shape
+        dx = gc['dx']
+        dy = gc['dy']
+
+        z0 = self.z0
+        L  = self.L / 4.
+        l  = self.l
+
+        # Interpolate roughness length z0 to computational grid (same as FFT method)
+        if np.size(z0) > 1:
+            z0new = self.interpolate(gi['x'], gi['y'], z0, gc['x'], gc['y'], 0)
+        else:
+            z0new = z0
+
+        # Inner layer height (iterative, same as FFT method)
+        for _ in range(5):
+            l = 2 * 0.41**2 * L / np.log(l / z0new)
+
+        # Middle layer height (iterative, same as FFT method)
+        hm = 1.0
+        for _ in range(5):
+            hm = L / np.sqrt(np.log(hm / z0new))
+
+        # Non-dimensional velocity (same as FFT method)
+        ul = np.log(l / z0new) / np.log(hm / z0new)
+
+        # Scalar effective values when z0 is spatially varying
+        if np.size(z0new) > 1:
+            log_l_z0 = float(np.mean(np.log(l / z0new)))
+            ul_eff   = float(np.mean(ul))
+        else:
+            log_l_z0 = float(np.log(l / z0new))
+            ul_eff   = float(ul)
+
+        # Apply Gaussian spatial filter to topography.
+        # This replaces the FFT-based high-frequency filter: the sigma of the
+        # Gaussian is taken as the upper bound of nfilter (in grid cells).
+        if nfilter is not None:
+            sigma_filter = float(np.max(nfilter))
+            z_filtered = ndimage.gaussian_filter(gc['z'], sigma=sigma_filter)
+        else:
+            z_filtered = gc['z'].copy()
+
+        # Amplitude coefficients derived from the Weng et al. leading-order
+        # perturbation theory.  The dominant contribution to the streamwise
+        # perturbation scales as 2*log(l/z0)/ul^2, and the cross-wind
+        # contribution scales as 2/ul^2.
+        alpha_s = 2.0 * log_l_z0 / ul_eff**2   # streamwise amplitude
+        alpha_n = 2.0 / ul_eff**2               # cross-wind amplitude
+
+        # Compute bed gradients by central differences
+        dzds = np.zeros_like(z_filtered)   # streamwise (x) slope
+        dzdn = np.zeros_like(z_filtered)   # cross-wind (y) slope
+
+        dzds[:, 1:-1] = (z_filtered[:, 2:] - z_filtered[:, :-2]) / (2. * dx)
+        dzds[:,    0] = (z_filtered[:,  1]  - z_filtered[:,  0])  / dx
+        dzds[:,   -1] = (z_filtered[:, -1]  - z_filtered[:, -2])  / dx
+
+        if ny > 1:
+            dzdn[1:-1, :] = (z_filtered[2:, :] - z_filtered[:-2, :]) / (2. * dy)
+            dzdn[0,    :] = (z_filtered[1,  :] - z_filtered[0,   :]) / dy
+            dzdn[-1,   :] = (z_filtered[-1, :] - z_filtered[-2,  :]) / dy
+
+        # Compute shear perturbations via row-by-row Cauchy sweep.
+        # For each y-row the Hilbert-transform kernel 1/(k*pi) is applied
+        # to the streamwise (or cross-wind) bed slope, giving an antisymmetric
+        # response: increased shear on the windward side and reduced shear in
+        # the lee – consistent with the Weng et al. perturbation theory.
+        gc['dtaux'] = _cauchy_hilbert_sweep(dzds, alpha_s, ny, nx)
+        gc['dtauy'] = _cauchy_hilbert_sweep(dzdn, alpha_n, ny, nx)
+
+
     def separation_shear(self, hsep):
         '''Reduces the computed wind shear perturbation below the 
         separation surface to mimic the turbulence effects in the 
@@ -918,4 +1049,49 @@ class WindShear:
     
 
         
+
+@njit(cache=True)
+def _cauchy_hilbert_sweep(field, alpha, ny, nx):
+    '''Compute wind shear perturbation via row-by-row Cauchy sweep.
+
+    For each y-row the discrete Cauchy principal-value integral of ``field``
+    is evaluated using the antisymmetric kernel ``1/(k * pi)``, which
+    implements the Hilbert transform of the input field in the x (wind)
+    direction.  This gives an antisymmetric perturbation around each
+    topographic feature: positive (increased shear) on the windward side and
+    negative (reduced shear) on the leeward side – consistent with the
+    Weng et al. perturbation theory.
+
+    The sweep processes all y-rows independently and can therefore be
+    thought of as a 1-D sweep in the wind direction applied row-by-row,
+    analogous to the directional sweep used for the sediment-concentration
+    field ``Ct``.
+
+    Parameters
+    ----------
+    field : numpy.ndarray
+        2-D input field of shape (ny, nx).  Typically the streamwise or
+        cross-wind bed-slope gradient.
+    alpha : float
+        Amplitude coefficient derived from the Weng et al. inner-layer
+        parameters.
+    ny, nx : int
+        Grid dimensions.
+
+    Returns
+    -------
+    result : numpy.ndarray
+        Wind shear perturbation field of shape (ny, nx).
+    '''
+    result = np.zeros((ny, nx))
+    for j in range(ny):
+        for i in range(nx):
+            integ = 0.0
+            for k in range(1, nx):
+                im = (i - k) % nx   # upstream index (periodic)
+                ip = (i + k) % nx   # downstream index (periodic)
+                # Antisymmetric Cauchy kernel: upstream minus downstream
+                integ += (field[j, im] - field[j, ip]) / (k * np.pi)
+            result[j, i] = alpha * integ
+    return result
         
