@@ -151,9 +151,11 @@ def zeta_from_vegetation(s, p):
 
         # --- Species weighting based on maturity and density ----------------
         if p['method_vegetation'] == 'grass':
-            hveg_eff = s['hvegeff_zeta']  # Effective vegetation height for zeta adjustment
+            hveg_eff = s['hvegeff'][:, :, ksp]  # Effective vegetation height for zeta adjustment
+            hveg_eff_zeta = s['hvegeff_zeta'] # Effective vegetation height for zeta adjustment
         elif p['method_vegetation'] == 'duran':
             hveg_eff = s['hveg']
+            hveg_eff_zeta = s['hveg']
         else:
             ValueError(f"Unknown vegetation method: {p['method_vegetation']}")
 
@@ -169,7 +171,7 @@ def zeta_from_vegetation(s, p):
 
         # --- Bed–interaction factor from Weibull CDF ------------------------
         Ld_eff = h_lift / gamma(1.0 + 1.0 / k_zeta)
-        zeta_k = 1.0 - np.exp(-(hveg_eff / Ld_eff)**k_zeta)
+        zeta_k = 1.0 - np.exp(-(hveg_eff_zeta / Ld_eff)**k_zeta)
         
         # --- Reduction due to bouncing (skimming) ---------------------------
         zeta_k *= (1.0 - p['bounce'][ksp])
