@@ -2,12 +2,12 @@ Model setup
 =================
 Setting up an AeoLiS model involves configuring various parameters and input files. In this section, we will cover:
 
-- **Model Input**: Information on the required input files and their formats.
-- **Model Output**: Guidance on how to analyse model output.
-- **Default settings**: Overview of the various parameters that can be adjusted in the model and their default values.
-- **Activate/deactivate processes**: Explanation of different process flags and their effects on the simulation.
-- **Model state/output**: Overview of model state variables that can be outputted.
-- **Guidance on solver use**: Explanation of the use of different solvers.
+- **Model Input**: The input files and their formats.
+- **Model Output**: How to analyse the output.
+- **Default settings**: Overview of the model parameters, incl. default values.
+- **Activate/deactivate processes**: Process flags.
+- **Model state/output**: Overview of model state variables.
+- **Guidance on solver use**
 
 A general tip for setting up an AeoLiS model is to start simple and build up the complexity. As a starting point, use the default values and then slowly deviate from those and turn on processes. Start with a relatively coarse grid to allow for faster simulation testing. It is also highly recommended to start with constant conditions, such as a one-directional constant wind, making it easier to interpret if the model output is logical. 
 
@@ -21,9 +21,9 @@ Model input
 -----------
 
 The computational grid and boundary conditions for AeoLiS are specified through external
-input files called by the main parameter file. The computational grid is defined
+input files called by the main configuration file. The computational domain is defined
 using specific spatial files (``*.grd``), while boundary conditions for wind, wave, and tides
-are provided via ``*.txt`` files. An overview of most of these files is provided in the table below.
+are provided via ``*.txt`` files. An overview of these files is provided in the table below.
 
 .. list-table:: 
    :widths: 15 15 15 15 40
@@ -125,12 +125,12 @@ The model can be run in 1D and 2D mode depending on the input dimensions. Most p
 
 x.grd and y.grd (Spatial Grid)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-The ``x.grd`` and ``y.grd`` files define the computational grid in meters. It is important to understand that the **boundary definitions and cross-shore/longshore directions are determined by the shape and structure of the grid matrices**, while the **actual physical location and orientation are determined by the specific coordinate values** inside those matrices. To ensure correct model execution and boundary alignment, grid generation should follow this step-by-step approach:
+The ``x.grd`` and ``y.grd`` files define the computational grid in meters. It is important to understand that the boundary definitions and cross-shore/longshore directions are determined by the shape and structure of the grid matrices, while the physical location and orientation are determined by the specific coordinate values inside those matrices. To ensure correct model execution and boundary alignment, grid generation should follow this step-by-step approach:
 
 1. **Define dimensions and resolution:** Set your domain length and grid spacing. Because the model does not yet support variable grid sizes, the cross-shore resolution must equal the alongshore resolution (e.g., ``dx = 10; dy = 10``).
-2. **Create domain axes:** Generate 1D arrays for the cross-shore and alongshore directions. The cross-shore array dictates the domain boundaries and **must be ascending**; the first element is always the onshore boundary, and the last is the offshore boundary (e.g., ``x = np.arange(0, Lx + dx, dx)``).
-3. **Generate the orthogonal grid:** Use the 1D axes to create 2D coordinate matrices (e.g., ``X, Y = np.meshgrid(x, y)``).
-4. **Apply physical orientation:** Translate (shift) and rotate the coordinate values within these matrices to match their true real-world location and physical orientation (e.g., ``Xr = X * np.cos(theta) - Y * np.sin(theta) + x0``).
+2. **Create domain axes:** Generate 1D arrays for the cross-shore and alongshore directions. The cross-shore array dictates the domain boundaries and **must be ascending**; the first x-element is always the onshore boundary, and the last is the offshore boundary (e.g., ``x = np.arange(0, Lx + dx, dx)``).
+3. **Generate the grid:** Use the 1D axes to create 2D coordinate matrices (e.g., ``X, Y = np.meshgrid(x, y)``).
+4. **Apply physical orientation:** Shift and rotate the coordinate values within these matrices to match the desired real-world location and orientation (e.g., ``Xr = X * np.cos(theta) - Y * np.sin(theta) + x0``).
 
 By handling the physical orientation directly within the grid coordinate values, the model orientation keyword ``alfa`` is no longer required and should be left at its default value of ``0``.
 
@@ -157,11 +157,9 @@ The ``veg.grd`` file is an optional grid providing the initial vegetation covera
 
 Masks (tide, wave, and runup)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Masks (e.g., ``mask_tide``, ``mask_wave``, ``mask_runup``) can be used to spatially modify or fix boundary conditions across the domain. This is particularly useful when landward elevations are lower than the water level but remain dry, or when water bodies are disconnected from the offshore (such as a barrier island system where inland water experiences no tidal or wave action).
+Masks (e.g., ``mask_tide``, ``mask_wave``, ``mask_runup``) can be used to spatially modify boundary conditions. This is particularly useful when landward elevations are lower than the offshore water level but remain dry, or when water bodies are disconnected from the offshore (such as a barrier island system where inland water experiences no tidal or wave action).
 
-Masks utilize complex numbers to apply both a scaling multiplier and a static offset to the boundary condition, following the logic: ``Applied Value = (Real Value * Boundary Value) + Complex Value``. 
-
-To pass the actual boundary value normally, a simple real value of ``1`` is sufficient. To completely zero out the boundary value in a specific area (e.g., no waves inland), use ``0``. To set a fixed static value regardless of the incoming boundary condition (e.g., an inland lake permanently fixed at +2m water level), use a complex value such as ``0 + 2j``.
+Masks utilize complex numbers to apply both a scaling multiplier and a static offset to the boundary condition, following the logic: ``Applied Value = (Real Value * Boundary Value) + Complex Value``. To completely zero out the boundary value in a specific area (e.g., no waves inland), use ``0``. To set a fixed static value regardless of the incoming boundary condition (e.g., an inland lake permanently fixed at +2m water level), use a complex value such as ``0 + 2j``.
 
 Example Python script
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -208,10 +206,10 @@ Example Python script
 
 Multi-dimensional Inputs (mass, hveg, Nt)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Some variables naturally require multiple dimensions per spatial grid cell, such as spatially varying grain sizes (multiple fractions and bed layers) or complex vegetation cover (multiple species). AeoLiS requires these multi-dimensional arrays to be flattened into lower-dimensional formats before saving.
+Some variables require multiple dimensions per spatial grid cell, such as spatially varying grain sizes (multiple fractions and bed layers) or complex vegetation cover (multiple species). AeoLiS requires these multi-dimensional arrays to be flattened into two-dimensional formats before saving as textfiles.
 
-* **mass.txt**: Defines the mass of each sediment fraction per bed layer. If the grain size distribution is uniform across the domain, this file is not needed. The natural 4D shape of `(ny, nx, nlayers, nfractions)` must be reshaped into a 2D matrix of shape `(nx * ny, nfractions * nlayers)`. The rows represent the flattened spatial coordinates, and the columns are grouped by bed layer (e.g., Layer 1: Fraction 1, Fraction 2; Layer 2: Fraction 1, Fraction 2).
-* **hveg.grd and Nt.grd**: When utilizing the grass vegetation method (``method_vegetation = grass``), the model requires vegetation height (``hveg``) and density (``Nt``). Because this method supports multiple interacting species, the natural 3D shape of `(ny, nx, nspecies)` must be completely flattened into a 1D vector of shape `(ny * nx * nspecies)`. 
+* **mass.txt**: Defines the mass of each sediment fraction per bed layer. If the grain size distribution is uniform across the domain, which is most often the case, this file is not needed (see keywords ``grain_dist`` and ``grain_size`` in the configuration file). The 4D shape of `(ny, nx, nlayers, nfractions)` must be reshaped into a 2D matrix of shape `(nx * ny, nfractions * nlayers)`. The rows represent the flattened spatial coordinates, and the columns are grouped by bed layer (e.g., Layer 1: Fraction 1, Fraction 2; Layer 2: Fraction 1, Fraction 2).
+* **hveg.grd and Nt.grd**: When using the grass vegetation method (``method_vegetation = grass``), the model needs vegetation height (``hveg``) and density (``Nt``). Because this method supports multiple interacting species, the 3D shape of `(ny, nx, nspecies)` is flattened into a 1D vector of shape `(ny * nx * nspecies)`. 
 
 .. _fig-mass-inputs-2D:
 
@@ -235,11 +233,11 @@ Below is a simple Python script demonstrating how to load spatial grid dimension
     ny, nx = X.shape
     n_cells = ny * nx
 
-    # 2. Create mass.txt (Sediment fractions and layers)
+    # 2. Create mass.txt (sediment fractions and layers)
     n_layers = 3
     n_fractions = 4
     
-    # Example: A uniform sediment distribution across the domain
+    # Example: a uniform sediment distribution across the domain
     mass_per_fraction = np.array([0.4, 0.3, 0.2, 0.1]) # kg per fraction
     
     # Tile the fraction distribution to fill all bed layers and spatial cells
@@ -254,11 +252,11 @@ Below is a simple Python script demonstrating how to load spatial grid dimension
     hveg = np.zeros((ny, nx, n_species))
     Nt = np.zeros((ny, nx, n_species))
 
-    # Example: Species 0 is 0.5m tall, Species 1 is 1.0m tall
+    # Example: species 0 is 0.5m tall, species 1 is 1.0m tall
     hveg[:, :, 0] = 0.5 
     hveg[:, :, 1] = 1.0
     
-    # Example: Species 0 has 10 tillers/m^2, Species 1 has 5 tillers/m^2
+    # Example: species 0 has 10 tillers/m^2, species 1 has 5 tillers/m^2
     Nt[:, :, 0] = 10.0 
     Nt[:, :, 1] = 5.0  
 
@@ -270,18 +268,13 @@ Below is a simple Python script demonstrating how to load spatial grid dimension
     np.savetxt('Nt.grd', Nt_flat)
 
 
-Time-series Boundary Conditions (*.txt)
+Time-series (*.txt)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Environmental forcing in AeoLiS—such as wind, water levels, and wave conditions—is provided through external time-series files. For all of these files, the format follows the same structure: the first column represents time in seconds w.r.t. the ``refdate`` in the main configruation file. The following columns contain the variables at those given times. The model will automatically interpolate these data points to match the modelling time steps.
+Environmental forcing in AeoLiS—such as wind, water levels, and wave conditions—is provided through external time-series files. For all of these files, the format follows the same structure: the first column represents time in seconds w.r.t. ``refdate`` in the configruation file. The following columns contain the variables at those given times. The model will automatically interpolate these data points to match the modelling time steps.
 
 wind.txt
 ~~~~~~~~
-The ``wind.txt`` file provides the wind boundary conditions driving aeolian transport. It contains three columns: 
-1. Time (s)
-2. Wind speed (m/s)
-3. Wind direction (degrees) 
-
-Wind directions can be specified in either nautical or cartesian convention, which is set in the ``aeolis.txt`` file using the ``wind_convention`` keyword. 
+The ``wind.txt`` file provides the wind boundary conditions driving aeolian transport. It contains three columns: 1. Time (s), 2. Wind speed (m/s), 3. Wind direction (degrees). Wind directions can be specified in either nautical or cartesian convention, which is set in the ``aeolis.txt`` file using the ``wind_convention`` keyword. 
 
 .. _fig-wind-inputs:
 
@@ -294,9 +287,7 @@ Wind directions can be specified in either nautical or cartesian convention, whi
 
 tide.txt
 ~~~~~~~~
-The ``tide.txt`` file contains the water elevation data for the duration of the simulation. It contains two columns:
-1. Time (s)
-2. Water elevation (m)
+The ``tide.txt`` file contains the water elevation data for the duration of the simulation. It contains two columns: 1. Time (s), 2. Water elevation (m)
 
 .. _fig-tide-inputs:
 
@@ -309,10 +300,7 @@ The ``tide.txt`` file contains the water elevation data for the duration of the 
    
 wave.txt
 ~~~~~~~~
-The ``wave.txt`` file provides the wave data used by AeoLiS to calculate runup. It contains three columns:
-1. Time (s)
-2. Significant wave height (m)
-3. Peak wave period (s)
+The ``wave.txt`` file provides the wave data used by AeoLiS to calculate runup. It contains three columns: 1. Time (s), 2. Significant wave height (m), 3. Peak wave period (s)
 
 .. _fig-wave-inputs:
 
@@ -325,13 +313,7 @@ The ``wave.txt`` file provides the wave data used by AeoLiS to calculate runup. 
 
 meteo.txt
 ~~~~~~~~~
-The ``meteo.txt`` file contains meteorological data and is only required if using the groundwater module by Hallin (2023) to simulate surface moisture. It contains six columns:
-1. Time (s)
-2. Temperature (°C)
-3. Precipitation (mm/hr)
-4. Relative humidity (%)
-5. Global radiation (MJ/$m^2$/day)
-6. Air pressure (kPa)
+The ``meteo.txt`` file contains meteorological data and is only required if using the groundwater module by Hallin (2023) to simulate surface moisture. It contains six columns: 1. Time (s), 2. Temperature (°C), 3. Precipitation (mm/hr), 4. Relative humidity (%), 5. Global radiation (MJ/$m^2$/day), 6. Air pressure (kPa)
 
 .. _fig-meteo-inputs:
 
@@ -387,6 +369,9 @@ When running the model, you can automatically generate diagnostic plots by setti
 
 
 .. _default-settings:
+
+Model output
+------------
 
 Default settings
 -----------------
