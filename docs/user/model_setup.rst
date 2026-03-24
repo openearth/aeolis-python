@@ -749,8 +749,7 @@ are listed below.
    :start-after: #: Aeolis model state variables
    :end-before: #: AeoLiS model default configuration
 
-
-Schematizing advection, shear and grainspeed
+Guide on model schematization
 ---------------------------------------------------
 
 Advection solver
@@ -774,7 +773,7 @@ Shear and grainspeed schematization
 
 There are several options for schematizing spatial shear and sediment velocity. Higher complexity yields more realistic physics but increases computational cost. To illustrate the impact of these choices, we use a consistent demonstration case: A cone-shaped bedform sits on a non-erodible layer, upwind of a vegetated patch designed to capture all incoming sediment. We expect the landform to migrate downwind and evolve into a crescentic barchan dune. We also track the amount of deposition in the vegetated area to monitor mass balance.
 
-Case 0: Flat Conditions (Original Method)
+Case 0: Windspeed - original method by Hoonhout (2016)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * **Configuration:** ``process_shear = F``, ``method_grainspeed = windspeed``
 
@@ -784,9 +783,9 @@ Topographic feedback is disabled (:math:`\nabla \tau = 0`), meaning the wind blo
    :autoplay:
    :loop:
    :muted:
-   :width: 650
+   :width: 700
 
-Case 1: Uniform Grain Speed
+Case 1: Uniform grainspeed
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * **Configuration:** ``process_shear = F``, ``method_grainspeed = duran_uniform``
 
@@ -796,9 +795,9 @@ Sediment in saltation moves significantly slower than the wind. This case introd
    :autoplay:
    :loop:
    :muted:
-   :width: 650
+   :width: 700
 
-Case 2: Topographic Steering
+Case 2: Topographic steering
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * **Configuration:** ``process_shear = T``, ``method_grainspeed = duran_uniform``
 
@@ -808,9 +807,9 @@ The shear velocity vector is now perturbed by the topography, creating spatial g
    :autoplay:
    :loop:
    :muted:
-   :width: 650
+   :width: 700
 
-Case 3 (special): Separation Bubble
+Case 3: Separation bubble (special)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * **Configuration:** ``process_separation = T`` (Requires ``process_shear = T``)
 
@@ -820,9 +819,9 @@ Steep lee-side slopes cause airflow to separate, creating a zone of recirculatio
    :autoplay:
    :loop:
    :muted:
-   :width: 650
+   :width: 700
 
-Case 4: Spatially Varying Grain Speed (Analytical)
+Case 4: Spatially varying grainspeed
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * **Configuration:** ``process_shear = T``, ``method_grainspeed = duran``
 
@@ -832,9 +831,9 @@ For a complete description of transport around landforms, the sediment velocity 
    :autoplay:
    :loop:
    :muted:
-   :width: 650
+   :width: 700
 
-Case 5: Steep Slopes (Numerical Solution)
+Case 5: Steeper Slopes (numerical solution)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * **Configuration:** ``process_shear = T``, ``method_grainspeed = duran_full``
 
@@ -844,13 +843,13 @@ The analytical approximation in Case 4 can overestimate upslope transport on ver
    :autoplay:
    :loop:
    :muted:
-   :width: 800
+   :width: 700
 
 Summary of Parameter Settings
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. list-table:: 
-   :widths: 5 25 10 10 15 15 10
+   :widths: 5 25 5 5 15 15 10
    :header-rows: 1
 
    * - Case
