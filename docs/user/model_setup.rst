@@ -1,4 +1,4 @@
-Model setup
+Model Input and Output
 =================
 Setting up an AeoLiS model involves configuring various parameters and input files. In this section, we will cover:
 
@@ -11,7 +11,7 @@ Setting up an AeoLiS model involves configuring various parameters and input fil
 
 A general tip for setting up an AeoLiS model is to start simple and build up the complexity. As a starting point, use the default values and then slowly deviate from those and turn on processes. Start with a relatively coarse grid to allow for faster simulation testing. It is also highly recommended to start with constant conditions, such as a one-directional constant wind, making it easier to interpret if the model output is logical. 
 
-While testing, go through the sequential steps AeoLiS takes, plot the variables, and critically assess whether the results are expected. Important model state variables to check include: wind speed and direction (``uws``, ``uwn``), shear velocity (``ustars``, ``ustarn``), velocity threshold (``uth``), sediment concentrations (``Cu``, ``Ct``), pickup (``pickup``), and bed level change (``zb``, ``dzb``).
+While testing, go through the sequential steps AeoLiS takes, plot the variables, and critically assess whether the results are expected. Important model state variables to check include: wind speed and direction (``uws``, ``uwn``), shear velocity (``ustars``, ``ustarn``), velocity threshold (``uth``), sediment concentrations (``Cu``, ``Ct``), pickup (``pickup``), and, finally, the resulting bed level change (``zb``, ``dzb``).
 
 In case you run into issues, we encourage users to post questions and case studies on the `AeoLiS Discussion Board`_. We use this public forum so our help and advice is available to everyone.
 
@@ -107,11 +107,11 @@ are provided via ``*.txt`` files. An overview of these files is provided in the 
 
 Main configuration file (e.g., aeolis.txt)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The main configuration file controls all processes and boundary conditions.
+The main configuration file controls all processes and input files.
 Parameters in the file are specified by various keywords; each keyword has a pre-defined
 default value (see ``constants.py`` and the Default settings tab) that will be used if it is not directly specified. Among the keywords
-are those defining external grid files (``xgrid_file``, ``ygrid_file``,
-``bed_file``) and external boundary conditions (``tide_file``, ``wave_file``, ``wind_file``).  
+are those defining grid files (``xgrid_file``, ``ygrid_file``,
+``bed_file``) and boundary conditions (``tide_file``, ``wave_file``, ``wind_file``).  
 Physical processes in AeoLiS can be toggled by setting process keywords to True (``T``) or False (``F``). 
 Example parameter files can be found in the examples folder on the AeoLiS GitHub.
 
@@ -123,16 +123,16 @@ in the ``x.grd`` file corresponds to the exact same physical cell as element `[i
 
 The model can be run in 1D and 2D mode depending on the input dimensions. Most processes are implemented in 2D mode. To run the model in 2D mode, all grid files should contain 2D matrices ``(ny, nx)`` of the same size. To run the model in 1D mode, all grid files should contain 1D vectors ``(nx, 1)``. Because some processes are easier to solve in 2D, the 1D model is internally converted to a quasi-2D model by repeating the vectors three times ``(nx, 3)``, assuming the same resolution spacing as the cross-shore direction. Results are then converted back to 1D by extracting the middle vector. 
 
-x.grd and y.grd (Spatial Grid)
+x.grd and y.grd (coordinates)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-The ``x.grd`` and ``y.grd`` files define the computational grid in meters. It is important to understand that the boundary definitions and cross-shore/longshore directions are determined by the shape and structure of the grid matrices, while the physical location and orientation are determined by the specific coordinate values inside those matrices. To ensure correct model execution and boundary alignment, grid generation should follow this step-by-step approach:
+The ``x.grd`` and ``y.grd`` files define the coordinates of the computational grid in meters. Important: The structure and order of the elements in these files determines the boundary definitions (i.e., which boundary is on which edge, what is longshore, what is cross-shore), while the specific coordinates determine the location and orientation of the domain. To ensure the model correctly interprets model grids, generation should follow this step-by-step approach (see also Python example further down below):
 
-1. **Define dimensions and resolution:** Set your domain length and grid spacing. Because the model does not yet support variable grid sizes, the cross-shore resolution must equal the alongshore resolution (e.g., ``dx = 10; dy = 10``).
-2. **Create domain axes:** Generate 1D arrays for the cross-shore and alongshore directions. The cross-shore array dictates the domain boundaries and **must be ascending**; the first x-element is always the onshore boundary, and the last is the offshore boundary (e.g., ``x = np.arange(0, Lx + dx, dx)``).
+1. **Define dimensions and resolution:** Set your domain length and grid spacing. At this stage, the x-direction always represents cross-shore and y-direction longshore. The model does not (yet) support variable grid sizes; the cross-shore resolution must equal the alongshore resolution (e.g., ``dx = 10; dy = 10``).
+2. **Create domain axes:** Generate 1D arrays for the cross-shore (x) and alongshore (y) directions. Both arrays must be ascending. In case of the x-array, the first element (``x[0]``) is at the onshore boundary, and the last element (``x[-1]``) is the offshore boundary (e.g., ``x = np.arange(0, Lx + dx, dx)``).
 3. **Generate the grid:** Use the 1D axes to create 2D coordinate matrices (e.g., ``X, Y = np.meshgrid(x, y)``).
-4. **Apply physical orientation:** Shift and rotate the coordinate values within these matrices to match the desired real-world location and orientation (e.g., ``Xr = X * np.cos(theta) - Y * np.sin(theta) + x0``).
+4. **Shift and rotate:** Now, shift and rotate the coordinatet to match the desired real-world location and orientation (e.g., ``Xr = X * np.cos(theta) - Y * np.sin(theta) + x0``). Following this order ensures both the structure of the files and the actual coordinates are correct.
 
-By handling the physical orientation directly within the grid coordinate values, the model orientation keyword ``alfa`` is no longer required and should be left at its default value of ``0``.
+By handling the physical orientation through the grid coordinates, the model orientation keyword ``alfa`` is no longer required and should be left untouched.
 
 z.grd (bed level)
 ~~~~~~~~~~~~~~~~~
@@ -140,11 +140,11 @@ The ``z.grd`` file provides the surface elevation for every cell defined in the 
 
 zne.grd (non-erodible Layer)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-The ``zne.grd`` file defines the elevation of the hard, non-erodible layer beneath the sand surface. The model will not erode sediment below this specified elevation. It follows the same dimensions and elevation datum as ``z.grd``.
+The ``zne.grd`` file defines the elevation of the non-erodible layer beneath the sand surface. The model will not erode sediment below this elevation. It follows the same dimensions and elevation datum as ``z.grd``.
 
 veg.grd (vegetation)
 ~~~~~~~~~~~~~~~~~~~~
-The ``veg.grd`` file is an optional grid providing the initial vegetation coverage (density) at each cell. 
+The ``veg.grd`` file is an optional grid providing the initial vegetation coverage (density) at each cell (0-1). 
 
 .. _fig-veg-inputs:
 
@@ -157,12 +157,13 @@ The ``veg.grd`` file is an optional grid providing the initial vegetation covera
 
 Masks (tide, wave, and runup)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Masks (e.g., ``mask_tide``, ``mask_wave``, ``mask_runup``) can be used to spatially modify boundary conditions. This is particularly useful when landward elevations are lower than the offshore water level but remain dry, or when water bodies are disconnected from the offshore (such as a barrier island system where inland water experiences no tidal or wave action).
+Masks (e.g., ``mask_tide``, ``mask_wave``, ``mask_runup``) can be used to spatially modify boundary conditions. This can be useful when, for instance, onshore elevations are lower than the offshore water level but remain dry, or when water bodies are disconnected from the offshore (such as a barrier island where the lagoon has no tidal or wave action).
 
-Masks utilize complex numbers to apply both a scaling multiplier and a static offset to the boundary condition, following the logic: ``Applied Value = (Real Value * Boundary Value) + Complex Value``. To completely zero out the boundary value in a specific area (e.g., no waves inland), use ``0``. To set a fixed static value regardless of the incoming boundary condition (e.g., an inland lake permanently fixed at +2m water level), use a complex value such as ``0 + 2j``.
+Masks use complex numbers to apply both a scaling multiplier (real) and a static offset (complex) to the boundary condition. For instance, for waveheight (Hs): ``Hs =  $\mathbb{R}$ * Hs + $\mathbb{C}$``. To half the boundary value in a specific area (e.g., sheltered waves inland), use ``0.5``. To set a fixed static value regardless of the incoming boundary condition (e.g., an inland lake permanently fixed at +2m water level), use a complex value such as ``0 + 2j``.
 
 Example Python script
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This Python script shows how to generate the grid files mentioned above.
 
 .. code-block:: python
 
@@ -206,7 +207,7 @@ Example Python script
 
 Multi-dimensional Inputs (mass, hveg, Nt)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Some variables require multiple dimensions per spatial grid cell, such as spatially varying grain sizes (multiple fractions and bed layers) or complex vegetation cover (multiple species). AeoLiS requires these multi-dimensional arrays to be flattened into two-dimensional formats before saving as textfiles.
+Some variables require multiple dimensions per spatial grid cell, such as spatially varying grain sizes (multiple fractions and bed layers) or complex vegetation cover (multiple species). AeoLiS requires these multi-dimensional arrays to be flattened into lower-dimensional formats before they can be saved as textfiles.
 
 * **mass.txt**: Defines the mass of each sediment fraction per bed layer. If the grain size distribution is uniform across the domain, which is most often the case, this file is not needed (see keywords ``grain_dist`` and ``grain_size`` in the configuration file). The 4D shape of `(ny, nx, nlayers, nfractions)` must be reshaped into a 2D matrix of shape `(nx * ny, nfractions * nlayers)`. The rows represent the flattened spatial coordinates, and the columns are grouped by bed layer (e.g., Layer 1: Fraction 1, Fraction 2; Layer 2: Fraction 1, Fraction 2).
 * **hveg.grd and Nt.grd**: When using the grass vegetation method (``method_vegetation = grass``), the model needs vegetation height (``hveg``) and density (``Nt``). Because this method supports multiple interacting species, the 3D shape of `(ny, nx, nspecies)` is flattened into a 1D vector of shape `(ny * nx * nspecies)`. 
@@ -232,49 +233,43 @@ Below is a simple Python script demonstrating how to load spatial grid dimension
     X = np.loadtxt('x.grd')
     ny, nx = X.shape
     n_cells = ny * nx
+    n_species = 2
 
-    # 2. Create mass.txt (sediment fractions and layers)
+    # 2a. Create mass.txt (sediment fractions and layers)
     n_layers = 3
     n_fractions = 4
+    mass_per_fraction = np.array([0.4, 0.3, 0.2, 0.1]) # kg per fraction (uniform sediment distribution across the domain)
     
-    # Example: a uniform sediment distribution across the domain
-    mass_per_fraction = np.array([0.4, 0.3, 0.2, 0.1]) # kg per fraction
-    
-    # Tile the fraction distribution to fill all bed layers and spatial cells
-    # Resulting shape: (n_cells, n_fractions * n_layers)
-    mass_matrix = np.tile(mass_per_fraction, (n_cells, n_layers)) 
-    np.savetxt('mass.txt', mass_matrix)
+    # Create the mass matrix using tile
+    mass_matrix = np.tile(mass_per_fraction, (n_cells, n_layers))  # (n_cells, n_fractions * n_layers)
 
-    # 3. Create hveg.grd and Nt.grd (Multi-species vegetation)
-    n_species = 2
-    
-    # Initialize 3D arrays
+    # Initialize the vegetation arrays
     hveg = np.zeros((ny, nx, n_species))
     Nt = np.zeros((ny, nx, n_species))
 
-    # Example: species 0 is 0.5m tall, species 1 is 1.0m tall
-    hveg[:, :, 0] = 0.5 
-    hveg[:, :, 1] = 1.0
-    
-    # Example: species 0 has 10 tillers/m^2, species 1 has 5 tillers/m^2
-    Nt[:, :, 0] = 10.0 
+    # Fill the vegetation arrays
+    hveg[:, :, 0] = 0.5 # first species is 0.5m tall
+    hveg[:, :, 1] = 1.0 # second species is 1.0m tall
+    Nt[:, :, 0] = 10.0 # tillers/m2
     Nt[:, :, 1] = 5.0  
 
-    # Flatten the 3D arrays into 1D vectors for AeoLiS
+    # Flatten the vegetation arrays
     hveg_flat = hveg.reshape(-1)
     Nt_flat = Nt.reshape(-1)
 
+    # Save files
+    np.savetxt('mass.txt', mass_matrix)
     np.savetxt('hveg.grd', hveg_flat)
     np.savetxt('Nt.grd', Nt_flat)
 
 
 Time-series (*.txt)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Environmental forcing in AeoLiS—such as wind, water levels, and wave conditions—is provided through external time-series files. For all of these files, the format follows the same structure: the first column represents time in seconds w.r.t. ``refdate`` in the configruation file. The following columns contain the variables at those given times. The model will automatically interpolate these data points to match the modelling time steps.
+Environmental forcing in AeoLiS (wind, water, waves) is provided through time-series files. For all of these files, the format follows the same structure: the first column represents time in seconds w.r.t. ``refdate`` in the configruation file. The other columns contain the variables at those given times. The model will automatically interpolate these data points to match the modelling time steps.
 
 wind.txt
 ~~~~~~~~
-The ``wind.txt`` file provides the wind boundary conditions driving aeolian transport. It contains three columns: 1. Time (s), 2. Wind speed (m/s), 3. Wind direction (degrees). Wind directions can be specified in either nautical or cartesian convention, which is set in the ``aeolis.txt`` file using the ``wind_convention`` keyword. 
+The ``wind.txt`` file provides the wind boundary conditions driving aeolian transport. It contains three columns: 1. Time (s), 2. Wind speed (m/s), 3. Wind direction (degrees). Wind directions can be specified in either nautical or cartesian convention, which is set using the ``wind_convention`` keyword in the configuration file. 
 
 .. _fig-wind-inputs:
 
@@ -313,7 +308,7 @@ The ``wave.txt`` file provides the wave data used by AeoLiS to calculate runup. 
 
 meteo.txt
 ~~~~~~~~~
-The ``meteo.txt`` file contains meteorological data and is only required if using the groundwater module by Hallin (2023) to simulate surface moisture. It contains six columns: 1. Time (s), 2. Temperature (°C), 3. Precipitation (mm/hr), 4. Relative humidity (%), 5. Global radiation (MJ/$m^2$/day), 6. Air pressure (kPa)
+The ``meteo.txt`` file contains meteorological data and is only required if using the groundwater module by Hallin (2023) to simulate surface moisture (``process_groundwater = T``). It contains six columns: 1. Time (s), 2. Temperature (°C), 3. Precipitation (mm/hr), 4. Relative humidity (%), 5. Global radiation (MJ/$m^2$/day), 6. Air pressure (kPa)
 
 .. _fig-meteo-inputs:
 
@@ -326,7 +321,7 @@ The ``meteo.txt`` file contains meteorological data and is only required if usin
 
 Example Python script
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Below is a simple Python script demonstrating how to generate and save these time-series files using NumPy. In this example, we generate a 10-day simulation with a constant onshore wind, a harmonic tide, and constant wave conditions.
+Below is a simple Python script demonstrating how to generate and save these time-series files. In this example, we generate a 10-day simulation with a constant onshore wind, a harmonic tide, and constant wave conditions.
 
 .. code-block:: python
 
@@ -361,108 +356,13 @@ Below is a simple Python script demonstrating how to generate and save these tim
 
 Visualizating input settings
 ^^^^^^^^^^^^^^^^^^^^
-When running the model, you can automatically generate diagnostic plots by setting the keyword ``visualization = True`` in your ``aeolis.txt`` file. This will automatically generate figures in your simulation folder to help verify your setup:
+When running the model, you can automatically generate diagnostic plots by setting the keyword ``visualization = T`` in the configuration file. This will automatically generate figures in your simulation folder to help verify your setup:
 
-* ``figure_grid_initialization.png``: Displays the grid orientation and boundaries.
+* ``figure_grid_initialization.png``: Displays the grid orientation and boundary definitions.
 * ``figure_params_initialization.png``: Shows the most relevant spatial parameters mapped onto the domain.
 * ``figure_timeseries_initialization.png``: Visualizes the time series of your environmental boundary conditions.
 
-
 .. _default-settings:
-
-
-Model output
-------------
-
-AeoLiS writes its simulation results to a single NetCDF4 file (by default named ``aeolis.nc``). The contents and frequency of this file are configured via the configuration file. The output interval is defined in seconds using the ``output_times`` keyword. The output variables are specified as a list using the ``output_vars`` keyword. You can request any of the variables listed in the :ref:`Model state/output` section, while ``x`` and ``y`` are automatically included.
-
-While most output variables have 2D spatial dimensions combined with a ``time`` dimension, some contain additional dimensions. For example, sediment mass (``mass``) is calculated per grid cell, bed layer, and sediment fraction. Outputting these multi-dimensional variables can result in large file sizes. To reduce this, AeoLiS offers ``masstop`` as output, which provides the sediment distribution only for the active top layer.
-
-By default, the output represents the model state at the exact moment defined by the output interval. If the internal time step (``dt``) is smaller than this interval, intermediate calculations are not saved. To evaluate variable behavior between output intervals, statistical summaries can be requested by appending suffixes directly to the variable names in ``output_vars``. Available suffixes include ``_avg`` (average), ``_sum`` (cumulative sum), ``_var`` (variance), ``_min`` (minimum), and ``_max`` (maximum) over the output interval.
-
-.. note::
-   **Known Issue:** Because the model parses the underscore (``_``) to identify these statistical requests, variables that naturally contain underscores in their base names might occasionally cause parsing conflicts.
-
-Example Python script 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. code-block:: python
-
-    import netCDF4 as nc
-    import matplotlib.pyplot as plt
-
-    # 1. Open the NetCDF output file
-    ncfile = 'aeolis.nc'
-    ds = nc.Dataset(ncfile, 'r')
-
-    # 2. Load spatial coordinates and bed level
-    x = ds.variables['x'][:, :]
-    y = ds.variables['y'][:, :]
-    zb_final = ds.variables['zb'][-1, :, :] # (time, y, x)
-    ds.close()
-
-    # 3. Plot the final bed level
-    fig, ax = plt.subplots(figsize=(8, 6))
-    pc = ax.pcolormesh(x, y, zb_final, cmap='viridis', shading='auto')
-    ax.set_aspect('equal') 
-    ax.set_xlabel('x (m)')
-    ax.set_ylabel('y (m)')
-    ax.set_title('Final Bed Level (zb)')
-    fig.colorbar(pc, ax=ax, label='Bed level (m)')
-
-    plt.tight_layout()
-    plt.show()
-
-
-Example Python script for animation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Below is a second example demonstrating how to animate time-series output of the cross-shore (``ustars``) and alongshore (``ustarn``) shear velocity components.
-
-.. code-block:: python
-
-    import netCDF4 as nc
-    import numpy as np
-    import matplotlib.pyplot as plt
-    import matplotlib.animation as animation
-
-    # 1. Open the NetCDF output file and load variables
-    ncfile = 'aeolis.nc'
-    ds = nc.Dataset(ncfile, 'r')
-
-    time = ds.variables['time'][:]
-    x = ds.variables['x'][:, :]
-    y = ds.variables['y'][:, :]
-    ustar = ds.variables['ustar'][:] # (time, y, x)
-    ustars = ds.variables['ustars'][:] # (time, y, x)
-    ustarn = ds.variables['ustarn'][:] # (time, y, x)
-    ds.close()
-
-    # 2. Set up the figure layout
-    fig, ax = plt.subplots(figsize=(8, 6))
-    ax.set_aspect('equal')
-    ax.set_xlabel('x (m)')
-    ax.set_ylabel('y (m)')
-
-    # Initial background mesh and colorbar
-    vmax = np.max(ustar) # Set a fixed scale for the animation
-    pc = ax.pcolormesh(x, y, ustar[0, :, :], cmap='YlOrRd', shading='auto', vmin=0, vmax=vmax)
-    fig.colorbar(pc, ax=ax, label='Shear velocity magnitude (m/s)')
-
-    # Initial quiver plot (vectors)
-    Q = ax.quiver(x, y, ustars[0, :, :], ustarn[0, :, :], color='black')
-    title = ax.set_title(f'Shear Velocity at t = {time[0]:.0f} s')
-
-    # 3. Define the update function for the animation
-    def update(frame):
-        pc.set_array(ustar_mag[frame, :, :].ravel())
-        Q.set_UVC(ustars[frame, :, :], ustarn[frame, :, :])
-        title.set_text(f'Shear Velocity at t = {time[frame]:.0f} s')
-        return pc, Q, title
-
-    # 4. Create the animation
-    frames = len(time)
-    ani = animation.FuncAnimation(fig, update, frames=frames, blit=False)
-    ani.save('ustar_animation.mp4', writer='ffmpeg', fps=10)
 
 Default settings
 -----------------
@@ -571,6 +471,101 @@ This process enables alteration of the shear velocity if fence characteristics a
 process_dune_erosion
 ^^^^^^^^^^^^^^^^^^^^^
 This flag turns on dune erosion calculation (:py:mod:`aeolis.erosion`.) based on the Palmsten and Holman (2012) method. After calculating the erosion, the avalanching routine is run in :py:mod:`aeolis.model.update`. This is needed because these modules only get called for aeolian transport in case of winds above threshold.
+
+
+
+
+
+Model output
+------------
+
+AeoLiS writes its simulation results to a NetCDF4 file (by default named ``aeolis.nc``). The outputed variables (``output_vars``) and frequency (``output_times``) of this file are configured via the configuration file. You can request any of the variables listed in the :ref:`Model state/output` section, while ``x`` and ``y`` are automatically included.
+
+While most output variables have 2D spatial dimensions combined with a ``time`` dimension (time, ny, nx), some contain additional dimensions. For example, sediment mass (``mass``) is calculated per grid cell, bed layer, and sediment fraction. Outputting such a five-dimensional variable can result in large file sizes. To reduce this, AeoLiS offers ``masstop`` as output, which provides the sediment distribution only for the active top layer.
+
+By default, the output represents the model state at the exact moment defined by the output interval. If the internal time step (``dt``) is smaller than this interval, intermediate calculations are not saved. To evaluate variable behavior between output intervals, statistical summaries can be requested by appending suffixes directly to the variable names in ``output_vars``. Available suffixes include ``_avg`` (average), ``_sum`` (cumulative sum), ``_var`` (variance), ``_min`` (minimum), and ``_max`` (maximum) over the output interval.
+
+.. note::
+   **Known Issue:** Because the model parses the underscore (``_``) to identify these statistical requests, variables that contain underscores in their base names will cause parsing conflicts.
+
+Example Python script 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Below is a Python script showing how to read the NetCDF output data en create a single plot.
+
+.. code-block:: python
+
+    import netCDF4 as nc
+    import matplotlib.pyplot as plt
+
+    # 1. Open the NetCDF output file
+    ncfile = 'aeolis.nc'
+    ds = nc.Dataset(ncfile, 'r')
+
+    # 2. Load spatial coordinates and bed level
+    x = ds.variables['x'][:, :]
+    y = ds.variables['y'][:, :]
+    zb_final = ds.variables['zb'][-1, :, :] # (time, y, x)
+    ds.close()
+
+    # 3. Plot the final bed level
+    fig, ax = plt.subplots(figsize=(8, 6))
+    pc = ax.pcolormesh(x, y, zb_final, cmap='viridis', shading='auto')
+    ax.set_aspect('equal') 
+    ax.set_xlabel('x (m)')
+    ax.set_ylabel('y (m)')
+    ax.set_title('Final Bed Level (zb)')
+    fig.colorbar(pc, ax=ax, label='Bed level (m)')
+
+    plt.tight_layout()
+    plt.show()
+
+
+Example Python script for animation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Below is a second example demonstrating how to animate time-series output of the cross-shore (``ustars``) and alongshore (``ustarn``) shear velocity components.
+
+.. code-block:: python
+
+    import netCDF4 as nc
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import matplotlib.animation as animation
+
+    # 1. Open the NetCDF output file and load variables
+    ncfile = 'aeolis.nc'
+    ds = nc.Dataset(ncfile, 'r')
+
+    time = ds.variables['time'][:]
+    x = ds.variables['x'][:, :]
+    y = ds.variables['y'][:, :]
+    ustar = ds.variables['ustar'][:] # (time, y, x)
+    ustars = ds.variables['ustars'][:] # (time, y, x)
+    ustarn = ds.variables['ustarn'][:] # (time, y, x)
+    ds.close()
+
+    # 2. Set up the figure layout
+    fig, ax = plt.subplots(figsize=(8, 6))
+    title = ax.set_title(f'Shear Velocity at t = {time[0]:.0f} s')
+    ax.set_aspect('equal')
+    ax.set_xlabel('x (m)')
+    ax.set_ylabel('y (m)')
+
+    # Initial background mesh, colorbar and overlaying quiver plot (vectors)
+    pc = ax.pcolormesh(x, y, ustar[0, :, :], cmap='YlOrRd', shading='auto', vmin=0, vmax=np.max(ustar))
+    fig.colorbar(pc, ax=ax, label='Shear velocity magnitude (m/s)')
+    Q = ax.quiver(x, y, ustars[0, :, :], ustarn[0, :, :], color='black')
+    
+    # 3. Define the update function for the animation
+    def update(frame):
+        pc.set_array(ustar_mag[frame, :, :].ravel())                 # update basemap
+        Q.set_UVC(ustars[frame, :, :], ustarn[frame, :, :])          # update quiver
+        title.set_text(f'Shear Velocity at t = {time[frame]:.0f} s') # update title
+        return pc, Q, title
+
+    # 4. Create the animation
+    ani = animation.FuncAnimation(fig, update, frames=len(time), blit=False)
+    ani.save('ustar_animation.mp4', writer='ffmpeg', fps=10)
+
 
 
 Model state/output
