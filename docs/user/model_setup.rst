@@ -370,8 +370,49 @@ When running the model, you can automatically generate diagnostic plots by setti
 
 .. _default-settings:
 
+
 Model output
 ------------
+
+AeoLiS writes its simulation results to a single NetCDF4 file (by default named ``aeolis.nc``). The contents and frequency of this file are configured via the configuration file. The output interval is defined in seconds using the ``output_times`` keyword. The output variables are specified as a list using the ``output_vars`` keyword. You can request any of the variables listed in the :ref:`Model state/output` section, while ``x`` and ``y`` are automatically included.
+
+While most output variables have 2D spatial dimensions combined with a ``time`` dimension, some contain additional dimensions. For example, sediment mass (``mass``) is calculated per grid cell, bed layer, and sediment fraction. Outputting these multi-dimensional variables can result in large file sizes. To reduce this, AeoLiS offers ``masstop`` as output, which provides the sediment distribution only for the active top layer.
+
+By default, the output represents the model state at the exact moment defined by the output interval. If the internal time step (``dt``) is smaller than this interval, intermediate calculations are not saved. To evaluate variable behavior between output intervals, statistical summaries can be requested by appending suffixes directly to the variable names in ``output_vars``. Available suffixes include ``_avg`` (average), ``_sum`` (cumulative sum), ``_var`` (variance), ``_min`` (minimum), and ``_max`` (maximum) over the output interval.
+
+.. note::
+   **Known Issue:** Because the model parses the underscore (``_``) to identify these statistical requests, variables that naturally contain underscores in their base names might occasionally cause parsing conflicts.
+
+Example Python script 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+    import netCDF4 as nc
+    import matplotlib.pyplot as plt
+
+    # 1. Open the NetCDF output file
+    ncfile = 'aeolis.nc'
+    ds = nc.Dataset(ncfile, 'r')
+
+    # 2. Load spatial coordinates and bed level
+    x = ds.variables['x'][:, :]
+    y = ds.variables['y'][:, :]
+    zb_final = ds.variables['zb'][-1, :, :] # (time, y, x)
+    ds.close()
+
+    # 3. Plot the final bed level
+    fig, ax = plt.subplots(figsize=(8, 6))
+    pc = ax.pcolormesh(x, y, zb_final, cmap='viridis', shading='auto')
+    ax.set_aspect('equal') 
+    ax.set_xlabel('x (m)')
+    ax.set_ylabel('y (m)')
+    ax.set_title('Final Bed Level (zb)')
+    fig.colorbar(pc, ax=ax, label='Bed level (m)')
+
+    plt.tight_layout()
+    plt.show()
+
 
 Default settings
 -----------------
