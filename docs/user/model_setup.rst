@@ -414,6 +414,56 @@ Example Python script
     plt.show()
 
 
+Example Python script for animation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Below is a second example demonstrating how to animate time-series output of the cross-shore (``ustars``) and alongshore (``ustarn``) shear velocity components.
+
+.. code-block:: python
+
+    import netCDF4 as nc
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import matplotlib.animation as animation
+
+    # 1. Open the NetCDF output file and load variables
+    ncfile = 'aeolis.nc'
+    ds = nc.Dataset(ncfile, 'r')
+
+    time = ds.variables['time'][:]
+    x = ds.variables['x'][:, :]
+    y = ds.variables['y'][:, :]
+    ustar = ds.variables['ustar'][:] # (time, y, x)
+    ustars = ds.variables['ustars'][:] # (time, y, x)
+    ustarn = ds.variables['ustarn'][:] # (time, y, x)
+    ds.close()
+
+    # 2. Set up the figure layout
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.set_aspect('equal')
+    ax.set_xlabel('x (m)')
+    ax.set_ylabel('y (m)')
+
+    # Initial background mesh and colorbar
+    vmax = np.max(ustar) # Set a fixed scale for the animation
+    pc = ax.pcolormesh(x, y, ustar[0, :, :], cmap='YlOrRd', shading='auto', vmin=0, vmax=vmax)
+    fig.colorbar(pc, ax=ax, label='Shear velocity magnitude (m/s)')
+
+    # Initial quiver plot (vectors)
+    Q = ax.quiver(x, y, ustars[0, :, :], ustarn[0, :, :], color='black')
+    title = ax.set_title(f'Shear Velocity at t = {time[0]:.0f} s')
+
+    # 3. Define the update function for the animation
+    def update(frame):
+        pc.set_array(ustar_mag[frame, :, :].ravel())
+        Q.set_UVC(ustars[frame, :, :], ustarn[frame, :, :])
+        title.set_text(f'Shear Velocity at t = {time[frame]:.0f} s')
+        return pc, Q, title
+
+    # 4. Create the animation
+    frames = len(time)
+    ani = animation.FuncAnimation(fig, update, frames=frames, blit=False)
+    ani.save('ustar_animation.mp4', writer='ffmpeg', fps=10)
+
 Default settings
 -----------------
 
