@@ -750,12 +750,8 @@ are listed below.
    :end-before: #: AeoLiS model default configuration
 
 
-Guidance on schematization: advection, shear and grainspeed
+Schematizing advection, shear and grainspeed
 ---------------------------------------------------
-
-AeoLiS offers several options for schematizing spatial shear and sediment velocity. Higher complexity yields more realistic physics but increases computational cost. 
-
-To illustrate the impact of these choices, we use a consistent demonstration case: A cone-shaped bedform sits on a non-erodible layer, upwind of a vegetated patch designed to capture all incoming sediment. We expect the landform to migrate downwind and evolve into a crescentic barchan dune. We also track the amount of deposition in the vegetated area to monitor mass balance.
 
 Advection solver
 ^^^^^^^^^^^^^^^^
@@ -769,97 +765,80 @@ Where :math:`C` is the actual sediment concentration, :math:`U_s` is the sedimen
 
 You can solve this using three different methods (via the ``solver`` keyword):
 
-* **steadystate (default):** Highly recommended for most practical cases. Assumes concentration does not change over time within a single timestep (:math:`dc/dt = 0`) and solves rapidly using a finite difference sweeping algorithm.
-* **euler_backward:** An implicit, time-varying solver (formerly "pieter"). Recommended primarily for legacy purposes or when the steady-state assumption is problematic (e.g., :math:`dt < 10` s).
-* **euler_forward:** A simple explicit solver. Extremely slow due to strict CFL stability conditions. Included mainly for testing or educational purposes.
+* **steadystate (default):** Highly recommended for most cases. Assumes concentration does not change over time within a single timestep (:math:`dc/dt = 0`) and solves rapidly using a finite difference sweeping algorithm.
+* **euler_backward:** An implicit, time-varying solver (formerly ``pieter_solver``). Recommended primarily for legacy purposes or when the steady-state assumption is problematic (e.g., :math:`dt < 10` s).
+* **euler_forward:** A simple explicit solver. Slow due to strict CFL stability conditions. Included mainly for testing or educational purposes.
 
 Shear and grainspeed schematization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The magnitude of transport is dictated by the equilibrium concentration :math:`C_{\mathrm{sat}}`, which is a function of the shear velocity :math:`u_*`:
 
-.. math::
-
-   C_{\mathrm{sat}} \propto (u_* - u_{th})^3
-
-Where :math:`u_{th}` is the threshold shear velocity. The calculation of sediment velocity (:math:`u_s`) and the spatial variation of shear velocity (:math:`u_*`) are controlled by the ``method_grainspeed`` and ``process_shear`` keywords.
+There are several options for schematizing spatial shear and sediment velocity. Higher complexity yields more realistic physics but increases computational cost. To illustrate the impact of these choices, we use a consistent demonstration case: A cone-shaped bedform sits on a non-erodible layer, upwind of a vegetated patch designed to capture all incoming sediment. We expect the landform to migrate downwind and evolve into a crescentic barchan dune. We also track the amount of deposition in the vegetated area to monitor mass balance.
 
 Case 0: Flat Conditions (Original Method)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * **Configuration:** ``process_shear = F``, ``method_grainspeed = windspeed``
 
-Topographic feedback is disabled (:math:`\nabla \tau = 0`), meaning the wind blows over the cone as if it were flat. The sediment velocity simply equals the wind speed (:math:`u_s = u_w`). 
-
-**Result:** No landform development occurs. Sediment is stripped from the cone and deposited directly into the vegetation. This is the fastest method (20 mins), but should only be used for bulk transport calculations where morphodynamics are irrelevant.
+Topographic feedback is disabled (:math:`\nabla \tau = 0`), meaning the wind blows over the cone as if it were flat. The sediment velocity simply equals the wind speed (:math:`u_s = u_w`). As a result, no landform development occurs. Sediment is stripped from the cone and deposited directly into the vegetation. This is the fastest method (20 mins), but should only be used for bulk transport calculations where morphodynamics are irrelevant.
 
 .. video:: /images/case_00.mp4
    :autoplay:
    :loop:
    :muted:
-   :width: 800
+   :width: 650
 
 Case 1: Uniform Grain Speed
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * **Configuration:** ``process_shear = F``, ``method_grainspeed = duran_uniform``
 
-Sediment in saltation moves significantly slower than the wind. This case introduces the saltation model by Durán (2007) so that :math:`u_s < u_w`, but keeps the flat-bed assumption for shear velocity. 
-
-**Result:** Deposition patterns become more localized, but the landform still does not migrate because there is no topographic steering. It is slightly slower (33 mins) but physically more realistic than Case 0 for static topographies.
+Sediment in saltation moves significantly slower than the wind. This case introduces the saltation model by Durán (2007) so that :math:`u_s < u_w`, but keeps the flat-bed assumption for shear velocity. Deposition patterns become more localized, but the landform still does not migrate because there is no topographic steering. It is slightly slower (33 mins) but physically more realistic than Case 0 for static topographies.
 
 .. video:: /images/case_01.mp4
    :autoplay:
    :loop:
    :muted:
-   :width: 800
+   :width: 650
 
 Case 2: Topographic Steering
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * **Configuration:** ``process_shear = T``, ``method_grainspeed = duran_uniform``
 
-The shear velocity vector is now perturbed by the topography, creating spatial gradients in transport capacity. The sediment velocity :math:`u_s` remains uniform.
-
-**Result:** The variation in shear velocity causes the entire landform to migrate towards the vegetation. However, without flow separation or spatial variation in grain speed, it fails to evolve into a crescentic shape. Computational cost increases significantly (2:01 hrs) due to the secondary rotational grid required to calculate shear.
+The shear velocity vector is now perturbed by the topography, creating spatial gradients in transport capacity. The sediment velocity :math:`u_s` remains uniform. The variation in shear velocity causes the entire landform to migrate towards the vegetation. However, without flow separation or spatial variation in grain speed, it fails to evolve into a crescentic shape. Computational cost increases significantly (2:01 hrs) due to the secondary rotational grid required to calculate shear and increased spatial variability in transport which causes the advection solver to need more iterations.
 
 .. video:: /images/case_02.mp4
    :autoplay:
    :loop:
    :muted:
-   :width: 800
+   :width: 650
 
 Case 3 (special): Separation Bubble
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * **Configuration:** ``process_separation = T`` (Requires ``process_shear = T``)
 
-Steep lee-side slopes cause airflow to separate, creating a zone of recirculation and low shear. 
-
-**Result:** Activating the separation bubble prevents sediment transport on the lee side, preserving the steep slip face and allowing the crescentic barchan shape to form (2:10 hrs). Note: In highly complex topographies (like dense vegetation), the bubble may produce undesirable morphodynamics, so use it judiciously.
+Steep lee-side slopes cause airflow to separate, creating a zone of recirculation and low shear. Activating the separation bubble prevents sediment transport on the lee side, preserving the steep slip face and allowing the crescentic barchan shape to form (2:10 hrs). Note: In highly complex topographies (like dense vegetation), the bubble may produce undesirable morphodynamics, so use it judiciously.
 
 .. video:: /images/case_03.mp4
    :autoplay:
    :loop:
    :muted:
-   :width: 800
+   :width: 650
 
 Case 4: Spatially Varying Grain Speed (Analytical)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * **Configuration:** ``process_shear = T``, ``method_grainspeed = duran``
 
-For a complete description of transport around landforms, the sediment velocity :math:`u_s` must also vary spatially. This method uses Durán's analytical approximation, which incorporates slope terms but assumes slopes are relatively gentle to avoid heavy numerical solving.
-
-**Result:** Produces the expected crescentic morphodynamics efficiently (2:03 hrs). **This is the recommended configuration** for most simulations involving bedform evolution where topographic steering is important.
+For a complete description of transport around landforms, the sediment velocity :math:`u_s` must also vary spatially. This method uses Durán's analytical approximation, which incorporates slope terms but assumes slopes are relatively gentle to avoid heavy numerical solving. Produces the expected crescentic morphodynamics efficiently (2:03 hrs). **This is the recommended configuration** for most simulations involving bedform evolution where topographic steering is important.
 
 .. video:: /images/case_04.mp4
    :autoplay:
    :loop:
    :muted:
-   :width: 800
+   :width: 650
 
 Case 5: Steep Slopes (Numerical Solution)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * **Configuration:** ``process_shear = T``, ``method_grainspeed = duran_full``
 
-The analytical approximation in Case 4 can overestimate upslope transport on very steep slopes (e.g., :math:`> 33^\circ`). This method solves the full sediment velocity equation numerically to account for strong gravitational effects.
-
-**Result:** While differences are subtle in standard dune simulations, this method is crucial for extreme topography like steep blowout cliffs (2:09 hrs). *Caution: Dynamic avalanching is not fully coupled yet, so schematize steep slopes carefully.*
+The analytical approximation in Case 4 can overestimate upslope transport on very steep slopes (e.g., :math:`> 33^\circ`). This method solves the full sediment velocity equation numerically to account for strong gravitational effects.  While differences are subtle in standard dune simulations, this method is crucial for extreme topography like steep blowout cliffs (2:09 hrs). Caution: Dynamic avalanching is not fully coupled yet, so schematize steep slopes carefully.
 
 .. video:: /images/case_05.mp4
    :autoplay:
@@ -871,7 +850,7 @@ Summary of Parameter Settings
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. list-table:: 
-   :widths: 5 25 10 10 15 15 10 10
+   :widths: 5 25 10 10 15 15 10
    :header-rows: 1
 
    * - Case
@@ -881,7 +860,6 @@ Summary of Parameter Settings
      - ``grainspeed``
      - Application
      - Time
-     - Dep. (m³)
    * - **0**
      - Flat / Windspeed
      - ``F``
@@ -889,7 +867,6 @@ Summary of Parameter Settings
      - ``windspeed``
      - Bulk transport
      - 0:20
-     - 9961
    * - **1**
      - Flat / Grainspeed
      - ``F``
@@ -897,7 +874,6 @@ Summary of Parameter Settings
      - ``duran_uniform``
      - Static topography
      - 0:33
-     - 11095
    * - **2**
      - Topo Steering
      - ``T``
@@ -905,7 +881,6 @@ Summary of Parameter Settings
      - ``duran_uniform``
      - Veg-dominated dunes
      - 2:01
-     - 13156
    * - **3**
      - Separation Bubble
      - ``T``
@@ -913,7 +888,6 @@ Summary of Parameter Settings
      - ``duran_uniform``
      - Moderate morphology
      - 2:10
-     - 11222
    * - **4**
      - Varying $u_s$ (Approx)
      - ``T``
@@ -921,7 +895,6 @@ Summary of Parameter Settings
      - ``duran``
      - **Landform evolution**
      - 2:03
-     - 10313
    * - **5**
      - Varying $u_s$ (Full)
      - ``T``
@@ -929,6 +902,4 @@ Summary of Parameter Settings
      - ``duran_full``
      - Extreme topography
      - 2:09
-     - 10406
 
-*Note: Deposition tracked out of a total 13,404 m³.*
