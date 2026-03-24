@@ -783,7 +783,7 @@ Topographic feedback is disabled (:math:`\nabla \tau = 0`), meaning the wind blo
    :autoplay:
    :loop:
    :muted:
-   :width: 700
+   :width: 900
 
 Case 1: Uniform grainspeed
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -795,7 +795,7 @@ Sediment in saltation moves significantly slower than the wind. This case introd
    :autoplay:
    :loop:
    :muted:
-   :width: 700
+   :width: 900
 
 Case 2: Topographic steering
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -807,7 +807,7 @@ The shear velocity vector is now perturbed by the topography, creating spatial g
    :autoplay:
    :loop:
    :muted:
-   :width: 700
+   :width: 900
 
 Case 3: Separation bubble (special)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -819,7 +819,7 @@ Steep lee-side slopes cause airflow to separate, creating a zone of recirculatio
    :autoplay:
    :loop:
    :muted:
-   :width: 700
+   :width: 900
 
 Case 4: Spatially varying grainspeed
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -831,7 +831,7 @@ For a complete description of transport around landforms, the sediment velocity 
    :autoplay:
    :loop:
    :muted:
-   :width: 700
+   :width: 900
 
 Case 5: Steeper Slopes (numerical solution)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -843,7 +843,7 @@ The analytical approximation in Case 4 can overestimate upslope transport on ver
    :autoplay:
    :loop:
    :muted:
-   :width: 700
+   :width: 900
 
 Summary of Parameter Settings
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
