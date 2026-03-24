@@ -1,4 +1,4 @@
-Model Input and Output
+Model in- & output
 =================
 Setting up an AeoLiS model involves configuring various parameters and input files. In this section, we will cover:
 
