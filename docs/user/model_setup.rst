@@ -791,7 +791,7 @@ Topographic feedback is disabled (:math:`\nabla \tau = 0`), meaning the wind blo
 
 **Result:** No landform development occurs. Sediment is stripped from the cone and deposited directly into the vegetation. This is the fastest method (20 mins), but should only be used for bulk transport calculations where morphodynamics are irrelevant.
 
-.. video:: images/case_00.mp4
+.. video:: ../images/case_00.mp4
    :autoplay:
    :loop:
    :muted:
@@ -805,15 +805,11 @@ Sediment in saltation moves significantly slower than the wind. This case introd
 
 **Result:** Deposition patterns become more localized, but the landform still does not migrate because there is no topographic steering. It is slightly slower (33 mins) but physically more realistic than Case 0 for static topographies.
 
-.. video:: images/case_01.mp4
+.. video:: ../images/case_01.mp4
    :autoplay:
    :loop:
    :muted:
    :width: 800
-
-    <video autoplay loop muted playsinline width="100%">
-        <source src="../_images/case_01.mp4" type="video/mp4">
-    </video>
 
 Case 2: Topographic Steering
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -837,7 +833,7 @@ Steep lee-side slopes cause airflow to separate, creating a zone of recirculatio
 
 **Result:** Activating the separation bubble prevents sediment transport on the lee side, preserving the steep slip face and allowing the crescentic barchan shape to form (2:10 hrs). Note: In highly complex topographies (like dense vegetation), the bubble may produce undesirable morphodynamics, so use it judiciously.
 
-.. video:: images/case_03.mp4
+.. video:: ../images/case_03.mp4
    :autoplay:
    :loop:
    :muted:
@@ -851,7 +847,7 @@ For a complete description of transport around landforms, the sediment velocity 
 
 **Result:** Produces the expected crescentic morphodynamics efficiently (2:03 hrs). **This is the recommended configuration** for most simulations involving bedform evolution where topographic steering is important.
 
-.. video:: images/case_04.mp4
+.. video:: ../images/case_04.mp4
    :autoplay:
    :loop:
    :muted:
@@ -865,7 +861,7 @@ The analytical approximation in Case 4 can overestimate upslope transport on ver
 
 **Result:** While differences are subtle in standard dune simulations, this method is crucial for extreme topography like steep blowout cliffs (2:09 hrs). *Caution: Dynamic avalanching is not fully coupled yet, so schematize steep slopes carefully.*
 
-.. video:: images/case_05.mp4
+.. video:: ../images/case_05.mp4
    :autoplay:
    :loop:
    :muted:
