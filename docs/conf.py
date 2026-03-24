@@ -45,6 +45,7 @@ extensions = [
     'sphinx_copybutton',
     'sphinxcontrib.bibtex',
     'sphinx_rtd_theme',
+    'sphinxcontrib.video',
     # 'nbsphinx',
 ]
 
