@@ -105,7 +105,7 @@ are provided via ``*.txt`` files. An overview of these files is provided in the 
      - Optional
      - Spatial masks for tide, wave, or runup boundary conditions
 
-Main configuration file (e.g., aeolis.txt)
+Configuration file (aeolis.txt)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The main configuration file controls all processes and input files.
 Parameters in the file are specified by various keywords; each keyword has a pre-defined
@@ -115,7 +115,7 @@ are those defining grid files (``xgrid_file``, ``ygrid_file``,
 Physical processes in AeoLiS can be toggled by setting process keywords to True (``T``) or False (``F``). 
 Example parameter files can be found in the examples folder on the AeoLiS GitHub.
 
-Properties of \*.grd files
+Grid files (\*.grd)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 All grid files (``x.grd``, ``y.grd``, ``z.grd``, ``zne.grd``, ``veg.grd``, etc.) must have the exact same dimensions. 
 Each value (or element) within these matrices represents a single computational cell. This means that element `[i, j]` 
@@ -161,9 +161,9 @@ Masks (e.g., ``mask_tide``, ``mask_wave``, ``mask_runup``) can be used to spatia
 
 Masks use complex numbers to apply both a scaling multiplier (real) and a static offset (complex) to the boundary condition. For instance, for waveheight (Hs): ``Hs =  $\mathbb{R}$ * Hs + $\mathbb{C}$``. To half the boundary value in a specific area (e.g., sheltered waves inland), use ``0.5``. To set a fixed static value regardless of the incoming boundary condition (e.g., an inland lake permanently fixed at +2m water level), use a complex value such as ``0 + 2j``.
 
-Example Python script
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-This Python script shows how to generate the grid files mentioned above.
+*Example Python script* 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Generating the grid files described above
 
 .. code-block:: python
 
@@ -205,8 +205,8 @@ This Python script shows how to generate the grid files mentioned above.
     np.savetxt('veg.grd', veg)
     np.savetxt('mask_tide.grd', tide_mask)
 
-Multi-dimensional Inputs (mass, hveg, Nt)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Multi-dimensional input
+~~~~~~~~~~~~~~~~~~~~~~~
 Some variables require multiple dimensions per spatial grid cell, such as spatially varying grain sizes (multiple fractions and bed layers) or complex vegetation cover (multiple species). AeoLiS requires these multi-dimensional arrays to be flattened into lower-dimensional formats before they can be saved as textfiles.
 
 * **mass.txt**: Defines the mass of each sediment fraction per bed layer. If the grain size distribution is uniform across the domain, which is most often the case, this file is not needed (see keywords ``grain_dist`` and ``grain_size`` in the configuration file). The 4D shape of `(ny, nx, nlayers, nfractions)` must be reshaped into a 2D matrix of shape `(nx * ny, nfractions * nlayers)`. The rows represent the flattened spatial coordinates, and the columns are grouped by bed layer (e.g., Layer 1: Fraction 1, Fraction 2; Layer 2: Fraction 1, Fraction 2).
@@ -222,8 +222,8 @@ Some variables require multiple dimensions per spatial grid cell, such as spatia
    File format for a 2D AeoLis mass file for spatially variable grain size distributions. Each red dot is the mass for a specific sediment fraction within a specific bed layer at a given spatial location.
 
 Example Python script
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Below is a simple Python script demonstrating how to load spatial grid dimensions and properly flatten multi-dimensional arrays for AeoLiS.
+~~~~~~~~~~~~~~~~~~~~~
+Loading spatial grid dimensions and generating multi-dimensional input grids.
 
 .. code-block:: python
 
@@ -264,7 +264,7 @@ Below is a simple Python script demonstrating how to load spatial grid dimension
 
 
 Time-series (*.txt)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^
 Environmental forcing in AeoLiS (wind, water, waves) is provided through time-series files. For all of these files, the format follows the same structure: the first column represents time in seconds w.r.t. ``refdate`` in the configruation file. The other columns contain the variables at those given times. The model will automatically interpolate these data points to match the modelling time steps.
 
 wind.txt
@@ -320,8 +320,8 @@ The ``meteo.txt`` file contains meteorological data and is only required if usin
    File format for meteorological data used to simulate surface moisture in AeoLiS.
 
 Example Python script
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Below is a simple Python script demonstrating how to generate and save these time-series files. In this example, we generate a 10-day simulation with a constant onshore wind, a harmonic tide, and constant wave conditions.
+~~~~~~~~~~~~~~~~~~~~
+Generating and saving time-series files. In this example, we generate a 10-day simulation with a constant onshore wind, a harmonic tide, and constant wave conditions.
 
 .. code-block:: python
 
@@ -364,14 +364,13 @@ When running the model, you can automatically generate diagnostic plots by setti
 
 .. _default-settings:
 
-Default settings
------------------
 
-The AeoLiS model can be configured using a model configuration
-file. For any configuration parameters not defined in the model
-configuration file, or in case the model configuration file is absent,
-the default model configuration is used. The default model
-configuration is listed below.
+All parameters and defaults
+---------------------------
+
+All available configuration parameters, and their default values, are collected in ``constants.py``. 
+For any configuration parameters not defined in the model configuration file,
+the default value is used.
 
 .. literalinclude::   ../../aeolis/constants.py
    :language: python
@@ -379,102 +378,269 @@ configuration is listed below.
    :end-before: #: Merge initial and model state
 
 
-Activate/deactivate processes
--------------------------------
-After creating the input files that are necessary to run an AeoLiS model, the next step is often to decide which processes and methods to use. Several processes are defined in the configuration file that can be turned on and off. Apart from turning processes on and off, there are also several user-defined thresholds and methods that affect the way in which processes are calculated. For example, there are different sediment transport equations available within *process_transport*. The default is Bagnold, but by defining *method_transport* in the configuration file a different equation can be used. Here, we provide a description of the processes and methods that are defined in configuration file. More detailed descriptions of the processes and their implementation can be found in :ref:`the model description <model_description>`.
+Processes, Thresholds, Methods, and Boundary Conditions
+------------------
+Processes in AeoLiS can be activated (``T``) or deactivated (``F``) via the configuration file. Several thresholds (``th_...``) can be set seperately and methods keywords (``method_...``) determine which methods are used to compute these processes. Seperate keywords set which boundary conditions are applied.
 
-An easy way to look up where these process, threshold and method flags are used is by going to the main page of the AeoLiS github and using the search bar at the top. For instance, searching *process_tide* shows that it is used in :py:mod:`aeolis.threshold.compute`, :py:mod:`aeolis.vegetation.grow`, :py:mod:`aeolis.bed.update`.
+More detailed descriptions of these processes can be found in :ref:`the model description <model_description>`. To see exactly where specific process, threshold, and method flags are utilized in the code, an easy approach is to use the search bar on the main page of the AeoLiS GitHub repository.
 
-process_wind
+List overview
 ^^^^^^^^^^^^^
-*Process_wind* makes sure the wind file is loaded, and interpolates values of the wind speed and direction to each time step. The model does not work without this flag. Used in :py:mod:`aeolis.wind.interpolate`
 
-process_threshold
-^^^^^^^^^^^^^^^^^
-*Process_threshold* allows for the alterations of the threshold velocity by processes like grain and moisture. This process does not occur if a threshold file is provided as input since this file is used to define the threshold shear velocity. Used in :py:mod:`aeolis.threshold.compute`, documentation of threshold alterations can be found in :ref:model_description
+* ``process_wind``: Interpolates wind speed and direction to each time step. *The model cannot run without this flag.*
+* ``process_threshold``: Computes the threshold shear velocity based on various processes. (Note: This is overridden if a static threshold file is provided).
+* ``process_transport``: Computes the sediment transport rates. 
+* ``process_bedupdate``: Allows the bed level to change based on calculated erosion and deposition.
+* ``process_shear``: Computes the shear stress perturbation caused by topography (needed for landform simulations).
+* ``process_separation``: Computes flow separation bubbles over steep slopes (requires ``process_shear``).
+* ``process_avalanche``: Computes avalanching when bed slopes exceed a critical static angle.
+* ``process_tide``: Computes water level elevations, determining whether cells becomes submerged.
+* ``process_wave``: Computes wave heights across the domain, including $Hs_{mix}$, required for the mixing of sediment.
+* ``process_runup``: Computes the runup extent using the Stockdon equation (requires ``process_wave`` and ``process_tide``).
+* ``process_moist``: Computes soil moisture content via different surface moisture methods. (Related flags include ``process_groundwater``, ``process_seepage_face``, and ``process_scanning``).
+* ``process_mixtoplayer``: Mixes sediment fractions over several layers down to the Depth of Disturbance (requires ``process_wave``).
+* ``process_wet_bed_reset``: Resets the bed to the original bathymetry if submerged. Execution depends on Total Water Level (TWL), requiring ``process_runup``, ``process_wave``, and ``process_tide``.
+* ``process_vegetation``: Computes vegetation growth and shear stress reduction.
+* ``process_fences``: Computes shear velocity reduction based on user-provided fence characteristics (Okin model).
+* ``process_dune_erosion``: Computes dune erosion and triggers avalanching when water levels impact the dunes.
+* ``process_meteo``: *(Placeholder flag; currently has no functionality).*
 
-- **th_grainsize**: calculates the threshold velocity based on the grain size following Bagnold (:py:mod:`aeolis.threshold.compute_grain_size`)
-- **th_bedslope**: currently not implemented, but theoretically would include an alteration of the velocity threshold based on the slope of the bed. (:py:mod:`aeolis.threshold.compute_bedslope`)
-- **th_moisture**: alters the threshold velocity based on the moisture content, many different methods are available (:py:mod:`aeolis.threshold.compute_moisture`). Only works if moisture content is defined, which is calculated when process_moisture is on. 
-- **th_salt**: alters the wind velocity threshold based on salt content following Nickling and Ecclestone (1981) (:py:mod:`aeolis.threshold.compute_salt`) 
-- **th_sheltering**: modify the wind velocity threshold based on the presence of roughness elements in the grain size fractions following Raupach (1993) (:py:mod:`aeolis.threshold.compute_sheltering`) 
-- **th_humidity** and **th_drylayer**: are currently not implemented
+Thresholds
+~~~~~~~~~~
+* ``th_grainsize``: Computes threshold velocity based on grain size (base value, ``uth0``).
+* ``th_moisture``: Modifies threshold velocity based on moisture content (requires ``process_moist``).
+* ``th_sheltering``: Modifies threshold based on sheltering by roughness elements (coarser sediment fractions).
+* ``th_nelayer``: Modifies threshold based on the presence of a non-erodible layer.
+* *(Note: ``th_bedslope``, ``th_drylayer``, ``th_salt``, and ``th_humidity`` are currently not fully implemented or rarely used).*
 
-process_transport
-^^^^^^^^^^^^^^^^^^
-*Process_transport* allows the calculation of the equilibrium transport rate based on a user-defined transport method. 
+Methods
+~~~~~~~
+*Note: More guidance on the decision for ``method_grainspeed``, ``method_shear``, and ``solver`` is given in the "Guidance on advection, shear and grainspeed solvers" section later on.*
 
-**Method_transport** defines the sediment transport equation used in the calculation of the equilibrium transport rate. Options are: *bagnold, bagnold_gs, kawamura, lettau, dk, sauermann, vanrijn_strypsteen*.
+* ``method_transport``: Defines the transport equation (Options: ``bagnold``, ``bagnold_gs``, ``kawamura``, ``lettau``, ``dk``, ``sauermann``, ``vanrijn_strypsteen``).
+* ``method_grainspeed``: Defines the speed of sediment in the air (Options: ``windspeed``, ``duran``, ``duran_uniform``, ``duran_full``).
+* ``method_shear``: Computes topographic effects on wind shear stress (Options: ``fft``, ``1Dstacks``).
+* ``method_roughness``: Computes the roughness height (Options: ``constant``, ``constant_nikuradse``, ``vanrijn_strypsteen``).
+* ``method_vegetation``: Defines the vegetation formulation (Options: ``duran``, ``grass``). The newest vegetation implementation is called through ``grass``.
+* ``method_moist_process``: Computes soil moisture content (Options: ``infiltration``, ``surface_moisture``).
+* ``method_moist_threshold``: Computes wind velocity threshold based on soil moisture (Options: ``belly_johnson``).
+* ``solver``: Defines the numerical advection solver (Options: ``steadystate``, ``euler_backward``, ``euler_forward``).
 
-**Method_grainspeed** defines at which speed the sediment transport in the air is occurring. Options are: *duran*/*duran_full*, *windspeed*, and *constant*
+Boundary Conditions
+~~~~~~~~~~~~~~~~~~~
+* ``boundary_offshore``, ``boundary_onshore``, ``boundary_lateral``: Defines the method for handling sediment concentrations at the domain edges. Options include:
+  
+  * ``constant``: Applies a zero-gradient boundary condition (incoming concentration equals the adjacent internal cell).
+  * ``flux``: Applies a user-defined incoming sediment flux based on the equilibrium concentration.
+  * ``circular``: Applies periodic boundaries where sediment leaving one side re-enters the opposite side (Note: offshore and onshore boundaries must both be set to ``circular`` together).
 
-Used in :py:mod:`aeolis.transport.equilibrium`
+* ``offshore_flux``, ``onshore_flux``, ``lateral_flux``: Defines the incoming sediment concentration as a fraction of the equilibrium concentration (``Cu``) when the respective boundary is set to ``flux`` (e.g., ``1.0`` for fully saturated incoming wind, ``0.0`` for clean air with no sediment).
 
-process_bedupdate
-^^^^^^^^^^^^^^^^^^
-Process_bedupdate allows the bed level to change based on calculated erosion/deposition. Used in :py:mod:`aeolis.bed.update`
+Typical Configurations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+When building an AeoLiS model, it helps to know which processes and methods are typically required for different environments. The table below provides a general baseline for five common simulation types.
 
-process_shear
-^^^^^^^^^^^^^^
-Process_shear calls the shear module in shear.py to calculate the shear stress perturbation caused by topography. Used in :py:mod:`aeolis.wind.initialize`
+.. list-table:: 
+   :widths: 25 15 15 15 15 15
+   :header-rows: 1
 
-process_tide
-^^^^^^^^^^^^^
-Process_tide changes the threshold velocity to infinity (no aeolian transport) if the bed level is below the water level. This process is not used if th_moist is used. Used in :py:mod:`aeolis.threshold.compute`, :py:mod:`aeolis.vegetation.grow`, :py:mod:`aeolis.bed.update`.
-
-process_wave
-^^^^^^^^^^^^^
-Process_wave allows calculation of the water depth based on the input tide file and interpolates the input wave data to the timesteps of the model run. If the wave file is not available, the wave height and peak period are set to 0. Turning this process flag on also results in the calculation of Hsmix, which is needed for the calculation of the Depth of Disturbance (*process_mixtoplayer*). The initialization/calculation is skipped if external variables are imported from another model.
-
-process_runup
-^^^^^^^^^^^^^^
-Process_runup allows calculation of the runup extent based on the wave height, peak period and water level. Process_wave and Process_tide need to be on for this to work. The runup is calculated with the Stockdon equation using a user-defined, static beach slope. The initialization/calculation is skipped if external variables are imported from another model.
-
-process_moist
-^^^^^^^^^^^^^^
-Process_moist allows calculation of the soil moisture content, based on different methods, infiltration or surface_moist
-
-method_moist_process
-
-method_moist_threshold defines the equation used to calculate teh threshold shear veolcity based on the moisture content. Used in :py:mod:`aeolis.threshold.compute_moisture`.
-
-Process_groundwater, Process_seepage_face and Process_scanning are all related to the calculation of the moisture content.
-
-process_mixtoplayer
-^^^^^^^^^^^^^^^^^^^^
-This process flag allows mixing in the layers that are present down to the depth of disturbance. For the calculation of the DoD the process_wave need to be on.
-
-process_wet_bed_reset
-^^^^^^^^^^^^^^^^^^^^^
-Resets the bed to the original bathymetry if the bed is under water (zs). Used in :py:mod:`aeolis.bed.wet_bed_reset`. The execution of the wet bed reset is dependent on the TWL calculation, which can be turned on process_runup, process_waves and process_tide.
-
-process_meteo
-^^^^^^^^^^^^^^
-This is a place holder and currently has no functionality
-
-process_avalanche
-^^^^^^^^^^^^^^^^^^
-Simulates the process of avalanching when slopes of the bed become too steep to be realistic (i.e. > a critical static slope).
-
-process_separation
-^^^^^^^^^^^^^^^^^^^
-This enables the calculation of the separation bubble within the shear perturbation module. Before executing the calculation is checks whether steep slopes are present that might lead to a separation bubble. Process_separation will only be used if process_shear is on.
-
-process_vegetation
-^^^^^^^^^^^^^^^^^^^^
-This process flag allows application of shear stress reduction due to vegetation based on Raupach or Okin. It also allows for germination and lateral growth of vegetation if those values are set to larger than 0. This process is actively being developed.
-
-process_fences
-^^^^^^^^^^^^^^^
-This process enables alteration of the shear velocity if fence characteristics are provided as user input. Calculations happen in 1D or 2D depending on grid size following the Okin model. 
-
-process_dune_erosion
-^^^^^^^^^^^^^^^^^^^^^
-This flag turns on dune erosion calculation (:py:mod:`aeolis.erosion`.) based on the Palmsten and Holman (2012) method. After calculating the erosion, the avalanching routine is run in :py:mod:`aeolis.model.update`. This is needed because these modules only get called for aeolian transport in case of winds above threshold.
-
-
-
-
+   * - Parameter / Flag
+     - Wind-only [1]_
+     - Barchan [2]_
+     - Parabolic [3]_
+     - Beach [4]_
+     - Blowout [5]_
+   * - **Processes**
+     - 
+     - 
+     - 
+     - 
+     - 
+   * - ``process_wind``
+     - ✅
+     - ✅
+     - ✅
+     - ✅
+     - ✅
+   * - ``process_threshold``
+     - ✅
+     - ✅
+     - ✅
+     - ✅
+     - ✅
+   * - ``process_transport``
+     - ✅
+     - ✅
+     - ✅
+     - ✅
+     - ✅
+   * - ``process_bedupdate``
+     - ✅
+     - ✅
+     - ✅
+     - ✅
+     - ✅
+   * - ``process_shear``
+     - ❌
+     - ✅
+     - ✅
+     - ✅
+     - ✅
+   * - ``process_separation``
+     - ❌
+     - ✅
+     - ✅
+     - ❌
+     - ❌
+   * - ``process_avalanche``
+     - ❌
+     - ✅
+     - ✅
+     - ✅
+     - ✅
+   * - ``process_vegetation``
+     - ❌
+     - ❌
+     - ✅
+     - ✅
+     - ✅
+   * - ``process_tide``
+     - ❌
+     - ❌
+     - ❌
+     - ✅
+     - ✅
+   * - ``process_wave``
+     - ❌
+     - ❌
+     - ❌
+     - ✅
+     - ✅
+   * - ``process_runup``
+     - ❌
+     - ❌
+     - ❌
+     - ✅
+     - ✅
+   * - ``process_moist``
+     - ❌
+     - ❌
+     - ❌
+     - ✅
+     - ✅
+   * - ``process_mixtoplayer``
+     - ❌
+     - ❌
+     - ❌
+     - ✅
+     - ✅
+   * - ``process_wet_bed_reset``
+     - ❌
+     - ❌
+     - ❌
+     - ✅
+     - ✅
+   * - ``process_dune_erosion``
+     - ❌
+     - ❌
+     - ❌
+     - ✅ (maybe)
+     - ❌
+   * - **Thresholds**
+     - 
+     - 
+     - 
+     - 
+     - 
+   * - ``th_grainsize``
+     - ✅
+     - ✅
+     - ✅
+     - ✅
+     - ✅
+   * - ``th_moisture``
+     - ❌
+     - ❌
+     - ❌
+     - ✅
+     - ✅
+   * - ``th_sheltering``
+     - ❌
+     - ❌
+     - ❌
+     - ✅
+     - ✅
+   * - ``th_nelayer``
+     - ❌
+     - ✅
+     - ✅
+     - ❌
+     - ❌
+   * - **Methods**
+     - 
+     - 
+     - 
+     - 
+     - 
+   * - ``solver``
+     - ``steadystate``
+     - ``steadystate``
+     - ``steadystate``
+     - ``steadystate``
+     - ``steadystate``
+   * - ``method_transport``
+     - ``bagnold``
+     - ``bagnold``
+     - ``bagnold``
+     - ``bagnold``
+     - ``bagnold``
+   * - ``method_grainspeed``
+     - ``duran_uniform``
+     - ``duran``
+     - ``duran``
+     - ``duran``
+     - ``duran_full``
+   * - ``method_shear``
+     - -
+     - ``fft``
+     - ``fft``
+     - ``1Dstacks``
+     - ``fft``
+   * - ``method_vegetation``
+     - -
+     - -
+     - ``duran``
+     - ``grass``
+     - ``grass``
+   * - **Boundary Conditions**
+     - 
+     - 
+     - 
+     - 
+     - 
+   * - ``boundary_lateral``
+     - ``circular``
+     - ``circular``
+     - ``circular``
+     - ``circular``
+     - ``constant``
+   * - ``boundary_offshore``
+     - ``circular``
+     - ``constant``
+     - ``constant``
+     - ``flux (0)``
+     - ``flux (0)``
+   * - ``boundary_onshore``
+     - ``circular``
+     - ``constant``
+     - ``constant``
+     - ``flux (0)``
+     - ``flux (0)``
+.. [1] **Wind-only:** A basic flat-bed simulation without topographic, vegetation or marine influences.
+.. [2] **Barchan:** A migrating barchan simulation requiring topographic shear steering, flow separation, and avalanching.
+.. [3] **Parabolic:** A vegetated dune simulation combining topographic steering with vegetation processes.
+.. [4] **Beach:** A simplistic (semi-1D) beach-dune profile simulation describing foredune growth.
+.. [5] **Blowout:** A complex coastal dune simulation involving a combination of most AeoLiS processes.
 
 Model output
 ------------
@@ -584,7 +750,7 @@ are listed below.
    :end-before: #: AeoLiS model default configuration
 
 
-Guidance on solver use
+Guidance on advection, shear and grainspeed solvers
 ------------------------
 
 Different numerical solvers are available in the latest AeoLiS version. 
