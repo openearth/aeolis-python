@@ -1,14 +1,19 @@
 Model setup
 =================
-Setting up the AeoLiS model involves configuring various parameters and input files to ensure accurate and efficient simulations. In this section, we will cover:
+Setting up an AeoLiS model involves configuring various parameters and input files. In this section, we will cover:
 
-- **Model Input**: Detailed information on the required input files and their formats.
+- **Model Input**: Information on the required input files and their formats.
+- **Model Output**: Guidance on how to analyse model output.
 - **Default settings**: Overview of the various parameters that can be adjusted in the model and their default values.
 - **Activate/deactivate processes**: Explanation of different process flags and their effects on the simulation.
 - **Model state/output**: Overview of model state variables that can be outputted.
 - **Guidance on solver use**: Explanation of the use of different solvers.
 
-A general tip for setting up a model like AeoLiS is to start simple and build up the complexity. As a starting point, you can use the default values and then slowly deviate from those and turn on processes. In case you run into issues, we encourage (new) users to post questions and case studies on the `AeoLiS Discussion Board`_. We use this public forum so our help and advice is available to everyone.
+A general tip for setting up an AeoLiS model is to start simple and build up the complexity. As a starting point, use the default values and then slowly deviate from those and turn on processes. Start with a relatively coarse grid to allow for faster simulation testing. It is also highly recommended to start with constant conditions, such as a one-directional constant wind, making it easier to interpret if the model output is logical. 
+
+While testing, go through the sequential steps AeoLiS takes, plot the variables, and critically assess whether the results are expected. Important model state variables to check include: wind speed and direction (``uws``, ``uwn``), shear velocity (``ustars``, ``ustarn``), velocity threshold (``uth``), sediment concentrations (``Cu``, ``Ct``), pickup (``pickup``), and bed level change (``zb``, ``dzb``).
+
+In case you run into issues, we encourage users to post questions and case studies on the `AeoLiS Discussion Board`_. We use this public forum so our help and advice is available to everyone.
 
 .. _AeoLiS Discussion Board: https://github.com/openearth/aeolis-python/discussions
 
@@ -16,91 +21,130 @@ Model input
 -----------
 
 The computational grid and boundary conditions for AeoLiS are specified through external
-input files called by the model parameter file aeolis.txt.  The computational grid is defined
-with an x grid, y grid, and z grid.  Boundary conditions for wind, wave, and tides
-are also specified with external text files.  A list of additional grid and boundary
-files can be found in the table below.  Each file is further defined below.
+input files called by the main parameter file. The computational grid is defined
+using specific spatial files (``*.grd``), while boundary conditions for wind, wave, and tides
+are provided via ``*.txt`` files. An overview of most of these files is provided in the table below.
 
 .. list-table:: 
-   :widths: 25 50
+   :widths: 15 15 15 15 40
    :header-rows: 1
 
    * - Input File
+     - Keyword
+     - Dimensions
+     - Requirement
      - File Description
    * - aeolis.txt
-     - File containing parameter definitions
+     - N/A
+     - N/A
+     - Mandatory
+     - Main file containing parameter definitions
    * - x.grd
-     - File containing cross-shore grid
+     - ``xgrid_file``
+     - (ny, nx)
+     - Mandatory
+     - File containing cross-shore grid coordinates
    * - y.grd
-     - File containing alongshore grid (can be all zeros for 1D cases)
+     - ``ygrid_file``
+     - (ny, nx)
+     - Mandatory
+     - File containing alongshore grid coordinates
    * - z.grd
-     - File containing topography and bathymetry data
+     - ``bed_file``
+     - (ny, nx)
+     - Mandatory
+     - File containing topography and bathymetry data (bed level)
+   * - zne.grd
+     - ``ne_layer_file``
+     - (ny, nx)
+     - Optional
+     - File containing the non-erodible layer elevation
    * - veg.grd
-     - File containing initial vegetation density   
+     - ``veg_file``
+     - (ny, nx)
+     - Optional
+     - Initial vegetation density (if ``process_vegetation = T``)
+   * - hveg.grd
+     - ``hveg_file``
+     - (ny*nx*nspecies)
+     - Optional
+     - Vegetation height per species (if ``method_vegetation = grass``)
+   * - Nt.grd
+     - ``Nt_file``
+     - (ny*nx*nspecies)
+     - Optional
+     - Vegetation density/tillers per species (if ``method_vegetation = grass``)     
    * - mass.txt
-     - File containing sediment mass data when using space varying grain size distribution  
+     - ``mass_file``
+     - (nx*ny, nfractions*nlayers)
+     - Optional
+     - Sediment mass data (for space-varying grain sizes)
    * - wind.txt
+     - ``wind_file``
+     - (ntimesteps, 3)
+     - Mandatory
      - File containing wind speed and direction data
    * - tide.txt
-     - File containing water elevation data
+     - ``tide_file``
+     - (ntimesteps, 2)
+     - Optional
+     - Water elevation data (if ``process_tide = T``)
    * - wave.txt
-     - File containing wave height and period data
+     - ``wave_file``
+     - (ntimesteps, 3)
+     - Optional
+     - Wave height and period data (if ``process_wave = T``)
    * - meteo.txt
-     - File containing meteorological time series data
+     - ``meteo_file``
+     - (ntimesteps, 6)
+     - Optional
+     - Meteorological data (if ``process_groundwater = T``)
+   * - mask_*.grd
+     - ``mask_tide``, etc.
+     - (ny, nx)
+     - Optional
+     - Spatial masks for tide, wave, or runup boundary conditions
 
-aeolis.txt
-^^^^^^^^^^^
-
-This is the parameter file for AeoLiS that defines the model processes and boundary conditions.
+Main configuration file (e.g., aeolis.txt)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The main configuration file controls all processes and boundary conditions.
 Parameters in the file are specified by various keywords; each keyword has a pre-defined
-default value that will be used if it is not direclty specified in aeolis.txt (a list of default parameter
-values can be found in the Default settings tab on the left).  Among the keywords
-in aeolis.txt are the keywords to define the external computational grid files (xgrid_file, ygrid_file,
-and bed_file) and external boundary condition files (tide_file, wave_file, wind_file, etc.).  
-The different physical processes in AeoLiS can be turned on and off by changing the 
-process keywords in aeolis.txt to T (True) and F (False).  Example aeolis.txt parameters files can be
-found in the examples folder on the AeoLiS GitHub.
+default value (see ``constants.py`` and the Default settings tab) that will be used if it is not directly specified. Among the keywords
+are those defining external grid files (``xgrid_file``, ``ygrid_file``,
+``bed_file``) and external boundary conditions (``tide_file``, ``wave_file``, ``wind_file``).  
+Physical processes in AeoLiS can be toggled by setting process keywords to True (``T``) or False (``F``). 
+Example parameter files can be found in the examples folder on the AeoLiS GitHub.
 
-x.grd
-^^^^^^
+Properties of \*.grd files
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+All grid files (``x.grd``, ``y.grd``, ``z.grd``, ``zne.grd``, ``veg.grd``, etc.) must have the exact same dimensions. 
+Each value (or element) within these matrices represents a single computational cell. This means that element `[i, j]` 
+in the ``x.grd`` file corresponds to the exact same physical cell as element `[i, j]` in the ``z.grd`` file. 
 
-The x.grd file defines the computational grid in the cross-shore direction defined in meters.  
-In a 1-dimensional (1D) case, the file contains a single column of cross-shore locations 
-starting at zero for a location of choice.  In a 2-dimesional (2D) case, the file
-contains multiple columns (cross-shore positions) and rows (alongshore positions) 
-where each value corresponds to a specific location in the 2D grid.  The file can be renamed 
-and is referenced from the parameters file with the xgrid_file keyword.
+The model can be run in 1D and 2D mode depending on the input dimensions. Most processes are implemented in 2D mode. To run the model in 2D mode, all grid files should contain 2D matrices ``(ny, nx)`` of the same size. To run the model in 1D mode, all grid files should contain 1D vectors ``(nx, 1)``. Because some processes are easier to solve in 2D, the 1D model is internally converted to a quasi-2D model by repeating the vectors three times ``(nx, 3)``, assuming the same resolution spacing as the cross-shore direction. Results are then converted back to 1D by extracting the middle vector. 
 
-y.grd
-^^^^^^
+x.grd and y.grd (Spatial Grid)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The ``x.grd`` and ``y.grd`` files define the computational grid in meters. It is important to understand that the **boundary definitions and cross-shore/longshore directions are determined by the shape and structure of the grid matrices**, while the **actual physical location and orientation are determined by the specific coordinate values** inside those matrices. To ensure correct model execution and boundary alignment, grid generation should follow this step-by-step approach:
 
-This file defines the computational grid in the alongshore direction.  In a 1D case,
-y.grd will contain a single column of zeros.  In a 2D case, similar to the x.grd file, 
-y.grd has multiple columns (cross-shore positions) and rows (alongshore positions)
-where each row, column position corresponds to a specific location in the 2D gird.
-x.grd and y.grd will always be the same size regardless of running a 1D or 2D simulation.
-As with the x.grd file, this file can be renamed and is referenced from the parameters file with the
-keyword: ygrid_file.    
+1. **Define dimensions and resolution:** Set your domain length and grid spacing. Because the model does not yet support variable grid sizes, the cross-shore resolution must equal the alongshore resolution (e.g., ``dx = 10; dy = 10``).
+2. **Create domain axes:** Generate 1D arrays for the cross-shore and alongshore directions. The cross-shore array dictates the domain boundaries and **must be ascending**; the first element is always the onshore boundary, and the last is the offshore boundary (e.g., ``x = np.arange(0, Lx + dx, dx)``).
+3. **Generate the orthogonal grid:** Use the 1D axes to create 2D coordinate matrices (e.g., ``X, Y = np.meshgrid(x, y)``).
+4. **Apply physical orientation:** Translate (shift) and rotate the coordinate values within these matrices to match their true real-world location and physical orientation (e.g., ``Xr = X * np.cos(theta) - Y * np.sin(theta) + x0``).
 
-z.grd
-^^^^^^
+By handling the physical orientation directly within the grid coordinate values, the model orientation keyword ``alfa`` is no longer required and should be left at its default value of ``0``.
 
-The z.grd file provides the model with the elevation information for the computational 
-grid defined in x.grd and y.grd.  Similar to x.grd and y.grd, when running 
-AeoLis in 1D the file contains a single column with the number of rows equal 
-to the number of rows in x.grd and y.grd.  In 2D cases, z.grd has multiple columns and 
-rows of equal size to x.grd and y.grd.  Elevation values in the file should be defined such that
-positive is up and negative is down.  The file can be renamed and is referenced from the 
-parameters file with the keyword: bed_file.
+z.grd (bed level)
+~~~~~~~~~~~~~~~~~
+The ``z.grd`` file provides the surface elevation for every cell defined in the spatial grids. Elevation values should be defined such that positive values are above the vertical datum (up) and negative values are below (down). 
 
-veg.grd
-^^^^^^^^
+zne.grd (non-erodible Layer)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The ``zne.grd`` file defines the elevation of the hard, non-erodible layer beneath the sand surface. The model will not erode sediment below this specified elevation. It follows the same dimensions and elevation datum as ``z.grd``.
 
-The veg.grd file is an optional grid providing initial vegetation coverage (density) at each position in the 
-model domain defined in x.grd and y.grd.  Similar to the grid files, if simulations are in 
-2D there will be multiple columns for each cross-shore position (x) and multiple rows for 
-each alongshore position (y).  The format of a 1D vegetation grid file can be seen below 
-where each red dots represent vegetation cover at each cross-shore position. 
+veg.grd (vegetation)
+~~~~~~~~~~~~~~~~~~~~
+The ``veg.grd`` file is an optional grid providing the initial vegetation coverage (density) at each cell. 
 
 .. _fig-veg-inputs:
 
@@ -111,40 +155,63 @@ where each red dots represent vegetation cover at each cross-shore position.
    
    File format for a 1D AeoLis vegetation grid.  Each red dot is the vegetation density at a specific location in the computational grid.
 
-mass.txt
-^^^^^^^^^
+Masks (tide, wave, and runup)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Masks (e.g., ``mask_tide``, ``mask_wave``, ``mask_runup``) can be used to spatially modify or fix boundary conditions across the domain. This is particularly useful when landward elevations are lower than the water level but remain dry, or when water bodies are disconnected from the offshore (such as a barrier island system where inland water experiences no tidal or wave action).
 
-The mass.txt file allows users to specify variations in grain size distribution in both 
-horizontal and vertical directions.  If the grain size distribution is constant throughout
-the model domain, multifraction sediment transport is possilbe without this file.  The file contains
-the mass of each sediment fraction in each grid cell and bed layer. The file is formatted such that each
-row corresponds to a specific location in the computational domain and the columns are grouped 
-by bed layers and each individual column represents a single sediment fraction present in the model
-domain.  An infinite number of sediment fractions can be defined in the model; however, it should be 
-noted the more sediment fractions present the longer the simulation time and larger the output files.    
+Masks utilize complex numbers to apply both a scaling multiplier and a static offset to the boundary condition, following the logic: ``Applied Value = (Real Value * Boundary Value) + Complex Value``. 
 
-In a 1D case, the text file will have dimensions of number of cross-shore locations (x) by number 
-of sediment fractions times the number of bed layers.  For example if you have 200 cross-shore positions
-in your model domain and 4 different sediment fractions with 3 bed layers, your mass.txt file 
-will contain a matrix of 200 rows by 12 columns.  An example of a 1D mass.txt file can be seen below 
-where each red dot represents a sediment fraction mass at a specific location in the model domain.
+To pass the actual boundary value normally, a simple real value of ``1`` is sufficient. To completely zero out the boundary value in a specific area (e.g., no waves inland), use ``0``. To set a fixed static value regardless of the incoming boundary condition (e.g., an inland lake permanently fixed at +2m water level), use a complex value such as ``0 + 2j``.
 
-.. _fig-mass-inputs-1D:
+Example Python script
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. figure:: /images/mass_text_file_graphic.jpeg
-   :alt: mass file format 1D
-   :width: 550px
-   :align: center
-   
-   File format for a 1D AeoLis mass for spatially variable grain size distributions.  Each red dot is the mass for each sediment fraction
-   at each location in the computational grid (x, y, bed layer).
- 
-In a 2D case, the mass.txt file will have dimensions of number of cross-shore positions (x)
-times the number of alongshore positions (x) by number of sediment fractions times the number of
-bed layers.  The file will be formatted such that the columns are grouped by bed layer with all available
-sediment fractions present in each bed layer and rows are grouped by alongshore position with all 
-cross-shore prositions given for each alongshore position.  An visual example of a 2D mass.txt input
-file for AeoLis can be seen below.
+.. code-block:: python
+
+    import numpy as np
+
+    # 1. Define dimensions and resolution
+    Lx, Ly = 1000, 500  # Lx is always cross-shore, Ly is longshore
+    dx = 10             # dx must equal dy
+    
+    x0, y0 = 5000, 5000 # coordinates for a grid corner point
+    theta = np.radians(30) # grid rotation in radians
+
+    # 2. Create axes
+    x = np.arange(0, Lx + dx, dx) # must be ascending (first=onshore, last=offshore)
+    y = np.arange(0, Ly + dx, dx) 
+    
+    # 3. Create orthogonal grid
+    X, Y = np.meshgrid(x, y)
+
+    # 4. Rotate and shift domain to real-world coordinates
+    Xr = X * np.cos(theta) - Y * np.sin(theta) + x0
+    Yr = X * np.sin(theta) + Y * np.cos(theta) + y0
+    # *Because orientation is baked into the coordinates, set `alfa = 0` in aeolis.txt*
+
+    # 5. Populate specific grid variables
+    z = np.zeros_like(X) # example: Flat bed level at 0.0m
+    zne = np.full_like(z, -2.0) # example: Flat non-erodible layer at -2.0m
+    veg = np.zeros_like(z) # example: no initial vegetation
+
+    # 6. Create masks (e.g., tide mask for an inland lake)
+    tide_mask = np.ones_like(X, dtype=complex) 
+    tide_mask[:, :10] = 0.0 + 2.0j # 0.0 multiplier (no tidal variation) + 2.0j elevated
+
+    # Save outputs to text files (to be read as .grd)
+    np.savetxt('x.grd', Xr)
+    np.savetxt('y.grd', Yr)
+    np.savetxt('z.grd', z)
+    np.savetxt('zne.grd', zne)
+    np.savetxt('veg.grd', veg)
+    np.savetxt('mask_tide.grd', tide_mask)
+
+Multi-dimensional Inputs (mass, hveg, Nt)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Some variables naturally require multiple dimensions per spatial grid cell, such as spatially varying grain sizes (multiple fractions and bed layers) or complex vegetation cover (multiple species). AeoLiS requires these multi-dimensional arrays to be flattened into lower-dimensional formats before saving.
+
+* **mass.txt**: Defines the mass of each sediment fraction per bed layer. If the grain size distribution is uniform across the domain, this file is not needed. The natural 4D shape of `(ny, nx, nlayers, nfractions)` must be reshaped into a 2D matrix of shape `(nx * ny, nfractions * nlayers)`. The rows represent the flattened spatial coordinates, and the columns are grouped by bed layer (e.g., Layer 1: Fraction 1, Fraction 2; Layer 2: Fraction 1, Fraction 2).
+* **hveg.grd and Nt.grd**: When utilizing the grass vegetation method (``method_vegetation = grass``), the model requires vegetation height (``hveg``) and density (``Nt``). Because this method supports multiple interacting species, the natural 3D shape of `(ny, nx, nspecies)` must be completely flattened into a 1D vector of shape `(ny * nx * nspecies)`. 
 
 .. _fig-mass-inputs-2D:
 
@@ -153,19 +220,68 @@ file for AeoLis can be seen below.
    :width: 550px
    :align: center
    
-   File format for a 2D AeoLis mass file for spatially variable grain size distributions.  Each red dot is the mass for each sediment fraction
-   at each location in the computational grid (x, y, bed layer).
+   File format for a 2D AeoLis mass file for spatially variable grain size distributions. Each red dot is the mass for a specific sediment fraction within a specific bed layer at a given spatial location.
+
+Example Python script
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Below is a simple Python script demonstrating how to load spatial grid dimensions and properly flatten multi-dimensional arrays for AeoLiS.
+
+.. code-block:: python
+
+    import numpy as np
+
+    # 1. Load spatial grid to get dimensions
+    X = np.loadtxt('x.grd')
+    ny, nx = X.shape
+    n_cells = ny * nx
+
+    # 2. Create mass.txt (Sediment fractions and layers)
+    n_layers = 3
+    n_fractions = 4
+    
+    # Example: A uniform sediment distribution across the domain
+    mass_per_fraction = np.array([0.4, 0.3, 0.2, 0.1]) # kg per fraction
+    
+    # Tile the fraction distribution to fill all bed layers and spatial cells
+    # Resulting shape: (n_cells, n_fractions * n_layers)
+    mass_matrix = np.tile(mass_per_fraction, (n_cells, n_layers)) 
+    np.savetxt('mass.txt', mass_matrix)
+
+    # 3. Create hveg.grd and Nt.grd (Multi-species vegetation)
+    n_species = 2
+    
+    # Initialize 3D arrays
+    hveg = np.zeros((ny, nx, n_species))
+    Nt = np.zeros((ny, nx, n_species))
+
+    # Example: Species 0 is 0.5m tall, Species 1 is 1.0m tall
+    hveg[:, :, 0] = 0.5 
+    hveg[:, :, 1] = 1.0
+    
+    # Example: Species 0 has 10 tillers/m^2, Species 1 has 5 tillers/m^2
+    Nt[:, :, 0] = 10.0 
+    Nt[:, :, 1] = 5.0  
+
+    # Flatten the 3D arrays into 1D vectors for AeoLiS
+    hveg_flat = hveg.reshape(-1)
+    Nt_flat = Nt.reshape(-1)
+
+    np.savetxt('hveg.grd', hveg_flat)
+    np.savetxt('Nt.grd', Nt_flat)
+
+
+Time-series Boundary Conditions (*.txt)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Environmental forcing in AeoLiS—such as wind, water levels, and wave conditions—is provided through external time-series files. For all of these files, the format follows the same structure: the first column represents time in seconds w.r.t. the ``refdate`` in the main configruation file. The following columns contain the variables at those given times. The model will automatically interpolate these data points to match the modelling time steps.
 
 wind.txt
-^^^^^^^^^
+~~~~~~~~
+The ``wind.txt`` file provides the wind boundary conditions driving aeolian transport. It contains three columns: 
+1. Time (s)
+2. Wind speed (m/s)
+3. Wind direction (degrees) 
 
-The wind.txt file provides the model with wind boundary conditions and is formatted similar to 
-the tide.txt and wave.txt files.  The first column is time in seconds from 
-start, the second column is wind speed, and the third column is wind direction.  The wind directions
-can be specified in either nautical or cartesian convention (specified in aeolis.txt with keyword: wind_convention).  
-The format of this file can be seen below were each of the red dots represents a data value of time, wind speed, 
-or wind direction.  As AeoLiS is an aeolian sediment transport model, the wind boundary conditions are of particular
-importance.      
+Wind directions can be specified in either nautical or cartesian convention, which is set in the ``aeolis.txt`` file using the ``wind_convention`` keyword. 
 
 .. _fig-wind-inputs:
 
@@ -177,13 +293,10 @@ importance.
    File format for wind boundary conditions file for AeoLis input.
 
 tide.txt
-^^^^^^^^^
-
-The tide.txt file contains the water elevation data for the duration of the 
-simulation.  It is formatted such that the first column is time in seconds and 
-the second column is the water elevation data at each time step.  An example of 
-the file format can be seen below where each red dot represents a data value for 
-time or water elevation.
+~~~~~~~~
+The ``tide.txt`` file contains the water elevation data for the duration of the simulation. It contains two columns:
+1. Time (s)
+2. Water elevation (m)
 
 .. _fig-tide-inputs:
 
@@ -195,14 +308,11 @@ time or water elevation.
    File format for the water elevation conditions file for AeoLis input.
    
 wave.txt
-^^^^^^^^^
-
-The wave.txt file provides the model with wave data used in AeoLiS for runup calculations.  
-The file is formatted similar to tide.txt but has three columns instead of two.  
-Here, the first column is time in seconds, the second column is wave height, 
-and the third column is the wave period.  The format of this file can be seen 
-below where each red dot represents 
-a data value. 
+~~~~~~~~
+The ``wave.txt`` file provides the wave data used by AeoLiS to calculate runup. It contains three columns:
+1. Time (s)
+2. Significant wave height (m)
+3. Peak wave period (s)
 
 .. _fig-wave-inputs:
 
@@ -214,16 +324,14 @@ a data value.
    File format for the wave conditions file for AeoLis input.
 
 meteo.txt
-^^^^^^^^^^
-
-The meteo.txt file contains meteorological data used to simulate surface moisture in the model domain (see Simulation of surface moisture 
-in Model description on for surface moisture implementation in AeoLiS).  This file is formatted similar to the other environmental boundary
-condition files (wind, wave, and tide) such that it contains a time series of environmental data read into AeoLiS through keyword specification. 
-The keywords required to process surface moisture with evaporation and infiltration are process_moist = True, method_moist_process = surf_moisture, 
-th_moisture = True, and meteo_file = meteo.txt (or name of file containing meteorological data).  An example of the meteo.txt file can be seen in the 
-figure below where each red dot represents a time series data value.  The first column contains time (s), the second column is temperature (degrees C),
-the thrid column is precipitation (mm/hr), the fourth column is relative humidity (%), the fifth column is global radiation (MJ/$m^2$/day), and the sixth
-column is air pressure (kPa).  
+~~~~~~~~~
+The ``meteo.txt`` file contains meteorological data and is only required if using the groundwater module by Hallin (2023) to simulate surface moisture. It contains six columns:
+1. Time (s)
+2. Temperature (°C)
+3. Precipitation (mm/hr)
+4. Relative humidity (%)
+5. Global radiation (MJ/$m^2$/day)
+6. Air pressure (kPa)
 
 .. _fig-meteo-inputs:
 
@@ -232,18 +340,50 @@ column is air pressure (kPa).
    :width: 550px
    :align: center
    
-   File format for meteorological data used to simulate surface moisture in AeoLiS where each red dot represents a time series value. 
+   File format for meteorological data used to simulate surface moisture in AeoLiS.
 
+Example Python script
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Below is a simple Python script demonstrating how to generate and save these time-series files using NumPy. In this example, we generate a 10-day simulation with a constant onshore wind, a harmonic tide, and constant wave conditions.
 
+.. code-block:: python
 
-1D and 2D models
------------------
+    import numpy as np
 
-The model can be run in 1D and 2D mode depending on the definition of the input. Most processes are implemented in 2D mode. To run the model in 2D mode all grid files should contain 2D matrices of the same size. 
+    # 1. Define time array
+    days = 10
+    dt = 3600 # 1-hour intervals
+    time_sec = np.arange(0, days * 24 * 3600 + dt, dt) 
 
-To run the model in 1D mode, all grid files should contain vectors. In 1D mode, the ygrd_file typically contains vector with constant values (ones or zeros). 
-Because some processes are easier to solve in 2D, the 1D model is converted to a 2D model by repeating the vectors 3 times assuming the same resolution 
-spacing as in the xgrid direction. The model will run in a quasi 2D mode. Results are then converted to 1D again by taking the middle of the 3 vectors.
+    # 2. Wind (constant onshore wind)
+    # Assuming 270 degrees is straight onshore
+    wind_speed = np.full_like(time_sec, 8.0)  # 8 m/s
+    wind_dir = np.full_like(time_sec, 270.0)  # 270 degrees
+    wind_data = np.column_stack((time_sec, wind_speed, wind_dir))
+
+    # 3. Tide (harmonic tide)
+    tide_amp = 1.0 # 1 meter amplitude
+    tide_period = 12 * 3600 # 12-hour period in seconds
+    water_level = tide_amp * np.sin(2 * np.pi * time_sec / tide_period)
+    tide_data = np.column_stack((time_sec, water_level))
+
+    # 4. Waves (constant wave height and period)
+    wave_height = np.full_like(time_sec, 1.5) # 1.5m significant wave height
+    wave_period = np.full_like(time_sec, 6.0) # 6s peak period
+    wave_data = np.column_stack((time_sec, wave_height, wave_period))
+
+    # 5. Save to text files
+    np.savetxt('wind.txt', wind_data, fmt='%.2f')
+    np.savetxt('tide.txt', tide_data, fmt='%.2f')
+    np.savetxt('wave.txt', wave_data, fmt='%.2f')
+
+Visualizating input settings
+^^^^^^^^^^^^^^^^^^^^
+When running the model, you can automatically generate diagnostic plots by setting the keyword ``visualization = True`` in your ``aeolis.txt`` file. This will automatically generate figures in your simulation folder to help verify your setup:
+
+* ``figure_grid_initialization.png``: Displays the grid orientation and boundaries.
+* ``figure_params_initialization.png``: Shows the most relevant spatial parameters mapped onto the domain.
+* ``figure_timeseries_initialization.png``: Visualizes the time series of your environmental boundary conditions.
 
 
 .. _default-settings:
