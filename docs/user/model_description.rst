@@ -651,7 +651,7 @@ The underlying implementation of the perturbation theory and separation bubble o
 
 .. _vid-rotating-shear:
 
-.. figure:: /images/rotating_shear.avi
+.. figure:: /images/rotating_shear.mp4
    :align: center
 
    Animation demonstrating the rotational computational grid aligning with the changing wind direction to solve for topographic steering at each time step.
