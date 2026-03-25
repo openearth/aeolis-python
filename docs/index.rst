@@ -6,14 +6,6 @@
 Welcome to AeoLiS's Documentation
 ==================================
 
-.. raw:: html
-
-   <div style="overflow: hidden;">
-      <iframe src="https://www.youtube.com/embed/dHr2NlGkSE4?&autoplay=1"  width="100%" height="315" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; web-share"></iframe>
-   </div>
-
--------
-
 This documentation describes the Python implementation of the AeoLiS. AeoLiS is an aeolian sediment transport and landform evolution model that is designed to account for sediment-supply-limiting factors in coastal environments. The source code of the Python implementation can be found in `GitHub <https://github.com/openearth/aeolis-python>`_.
 
 The code is developed and maintained by a developer group that consists of members from Deltares, U.S. Army Engineer Research and Development Center (ERDC), Delft University of Technology, Oregon State University, and Lund University. We encourage contributions from the community. If you are interested in contributing to the code, please read the :ref:`developer documentation <quickstart>`.
@@ -66,8 +58,6 @@ Contents
    developer/modularity
    developer/domain-decomposition
 
-
-
 Contact
 =======
 If you have questions about the model that is of interest to the community, please post your question in the  `discussion forum <https://github.com/openearth/aeolis-python/discussions>`_.
@@ -78,6 +68,34 @@ If you have questions about the model that is of interest to the community, plea
 - Christa van IJzendoorn (vanijzec@oregonstate.edu) at Oregon State University
 - Caroline Hallin (caroline.hallin@tvrl.lth.se) at Lund University
 - Glenn Strypsteen (glenn.strypsteen@kuleuven.be) at Katholieke Universiteit Leuven
+
+.. list-table:: 
+   :widths: 50 50
+   :header-rows: 0
+
+   * - .. video:: /images/01_blender_barchan.mp4
+          :autoplay:
+          :loop:
+          :muted:
+          :width: 100%
+
+     - .. video:: /images/02_blender_parabolic.mp4
+          :autoplay:
+          :loop:
+          :muted:
+          :width: 100%
+
+   * - .. video:: /images/03_blender_embryo.mp4
+          :autoplay:
+          :loop:
+          :muted:
+          :width: 100%
+
+     - .. video:: /images/04_blender_blowout.mp4
+          :autoplay:
+          :loop:
+          :muted:
+          :width: 100%
 
 
 Acknowledgements
