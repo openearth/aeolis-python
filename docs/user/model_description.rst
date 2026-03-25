@@ -538,26 +538,20 @@ For two-dimensional situations, the shear stress perturbation in the x- and y-di
    
    \sigma=\sqrt{iLk_{x}z'_{0}/l}
 
-where :math:`\tilde{}` indicates the Fourier-transformed components of the parameters, :math:`k_x` and :math:`k_y` are the components of the wave vector :math:`\vec{k}` in Fourier space, and :math:`K_0` and :math:`K_1` are modified Bessel functions. As illustrated in Figure :numref:`fig-concept-topo-steering`, :math:`l` [m] is the depth of the inner layer of flow:
+where :math:`\tilde{}` indicates the Fourier-transformed components of the parameters, :math:`k_x` and :math:`k_y` are the components of the wave vector :math:`\vec{k}` in Fourier space, and :math:`K_0` and :math:`K_1` are modified Bessel functions. As illustrated in Figure :numref:`fig-concept-topo-steering`, the depth of the inner layer of flow :math:`l` [m], the dimensionless vertical velocity profile :math:`U(l)` [-] at height :math:`l`, and the height of the middle layer of flow :math:`z_m` [m] are defined as:
 
 .. math::
-   :label: inner_layer_depth
+   :label: flow_layer_parameters
 
-   l=\frac{2 \kappa^2 L}{\ln \left( \frac{l}{z'_{0}} \right)}
+   l = \frac{2 \kappa^2 L}{\ln \left( \frac{l}{z'_{0}} \right)} \qquad \qquad U(l) \equiv \frac{\ln \left( \frac{l}{z'_{0}} \right)}{\ln \left( \frac{z_{m}}{z'_{0}} \right)} \qquad \qquad z_{m} = \sqrt{\frac{L^2}{\ln \left( \frac{z_{m}}{z'_{0}} \right)}}
 
-where :math:`L` [m] is the typical length scale of the hill. The constant :math:`U(l)` [-] is the dimensionless vertical velocity profile at height :math:`l`:
+where :math:`L` [m] is the typical length scale of the hill.
 
-.. math::
-   :label: vertical_velocity_profile
+.. tip:: 
+   **Tuning the length scale (L):** The typical length scale of the hill (L) significantly influences the shear perturbation. A smaller L will result in...
 
-   U(l)\equiv\frac{\ln \left( \frac{l}{z'_{0}} \right)}{\ln \left( \frac{z_{m}}{z'_{0}} \right)}
-
-where :math:`z_{m}` [m] is the height of the middle layer of flow:
-
-.. math::
-   :label: middle_layer_height
-
-   z_{m}=\sqrt{\frac{L^2}{\ln \left( \frac{z_{m}}{z'_{0}} \right)}}
+.. admonition:: Modelling Advice
+   When defining the typical length scale of the hill (L), keep in mind that it acts as a smoothing parameter for the topography. If your grid resolution is very fine, setting L too low might...
 
 For one-dimensional situations, a simplified solution of the shear perturbation approach is implemented. By ignoring some minor terms, it provides a less computationally expensive approach :cite:`kroy2002minimal`:
 
@@ -571,6 +565,8 @@ where :math:`\alpha` [-] and :math:`\beta` [-] both depend on :math:`L/z_0`, but
 .. _fig-concept-topo-steering:
 
 .. figure:: /images/concept_topo_steering.jpg
+   :alt: concept topographic steering
+   :width: 800px
    :align: center
 
    Schematic overview of the shear perturbation and flow separation approach. Based on :cite:`weng1991air` and :cite:`kroy2002minimal`.
@@ -597,14 +593,9 @@ The separation bubble profile :math:`z_{sep}` is then calculated as:
 where the polynomial coefficients are:
 
 .. math::
-   :label: poly_coeff_a2
+   :label: poly_coeffs
 
-   a_2=-\frac{3 z_{\mathrm{brink}} + 2 z_{\mathrm{brink}}' l_r}{l_r^2}
-
-.. math::
-   :label: poly_coeff_a3
-
-   a_3=\frac{2 z_{\mathrm{brink}} +  z_{\mathrm{brink}}' l_r}{l_r^3}
+   a_2=-\frac{3 z_{\mathrm{brink}} + 2 z_{\mathrm{brink}}' l_r}{l_r^2} \qquad \qquad a_3=\frac{2 z_{\mathrm{brink}} +  z_{\mathrm{brink}}' l_r}{l_r^3}
 
 
 The computed shear stress as a result of the combined influence of the implemented shear stress perturbations and flow separation is shown in Figure :numref:`fig-compare-topo-steering`. These results show the decrease on the windward and lee sides of both Gaussian- and barchan-shaped landforms and an increase over the crest. Additionally, a shear velocity of zero is shown below the separation bubble. 
@@ -612,6 +603,8 @@ The computed shear stress as a result of the combined influence of the implement
 .. _fig-compare-topo-steering:
 
 .. figure:: /images/compare_topo_steering.jpg
+   :alt: topographic steering
+   :width: 800px
    :align: center
 
    Spatial variation in shear stress due to topographic steering of the wind field. The upper panels show the bed level :math:`z_b` [m] and shear stress velocity perturbation :math:`\delta u_*` [m/s] over a uniform Gaussian hill. The lower panels show topographic steering over a barchan dune, including the influence of flow separation. The right panels compare outcomes of the one- and two-dimensional approaches.
@@ -621,8 +614,8 @@ Directional winds
 
 The underlying implementation of the perturbation theory and separation bubble originally allows only for wind conditions that are perpendicular to the grid. An overlaying computational grid is introduced in AeoLiS, which rotates with the changing wind direction per time step. By doing this, the shear stresses are always estimated in the positive x-direction of the computational grid. The following steps are executed for each time step:
 
-1. Create a computational grid aligned with the wind direction (``set_computational_grid``).
-2. Add and fill a buffer around the original grid.
+1. Create a computational ('Rotational') grid aligned with the wind direction (``set_computational_grid``).
+2. Add and fill a buffer around the original ('Primary') grid.
 3. Populate the computational grid by rotating it to the current wind direction and interpolate the original topography onto it. 
 4. Compute the morphology-wind induced shear stress by using the perturbation theory.
 5. Add the wind-induced shear stresses to the computational grid.
@@ -635,8 +628,11 @@ The underlying implementation of the perturbation theory and separation bubble o
 
 .. _vid-rotating-shear:
 
-.. figure:: /images/rotating_shear.mp4
-   :align: center
+.. video:: /images/rotating_shear.mp4
+   :autoplay:
+   :loop:
+   :muted:
+   :width: 100%
 
    Animation demonstrating the rotational computational grid aligning with the changing wind direction to solve for topographic steering at each time step.
 
