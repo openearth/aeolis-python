@@ -3,12 +3,6 @@
 Model description
 =================
 
-.. _fig-aeolis-overview:
-
-.. figure:: /images/aeolis_overview.png
-   :width: 800px
-   :align: center
-
 Sediment Transport
 -------------------
 
