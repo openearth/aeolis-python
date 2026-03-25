@@ -2,3 +2,23 @@
 .wy-nav-content {
     max-width: 1000px !important;
 }
+
+/* Remove borders and backgrounds from video grid tables */
+table.borderless-table, 
+table.borderless-table td, 
+table.borderless-table tr {
+    border: none !important;
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+/* Remove the specific grey background RTD applies to odd rows */
+table.borderless-table tr:nth-child(2n-1),
+table.borderless-table tr:nth-child(2n-1) td {
+    background-color: transparent !important;
+}
+
+/* Optional: remove padding to make the videos sit closer together */
+table.borderless-table td {
+    padding: 5px !important;
+}
