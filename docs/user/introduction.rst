@@ -10,11 +10,19 @@ Model overview
 
 .. _fig-aeolis-overview:
 
-.. figure:: /images/aeolis_overview.png
-   :width: 900px
-   :align: center
-   
-   Overview of the AeoLiS model - Model structure and the simulated processes.
+.. raw:: html
+
+    <div style="text-align: center; margin-bottom: 20px;">
+        <img src="../_static/aeolis_overview.png" usemap="#image-map" style="max-width: 900px; width: 100%; height: auto;">
+        
+        <map name="image-map">
+            <area target="_blank" alt="Avalanching" title="Avalanching" href="https://aeolis.readthedocs.io/en/update_documentation/_modules/avalanching.html#avalanche" coords="1728,6796,2846,6942" shape="rect">
+        </map>
+        
+        <p style="font-style: italic; margin-top: 10px;">
+            Overview of the AeoLiS model - Model structure and the simulated processes.
+        </p>
+    </div>
 
 Applicability and limitations
 -----------------------------
