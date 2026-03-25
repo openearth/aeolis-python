@@ -510,21 +510,7 @@ be specified by the user, for example through the BMI interface.
 Wind shear and topographic steering
 -----------------------------------
 
-To simulate the topographic steering effects on desert and coastal landforms, numerous studies have utilized computational fluid dynamics :cite:`wakes2010numerical, smyth2011computational, hesp2015flow, bauer2022cfd, pourteimouri2023modelling`. However, the computational costs of these methods currently limit their use when long-term morphodynamic simulations tailored for engineering applications are pursued. To reduce computational costs, AeoLiS adopts the techniques proposed by :cite:`DuranMoore2013`, which consist of an analytical approach tailored for calculating topographic wind steering for smooth topographies combined with a modelled separation bubble mechanism. In addition to the adopted techniques, the model implements the ability to use varying wind directions that occur in realistic situations. 
-
-The starting point for calculating near-bed shear velocity :math:`u_*` [m/s] and topographic steering is the Prandtl-Von Kármán's Law of the Wall. The Law of the Wall is used to convert the wind velocity :math:`u_w` [m/s] at height :math:`z` [m] above the bed to the near-bed shear velocity: 
-
-.. math::
-   :label: law_of_wall
-
-   u_* = \frac{u_w}{\ln \left( \frac{z}{z_0} \right)}\kappa
-
-where :math:`z_0` [m] is the roughness height above the bed and :math:`\kappa` [-] is the von Kármán constant for turbulent flow. The roughness height :math:`z_0` can also be determined based on a roughness height predictor as described by :cite:`vanrijn2020aeolianmodel` and :cite:`strypsteen2023importance`.
-
-Shear perturbations
-^^^^^^^^^^^^^^^^^^^
-
-The topographic steering of the wind due to smooth gradients is implemented following an analytical perturbation theory for turbulent boundary layer flow :cite:`weng1991air, kroy2002minimal`. This method describes the topographic impact through perturbations in the shear stress :math:`\tau` [:math:`\mathrm{N/m^2}`] (where :math:`\tau={\rho_a}{u_*}^2`):
+To simulate the topographic steering effects on dunes, often Computational Fluid Dynamics (CFD) methods are used. However, these methods are computationally expensive, making them not ideal for long-term morphodynamic simulations. To reduce computational costs, the topographic steering of the wind due to smooth gradients is implemented following an analytical perturbation theory for turbulent boundary layer flow :cite:`weng1991air, kroy2002minimal`. This method describes the topographic impact through perturbations in the shear stress :math:`\tau` [:math:`\mathrm{N/m^2}`] (where :math:`\tau={\rho_a}{u_*}^2`):
 
 .. math::
    :label: shear_perturbation_base
@@ -592,9 +578,7 @@ where :math:`\alpha` [-] and :math:`\beta` [-] both depend on :math:`L/z_0`, but
 Flow separation
 ^^^^^^^^^^^^^^^
 
-The implementation of the shear perturbation theory by :cite:`weng1991air` is only valid in situations with relatively smooth surfaces. In coastal environments, the existence of slipfaces and vegetation often results in rougher terrain featuring sharp edges and steep slopes, which lead to separation of wind flow :cite:`jackson2011investigation, davidson2022flow`. The occurrence of such steep slopes limits the validity of the purely analytical approach. 
-
-To address this, a heuristic description of flow separation is used following the Coastal Dune Model (CDM) :cite:`sauermann2001continuum, kroy2002minimal, DuranMoore2013`. A smooth envelope is created, which separates the main flow when a sharp edge is detected in the windward direction. This smooth envelope is called a separation bubble, :math:`z_{sep}` [m] (Figure :numref:`fig-concept-topo-steering`). This separation bubble represents the surface that divides the region of flow reversal from the main flow stream along the smooth hill. Subsequently, in all cells for which the bed level is lower than the separation bubble (:math:`z_b < z_{sep}`), the shear velocity :math:`u_{*}` is set to 0 m/s. This assumes that eventual flow reversal velocities are not significant enough to initiate aeolian transport.
+The implementation of the shear perturbation theory by :cite:`weng1991air` is only valid in situations with relatively smooth surfaces. The occurrence of steep slopes limits the validity of the approach. To address this, a description of flow separation is used following the Coastal Dune Model (CDM) :cite:`sauermann2001continuum, kroy2002minimal, DuranMoore2013`. A smooth envelope is created, which separates the main flow when a sharp edge is detected in the windward direction. This smooth envelope is called a separation bubble, :math:`z_{sep}` [m] (Figure :numref:`fig-concept-topo-steering`). This separation bubble represents the surface that divides the region of flow reversal from the main flow stream along the smooth hill. Subsequently, in all cells for which the bed level is lower than the separation bubble (:math:`z_b < z_{sep}`), the shear velocity :math:`u_{*}` is set to 0 m/s. This assumes that eventual flow reversal velocities are not significant enough to initiate aeolian transport.
 
 The separation bubble surface :math:`z_{sep}` is modelled by a third-order polynomial. The height of the brinkline, or the location where the separation bubble starts to detach from the bed, is defined by :math:`z_b(x_{\mathrm{brink}}) \equiv z_{\mathrm{brink}}`. Assuming a maximum slope :math:`c` [deg] for the separation surface that determines the shape of the bubble, the reattachment length :math:`l_r` is obtained by:
 
@@ -623,7 +607,7 @@ where the polynomial coefficients are:
    a_3=\frac{2 z_{\mathrm{brink}} +  z_{\mathrm{brink}}' l_r}{l_r^3}
 
 
-The computed shear stress as a result of the combined influence of the implemented shear stress perturbations and flow separation is shown in Figure :numref:`fig-compare-topo-steering`. These results show the decrease on the windward and lee sides of both Gaussian- and barchan-shaped landforms and an increase over the crest. Additionally, a shear velocity of zero is shown below the separation bubble. Studies have demonstrated the accuracy of the general analytical shear stress prediction approach applied to coastal dunes by comparing it with real-world measurements and detailed numerical simulation results acquired with CFD models :cite:`kombiadou2023exploring, cecilCFDInReview`.
+The computed shear stress as a result of the combined influence of the implemented shear stress perturbations and flow separation is shown in Figure :numref:`fig-compare-topo-steering`. These results show the decrease on the windward and lee sides of both Gaussian- and barchan-shaped landforms and an increase over the crest. Additionally, a shear velocity of zero is shown below the separation bubble. 
 
 .. _fig-compare-topo-steering:
 
@@ -635,7 +619,7 @@ The computed shear stress as a result of the combined influence of the implement
 Directional winds
 ^^^^^^^^^^^^^^^^^
 
-The underlying implementation of the perturbation theory and separation bubble originally allows only for wind conditions that are perpendicular to the grid. To enable model applicability independent of wind direction, an overlaying computational grid is introduced in AeoLiS, which rotates with the changing wind direction per time step. By doing this, the shear stresses are always estimated in the positive x-direction of the computational grid. The following steps are executed for each time step:
+The underlying implementation of the perturbation theory and separation bubble originally allows only for wind conditions that are perpendicular to the grid. An overlaying computational grid is introduced in AeoLiS, which rotates with the changing wind direction per time step. By doing this, the shear stresses are always estimated in the positive x-direction of the computational grid. The following steps are executed for each time step:
 
 1. Create a computational grid aligned with the wind direction (``set_computational_grid``).
 2. Add and fill a buffer around the original grid.
