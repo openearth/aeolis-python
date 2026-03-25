@@ -19,6 +19,53 @@ The code is developed and maintained by a developer group that consists of membe
    
    AeoLiS developer group
 
+Contact
+=======
+If you have questions about the model that is of interest to the community, please post your question in the  `discussion forum <https://github.com/openearth/aeolis-python/discussions>`_.
+
+- Bart van Westen (Bart.vanWesten@deltares.nl) at Deltares
+- Nick Cohn (nicholas.t.cohn@usace.army.mil) at U.S. Army Engineer Research and Development Center (ERDC)
+- Sierd de Vries (Sierd.deVries@tudelft.nl) (founder) at Delft University of Technology
+- Christa van IJzendoorn (vanijzec@oregonstate.edu) at Oregon State University
+- Caroline Hallin (caroline.hallin@tvrl.lth.se) at Lund University
+- Glenn Strypsteen (glenn.strypsteen@kuleuven.be) at Katholieke Universiteit Leuven
+
+Acknowledgements
+================
+
+* AeoLiS was initially developed at Delft University of Technology with support from the ERC-Advanced Grant 291206 Nearshore Monitoring and Modeling (`NEMO <http://nemo.citg.tudelft.nl>`_) and `Deltares <http://www.deltares.nl>`_.
+* AeoLiS is currently maintained by `Bart van Westen <Bart.vanWesten@deltares.nl>`_ at Deltares, `Nick Cohn <nicholas.t.cohn@usace.army.mil>`_ at U.S. Army Engineer Research and Development Center (ERDC) and `Sierd de Vries <Sierd.deVries@tudelft.nl>`_ at Delft University of Technology.
+* Further development of AeoLiS is supported by the `Digital Competence Centre <https://dcc.tudelft.nl>`_, Delft University of Technology.
+
+.. list-table:: 
+   :widths: 50 50
+   :header-rows: 0
+   :class: borderless-table
+
+   * - .. video:: /images/01_blender_barchan.mp4
+          :autoplay:
+          :loop:
+          :muted:
+          :width: 100%
+
+     - .. video:: /images/02_blender_parabolic.mp4
+          :autoplay:
+          :loop:
+          :muted:
+          :width: 100%
+
+   * - .. video:: /images/03_blender_embryo.mp4
+          :autoplay:
+          :loop:
+          :muted:
+          :width: 100%
+
+     - .. video:: /images/04_blender_blowout.mp4
+          :autoplay:
+          :loop:
+          :muted:
+          :width: 100%
+
 Contents
 ========
 
@@ -57,58 +104,4 @@ Contents
 
    developer/modularity
    developer/domain-decomposition
-
-Contact
-=======
-If you have questions about the model that is of interest to the community, please post your question in the  `discussion forum <https://github.com/openearth/aeolis-python/discussions>`_.
-
-- Bart van Westen (Bart.vanWesten@deltares.nl) at Deltares
-- Nick Cohn (nicholas.t.cohn@usace.army.mil) at U.S. Army Engineer Research and Development Center (ERDC)
-- Sierd de Vries (Sierd.deVries@tudelft.nl) (founder) at Delft University of Technology
-- Christa van IJzendoorn (vanijzec@oregonstate.edu) at Oregon State University
-- Caroline Hallin (caroline.hallin@tvrl.lth.se) at Lund University
-- Glenn Strypsteen (glenn.strypsteen@kuleuven.be) at Katholieke Universiteit Leuven
-
-.. list-table:: 
-   :widths: 50 50
-   :header-rows: 0
-
-   * - .. video:: /images/01_blender_barchan.mp4
-          :autoplay:
-          :loop:
-          :muted:
-          :width: 100%
-
-     - .. video:: /images/02_blender_parabolic.mp4
-          :autoplay:
-          :loop:
-          :muted:
-          :width: 100%
-
-   * - .. video:: /images/03_blender_embryo.mp4
-          :autoplay:
-          :loop:
-          :muted:
-          :width: 100%
-
-     - .. video:: /images/04_blender_blowout.mp4
-          :autoplay:
-          :loop:
-          :muted:
-          :width: 100%
-
-
-Acknowledgements
-================
-
-* AeoLiS was initially developed at Delft University of Technology with support from the ERC-Advanced Grant 291206 Nearshore Monitoring and Modeling (`NEMO <http://nemo.citg.tudelft.nl>`_) and `Deltares <http://www.deltares.nl>`_.
-* AeoLiS is currently maintained by `Bart van Westen <Bart.vanWesten@deltares.nl>`_ at Deltares, `Nick Cohn <nicholas.t.cohn@usace.army.mil>`_ at U.S. Army Engineer Research and Development Center (ERDC) and `Sierd de Vries <Sierd.deVries@tudelft.nl>`_ at Delft University of Technology.
-* Further development of AeoLiS is supported by the `Digital Competence Centre <https://dcc.tudelft.nl>`_, Delft University of Technology.
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`search`
 
