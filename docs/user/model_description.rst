@@ -287,7 +287,10 @@ Predictions of the actual saltation velocity provide a more realistic descriptio
 
 where :math:`v_{\mathrm{eff}}` [:math:`\mathrm{m/s}`] is the effective wind velocity driving the grains, which depends on the shear velocity :math:`u_*` and the threshold shear velocity :math:`u_{\mathrm{*th}}`. :math:`u_{\mathrm{f}}` [:math:`\mathrm{m/s}`] is the fluid threshold velocity (or grain settling velocity), :math:`\nabla z_{\mathrm{B}}` [:math:`\mathrm{-}`] is the bed slope, and :math:`\alpha` [:math:`\mathrm{-}`] is an effective restitution coefficient for the grain-bed interaction (e.g., :math:`\alpha = 0.42` for :math:`d = 250` :math:`\mathrm{\mu m}`). 
 
-Note that the computed :math:`u_{\mathrm{sed}}` represents the collective horizontal sediment movement, not the velocity of individual grains. AeoLiS provides three options based on this momentum balance:
+.. note::
+   The computed :math:`u_{\mathrm{sed}}` represents the collective horizontal sediment movement, not the velocity of individual grains. 
+
+AeoLiS provides three options based on this momentum balance:
 
 ``duran_full`` solves the full momentum balance equation (Equation :eq:`used_momentum`) numerically for each timestep. This method is computationally heavy but necessary for accurate sediment velocities on steep topography (e.g., steep blowout cliffs).
 
