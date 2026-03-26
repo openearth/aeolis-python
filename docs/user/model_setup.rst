@@ -1,3 +1,5 @@
+.. _model-input-output:
+
 Model in- & output
 =================
 Setting up an AeoLiS model involves configuring various parameters and input files. In this section, we will cover:
@@ -116,6 +118,8 @@ are those defining grid files (``xgrid_file``, ``ygrid_file``,
 ``bed_file``) and boundary conditions (``tide_file``, ``wave_file``, ``wind_file``).  
 Physical processes in AeoLiS can be toggled by setting process keywords to True (``T``) or False (``F``). 
 Example parameter files can be found in the examples folder on the AeoLiS GitHub.
+
+.. _grid-files:
 
 Grid files (\*.grd)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
