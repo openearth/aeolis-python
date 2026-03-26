@@ -3,13 +3,15 @@
 Model description
 =================
 
-Model Overview
---------------
+Quick Overview
+~~~~~~~~~~~~~~
 
-This section provides a summary of the main processes, equations, and configuration parameters in AeoLiS. For detailed information, refer to the linked subsections.
+This section provides a summary of the main processes, equations, and configuration parameters in AeoLiS. For detailed information, refer to the linked subsections. Main configuration file. This holds all parameters and links to other files. Computational domain x,y,z (more information, see :ref:`model-input`). Forcing by timeseries (more information, see :ref:`timeseries`).  Overview of all parameters in :ref:`parameters` Overview of all processes in :ref:`processes`.
+
+More information on model output :ref:`model-output`
 
 Sediment Transport
-~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^
 
 Calculating aeolian sediment transport is the core of the AeoLiS model. Sediment transport is computed using a two-dimensional advection scheme, simplified here for one-dimensional transport of a single sediment fraction:
 
@@ -18,14 +20,17 @@ Calculating aeolian sediment transport is the core of the AeoLiS model. Sediment
            
    \frac{\partial c}{\partial t} + u_{\mathrm{sed}} \frac{\partial c}{\partial x} = \min \left ( \frac{\partial m_{\mathrm{a}}}{\partial t} \quad ; \quad \frac{c_{\mathrm{sat}} - c}{T} \right )
 
-The saturated sediment concentration :math:`c_{\mathrm{sat}}` defines the transport capacity. Multiple method avaiable, selected through ``method_transport``, where Bagnold (REF) is default:
+
+The saturated sediment concentration :math:`c_{\mathrm{sat}}` (``Cu``) defines the transport capacity and :math:`c` (``Ct``) is the instantatinous transport. For more information on the sediment transport and advection computation, see :ref:`sediment-transport`. Obtaining :math:`c` requires solving this advection equation, which is one of the most computationally expensive processes in the model. Different solvers can be selected through ``solver`` (options: ``steadystate``, ``euler_backward``, ``euler_forward``). For more information on the available solvers, see section :ref:`processes` and :ref:`solver-guide`.
+
+Multiple methods are avaiable to compute :math:`c_{\mathrm{sat}}` (``method_transport``), where the equation by Bagnold (REF) (``bagnold``) is the default setting:
 
 .. math::
    :label: bagnold_overview
 
    c_{\mathrm{sat}} = \max \left ( 0 \quad ; \quad \alpha C \frac{\rho_{\mathrm{a}}}{g} \sqrt{\frac{d_{n}}{D_{n}}} \frac{\left ( u_* - u_{\mathrm{th}} \right )^3}{u_{\mathrm{sed}}} \right )
 
-The sediment velocity :math:`u_{\mathrm{sed}}` is determined by the ``method_grainspeed`` parameter. 
+The sediment velocity :math:`u_{\mathrm{sed}}` can also be computed via multiple methods (``method_grainspeed``). It can either be set equal to the governing wind velocity (``windspeed``) or computed via the  determined by the ``method_grainspeed`` parameter. 
 
 The right-hand side of the advection equation is governed by the adaptation timescale :math:`T`. Sediment transport is activated in the configuration file using ``process_transport``. To allow sediment fluxes to exchange with the bed, ``process_bedupdate`` must also be enabled.
 
@@ -78,6 +83,8 @@ Hydrodynamics and Surface Moisture
 
 Wave runup, capillary rise, and precipitation periodically wet the beach, temporally increasing the shear velocity threshold. The model utilizes input water levels and wave heights—provided via the ``tide_file`` and ``wave_file``, and activated via ``process_tide`` and ``process_wave``—to determine the total water level (TWL) and runup (enabled via ``process_runup``). Once the beach is exposed, infiltration and evaporation dry the surface. This moisture tracking is activated via ``process_moist``. For advanced simulations that require detailed groundwater tracking, a dedicated groundwater module can be activated (``process_groundwater``). 
 
+Also masks..
+
 For equations on runup, wave setup, and drying curves, see the :ref:`Surface moisture <surface-moisture>` section.
 
 Morphological Change
@@ -88,6 +95,8 @@ As sediment is transported across the domain, the bed elevation updates based on
 For details on bed updating and discrete slope failures, see the :ref:`Morphological change <morphological-change>` section.
 
 ---
+
+.. _sediment-transport:
 
 Sediment Transport
 -------------------
@@ -189,6 +198,8 @@ not solved for and hence no morphological feedback is included in the
 simulation. The model is initially intended to provide accurate
 sediment fluxes from the beach to the dunes rather than to simulate
 subsequent dune formation.
+
+.. _multi-fraction:
 
 Multi-fraction sediment transport
 -------------------------------------
@@ -344,6 +355,8 @@ grain size dependency is implemented through
 :math:`u_{\mathrm{th}}`. :math:`u_{\mathrm{th}}` typically varies between 1 and 6
 m/s for sand.
 
+.. _sediment-sorting:
+
 Sediment Sorting and Beach Armoring
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -450,6 +463,8 @@ total number of sediment fractions. It is assumed that the sediment
 fractions are ordered by increasing size. Whether a fraction is
 erodible depends on the sediment transport capacity.
 
+.. _sediment-mixing:
+
 Hydraulic Mixing
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -486,6 +501,8 @@ local wave height maximized by a maximum wave height over depth ratio
 through an input time series of water levels. Typical values for
 :math:`f_{\Delta z_{\mathrm{d}}}` are 0.05 to 0.4 and 0.5 for :math:`\gamma`.
 
+.. _threshold:
+
 Shear velocity threshold
 ------------------------
 
@@ -520,6 +537,8 @@ where :math:`A` [-] is an empirical constant, :math:`\rho_{\mathrm{p}}`
 gravitational constant and :math:`d_{\mathrm{n}}` [m] is the nominal grain
 size of the sediment fraction.
 
+.. _moisture:
+
 Moisture content
 ^^^^^^^^^^^^^^^^^
 
@@ -549,6 +568,7 @@ threshold :cite:`Pye1990`. Values larger than 0.064 (or 10\%
 volumetric content) cease transport :cite:`DelgadoFernandez2010`,
 which is implemented as an infinite shear velocity threshold.
 
+.. _roughness:
 
 Roughness elements
 ^^^^^^^^^^^^^^^^^^^
@@ -592,6 +612,7 @@ content [mg/g]. Currently, no model is implemented that predicts the
 instantaneous salt content. The spatial varying salt content needs to
 be specified by the user, for example through the BMI interface.
 
+.. _wind-shear:
 
 Wind shear and topographic steering
 -----------------------------------
@@ -721,6 +742,7 @@ The underlying implementation of the perturbation theory and separation bubble o
 
    Animation demonstrating the rotational computational grid aligning with the changing wind direction to solve for topographic steering at each time step.
 
+.. _vegetation:
 
 Vegetation 
 ------------
@@ -822,6 +844,7 @@ parameter ρ_{lat} adjusting the likelihood of lateral propagation at these boun
 Inundation
 ^^^^^^^^^^^^
 
+.. _hydrodynamics-moisture:
 
 Surface moisture
 -----------------
@@ -1116,6 +1139,7 @@ Sand fences
 Marine erosion
 ---------------
 
+.. _morphological-change:
 
 Morphological change
 ---------------------
