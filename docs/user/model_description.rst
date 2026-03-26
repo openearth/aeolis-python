@@ -14,7 +14,7 @@ The simulation advances sequentially through time steps, repeating all activated
 
 Sediment Transport
 ~~~~~~~~~~~~~~~~~~
-For detailed information, see the :ref:`sediment transport section <sediment-transport>`.
+For detailed information, see the :ref:`sediment transport section <aeolian-sediment-transport>`.
 
 Aeolian sediment transport is the core of the AeoLiS model. It is computed using a two-dimensional advection scheme, simplified here for one-dimensional transport of a single sediment fraction:
 
@@ -23,7 +23,7 @@ Aeolian sediment transport is the core of the AeoLiS model. It is computed using
            
    \frac{\partial c}{\partial t} + u_{\mathrm{sed}} \frac{\partial c}{\partial x} = E - D = \min \left ( \frac{\partial m_{\mathrm{a}}}{\partial t} \quad ; \quad \frac{c_{\mathrm{sat}} - c}{T} \right )
 
-The right-hand side of the advection equation represents the net entrainment—the difference between erosion ($E$) and deposition ($D$). The saturated sediment concentration :math:`c_{\mathrm{sat}}` (``Cu``) defines the transport capacity, while :math:`c` (``Ct``) is the instantaneous concentration in the air. Transport is activated in the configuration file using ``process_transport``. This net entrainment is governed by the adaptation timescale :math:`T` (``T``), which determines how quickly the concentration reaches equilibrium. To allow sediment to actually erode from or deposit to the bed, ``process_bedupdate`` must be enabled. 
+The right-hand side of the advection equation represents the net entrainment—the difference between erosion (:math:`E`) and deposition (:math:`D`). The saturated sediment concentration :math:`c_{\mathrm{sat}}` (``Cu``) defines the transport capacity, while :math:`c` (``Ct``) is the instantaneous concentration in the air. Transport is activated in the configuration file using ``process_transport``. This net entrainment is governed by the adaptation timescale :math:`T` (``T``), which determines how quickly the concentration reaches equilibrium. To allow sediment to actually erode from or deposit to the bed, ``process_bedupdate`` must be enabled. 
 
 Solving this advection equation is one of the most computationally expensive parts of the model. You can choose different numerical approaches using the ``solver`` keyword. For detailed guidance on these options, see the :ref:`solver guide <solver-guide>`.
 
@@ -61,7 +61,7 @@ Topography can steer the wind, causing perturbations in the shear stress :math:`
 
    \vec{\tau}(x,y) = \vec{\tau}_{0} + |\vec{\tau}_{0}|\delta\vec{\tau}(x,y)
 
-This steering process can be activated using the ``process_shear`` keyword. Different methods are available to compute these shear perturbations, which can be selected through ``method_shear``. More information on these computations is given in the :ref:`topographic steering section <wind-shear>`.
+This steering process can be activated using the ``process_shear`` keyword. Different methods are available to compute these shear perturbations, which can be selected through ``method_shear``. More information on these computations is given in the :ref:`topographic steering section <topographic-steering>`.
 
 The presence of vegetation can also reduce the effective shear stress. This drag reduction is parameterized using the Raupach formulation, which relies on a vegetation-related roughness parameter :math:`\Gamma` (``gamma_vegshear``) and the basal cover :math:`\rho_{\mathrm{veg}}` (``rhoveg``):
 
@@ -112,7 +112,7 @@ This growth is governed by the intrinsic vertical growth rate :math:`V_{\mathrm{
 
 Hydrodynamics and Surface Moisture
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Detailed section: :ref:`hydrodynamics-surface-moisture`
+Detailed section: :ref:`hydrodynamics-moisture`
 
 Water levels, wave runup, and groundwater can wet the beach, temporarily increasing the shear velocity threshold and mixing sediment fractions. The model reads input water levels (``tide_file``) and wave heights (``wave_file``), which are activated via ``process_tide`` and ``process_wave``. 
 
@@ -120,25 +120,22 @@ The input water level is first projected onto the domain to establish the Still 
 
 Inundation wets the bed, increasing the surface moisture (``moist``). Once the beach is exposed, infiltration and evaporation gradually dry the surface. This moisture tracking is activated via ``process_moist``. A more advanced description of intertidal groundwater fluctuations by :cite:t:`Hallin2023` can also be enabled through ``process_groundwater``. For more information on these computations, see the :ref:`surface moisture section <surface-moisture>`.
 
-Furthermore, wave impacts can mix multiple sediment fractions across several bed layers down to the depth of disturbance. This mixing process is enabled via ``process_mixtoplayer``. For more details on how waves rework the bed, see the :ref:`sediment mixing section <sediment-mixing>`.
+Furthermore, wave impacts can mix multiple sediment fractions across several bed layers down to the depth of disturbance. This mixing process is enabled via ``process_mixtoplayer``. For more details on how waves rework the bed, see the :ref:`hydraulic sediment mixing section <hydraulic-sediment-mixing>`.
 
 Morphological Change
 ^^^^^^^^^^^^^^^^^^^^
 Detailed section: :ref:`morphological-change`
 
-Gradients in aeolian sediment transport result in net erosion or deposition, causing the bed level $z$ (``zb``) to change over time. This morphological updating is enabled by ``process_bedupdate``:
+Gradients in aeolian sediment transport result in net erosion or deposition, causing the bed level :math:`z_B$` (``zb``) to change over time; :math:`\Delta z_B$` (``dzb``). This morphological updating is enabled by ``process_bedupdate``:
 
 .. math::
    :label: bedupdate_overview
 
    \frac{\partial z}{\partial t} = - \frac{1}{\rho_{\mathrm{sed}}(1 - p)} (E - D)
 
-This change is driven directly by the net entrainment $(E - D)$ computed in the advection equation, scaled by the sediment density :math:`\rho_{\mathrm{sed}}` and the sediment porosity :math:`p`. Together, the density and porosity represent the bulk density of the bed. For more detailed mechanics on this mass balance, see the :ref:`morphological change section <morphological-change>`.
+This change is driven directly by the net entrainment :math:`(E - D)` computed in the advection equation, scaled by the sediment density :math:`\rho_{\mathrm{sed}}` and the sediment porosity :math:`p`. Together, the density and porosity represent the bulk density of the bed. For more detailed mechanics on this mass balance, see the :ref:`morphological change section <morphological-change>`.
 
 To redistribute sediment when the local slope becomes too steep, avalanching can be enabled through ``process_avalanche``. This routine triggers when the bed slope exceeds the static angle of repose (``theta_stat``) and relaxes the slope back to the dynamic angle of repose (``theta_dyn``). 
-
-Additionally, submerged cells are subject to distinct bed level assumptions and marine erosion. This boundary behavior is managed by configurations like ``process_wet_bed_reset``. 
-
 
 .. _fig-aeolis-overview:
 
@@ -494,7 +491,7 @@ lower bed layers (Figure :numref:`fig-bedcomposition`, detail, upper
 right panel). If more fines are deposited than passed to the lower bed
 layers the bed surface layer becomes increasingly fine.
 
-.. _hydraulic-mixing:
+.. _hydraulic:
 Hydraulic Mixing
 ~~~~~~~~~~~~~~~~~~~~
 
