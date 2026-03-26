@@ -13,7 +13,7 @@ For guidance on setting up an AeoLiS model, see the :ref:`model in- & output gui
 The simulation advances sequentially through time steps, repeating all activated processes and continuously updating the morphological model state. The simulation duration runs from a defined start time (``tstart``) to an end time (``tstop``), both specified in seconds relative to a designated reference date (``refdate``). A typical internal time step (``dt``) is 3600 seconds (1 hour). As the model progresses, it exports user-defined variables (``output_vars``) to a NetCDF file (default: ``aeolis.nc``, defined by ``output_file``) at customized intervals (``output_times``).
 
 Sediment Transport
-~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^
 For detailed information, see the :ref:`sediment transport section <aeolian-sediment-transport>`.
 
 Aeolian sediment transport is the core of the AeoLiS model. It is computed using a two-dimensional advection scheme, simplified here for one-dimensional transport of a single sediment fraction:
@@ -166,7 +166,7 @@ existing concepts.
 
 .. _advection-equation:
 Advection Equation
-~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^
 
 A 1D advection scheme is adopted in correspondence with
 :cite:`deVries2014a` in which :math:`c` (``Ct``) [:math:`\mathrm{kg/m^2}`] is
