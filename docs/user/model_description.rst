@@ -3,6 +3,93 @@
 Model description
 =================
 
+
+Model Overview
+---------------
+
+Summary of most important processes and equations and general structure. References to more elaborate description within text.
+
+Sediment Transport
+~~~~~~~~~~~~~~~~~~
+
+Aeolian sediment transport is computed using a two-dimensional advection scheme, simplified here for one-dimensional, one sediment fraction:
+
+.. math::
+   :label: advection
+           
+   \frac{\partial c}{\partial t} + u_z \frac{\partial c}{\partial x} = \min \left ( \frac{\partial m_{\mathrm{a}}}{\partial t} \quad ; \quad \frac{c_{\mathrm{sat}} - c}{T} \right )
+
+Here parameters defs ... 
+
+Difference between c and c_sat determines pickup .... Computing c_sat; Default method bagnold, but several different methods possible (see section ...)
+
+Sediment velocity originally ... but can also .... (see section ... )
+
+Several options for solver ..... (steady-state, ....) (see section ...)
+
+Sediment availability and multiple fractions (see section ...)
+
+Wind and shear velocity
+~~~~~~~~~~~~~~~~~~
+
+c_sat function of shear velocity and velocity threshold. 
+
+Shear velocity first on flat bed computed by law of the wall.
+
+Topography steers velocity. Several methods to compute (see section ...). Eventually delta-tau computed:
+
+Simple equation..
+
+Also vegetation reduces shear; computed through Raupach
+
+Simple equation...
+
+More information see section ...
+
+Velocity threshold
+~~~~~~~~~~~~~~~~~
+
+Shear velocity driver, velocity threshold is limiter. Is  collection of processes. 
+
+Equations uth = uth,0 * f1 * f2..... 
+
+More details on base grainspeed (see section ...), roughness elements (see section ...), moisture (see section ...), non-erodible layer (see section ...)
+
+
+Vegetation
+~~~~~~~~~~
+
+Vegetation (see publication structure)
+
+(seperate detailed sections on metrics, growth, shear, transport)
+
+Hydrodynamic and moisture
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+General wetting and drying and influence on th, more info on:
+
+SWL = ....
+Hs = .....
+R = ....
+TWL = ....
+
+zs = TWL ....
+
+moist = ....
+
+different existing methods for drying (see section ...)
+
+Caroline groundwater model (see section ...)
+
+Morphological change
+~~~~~~~~~~~~~~~~~~~~
+
+General info on bed update and others (avalanche and marine). 
+
+More details on avalanche (see section ...)
+
+More details on marine resetting (wet_bed_reset etc.) (see section ...)
+
 Sediment Transport
 -------------------
 
