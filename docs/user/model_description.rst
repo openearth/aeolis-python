@@ -6,9 +6,9 @@ Model description
 Quick Overview
 ~~~~~~~~~~~~~~
 
-This section provides a summary of the main processes, equations, and configuration parameters in AeoLiS. For detailed information, refer to the linked subsections. Main configuration file. This holds all parameters and links to other files. Computational domain x,y,z (more information, see :ref:`model-input`). Forcing by timeseries (more information, see :ref:`timeseries`).  Overview of all parameters in :ref:`parameters` Overview of all processes in :ref:`processes`.
+This section provides a summary of the main processes, equations, and configuration parameters in AeoLiS. For more detailed information, refer to the linked sections. 
 
-More information on model output :ref:`model-output`
+For more information on the model in- and output, see the :ref:`model-input-output` section. The main configuration file (``aeolis.txt`` by default) contains all parameter settings, process flags and refers to other external input files (:ref:`model-input`). The computational domain is defined in x- and y-coordinates (``xgrid_file``, ``ygrid_file``) and a bed elevation (``bed_file``) (see the :ref:`grid-files` section). External forcing is defined by timeseries of wind, tide and waves (more information, see :ref:`timeseries`). An overview of all model parameters is given in the :ref:`parameters` section and all processes in the :ref:`processes` section. For more information on model output, see the :ref:`model-output` section.
 
 Sediment Transport
 ^^^^^^^^^^^^^^^^^^
