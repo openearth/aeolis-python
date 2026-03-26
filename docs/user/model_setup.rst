@@ -17,6 +17,8 @@ In case you run into issues, we encourage users to post questions and case studi
 
 .. _AeoLiS Discussion Board: https://github.com/openearth/aeolis-python/discussions
 
+.. _model-input:
+
 Model input
 -----------
 
@@ -155,6 +157,8 @@ The ``veg.grd`` file is an optional grid providing the initial vegetation covera
    
    File format for a 1D AeoLis vegetation grid.  Each red dot is the vegetation density at a specific location in the computational grid.
 
+.. _masks:
+
 Masks (tide, wave, and runup)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Masks (e.g., ``mask_tide``, ``mask_wave``, ``mask_runup``) can be used to spatially modify boundary conditions. This can be useful when, for instance, onshore elevations are lower than the offshore water level but remain dry, or when water bodies are disconnected from the offshore (such as a barrier island where the lagoon has no tidal or wave action).
@@ -262,6 +266,7 @@ Loading spatial grid dimensions and generating multi-dimensional input grids.
     np.savetxt('hveg.grd', hveg_flat)
     np.savetxt('Nt.grd', Nt_flat)
 
+.. _time-series:
 
 Time-series (*.txt)
 ^^^^^^^^^^^^^^^^^^^
@@ -364,6 +369,7 @@ When running the model, you can automatically generate diagnostic plots by setti
 
 .. _default-settings:
 
+.. _parameters:
 
 All parameters and defaults
 ---------------------------
@@ -377,6 +383,7 @@ the default value is used.
    :start-after: #: AeoLiS model default configuration
    :end-before: #: Merge initial and model state
 
+.. _processes:
 
 Processes, Thresholds, Methods, and Boundary Conditions
 ------------------
@@ -642,6 +649,8 @@ When building an AeoLiS model, it helps to know which processes and methods are 
 .. [4] **Beach:** A simplistic (semi-1D) beach-dune profile simulation describing foredune growth.
 .. [5] **Blowout:** A complex coastal dune simulation involving a combination of most AeoLiS processes.
 
+.. _output:
+
 Model output
 ------------
 
@@ -748,6 +757,8 @@ are listed below.
    :language: python
    :start-after: #: Aeolis model state variables
    :end-before: #: AeoLiS model default configuration
+
+.. _solver-guide:
 
 Guide on model schematization
 ---------------------------------------------------
