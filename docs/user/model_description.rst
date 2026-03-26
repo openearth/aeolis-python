@@ -126,9 +126,9 @@ Submerged cells are subject to distinct bed level assumptions and marine erosion
    Overview of the AeoLiS model
 
 
-.. _sediment-transport:
+.. _aeolian-sediment-transport:
 
-Sediment Transport
+Aeolian Sediment Transport
 -------------------
 
 Calculating aeolian sediment transport is the core of the AeoLiS model. 
@@ -143,6 +143,11 @@ for each sediment fraction individually. This model approach is a
 generalization of existing model concepts, like the shear velocity
 threshold and critical fetch, and therefore compatible with these
 existing concepts.
+
+.. _advection-equation:
+
+Advection Equation
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 A 1D advection scheme is adopted in correspondence with
 :cite:`deVries2014a` in which :math:`c` [:math:`\mathrm{kg/m^2}`] is
@@ -182,7 +187,12 @@ maximized by the available sediment in the bed :math:`m_{\mathrm{a}}`
 to be equal for both erosion and deposition. A time scale of 1 second
 is commonly used :cite:`deVries2014a`.
 
-The saturated sediment concentration :math:`c_{\mathrm{sat}}` is computed using an
+.. _saturated-sediment-transport:
+
+Saturated Sediment Transport
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The equilibrium, or saturated, sediment concentration :math:`c_{\mathrm{sat}}` is computed using an
 empirical sediment transport formulation (e.g. :cite:`Bagnold1937a`):
 
 .. math::
@@ -229,7 +239,15 @@ simulation. The model is initially intended to provide accurate
 sediment fluxes from the beach to the dunes rather than to simulate
 subsequent dune formation.
 
-.. _multi-fraction:
+.. _sediment-velocity:
+
+Sediment Velocity
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+PLACEHOLDER
+
+
+.. _multi-fraction-sediment-transport:
 
 Multi-fraction sediment transport
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -455,10 +473,10 @@ lower bed layers (Figure :numref:`fig-bedcomposition`, detail, upper
 right panel). If more fines are deposited than passed to the lower bed
 layers the bed surface layer becomes increasingly fine.
 
-.. _sediment-mixing:
+.. _hydraulic-mixing:
 
 Hydraulic Mixing
-^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~
 
 As sediment sorting due to aeolian processes can lead to armoring of a
 beach surface, mixing of the beach surface or erosion of course
@@ -494,122 +512,33 @@ through an input time series of water levels. Typical values for
 :math:`f_{\Delta z_{\mathrm{d}}}` are 0.05 to 0.4 and 0.5 for :math:`\gamma`.
 
 
+.. _bed-interaction-approach:
 
+Bed-interaction Approach (zeta)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. _threshold:
-
-Shear velocity threshold
-------------------------
-
-The shear velocity threshold represents the influence of bed surface
-properties in the saturated sediment transport equation. The shear
-velocity threshold is computed for each grid cell and sediment
-fraction separately based on local bed surface properties, like
-moisture, roughness elements and salt content. For each bed surface
-property supported by the model a factor is computed to increase the
-initial shear velocity threshold:
-
-.. math::
-  :label: apx-shearvelocity
-  
-  u_{\mathrm{* th}} = 
-  f_{u_{\mathrm{* th}}, \mathrm{M}} \cdot 
-  f_{u_{\mathrm{* th}}, \mathrm{R}} \cdot 
-  f_{u_{\mathrm{* th}}, \mathrm{S}} \cdot 
-  u_{\mathrm{* th, 0}}
-
-The initial shear velocity threshold :math:`u_{\mathrm{* th, 0}}` [m/s] is
-computed based on the grain size following :cite:`Bagnold1937b`:
-
-.. math::
-   :label: shear
-
-   u_{\mathrm{* th, 0}} = A \sqrt{ \frac{\rho_{\mathrm{p}} - \rho_{\mathrm{a}}}{\rho_{\mathrm{a}}} \cdot g \cdot d_{\mathrm{n}}}
-
-where :math:`A` [-] is an empirical constant, :math:`\rho_{\mathrm{p}}`
-[:math:`\mathrm{kg/m^3}`] is the grain density, :math:`\rho_{\mathrm{a}}`
-[:math:`\mathrm{kg/m^3}`] is the air density, :math:`g` [:math:`\mathrm{m/s^2}`] is the
-gravitational constant and :math:`d_{\mathrm{n}}` [m] is the nominal grain
-size of the sediment fraction.
-
-.. _moisture:
-
-Moisture content
-^^^^^^^^^^^^^^^^^
-
-The shear velocity threshold is updated based on moisture content
-following :cite:`Belly1964`:
-
-.. math::
-  :label: apx-moist
-   
-  f_{u_{\mathrm{* th}}, \mathrm{M}} = \max(1 \quad ; \quad 1.8 + 0.6 \cdot \log(p_{\mathrm{g}}))
-
-where :math:`f_{u_{\mathrm{* th},M}}` [-] is a factor in Equation :eq:`apx-shearvelocity`, :math:`p_{\mathrm{g}}` [-] is the geotechnical
-mass content of water, which is the percentage of water compared to
-the dry mass. The geotechnical mass content relates to the volumetric
-water content :math:`p_{\mathrm{V}}` [-] according to:
-
-.. math::
-  :label: vol-water
-
-  p_{\mathrm{g}} = \frac{p_{\mathrm{V}} \cdot \rho_{\mathrm{w}}}{\rho_{\mathrm{p}} \cdot (1 - p)}
-
-where :math:`\rho_{\mathrm{w}}` [:math:`\mathrm{kg/m^3}`] and
-:math:`\rho_{\mathrm{p}}` [:math:`\mathrm{kg/m^3}`] are the water and particle
-density respectively and :math:`p` [-] is the porosity. Values for
-:math:`p_{\mathrm{g}}` smaller than 0.005 do not affect the shear velocity
-threshold :cite:`Pye1990`. Values larger than 0.064 (or 10\%
-volumetric content) cease transport :cite:`DelgadoFernandez2010`,
-which is implemented as an infinite shear velocity threshold.
-
-.. _roughness:
-
-Roughness elements
-^^^^^^^^^^^^^^^^^^^
-
-Sediment sorting may lead to the emergence of non-erodible elements
-from the bed. Non-erodible roughness elements may shelter the erodible
-bed from wind erosion due to shear partitioning, resulting in a
-reduced sediment availability :cite:`Raupach1993`. Therefore the
-equation of :cite:`Raupach1993` is implemented according to:
-
-.. math::
-   :label: raupach
-           
-   u_{\mathrm{* th, R}} = u_{\mathrm{* th}} \cdot \sqrt{ \left( 1 - m \cdot \sum_{k=k_0}^{n_{\mathrm{k}}}{w_k^{\mathrm{bed}}} \right) \left( 1 + \frac{m \beta}{\sigma} \cdot \sum_{k=k_0}^{n_{\mathrm{k}}}{w_k^{\mathrm{bed}}} \right) }
-
-in which :math:`\sigma` is the ratio between the frontal area and the
-basal area of the roughness elements and :math:`\beta` is the ratio
-between the drag coefficients of the roughness elements and the bed
-without roughness elements. :math:`m` is a factor to account for the
-difference between the mean and maximum shear stress and is usually
-chosen 1.0 in wind tunnel experiments and may be lowered to 0.5 for
-field applications. The roughness density :math:`\lambda` in the
-original equation of :cite:`Raupach1993` is obtained from the mass
-fraction in the bed surface layer :math:`w_k^{\mathrm{bed}}` according
-to:
-
-.. math::
-   :label: rough
-   
-   \lambda = \frac{\sum_{k=k_0}^{n_{\mathrm{k}}}{w_k^{\mathrm{bed}}}}{\sigma}
-
-in which :math:`k_0` is the index of the smallest non-erodible
-sediment fraction in current conditions and :math:`n_{\mathrm{k}}` is the
-total number of sediment fractions. It is assumed that the sediment
-fractions are ordered by increasing size. Whether a fraction is
-erodible depends on the sediment transport capacity.
-
-Non-erodible layer
-^^^^^^^^^^^^
+PLACEHOLDER
 
 
 
-.. _wind-shear:
+.. _wind-shear-velocity:
 
-Wind shear and topographic steering
+Wind and Shear Velocity
 -----------------------------------
+
+PLACEHOLDER: WIND READ FROM ..... MAIN PROCESS...
+
+.. _shear-velocity:
+
+Shear Velocity
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+PLACEHOLDER: LAW OF THE WALL
+
+.. _topographic-steering:
+
+Topographic Steering
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 To simulate the topographic steering effects on dunes, often Computational Fluid Dynamics (CFD) methods are used. However, these methods are computationally expensive, making them not ideal for long-term morphodynamic simulations. To reduce computational costs, the topographic steering of the wind due to smooth gradients is implemented following an analytical perturbation theory for turbulent boundary layer flow :cite:`weng1991air, kroy2002minimal`. This method describes the topographic impact through perturbations in the shear stress :math:`\tau` [:math:`\mathrm{N/m^2}`] (where :math:`\tau={\rho_a}{u_*}^2`):
 
@@ -663,6 +592,8 @@ For one-dimensional situations, a simplified solution of the shear perturbation 
 
 where :math:`\alpha` [-] and :math:`\beta` [-] both depend on :math:`L/z_0`, but are user-defined fixed variables rather than computed in the model. :math:`\xi` [-] is the normalized cross-shore distance :math:`x/L`.
 
+.. _flow-separation:
+
 Flow separation
 ^^^^^^^^^^^^^^^
 
@@ -710,7 +641,7 @@ The computed shear stress as a result of the combined influence of the implement
    Spatial variation in shear stress due to topographic steering of the wind field. The upper panels show the bed level :math:`z_b` [m] and shear stress velocity perturbation :math:`\delta u_*` [m/s] over a uniform Gaussian hill. The lower panels show topographic steering over a barchan dune, including the influence of flow separation. The right panels compare outcomes of the one- and two-dimensional approaches.
 
 Directional winds
-^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~
 
 The underlying implementation of the perturbation theory and separation bubble originally allows only for wind conditions that are perpendicular to the grid. An overlaying computational grid is introduced in AeoLiS, which rotates with the changing wind direction per time step. By doing this, the shear stresses are always estimated in the positive x-direction of the computational grid. The following steps are executed for each time step:
 
@@ -736,6 +667,126 @@ The underlying implementation of the perturbation theory and separation bubble o
 
    Animation demonstrating the rotational computational grid aligning with the changing wind direction to solve for topographic steering at each time step.
 
+
+
+.. _shear-velocity-threshold:
+
+Shear Velocity Threshold
+------------------------
+
+The shear velocity threshold represents the influence of bed surface
+properties in the saturated sediment transport equation. The shear
+velocity threshold is computed for each grid cell and sediment
+fraction separately based on local bed surface properties, like
+moisture, roughness elements and salt content. For each bed surface
+property supported by the model a factor is computed to increase the
+initial shear velocity threshold:
+
+.. math::
+  :label: apx-shearvelocity
+  
+  u_{\mathrm{* th}} = 
+  f_{u_{\mathrm{* th}}, \mathrm{M}} \cdot 
+  f_{u_{\mathrm{* th}}, \mathrm{R}} \cdot 
+  f_{u_{\mathrm{* th}}, \mathrm{S}} \cdot 
+  u_{\mathrm{* th, 0}}
+
+.. _base-threshold-grainsize:
+
+Base Threshold: Grainsize
+^^^^^^^^^^^^^^^
+
+The initial shear velocity threshold :math:`u_{\mathrm{* th, 0}}` [m/s] is
+computed based on the grain size following :cite:`Bagnold1937b`:
+
+.. math::
+   :label: shear
+
+   u_{\mathrm{* th, 0}} = A \sqrt{ \frac{\rho_{\mathrm{p}} - \rho_{\mathrm{a}}}{\rho_{\mathrm{a}}} \cdot g \cdot d_{\mathrm{n}}}
+
+where :math:`A` [-] is an empirical constant, :math:`\rho_{\mathrm{p}}`
+[:math:`\mathrm{kg/m^3}`] is the grain density, :math:`\rho_{\mathrm{a}}`
+[:math:`\mathrm{kg/m^3}`] is the air density, :math:`g` [:math:`\mathrm{m/s^2}`] is the
+gravitational constant and :math:`d_{\mathrm{n}}` [m] is the nominal grain
+size of the sediment fraction.
+
+.. _threshold-moisture-content:
+
+Threshold: Moisture content
+^^^^^^^^^^^^^^^^^
+
+The shear velocity threshold is updated based on moisture content
+following :cite:`Belly1964`:
+
+.. math::
+  :label: apx-moist
+   
+  f_{u_{\mathrm{* th}}, \mathrm{M}} = \max(1 \quad ; \quad 1.8 + 0.6 \cdot \log(p_{\mathrm{g}}))
+
+where :math:`f_{u_{\mathrm{* th},M}}` [-] is a factor in Equation :eq:`apx-shearvelocity`, :math:`p_{\mathrm{g}}` [-] is the geotechnical
+mass content of water, which is the percentage of water compared to
+the dry mass. The geotechnical mass content relates to the volumetric
+water content :math:`p_{\mathrm{V}}` [-] according to:
+
+.. math::
+  :label: vol-water
+
+  p_{\mathrm{g}} = \frac{p_{\mathrm{V}} \cdot \rho_{\mathrm{w}}}{\rho_{\mathrm{p}} \cdot (1 - p)}
+
+where :math:`\rho_{\mathrm{w}}` [:math:`\mathrm{kg/m^3}`] and
+:math:`\rho_{\mathrm{p}}` [:math:`\mathrm{kg/m^3}`] are the water and particle
+density respectively and :math:`p` [-] is the porosity. Values for
+:math:`p_{\mathrm{g}}` smaller than 0.005 do not affect the shear velocity
+threshold :cite:`Pye1990`. Values larger than 0.064 (or 10\%
+volumetric content) cease transport :cite:`DelgadoFernandez2010`,
+which is implemented as an infinite shear velocity threshold.
+
+.. _threshold-roughness-elements:
+
+Threshold: Roughness elements
+^^^^^^^^^^^^^^^^^^^
+
+Sediment sorting may lead to the emergence of non-erodible elements
+from the bed. Non-erodible roughness elements may shelter the erodible
+bed from wind erosion due to shear partitioning, resulting in a
+reduced sediment availability :cite:`Raupach1993`. Therefore the
+equation of :cite:`Raupach1993` is implemented according to:
+
+.. math::
+   :label: raupach
+           
+   u_{\mathrm{* th, R}} = u_{\mathrm{* th}} \cdot \sqrt{ \left( 1 - m \cdot \sum_{k=k_0}^{n_{\mathrm{k}}}{w_k^{\mathrm{bed}}} \right) \left( 1 + \frac{m \beta}{\sigma} \cdot \sum_{k=k_0}^{n_{\mathrm{k}}}{w_k^{\mathrm{bed}}} \right) }
+
+in which :math:`\sigma` is the ratio between the frontal area and the
+basal area of the roughness elements and :math:`\beta` is the ratio
+between the drag coefficients of the roughness elements and the bed
+without roughness elements. :math:`m` is a factor to account for the
+difference between the mean and maximum shear stress and is usually
+chosen 1.0 in wind tunnel experiments and may be lowered to 0.5 for
+field applications. The roughness density :math:`\lambda` in the
+original equation of :cite:`Raupach1993` is obtained from the mass
+fraction in the bed surface layer :math:`w_k^{\mathrm{bed}}` according
+to:
+
+.. math::
+   :label: rough
+   
+   \lambda = \frac{\sum_{k=k_0}^{n_{\mathrm{k}}}{w_k^{\mathrm{bed}}}}{\sigma}
+
+in which :math:`k_0` is the index of the smallest non-erodible
+sediment fraction in current conditions and :math:`n_{\mathrm{k}}` is the
+total number of sediment fractions. It is assumed that the sediment
+fractions are ordered by increasing size. Whether a fraction is
+erodible depends on the sediment transport capacity.
+
+.. _threshold-non-erodible-layer:
+
+Threshold: Non-erodible layer
+^^^^^^^^^^^^
+
+
+
+
 .. _vegetation:
 
 Vegetation 
@@ -750,29 +801,10 @@ lateral expansion and establishment :cite:`Keijsers2016`, as well as simulating
 the destruction of vegetation caused by hydrodynamic processes.In the event of 
 cell inundation, vegetation density is reduced as a result. 
 
-Shear stress reduction
-^^^^^^^^^^^^^^^^^^^^^^^^
-Inspired by the Coastal Dune Model (CDM) proposed by :cite:`DuranMoore2013`, AeoLiS 
-incorporates vegetation-wind interaction using the expression established by :cite:`DuranHerrmann2006`:
+.. _vegetation-metrics:
 
-.. math::
-   :label: shear_reduction_vegetation
-
-   \frac{u_{\text{veg}}}{u_*} = \frac{1}{\sqrt{1 + \Gamma \rho_{\text{veg}}}}
-
-
-where the ratio of shear velocity in the presence of vegetation (:math:`u_{*,\text{veg}}`) to the unobstructed 
-shear velocity (:math:`u_*`) is determined by a vegetation-related roughness parameter (:math:`\Gamma`) and the 
-vegetation density within a unit area of the grid cell (:math:`\rho_{\text{veg}}`). In the model, :math:`\Gamma` = 16 is derived 
-from plant form drag and geometry values documented for creosote communities :cite:`DuranHerrmann2006`. 
-This implementation calculates the expression on each model grid cell, with higher vegetation density 
-(expressed by :math:`\rho_{\text{veg}}`) leading to a more substantial reduction in shear velocity compared to sparse 
-vegetation. By integrating these physical and ecological processes, AeoLiS simulates spatial patterns and temporal 
-variations in sediment transport and morphological changes resulting from aeolian processes in coastal 
-environments.
-
-Vegetation density
-^^^^^^^^^^^^^^^^^^^
+Vegetation Metrics
+^^^^^^^^^^^^
 
 The vegetation density :math:`\rho_{\text{veg}}` can vary in space and time and is determined by the ratio of the actual vegetation height (hveg) 
 to the maximum vegetation height (:math:`h_{\text{veg,max}}`), and can vary between 0 and 1 (:cite:`DuranHerrmann2006`):
@@ -789,8 +821,11 @@ height within that specific cell. This height variation is influenced by both th
 the rate of sediment burial. If the vegetation density remains constant over time, it suggests either no 
 sedimentation or a growth rate equal to the rate of sediment burial within the cell. 
 
-Growth and decay
-^^^^^^^^^^^^^^^^^
+
+.. _vegetation-development:
+
+Vegetation Development
+^^^^^^^^^^^^
 
 Vegetation growth and decay follow the model proposed by :cite:`DuranHerrmann2006`, modified to include :math:`\delta z_{\text{b,opt}}`
 (m/year), representing sediment burial for optimal growth that shifts the peak of optimal growth:
@@ -835,45 +870,63 @@ across the domain, except in eroding grid cells (where bed elevation decreases),
 propagation is determined by identifying the boundaries between vegetated and non-vegetated cells, with the 
 parameter ρ_{lat} adjusting the likelihood of lateral propagation at these boundaries.
 
-Inundation
-^^^^^^^^^^^^
+
+
+.. _vegetation-induced-shear-reduction:
+
+Vegetation-induced Shear Reduction
+^^^^^^^^^^^^^^^^^^^^^^^^
+Inspired by the Coastal Dune Model (CDM) proposed by :cite:`DuranMoore2013`, AeoLiS 
+incorporates vegetation-wind interaction using the expression established by :cite:`DuranHerrmann2006`:
+
+.. math::
+   :label: shear_reduction_vegetation
+
+   \frac{u_{\text{veg}}}{u_*} = \frac{1}{\sqrt{1 + \Gamma \rho_{\text{veg}}}}
+
+
+where the ratio of shear velocity in the presence of vegetation (:math:`u_{*,\text{veg}}`) to the unobstructed 
+shear velocity (:math:`u_*`) is determined by a vegetation-related roughness parameter (:math:`\Gamma`) and the 
+vegetation density within a unit area of the grid cell (:math:`\rho_{\text{veg}}`). In the model, :math:`\Gamma` = 16 is derived 
+from plant form drag and geometry values documented for creosote communities :cite:`DuranHerrmann2006`. 
+This implementation calculates the expression on each model grid cell, with higher vegetation density 
+(expressed by :math:`\rho_{\text{veg}}`) leading to a more substantial reduction in shear velocity compared to sparse 
+vegetation. By integrating these physical and ecological processes, AeoLiS simulates spatial patterns and temporal 
+variations in sediment transport and morphological changes resulting from aeolian processes in coastal 
+environments.
+
+
+.. _vegetation-computing-zeta:
+
+Computing bed-interaction (zeta) over vegetation
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+PLACEHOLDER
+
+.. _vegetation-mortality:
+
+Vegetation Mortality
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+PLACEHOLDER
+
+
 
 .. _hydrodynamics-moisture:
 
-Surface moisture
+Hydrodynamics and Surface Moisture
 -----------------
 
-Wave runup, capillary rise from the beach groundwater, and precipitation periodically wet the intertidal beach
-temporally increasing the shear velocity threshold (
-:numref:`fig-moisture-processes`). Infiltration and
-evaporation subsequently dry the beach.
-
-.. _fig-moisture-processes:
-
-.. figure:: /images/moisture_processes.jpg
-   :align: center
-
-   Illustration of processes influencing the volumetric moisture content :math:`\theta` at the beach surface.
-
-The structure of the surface moisture module and included processes are schematized in :numref:`fig-moisture-scheme`. 
-The resulting surface moisture is obtained by selecting the largest of the moisture contents computed 
-with the water balance approach (right column) and due to capillary rise from the groundwater table (left column). 
-The method is based on the assumption that the flow of soil water is small compared to the flow of groundwater 
-and that the beach groundwater dynamics primarily is controlled by the water level and wave action at 
-the seaward boundary :cite:`Raubenheimer1999`, :cite:`Schmutz2014`. Thus, there is no feedback between the processes 
-in the right column of :numref:`fig-moisture-scheme` and the groundwater dynamics described in the left column.
-
-.. _fig-moisture-scheme:
-
-.. figure:: /images/moisture_scheme.jpg
-   :width: 600px
-   :align: center
-
-   Implementation of surface moisture processes in the AeoLiS.
+Aeolis computes .... for ... and ... and ...
 
 
-Runup and wave setup
-^^^^^^^^^^^^^^^^^^^^
+.. _water-levels-waves-run-up:
+
+Water levels, Waves and Run-up
+^^^^^^^^^^^^^^^
+
+PLACEHOLDER: TWL, SWL, zs, hw, eta, R, ...
+
 The runup height and wave setup are computed using the Stockdon formulas :cite:`Stockdon2006`. 
 Their parameterization differs depending on the dynamic beach steepness expressed through the Irribaren number:
 
@@ -913,8 +966,61 @@ and wave setup:
    < \eta  >  = 0.35\xi
 
 
-Tide- and wave-induced groundwater variations
+.. _surface-moisture:
+
+Surface Moisture
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+PLACEHOLDER
+
+
+.. _hydraulic-sediment-mixing:
+
+Hydraulic Sediment Mixing
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+PLACEHOLDER
+
+.. _marine-driven-bed-level-change:
+
+Marine-driven Bed Level Change
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+PLACEHOLDER
+
+
+
+Groundwater Module (Hallin, 2023)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+Wave runup, capillary rise from the beach groundwater, and precipitation periodically wet the intertidal beach
+temporally increasing the shear velocity threshold (
+:numref:`fig-moisture-processes`). Infiltration and
+evaporation subsequently dry the beach.
+
+.. _fig-moisture-processes:
+
+.. figure:: /images/moisture_processes.jpg
+   :align: center
+
+   Illustration of processes influencing the volumetric moisture content :math:`\theta` at the beach surface.
+
+The structure of the surface moisture module and included processes are schematized in :numref:`fig-moisture-scheme`. 
+The resulting surface moisture is obtained by selecting the largest of the moisture contents computed 
+with the water balance approach (right column) and due to capillary rise from the groundwater table (left column). 
+The method is based on the assumption that the flow of soil water is small compared to the flow of groundwater 
+and that the beach groundwater dynamics primarily is controlled by the water level and wave action at 
+the seaward boundary :cite:`Raubenheimer1999`, :cite:`Schmutz2014`. Thus, there is no feedback between the processes 
+in the right column of :numref:`fig-moisture-scheme` and the groundwater dynamics described in the left column.
+
+.. _fig-moisture-scheme:
+
+.. figure:: /images/moisture_scheme.jpg
+   :width: 600px
+   :align: center
+
+   Implementation of surface moisture processes in the AeoLiS.
 
 Groundwater under sandy beaches can be considered as shallow aquifers, with only horizontal groundwater
 flow so that the pressure distribution is hydrostatic :cite:`Baird1998,Brakenhoff2019,Nielsen1990,Raubenheimer1999`.
@@ -970,7 +1076,8 @@ Substitution of :math:`u` (Equation :eq:`gw-discharge`) in the continuity equati
    \frac{{\partial \eta }}{{\partial t}} = \frac{K}{{{n_e}}}\frac{\partial }{{\partial x}}\left( {(D + \eta )\frac{{\partial \eta }}{{\partial x}}} \right) + \frac{{{U_l}}}{{{n_e}}}
 
 Numerical solution of the Boussinesq groundwater equation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 The Boussinesq equation is solved numerically with a central finite difference 
 method in space and a fourth-order Runge-Kutta integration technique in time:
 
@@ -1011,7 +1118,7 @@ and the groundwater elevation is set equal to the bed elevation. On the landward
 a no-flow condition, :math:`\frac{{\partial \eta }}{{\partial t}} = 0` (Neumann condition), or constant head, :math:`\eta = constant` (Dirichlet condition), is prescribed.
 
 Capillary rise
-^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~
 Soil water retention (SWR) functions describe the surface moisture due to capillary transport 
 of water from the groundwater table :cite:`VanGenuchten1980`:
 
@@ -1049,7 +1156,7 @@ The wetting scanning curve is obtained from :cite:`Mualem1974`:
 where :math:`{h_\Delta}` is the groundwater table depth at the reversal on the drying curve.
 
 Infiltration
-^^^^^^^^^^^^
+~~~~~~~~~~~~
 Infiltration is accounted for by assuming that excess water infiltrates until the moisture content reaches 
 field capacity, :math:`{\theta_fc}`. The moisture content at field capacity is the maximum amount of water 
 that the unsaturated zone of soil can hold against the pull of gravity. For sandy soils, 
@@ -1092,7 +1199,8 @@ drying time scale, defined as the time in which the beach moisture
 content halves.
 
 Precipitation and evaporation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 A water balance approach accounts for the effect of precipitation and evaporation,
 
 .. math::
@@ -1127,20 +1235,27 @@ is the latent heat vaporization. To obtain an evaporation rate in
 [m/s], the original formulation is multiplied by :math:`9 \cdot 10^7`.
 
 
-Sand fences
-------------
-
-Marine erosion
----------------
 
 .. _morphological-change:
 
 Morphological change
 ---------------------
 
+.. _bed-level-update:
+
+Bed Level Update
+^^^^^^^^^^^^
+
+PLACEHOLDER
+
+.. _avalanching:
 Avalanching
 ^^^^^^^^^^^^
 
-Wet bed reset
+PLACEHOLDER
+
+Marine-driven Morphodynamics
 ^^^^^^^^^^^^^^^^
+
+PLACEHOLDER: See section...
 
