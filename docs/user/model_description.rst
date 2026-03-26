@@ -6,14 +6,14 @@ Model description
 Quick Overview
 ~~~~~~~~~~~~~~
 
-This section provides a summary of the main processes, equations, and configuration parameters in AeoLiS. For more detailed information, refer to the linked sections. 
+This section provides a summary of the main processes, equations, and configuration parameters in AeoLiS. For more information, refer to the detailed descriptions linked in the text or further down this page.
 
-For more information on the model in- and output, see the :ref:`model-input-output` section. The main configuration file (``aeolis.txt`` by default) contains all parameter settings, process flags and refers to other external input files (:ref:`model-input`). The computational domain is defined in x- and y-coordinates (``xgrid_file``, ``ygrid_file``) and a bed elevation (``bed_file``) (see the :ref:`grid-files` section). External forcing is defined by timeseries of wind, tide and waves (more information, see :ref:`timeseries`). An overview of all model parameters is given in the :ref:`parameters` section and all processes in the :ref:`processes` section. For more information on model output, see the :ref:`model-output` section.
+For a comprehensive guide on setting up the model, see the :ref:`model-input-output` section. The main configuration file (default: ``aeolis.txt``) contains all parameter settings and process flags, and it serves as the central reference for external input files (:ref:`model-input`). The computational domain is constructed using x- and y-coordinates (``xgrid_file``, ``ygrid_file``) alongside the initial bed elevation (``bed_file``) (see the :ref:`grid-files` section). External environmental forcing is defined through continuous time series of wind, tide, and waves (see :ref:`timeseries`). A complete overview of all model parameters is provided in the :ref:`parameters` section, and the individual physical modules are outlined in the :ref:`processes` section. Finally, for details on extracting and analyzing simulation results, refer to the :ref:`model-output` section.
 
-Timesteps....
+The simulation advances sequentially through time steps, repeating all activated processes and continuously updating the morphological model state. The simulation duration runs from a defined start time (``tstart``) to an end time (``tstop``), both specified in seconds relative to a designated reference date (``refdate``). A typical internal time step (``dt``) is 3600 seconds (1 hour). As the model progresses, it exports user-defined variables (``output_vars``) to a NetCDF file (default: ``aeolis.nc``, defined by ``output_file``) at customized intervals (``output_times``).
 
 Sediment Transport
-"""""""""""""""
+^^^^^^^^^^^^^^^^^^
 
 Calculating aeolian sediment transport is the core of the AeoLiS model. Sediment transport is computed using a two-dimensional advection scheme, simplified here for one-dimensional transport of a single sediment fraction:
 
@@ -45,7 +45,7 @@ BED INTERACTION ``process_bedinteraction``
 
 
 Wind and shear Velocity
-"""""""""""""""
+^^^^^^^^^^^^^^^^^^
 
 The shear velocity :math:`u_*` (``ustar``) acts as the primary driver of transport. It is initially computed for a flat bed using the Prandtl-Von Kármán Law of the Wall, based on wind velocity :math:`u_w` (``uw``) at a given height (provided via the ``wind_file``). This core wind process is required for all simulations and is enabled via ``process_wind``.
 
@@ -70,7 +70,7 @@ Equation
 For more information, see the :ref:`Vegetation <vegetation>` section.
 
 Velocity threshold
-"""""""""""""""
+^^^^^^^^^^^^^^^^^^
 
 While shear velocity drives transport, the threshold velocity :math:`u_{\mathrm{th}}` (``uth``) serves as a limiter. It acts as a collective parameter for multiple supply-limiting processes, scaling the base threshold :math:`u_{\mathrm{*th,0}}` (``uth0``) by various environmental factors. Threshold calculations are enabled via ``process_threshold``.
 
@@ -82,7 +82,7 @@ While shear velocity drives transport, the threshold velocity :math:`u_{\mathrm{
 The base threshold :math:`u_{\mathrm{* th, 0}}` is computed based on the local grain size and density (activated via ``th_grainsize``). This base value is then scaled by supply-limiting factors depending on the enabled model processes. The influence of surface moisture (:math:`f_{\mathrm{M}}`) is activated via ``th_moisture``, while sheltering by non-erodible roughness elements (:math:`f_{\mathrm{R}}`) is configured via ``th_sheltering``. The restricting effect of a non-erodible layer can be included using ``th_nelayer``. For more information, see the :ref:`Velocity threshold <shear-threshold>` section.
 
 Vegetation
-~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^
 
 AeoLiS simulates the dynamic growth and spreading of vegetation, enabled via ``process_vegetation``. The specific vegetation formulation is selected using ``method_vegetation`` (``duran`` for the original implementation, ``grass`` for the newest implementation (REF van Westen 2026)). In the original description, vegetation density rhoveg (``rhoveg``) is computed through the vegetation height hveg (``hveg``) w.r.t. the maximum height (``Hveg``):
 
@@ -95,7 +95,7 @@ Equation dhveg
 Growth is governed by specific parameters for intrinsic vertical growth :math:`V_{\mathrm{ver}}` (``V_ver``) and sensitivity to sediment burial :math:`\gamma_{\mathrm{veg}}` (``veg_gamma``). For more information, see the :ref:`Vegetation <vegetation>` section.
 
 Hydrodynamics and Surface Moisture
-"""""""""""""""
+^^^^^^^^^^^^^^^^^^
 
 Water levels, wave runup, and groundwater can wet the beach, temporally increasing the shear velocity threshold, and mix sediment fractions. The model reads input water levels (``tide_file``) and wave heights (``wave_file``), activated via ``process_tide`` and ``process_wave``. The water level is first projected to the domain, resulting in the Still Water Level (``SWL``). After computing the wave runup (``R``), enabled via ``process_runup``), the Total Water Level (``TWL`` = ``SWL`` + ``R``) can be computed. The waterlevel ``zs`` maximum of bed level (``zb``) and TWL. Water depth is ``hw``. Applying masks (``tide_mask``, ``wave_mask``, ``runup_mask``) can be used to spatially modify the acting hydrodynamics. For more information on the hydrodynamics, see the ... section.
 
@@ -104,7 +104,7 @@ Inundation wets the bed, increasing the surface moisture (``moist``) and once th
 Wave impact can mix multiple sediment fractions over several bed layers down to the depth of disturbance , the ... section. (``process_mixtoplayer``)
 
 Morphological Change
-"""""""""""""""
+^^^^^^^^^^^^^^^^^^
 
 Gradients in aeolian sediment transport can cause the bed level (``zb``) to change (``dzb``), enabled by ``process_bedupdate``:
 
@@ -116,8 +116,6 @@ To redistributes sediment when the local slope exceeds the maximum angle of repo
 
 Submerged cells are subject to distinct bed level assumptions and marine erosion, managed by configurations like ``process_wet_bed_reset``. 
 
-
-------------------------
 
 .. _sediment-transport:
 
