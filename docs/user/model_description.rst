@@ -562,15 +562,6 @@ For one-dimensional situations, a simplified solution of the shear perturbation 
 
 where :math:`\alpha` [-] and :math:`\beta` [-] both depend on :math:`L/z_0`, but are user-defined fixed variables rather than computed in the model. :math:`\xi` [-] is the normalized cross-shore distance :math:`x/L`.
 
-.. _fig-concept-topo-steering:
-
-.. figure:: /images/concept_topo_steering.jpg
-   :alt: concept topographic steering
-   :width: 800px
-   :align: center
-
-   Schematic overview of the shear perturbation and flow separation approach. Based on :cite:`weng1991air` and :cite:`kroy2002minimal`.
-
 Flow separation
 ^^^^^^^^^^^^^^^
 
@@ -597,6 +588,14 @@ where the polynomial coefficients are:
 
    a_2=-\frac{3 z_{\mathrm{brink}} + 2 z_{\mathrm{brink}}' l_r}{l_r^2} \qquad \qquad a_3=\frac{2 z_{\mathrm{brink}} +  z_{\mathrm{brink}}' l_r}{l_r^3}
 
+.. _fig-concept-topo-steering:
+
+.. figure:: /images/concept_topo_steering.jpg
+   :alt: concept topographic steering
+   :width: 800px
+   :align: center
+
+   Schematic overview of the shear perturbation and flow separation approach. Based on :cite:`weng1991air` and :cite:`kroy2002minimal`.
 
 The computed shear stress as a result of the combined influence of the implemented shear stress perturbations and flow separation is shown in Figure :numref:`fig-compare-topo-steering`. These results show the decrease on the windward and lee sides of both Gaussian- and barchan-shaped landforms and an increase over the crest. Additionally, a shear velocity of zero is shown below the separation bubble. 
 
