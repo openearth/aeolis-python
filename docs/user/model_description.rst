@@ -13,8 +13,8 @@ For guidance on setting up an AeoLiS model, see the :ref:`model input and output
 The simulation advances sequentially through time steps, repeating all activated processes and continuously updating the morphological model state. The simulation duration runs from a defined start time (``tstart``) to an end time (``tstop``), both specified in seconds relative to a designated reference date (``refdate``). A typical internal time step (``dt``) is 3600 seconds (1 hour). As the model progresses, it exports user-defined variables (``output_vars``) to a NetCDF file (default: ``aeolis.nc``, defined by ``output_file``) at customized intervals (``output_times``).
 
 Aeolian Sediment Transport
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Detailed section: :ref:`aeolian-sediment-transport`.
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Detailed section: :ref:`aeolian-sediment-transport`
 
 Aeolian sediment transport is the core of the AeoLiS model. It is computed using a two-dimensional advection scheme, simplified here for one-dimensional transport of a single sediment fraction:
 
@@ -44,7 +44,7 @@ AeoLiS supports the inclusion of multiple sediment fractions (``grain_size``, ``
 Enabling ``process_bedinteraction`` incorporates a bed interaction parameter into the advection equation. For more information, see the :ref:`bed interaction approach <bed-interaction-approach>` section.
 
 Wind and Shear Velocity
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^
 Detailed section: :ref:`wind-shear-velocity`
 
 The shear velocity :math:`u_*` (``ustar``) acts as the primary driver of transport. It is initially computed for a flat bed using the Prandtl-Von Kármán Law of the Wall, based on wind velocity :math:`u_w` (``uw``) at a given height (provided via the ``wind_file``). This core wind process is required for all simulations and is enabled via ``process_wind``.
@@ -69,8 +69,9 @@ Equation
 
 For more information, see the :ref:`Vegetation <vegetation>` section.
 
-Velocity threshold
-~~~~~~~~~~~~~~~~~~~~~
+Shear Velocity threshold
+^^^^^^^^^^^^^^^^^^^^
+Detailed section: :ref:`shear-velocity-threshold`
 
 While shear velocity drives transport, the threshold velocity :math:`u_{\mathrm{th}}` (``uth``) serves as a limiter. It acts as a collective parameter for multiple supply-limiting processes, scaling the base threshold :math:`u_{\mathrm{*th,0}}` (``uth0``) by various environmental factors. Threshold calculations are enabled via ``process_threshold``.
 
@@ -82,7 +83,8 @@ While shear velocity drives transport, the threshold velocity :math:`u_{\mathrm{
 The base threshold :math:`u_{\mathrm{* th, 0}}` is computed based on the local grain size and density (activated via ``th_grainsize``). This base value is then scaled by supply-limiting factors depending on the enabled model processes. The influence of surface moisture (:math:`f_{\mathrm{M}}`) is activated via ``th_moisture``, while sheltering by non-erodible roughness elements (:math:`f_{\mathrm{R}}`) is configured via ``th_sheltering``. The restricting effect of a non-erodible layer can be included using ``th_nelayer``. For more information, see the :ref:`Velocity threshold <shear-threshold>` section.
 
 Vegetation
-~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^
+Detailed section: :ref:`vegetation`
 
 AeoLiS simulates the dynamic growth and spreading of vegetation, enabled via ``process_vegetation``. The specific vegetation formulation is selected using ``method_vegetation`` (``duran`` for the original implementation, ``grass`` for the newest implementation (REF van Westen 2026)). In the original description, vegetation density rhoveg (``rhoveg``) is computed through the vegetation height hveg (``hveg``) w.r.t. the maximum height (``Hveg``):
 
@@ -95,7 +97,8 @@ Equation dhveg
 Growth is governed by specific parameters for intrinsic vertical growth :math:`V_{\mathrm{ver}}` (``V_ver``) and sensitivity to sediment burial :math:`\gamma_{\mathrm{veg}}` (``veg_gamma``). For more information, see the :ref:`Vegetation <vegetation>` section.
 
 Hydrodynamics and Surface Moisture
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Detailed section: :ref:`hydrodynamics-surface-moisture`
 
 Water levels, wave runup, and groundwater can wet the beach, temporally increasing the shear velocity threshold, and mix sediment fractions. The model reads input water levels (``tide_file``) and wave heights (``wave_file``), activated via ``process_tide`` and ``process_wave``. The water level is first projected to the domain, resulting in the Still Water Level (``SWL``). After computing the wave runup (``R``), enabled via ``process_runup``), the Total Water Level (``TWL`` = ``SWL`` + ``R``) can be computed. The waterlevel ``zs`` maximum of bed level (``zb``) and TWL. Water depth is ``hw``. Applying masks (``tide_mask``, ``wave_mask``, ``runup_mask``) can be used to spatially modify the acting hydrodynamics. For more information on the hydrodynamics, see the ... section.
 
@@ -104,7 +107,8 @@ Inundation wets the bed, increasing the surface moisture (``moist``) and once th
 Wave impact can mix multiple sediment fractions over several bed layers down to the depth of disturbance , the ... section. (``process_mixtoplayer``)
 
 Morphological Change
-~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^
+Detailed section: :ref:`morphological-change
 
 Gradients in aeolian sediment transport can cause the bed level (``zb``) to change (``dzb``), enabled by ``process_bedupdate``:
 
