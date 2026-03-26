@@ -27,7 +27,7 @@ Aeolian sediment transport is the core of the AeoLiS model. It is computed using
 
 The saturated sediment concentration :math:`c_{\mathrm{sat}}` (``Cu``) defines the transport capacity, while :math:`c` (``Ct``) is the instantaneous concentration in the air. Transport is activated in the configuration file using ``process_transport``. The right-hand side of the advection equation is governed by the adaptation timescale :math:`T` (``T``), which determines how quickly the concentration reaches equilibrium. To allow sediment to actually erode from or deposit to the bed, ``process_bedupdate`` must be enabled. 
 
-Solving this advection equation is one of the most computationally expensive parts of the model. You can choose different numerical approaches using the ``solver`` keyword. For detailed guidance on these options, see the :ref:`Guidance on advection, shear and grainspeed solvers <solver-guide>` section.
+Solving this advection equation is one of the most computationally expensive parts of the model. You can choose different numerical approaches using the ``solver`` keyword. For detailed guidance on these options, see :ref:`this <solver-guide>` section.
 
 Several methods are available to compute the saturated sediment concentration (``method_transport``). The equation by :cite:`Bagnold1937a` (``bagnold``) is the default:
 
@@ -39,7 +39,7 @@ Several methods are available to compute the saturated sediment concentration (`
 The sediment velocity :math:`u_{\mathrm{sed}}` (``u``, ``us``, ``un``) is determined by the ``method_grainspeed`` parameter. It can either be set equal to the governing wind speed (``windspeed``) or calculated using a saltation model (e.g., ``duran``). For more information on grain speed computations, see the :ref:`TEST <sediment-velocity>` section.
 
 .. note:: 
-   For all vector variables (like ``uw``, ``ustar``,  ``tau``, ``u``,  ``q``), the subscripts ``s`` and ``n`` indicate the cross-shore and longshore directions, respectively, and the name without a subscript represents the overall magnitude. 
+   For all vector variables (like ``uw``, ``ustar``,  ``tau``, ``u``,  ``q``), the subscripts ``s`` and ``n`` (e.g., ``uws``, ``uwn``) indicate the cross-shore and longshore directions, respectively, and the name without a subscript represents the overall magnitude. 
 
 AeoLiS supports the inclusion of multiple sediment fractions (``grain_size``, ``grain_dist``) across multiple vertical layers (``nlayers``). This allows for the simulation of sediment sorting, mixing, and armoring. More details are provided in the :ref:`multi-fraction-sediment-transport` section.
 
