@@ -74,7 +74,7 @@ For more information on how this interacts with plant growth, see the :ref:`vege
 
 
 Shear Velocity threshold
-^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^
 Detailed section: :ref:`shear-velocity-threshold`
 
 Where shear velocity drives transport, the threshold velocity :math:`u_{\mathrm{th}}` (``uth``) [:math:`\mathrm{m/s}`] serves as a supply-limiter. It acts as a collective parameter for all supply-limiting processes, scaling the base threshold :math:`u_{\mathrm{*th,0}}` (``uth0``) [:math:`\mathrm{m/s}`] by various environmental factors. Threshold calculations are enabled via ``process_threshold``.
@@ -123,7 +123,7 @@ Inundation wets the bed, increasing the surface moisture (``moist``) [:math:`\ma
 Furthermore, wave impacts can mix multiple sediment fractions across several bed layers down to the depth of disturbance. This mixing process is enabled via ``process_mixtoplayer``. For more details on how waves rework the bed, see the :ref:`hydraulic sediment mixing section <hydraulic-sediment-mixing>`.
 
 Morphological Change
-^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
 Detailed section: :ref:`morphological-change`
 
 Gradients in aeolian sediment transport result in net erosion or deposition, causing the bed level :math:`z_B` (``zb``) [:math:`\mathrm{m}`] to change over time; :math:`\Delta z_B` (``dzb``) [:math:`\mathrm{m}`]. This morphological updating is enabled by ``process_bedupdate``:
