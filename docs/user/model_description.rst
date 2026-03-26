@@ -238,23 +238,23 @@ The saturated sediment concentration :math:`c_{\mathrm{sat}}` is directly relate
 
    c_{\mathrm{sat}} = \max \left( 0 \quad ; \quad C_{\mathrm{b}} \frac{\rho_{\mathrm{a}}}{g} \frac{\left( u_* - u_{\mathrm{th}} \right)^3}{u_{\mathrm{sed}}} \right)
 
-Depending on the configuration, several other formulations can be selected to compute the saturated sediment concentration:
+Depending on the configuration, several other formulations can be selected to compute the saturated sediment concentration, for example:
 
-* **``kawamura``**:
+``kawamura``:
 
   .. math::
      :label: kawamura
 
      c_{\mathrm{sat}} = C_{\mathrm{k}} \frac{\rho_{\mathrm{a}}}{g} \frac{\left( u_* + u_{\mathrm{th}} \right)^2 \left( u_* - u_{\mathrm{th}} \right)}{u_{\mathrm{sed}}}
 
-* **``lettau``**:
+``lettau``:
 
   .. math::
      :label: lettau
 
      c_{\mathrm{sat}} = C_{\mathrm{l}} \frac{\rho_{\mathrm{a}}}{g} \frac{u_*^2 \left( u_* - u_{\mathrm{th}} \right)}{u_{\mathrm{sed}}}
 
-* **``dk``**:
+``dk``:
 
   .. math::
      :label: dk
@@ -289,9 +289,9 @@ where :math:`v_{\mathrm{eff}}` [:math:`\mathrm{m/s}`] is the effective wind velo
 
 Note that the computed :math:`u_{\mathrm{sed}}` represents the collective horizontal sediment movement, not the velocity of individual grains. AeoLiS provides three options based on this momentum balance:
 
-* **``duran_full``**: Solves the full momentum balance equation (Equation :eq:`used_momentum`) numerically for each timestep. This method is computationally heavy but necessary for accurate sediment velocities on steep topography (e.g., steep blowout cliffs).
+``duran_full`` solves the full momentum balance equation (Equation :eq:`used_momentum`) numerically for each timestep. This method is computationally heavy but necessary for accurate sediment velocities on steep topography (e.g., steep blowout cliffs).
 
-* **``duran``**: Uses an analytical approximation of the full momentum balance. It accounts for spatial variations and slope effects by assuming slopes are relatively gentle to avoid computationally expensive numerical solving:
+``duran`` uses an analytical approximation of the full momentum balance. It accounts for spatial variations and slope effects by assuming slopes are relatively gentle to avoid computationally expensive numerical solving:
 
   .. math::
      :label: used_duran_approx
@@ -300,7 +300,7 @@ Note that the computed :math:`u_{\mathrm{sed}}` represents the collective horizo
 
   where :math:`\hat{e}_{\tau}` is the wind direction unit vector and :math:`A \equiv |\hat{e}_{\tau} + 2\alpha \nabla z_{\mathrm{B}}|`. The first term points toward the wind direction, while the second is directed along the surface gradient, accounting for the competing effects of wind and gravity.
 
-* **``duran_uniform``**: Assumes a flat bed (:math:`\nabla z_{\mathrm{B}} = 0`). The sediment velocity is spatially uniform, simplifying the equation further to:
+``duran_uniform`` assumes a flat bed (:math:`\nabla z_{\mathrm{B}} = 0`). The sediment velocity is spatially uniform, simplifying the equation further to:
 
   .. math::
      :label: used_duran_uniform
