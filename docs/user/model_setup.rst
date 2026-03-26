@@ -653,7 +653,7 @@ When building an AeoLiS model, it helps to know which processes and methods are 
 .. [4] **Beach:** A simplistic (semi-1D) beach-dune profile simulation describing foredune growth.
 .. [5] **Blowout:** A complex coastal dune simulation involving a combination of most AeoLiS processes.
 
-.. _output:
+.. _model-output:
 
 Model output
 ------------
