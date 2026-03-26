@@ -32,7 +32,7 @@ Several methods are available to compute the saturated sediment concentration (`
 .. math::
    :label: bagnold_overview
 
-   c_{\mathrm{sat}} = \max \left ( 0 \quad ; \quad \alpha C \frac{\rho_{\mathrm{a}}}{g} \sqrt{\frac{d_{n}}{D_{n}}} \frac{\left ( u_* - u_{\mathrm{th}} \right )^3}{u_{\mathrm{sed}}} \right )
+   c_{\mathrm{sat}} = \max \left ( 0 \quad ; \quad C \frac{\rho_{\mathrm{a}}}{g} \sqrt{\frac{d_{n}}{D_{n}}} \frac{\left ( u_* - u_{\mathrm{th}} \right )^3}{u_{\mathrm{sed}}} \right )
 
 The sediment velocity :math:`u_{\mathrm{sed}}` (``u``, ``us``, ``un``) [:math:`\mathrm{m/s}`] is determined by the ``method_grainspeed`` parameter. It can either be set equal to the governing wind speed (``windspeed``) or calculated using a saltation model (e.g., ``duran``). For more information on grain speed computations, see the :ref:`sediment velocity <sediment-velocity>` section.
 
@@ -210,7 +210,7 @@ is commonly used :cite:`deVries2014a`.
 
 Solving this advection equation is one of the most computationally expensive processes in the model. The numerical approach can be selected using the ``solver`` parameter, which provides three options: ``steadystate``, ``euler_backward``, and ``euler_forward``. 
 
-.. note::
+.. tip::
    The ``steadystate`` solver is the default and recommended option for most applications. It is the most thoroughly tested and fastest option available. The steady-state assumption is generally valid for aeolian transport because wind and sediment transport adjust to local conditions on a scale of seconds to minutes, which is orders of magnitude faster than the timescale of typical timesteps in the AeoLiS model (hours). For detailed guidance on configuring these numerical approaches, see the :ref:`solver guide <solver-guide>`.
 
 
@@ -224,46 +224,27 @@ empirical sediment transport formulation (e.g. :cite:`Bagnold1937a`):
 .. math::
    :label: equilibrum-transport
           
-   q_{\mathrm{sat}} = \alpha C \frac{\rho_{\mathrm{a}}}{g} \sqrt{\frac{d_{\mathrm{n}}}{D_{\mathrm{n}}}} \left ( u_z - u_{\mathrm{th}} \right )^3
+   q_{\mathrm{sat}} = C \frac{\rho_{\mathrm{a}}}{g} \sqrt{\frac{d_{\mathrm{n}}}{D_{\mathrm{n}}}} \left ( u_* - u_{\mathrm{th}} \right )^3
 
 in which :math:`q_{\mathrm{sat}}` [kg/m/s] is the equilibrium or
 saturated sediment transport rate and represents the sediment
-transport capacity. :math:`u_z` [m/s] is the wind velocity at height :math:`z` [m]
+transport capacity. :math:`u_*` [m/s] is the shear velocity
 and :math:`u_{\mathrm{th}}` the velocity threshold [m/s]. The properties of
 the sediment in transport are represented by a series of parameters:
 :math:`C` [--] is a parameter to account for the grain size distribution
 width, :math:`\rho_{\mathrm{a}}` [:math:`\mathrm{kg/m^3}`] is the density of the
 air, :math:`g` [:math:`\mathrm{m/s^2}`] is the gravitational constant,
 :math:`d_{\mathrm{n}}` [m] is the nominal grain size and :math:`D_{\mathrm{n}}`
-[m] is a reference grain size. :math:`\alpha` is a constant to account for
-the conversion of the measured wind velocity to the near-bed shear
-velocity following Prandtl-Von Kármán's Law of the Wall:
-:math:`\left(\frac{\kappa}{\ln z / z'} \right)^3` in which :math:`z'` [m] is the
-height at which the idealized velocity profile reaches zero and
-:math:`\kappa` [-] is the Von Kármán constant.
+[m] is a reference grain size.
 
 The equilibrium sediment transport rate :math:`q_{\mathrm{sat}}` is
-divided by the wind velocity :math:`u_z` to obtain a mass per unit
+divided by the sediment velocity :math:`u_sed` to obtain a mass per unit
 area (per unit width):
 
 .. math::
    :label: equilibrium-conc
    
-   c_{\mathrm{sat}} = \max \left ( 0 \quad ; \quad \alpha C \frac{\rho_{\mathrm{a}}}{g} \sqrt{\frac{d_{n}}{D_{n}}} \frac{\left ( u_z - u_{\mathrm{th}} \right )^3}{u_z} \right )
-
-in which :math:`C` [--] is an empirical constant to account for
-the grain size distribution width, :math:`\rho_{\mathrm{a}}`
-[:math:`\mathrm{kg/m^3}`] is the air density, :math:`g` [:math:`\mathrm{m/s^2}`] is the
-gravitational constant, :math:`d_{\mathrm{n}}` [m] is the nominal grain
-size, :math:`D_{\mathrm{n}}` [m] is a reference grain size, :math:`u_z` [m/s] is
-the wind velocity at height :math:`z` [m] and :math:`\alpha` [--] is a constant to
-convert from measured wind velocity to shear velocity.
-
-Note that at this stage the spatial variations in wind velocity are
-not solved for and hence no morphological feedback is included in the
-simulation. The model is initially intended to provide accurate
-sediment fluxes from the beach to the dunes rather than to simulate
-subsequent dune formation.
+   c_{\mathrm{sat}} = \max \left ( 0 \quad ; \quad C \frac{\rho_{\mathrm{a}}}{g} \sqrt{\frac{d_{n}}{D_{n}}} \frac{\left ( u_* - u_{\mathrm{th}} \right )^3}{u_z} \right )
 
 
 .. _sediment-velocity:
