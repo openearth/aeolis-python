@@ -13,7 +13,7 @@ For guidance on setting up an AeoLiS model, see the :ref:`model input and output
 The simulation advances sequentially through time steps, repeating all activated processes and continuously updating the morphological model state. The simulation duration runs from a defined start time (``tstart``) to an end time (``tstop``), both specified in seconds relative to a designated reference date (``refdate``). A typical internal time step (``dt``) is 3600 seconds (1 hour). As the model progresses, it exports user-defined variables (``output_vars``) to a NetCDF file (default: ``aeolis.nc``, defined by ``output_file``) at customized intervals (``output_times``).
 
 Aeolian Sediment Transport
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Detailed section: :ref:`aeolian-sediment-transport`.
 
 Aeolian sediment transport is the core of the AeoLiS model. It is computed using a two-dimensional advection scheme, simplified here for one-dimensional transport of a single sediment fraction:
@@ -44,7 +44,7 @@ AeoLiS supports the inclusion of multiple sediment fractions (``grain_size``, ``
 Enabling ``process_bedinteraction`` incorporates a bed interaction parameter into the advection equation. For more information, see the :ref:`bed interaction approach <bed-interaction-approach>` section.
 
 Wind and Shear Velocity
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Detailed section: :ref:`wind-shear-velocity`
 
 The shear velocity :math:`u_*` (``ustar``) acts as the primary driver of transport. It is initially computed for a flat bed using the Prandtl-Von Kármán Law of the Wall, based on wind velocity :math:`u_w` (``uw``) at a given height (provided via the ``wind_file``). This core wind process is required for all simulations and is enabled via ``process_wind``.
@@ -70,7 +70,7 @@ Equation
 For more information, see the :ref:`Vegetation <vegetation>` section.
 
 Velocity threshold
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
 
 While shear velocity drives transport, the threshold velocity :math:`u_{\mathrm{th}}` (``uth``) serves as a limiter. It acts as a collective parameter for multiple supply-limiting processes, scaling the base threshold :math:`u_{\mathrm{*th,0}}` (``uth0``) by various environmental factors. Threshold calculations are enabled via ``process_threshold``.
 
@@ -95,7 +95,7 @@ Equation dhveg
 Growth is governed by specific parameters for intrinsic vertical growth :math:`V_{\mathrm{ver}}` (``V_ver``) and sensitivity to sediment burial :math:`\gamma_{\mathrm{veg}}` (``veg_gamma``). For more information, see the :ref:`Vegetation <vegetation>` section.
 
 Hydrodynamics and Surface Moisture
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Water levels, wave runup, and groundwater can wet the beach, temporally increasing the shear velocity threshold, and mix sediment fractions. The model reads input water levels (``tide_file``) and wave heights (``wave_file``), activated via ``process_tide`` and ``process_wave``. The water level is first projected to the domain, resulting in the Still Water Level (``SWL``). After computing the wave runup (``R``), enabled via ``process_runup``), the Total Water Level (``TWL`` = ``SWL`` + ``R``) can be computed. The waterlevel ``zs`` maximum of bed level (``zb``) and TWL. Water depth is ``hw``. Applying masks (``tide_mask``, ``wave_mask``, ``runup_mask``) can be used to spatially modify the acting hydrodynamics. For more information on the hydrodynamics, see the ... section.
 
@@ -104,7 +104,7 @@ Inundation wets the bed, increasing the surface moisture (``moist``) and once th
 Wave impact can mix multiple sediment fractions over several bed layers down to the depth of disturbance , the ... section. (``process_mixtoplayer``)
 
 Morphological Change
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
 
 Gradients in aeolian sediment transport can cause the bed level (``zb``) to change (``dzb``), enabled by ``process_bedupdate``:
 
@@ -129,7 +129,7 @@ Submerged cells are subject to distinct bed level assumptions and marine erosion
 .. _aeolian-sediment-transport:
 
 Aeolian Sediment Transport
--------------------
+------------------------------
 
 Calculating aeolian sediment transport is the core of the AeoLiS model. 
 The model is based on the approach of :cite:`deVries2014a` which is extended to compute the
@@ -190,7 +190,7 @@ is commonly used :cite:`deVries2014a`.
 .. _saturated-sediment-transport:
 
 Saturated Sediment Transport
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The equilibrium, or saturated, sediment concentration :math:`c_{\mathrm{sat}}` is computed using an
 empirical sediment transport formulation (e.g. :cite:`Bagnold1937a`):
@@ -242,15 +242,14 @@ subsequent dune formation.
 
 .. _sediment-velocity:
 Sediment Transport Velocity
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 PLACEHOLDER TEXT
 
 
 .. _multi-fraction-sediment-transport:
-
 Multi-fraction Sediment Transport
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The formulation for the equilibrium or saturated sediment
 concentration :math:`c_{\mathrm{sat}}` (Equation
@@ -404,9 +403,8 @@ grain size dependency is implemented through
 m/s for sand.
 
 .. _sediment-sorting:
-
 Sediment Sorting and Beach Armoring
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Since the equilibrium or saturated sediment concentration
 :math:`c_{\mathrm{sat},k}` is weighted over multiple sediment fractions in
@@ -474,9 +472,8 @@ right panel). If more fines are deposited than passed to the lower bed
 layers the bed surface layer becomes increasingly fine.
 
 .. _hydraulic-mixing:
-
 Hydraulic Mixing
-~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
 
 As sediment sorting due to aeolian processes can lead to armoring of a
 beach surface, mixing of the beach surface or erosion of course
@@ -513,30 +510,24 @@ through an input time series of water levels. Typical values for
 
 
 .. _bed-interaction-approach:
-
 Bed-interaction Approach (zeta)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 PLACEHOLDER
 
-
-
 .. _wind-shear-velocity:
-
 Wind and Shear Velocity
 -----------------------------------
 
 PLACEHOLDER: WIND READ FROM ..... MAIN PROCESS...
 
 .. _shear-velocity:
-
 Shear Velocity
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 PLACEHOLDER: LAW OF THE WALL
 
 .. _topographic-steering:
-
 Topographic Steering
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -592,10 +583,10 @@ For one-dimensional situations, a simplified solution of the shear perturbation 
 
 where :math:`\alpha` [-] and :math:`\beta` [-] both depend on :math:`L/z_0`, but are user-defined fixed variables rather than computed in the model. :math:`\xi` [-] is the normalized cross-shore distance :math:`x/L`.
 
-.. _flow-separation:
 
+.. _flow-separation:
 Flow separation
-^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^
 
 The implementation of the shear perturbation theory by :cite:`weng1991air` is only valid in situations with relatively smooth surfaces. The occurrence of steep slopes limits the validity of the approach. To address this, a description of flow separation is used following the Coastal Dune Model (CDM) :cite:`sauermann2001continuum, kroy2002minimal, DuranMoore2013`. A smooth envelope is created, which separates the main flow when a sharp edge is detected in the windward direction. This smooth envelope is called a separation bubble, :math:`z_{sep}` [m] (Figure :numref:`fig-concept-topo-steering`). This separation bubble represents the surface that divides the region of flow reversal from the main flow stream along the smooth hill. Subsequently, in all cells for which the bed level is lower than the separation bubble (:math:`z_b < z_{sep}`), the shear velocity :math:`u_{*}` is set to 0 m/s. This assumes that eventual flow reversal velocities are not significant enough to initiate aeolian transport.
 
@@ -641,7 +632,7 @@ The computed shear stress as a result of the combined influence of the implement
    Spatial variation in shear stress due to topographic steering of the wind field. The upper panels show the bed level :math:`z_b` [m] and shear stress velocity perturbation :math:`\delta u_*` [m/s] over a uniform Gaussian hill. The lower panels show topographic steering over a barchan dune, including the influence of flow separation. The right panels compare outcomes of the one- and two-dimensional approaches.
 
 Directional winds
-~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
 
 The underlying implementation of the perturbation theory and separation bubble originally allows only for wind conditions that are perpendicular to the grid. An overlaying computational grid is introduced in AeoLiS, which rotates with the changing wind direction per time step. By doing this, the shear stresses are always estimated in the positive x-direction of the computational grid. The following steps are executed for each time step:
 
@@ -668,11 +659,9 @@ The underlying implementation of the perturbation theory and separation bubble o
    Animation demonstrating the rotational computational grid aligning with the changing wind direction to solve for topographic steering at each time step.
 
 
-
 .. _shear-velocity-threshold:
-
 Shear Velocity Threshold
-------------------------
+---------------------------
 
 The shear velocity threshold represents the influence of bed surface
 properties in the saturated sediment transport equation. The shear
@@ -692,9 +681,8 @@ initial shear velocity threshold:
   u_{\mathrm{* th, 0}}
 
 .. _base-threshold-grainsize:
-
 Base Threshold: Grainsize
-^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The initial shear velocity threshold :math:`u_{\mathrm{* th, 0}}` [m/s] is
 computed based on the grain size following :cite:`Bagnold1937b`:
@@ -710,10 +698,10 @@ where :math:`A` [-] is an empirical constant, :math:`\rho_{\mathrm{p}}`
 gravitational constant and :math:`d_{\mathrm{n}}` [m] is the nominal grain
 size of the sediment fraction.
 
-.. _threshold-moisture-content:
 
+.. _threshold-moisture-content:
 Threshold: Moisture content
-^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The shear velocity threshold is updated based on moisture content
 following :cite:`Belly1964`:
@@ -742,9 +730,8 @@ volumetric content) cease transport :cite:`DelgadoFernandez2010`,
 which is implemented as an infinite shear velocity threshold.
 
 .. _threshold-roughness-elements:
-
 Threshold: Roughness elements
-^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Sediment sorting may lead to the emergence of non-erodible elements
 from the bed. Non-erodible roughness elements may shelter the erodible
@@ -780,15 +767,14 @@ fractions are ordered by increasing size. Whether a fraction is
 erodible depends on the sediment transport capacity.
 
 .. _threshold-non-erodible-layer:
-
 Threshold: Non-erodible layer
-^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+PLACEHOLDER
 
 
 
 .. _vegetation:
-
 Vegetation 
 ------------
 
@@ -802,9 +788,8 @@ the destruction of vegetation caused by hydrodynamic processes.In the event of
 cell inundation, vegetation density is reduced as a result. 
 
 .. _vegetation-metrics:
-
 Vegetation Metrics
-^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^
 
 The vegetation density :math:`\rho_{\text{veg}}` can vary in space and time and is determined by the ratio of the actual vegetation height (hveg) 
 to the maximum vegetation height (:math:`h_{\text{veg,max}}`), and can vary between 0 and 1 (:cite:`DuranHerrmann2006`):
@@ -825,7 +810,7 @@ sedimentation or a growth rate equal to the rate of sediment burial within the c
 .. _vegetation-development:
 
 Vegetation Development
-^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^
 
 Vegetation growth and decay follow the model proposed by :cite:`DuranHerrmann2006`, modified to include :math:`\delta z_{\text{b,opt}}`
 (m/year), representing sediment burial for optimal growth that shifts the peak of optimal growth:
@@ -873,9 +858,9 @@ parameter ρ_{lat} adjusting the likelihood of lateral propagation at these boun
 
 
 .. _vegetation-induced-shear-reduction:
-
 Vegetation-induced Shear Reduction
-^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 Inspired by the Coastal Dune Model (CDM) proposed by :cite:`DuranMoore2013`, AeoLiS 
 incorporates vegetation-wind interaction using the expression established by :cite:`DuranHerrmann2006`:
 
@@ -897,25 +882,21 @@ environments.
 
 
 .. _vegetation-computing-zeta:
-
 Computing bed-interaction (zeta) over vegetation
-^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 PLACEHOLDER
 
 .. _vegetation-mortality:
-
 Vegetation Mortality
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 PLACEHOLDER
 
 
-
 .. _hydrodynamics-moisture:
-
 Hydrodynamics and Surface Moisture
------------------
+-------------------------------------
 
 Aeolis computes .... for ... and ... and ...
 
@@ -923,7 +904,7 @@ Aeolis computes .... for ... and ... and ...
 .. _water-levels-waves-run-up:
 
 Water levels, Waves and Run-up
-^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 PLACEHOLDER: TWL, SWL, zs, hw, eta, R, ...
 
@@ -967,29 +948,26 @@ and wave setup:
 
 
 .. _surface-moisture:
-
 Surface Moisture
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
 
 PLACEHOLDER
 
 
 .. _hydraulic-sediment-mixing:
-
 Hydraulic Sediment Mixing
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 PLACEHOLDER
 
 .. _marine-driven-bed-level-change:
-
 Marine-driven Bed Level Change
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 PLACEHOLDER
 
 
-
+.. _groundwater-module:
 Groundwater Module (Hallin, 2023)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1076,7 +1054,7 @@ Substitution of :math:`u` (Equation :eq:`gw-discharge`) in the continuity equati
    \frac{{\partial \eta }}{{\partial t}} = \frac{K}{{{n_e}}}\frac{\partial }{{\partial x}}\left( {(D + \eta )\frac{{\partial \eta }}{{\partial x}}} \right) + \frac{{{U_l}}}{{{n_e}}}
 
 Numerical solution of the Boussinesq groundwater equation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The Boussinesq equation is solved numerically with a central finite difference 
 method in space and a fourth-order Runge-Kutta integration technique in time:
@@ -1118,7 +1096,7 @@ and the groundwater elevation is set equal to the bed elevation. On the landward
 a no-flow condition, :math:`\frac{{\partial \eta }}{{\partial t}} = 0` (Neumann condition), or constant head, :math:`\eta = constant` (Dirichlet condition), is prescribed.
 
 Capillary rise
-~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~
 Soil water retention (SWR) functions describe the surface moisture due to capillary transport 
 of water from the groundwater table :cite:`VanGenuchten1980`:
 
@@ -1156,7 +1134,7 @@ The wetting scanning curve is obtained from :cite:`Mualem1974`:
 where :math:`{h_\Delta}` is the groundwater table depth at the reversal on the drying curve.
 
 Infiltration
-~~~~~~~~~~~~
+~~~~~~~~~~~~~~
 Infiltration is accounted for by assuming that excess water infiltrates until the moisture content reaches 
 field capacity, :math:`{\theta_fc}`. The moisture content at field capacity is the maximum amount of water 
 that the unsaturated zone of soil can hold against the pull of gravity. For sandy soils, 
@@ -1199,7 +1177,7 @@ drying time scale, defined as the time in which the beach moisture
 content halves.
 
 Precipitation and evaporation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A water balance approach accounts for the effect of precipitation and evaporation,
 
@@ -1241,21 +1219,23 @@ is the latent heat vaporization. To obtain an evaporation rate in
 Morphological change
 ---------------------
 
+PLACEHOLDER
+
 .. _bed-level-update:
 
 Bed Level Update
-^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^
 
 PLACEHOLDER
 
 .. _avalanching:
 Avalanching
-^^^^^^^^^^^^
+^^^^^^^^^^^^^
 
 PLACEHOLDER
 
 Marine-driven Morphodynamics
-^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 PLACEHOLDER: See section...
 
