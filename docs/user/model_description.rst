@@ -8,44 +8,46 @@ Quick Overview
 
 This section provides a summary of the main processes, equations, and configuration parameters in AeoLiS. For more information, refer to the detailed descriptions linked in the text or further down this page.
 
-For a comprehensive guide on setting up the model, see the :ref:`model-input-output` section. The main configuration file (default: ``aeolis.txt``) contains all parameter settings and process flags, and it serves as the central reference for external input files (:ref:`model-input`). The computational domain is constructed using x- and y-coordinates (``xgrid_file``, ``ygrid_file``) alongside the initial bed elevation (``bed_file``) (see the :ref:`grid-files` section). External environmental forcing is defined through continuous time series of wind, tide, and waves (see :ref:`timeseries`). A complete overview of all model parameters is provided in the :ref:`parameters` section, and the individual physical modules are outlined in the :ref:`processes` section. Finally, for details on extracting and analyzing simulation results, refer to the :ref:`model-output` section.
+For a comprehensive guide on setting up the model, see the :ref:`model-input-output` section. The main configuration file (default: ``aeolis.txt``) contains all parameter settings and process flags, and it serves as the central reference for external input files (:ref:`model-input`). The computational domain is constructed using x- and y-coordinates (``xgrid_file``, ``ygrid_file``) alongside the initial bed elevation (``bed_file``) (see the :ref:`grid-files` section). 
+
+External environmental forcing is defined through continuous time series of wind, tide, and waves (see :ref:`timeseries`). A complete overview of all model parameters is provided in the :ref:`parameters` section, and the individual physical modules are outlined in the :ref:`processes` section. Finally, for details on extracting and analyzing simulation results, refer to the :ref:`model-output` section.
 
 The simulation advances sequentially through time steps, repeating all activated processes and continuously updating the morphological model state. The simulation duration runs from a defined start time (``tstart``) to an end time (``tstop``), both specified in seconds relative to a designated reference date (``refdate``). A typical internal time step (``dt``) is 3600 seconds (1 hour). As the model progresses, it exports user-defined variables (``output_vars``) to a NetCDF file (default: ``aeolis.nc``, defined by ``output_file``) at customized intervals (``output_times``).
 
 Sediment Transport
 ~~~~~~~~~~~~~~~~~~
+Detailed section: :ref:`Sediment Transport <sediment-transport>`
 
-Calculating aeolian sediment transport is the core of the AeoLiS model. Sediment transport is computed using a two-dimensional advection scheme, simplified here for one-dimensional transport of a single sediment fraction:
+Aeolian sediment transport is the core of the AeoLiS model. It is computed using a two-dimensional advection scheme, simplified here for one-dimensional transport of a single sediment fraction:
 
 .. math::
    :label: advection_overview
            
    \frac{\partial c}{\partial t} + u_{\mathrm{sed}} \frac{\partial c}{\partial x} = \min \left ( \frac{\partial m_{\mathrm{a}}}{\partial t} \quad ; \quad \frac{c_{\mathrm{sat}} - c}{T} \right )
 
+The saturated sediment concentration :math:`c_{\mathrm{sat}}` (``Cu``) defines the transport capacity, while :math:`c` (``Ct``) is the instantaneous concentration in the air. Transport is activated in the configuration file using ``process_transport``. The right-hand side of the advection equation is governed by the adaptation timescale :math:`T` (``T``), which determines how quickly the concentration reaches equilibrium. To allow sediment to actually erode from or deposit to the bed, ``process_bedupdate`` must be enabled. 
 
-The saturated sediment concentration :math:`c_{\mathrm{sat}}` (``Cu``) defines the transport capacity and :math:`c` (``Ct``) is the instantatinous transport. Sediment transport is activated in the configuration file using ``process_transport``. The right-hand side of the advection equation is governed by the adaptation timescale :math:`T` ( ``T ``).  To allow sediment fluxes to exchange with the bed, ``process_bedupdate`` must be enabled. For more information on the sediment transport and advection computation, see the :ref:`sediment-transport` section. 
+Solving this advection equation is one of the most computationally expensive parts of the model. You can choose different numerical approaches using the ``solver`` keyword. For detailed guidance on these options, see the :ref:`Guidance on advection, shear and grainspeed solvers <solver-guide>` section.
 
-Obtaining :math:`c` requires solving this advection equation, which is one of the most computationally expensive processes in the model. Different solvers can be selected through ``solver`` (options: ``steadystate``, ``euler_backward``, ``euler_forward``). For more information on the available solvers, see the :ref:`processes` section and the :ref:`solver-guide` section for more elaborate guidance.
-
-Multiple methods are avaiable to compute the saturated sediment transport (``method_transport``), where the equation by :cite:`Bagnold1937a` (``bagnold``) is the default:
+Several methods are available to compute the saturated sediment concentration (``method_transport``). The equation by :cite:`Bagnold1937a` (``bagnold``) is the default:
 
 .. math::
    :label: bagnold_overview
 
    c_{\mathrm{sat}} = \max \left ( 0 \quad ; \quad \alpha C \frac{\rho_{\mathrm{a}}}{g} \sqrt{\frac{d_{n}}{D_{n}}} \frac{\left ( u_* - u_{\mathrm{th}} \right )^3}{u_{\mathrm{sed}}} \right )
 
-The sediment velocity :math:`u_{\mathrm{sed}}` (``u``, ``us``, ``un``) can also be computed via multiple methods (``method_grainspeed``). It can either be set equal to the governing wind velocity (``windspeed``) or computed via the  determined by the ``method_grainspeed`` parameter. For more information see the ... section ...
+The sediment velocity :math:`u_{\mathrm{sed}}` (``u``, ``us``, ``un``) is determined by the ``method_grainspeed`` parameter. It can either be set equal to the governing wind speed (``windspeed``) or calculated using a saltation model (e.g., ``duran``). For more information on grain speed computations, see the :ref:`TEST <sediment-velocity>` section.
 
 .. note:: 
-   The subscripts ``s`` and ``n`` indicate the cross-shore and longshore direction of the vector respectively. For all vector variables (like ``uw``, ``ustar``,  ``tau``, ``u``,  ``q``) no subscript means the magnitude, while s and n are the components.
+   For all vector variables (like ``uw``, ``ustar``,  ``tau``, ``u``,  ``q``), the subscripts ``s`` and ``n`` indicate the cross-shore and longshore directions, respectively, and the name without a subscript represents the overall magnitude. 
 
-AeoLiS support the inclusion of multiple sediment-fractions (``grain_size``, ``grain_dist``) across multiple vertical layers (``nlayers``), allowing for the simulation of sediment sorting, mixing and armouring. More details on multi-fraction transport is provided in the :ref:`Sediment Transport <sediment-transport>` section.
+AeoLiS supports the inclusion of multiple sediment fractions (``grain_size``, ``grain_dist``) across multiple vertical layers (``nlayers``). This allows for the simulation of sediment sorting, mixing, and armoring. More details are provided in the :ref:`multi-fraction-sediment-transport` section.
 
-BED INTERACTION ``process_bedinteraction``
+Enabling ``process_bedinteraction`` incorporates a bed interaction parameter into the advection equation. For more information, see the :ref:`bed-interaction-approach` section.
 
-
-Wind and shear Velocity
+Wind and Shear Velocity
 ~~~~~~~~~~~~~~~~~~
+Detailed section: :ref:`wind-shear-velocity`
 
 The shear velocity :math:`u_*` (``ustar``) acts as the primary driver of transport. It is initially computed for a flat bed using the Prandtl-Von Kármán Law of the Wall, based on wind velocity :math:`u_w` (``uw``) at a given height (provided via the ``wind_file``). This core wind process is required for all simulations and is enabled via ``process_wind``.
 
