@@ -6,17 +6,15 @@ Model description
 Quick Overview
 --------------
 
-This section provides a summary of the main processes, equations, and configuration parameters in AeoLiS. For more information, refer to the detailed descriptions linked in the text or further down this page.
+This section provides a summary of the main processes, equations, and configuration parameters in AeoLiS. For more information, refer to the detailed sections linked in the text (or scroll further down this page).
 
-For a comprehensive guide on setting up the model, see the :ref:`model-input-output` section. The main configuration file (default: ``aeolis.txt``) contains all parameter settings and process flags, and it serves as the central reference for external input files (:ref:`model-input`). The computational domain is constructed using x- and y-coordinates (``xgrid_file``, ``ygrid_file``) alongside the initial bed elevation (``bed_file``) (see the :ref:`grid-files` section). 
-
-External environmental forcing is defined through continuous time series of wind, tide, and waves (see :ref:`timeseries`). A complete overview of all model parameters is provided in the :ref:`parameters` section, and the individual physical modules are outlined in the :ref:`processes` section. Finally, for details on extracting and analyzing simulation results, refer to the :ref:`model-output` section.
+For guidance on setting up an AeoLiS model, click :ref:`here<model-input-output>`. The main configuration file (default: ``aeolis.txt``) is the basis of the model setup and contains all parameter settings and process-flags, and serves as the central reference for other input files. The computational domain is constructed using x- and y-coordinates (``xgrid_file``, ``ygrid_file``) alongside the initial bed elevation (``bed_file``). External environmental forcing is defined through continuous time series of wind, tide, and waves.
 
 The simulation advances sequentially through time steps, repeating all activated processes and continuously updating the morphological model state. The simulation duration runs from a defined start time (``tstart``) to an end time (``tstop``), both specified in seconds relative to a designated reference date (``refdate``). A typical internal time step (``dt``) is 3600 seconds (1 hour). As the model progresses, it exports user-defined variables (``output_vars``) to a NetCDF file (default: ``aeolis.nc``, defined by ``output_file``) at customized intervals (``output_times``).
 
 Sediment Transport
 ~~~~~~~~~~~~~~~~~~
-Detailed section: :ref:`Sediment Transport <sediment-transport>`
+Detailed information :ref:`here <sediment-transport>`.
 
 Aeolian sediment transport is the core of the AeoLiS model. It is computed using a two-dimensional advection scheme, simplified here for one-dimensional transport of a single sediment fraction:
 
