@@ -4,7 +4,7 @@ Model description
 =================
 
 Quick Overview
-~~~~~~~~~~~~~~
+--------------
 
 This section provides a summary of the main processes, equations, and configuration parameters in AeoLiS. For more information, refer to the detailed descriptions linked in the text or further down this page.
 
@@ -13,7 +13,7 @@ For a comprehensive guide on setting up the model, see the :ref:`model-input-out
 The simulation advances sequentially through time steps, repeating all activated processes and continuously updating the morphological model state. The simulation duration runs from a defined start time (``tstart``) to an end time (``tstop``), both specified in seconds relative to a designated reference date (``refdate``). A typical internal time step (``dt``) is 3600 seconds (1 hour). As the model progresses, it exports user-defined variables (``output_vars``) to a NetCDF file (default: ``aeolis.nc``, defined by ``output_file``) at customized intervals (``output_times``).
 
 Sediment Transport
-^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~
 
 Calculating aeolian sediment transport is the core of the AeoLiS model. Sediment transport is computed using a two-dimensional advection scheme, simplified here for one-dimensional transport of a single sediment fraction:
 
@@ -23,18 +23,18 @@ Calculating aeolian sediment transport is the core of the AeoLiS model. Sediment
    \frac{\partial c}{\partial t} + u_{\mathrm{sed}} \frac{\partial c}{\partial x} = \min \left ( \frac{\partial m_{\mathrm{a}}}{\partial t} \quad ; \quad \frac{c_{\mathrm{sat}} - c}{T} \right )
 
 
-The saturated sediment concentration :math:`c_{\mathrm{sat}}` (``Cu``) defines the transport capacity and :math:`c` (``Ct``) is the instantatinous transport. Sediment transport is activated in the configuration file using ``process_transport``. The right-hand side of the advection equation is governed by the adaptation timescale :math:`T` ( ``T ``).  To allow sediment fluxes to exchange with the bed, ``process_bedupdate`` must also be enabled. For more information on the sediment transport and advection computation, see the :ref:`sediment-transport` section. 
+The saturated sediment concentration :math:`c_{\mathrm{sat}}` (``Cu``) defines the transport capacity and :math:`c` (``Ct``) is the instantatinous transport. Sediment transport is activated in the configuration file using ``process_transport``. The right-hand side of the advection equation is governed by the adaptation timescale :math:`T` ( ``T ``).  To allow sediment fluxes to exchange with the bed, ``process_bedupdate`` must be enabled. For more information on the sediment transport and advection computation, see the :ref:`sediment-transport` section. 
 
 Obtaining :math:`c` requires solving this advection equation, which is one of the most computationally expensive processes in the model. Different solvers can be selected through ``solver`` (options: ``steadystate``, ``euler_backward``, ``euler_forward``). For more information on the available solvers, see the :ref:`processes` section and the :ref:`solver-guide` section for more elaborate guidance.
 
-Multiple methods are avaiable to compute the saturated sediment transport (``method_transport``), where the equation by Bagnold (REF) (``bagnold``) is the default:
+Multiple methods are avaiable to compute the saturated sediment transport (``method_transport``), where the equation by :cite:`Bagnold1937a` (``bagnold``) is the default:
 
 .. math::
    :label: bagnold_overview
 
    c_{\mathrm{sat}} = \max \left ( 0 \quad ; \quad \alpha C \frac{\rho_{\mathrm{a}}}{g} \sqrt{\frac{d_{n}}{D_{n}}} \frac{\left ( u_* - u_{\mathrm{th}} \right )^3}{u_{\mathrm{sed}}} \right )
 
-The sediment velocity :math:`u_{\mathrm{sed}}` (``u``, ``us``, ``un``) can also be computed via multiple methods (``method_grainspeed``). It can either be set equal to the governing wind velocity (``windspeed``) or computed via the  determined by the ``method_grainspeed`` parameter. 
+The sediment velocity :math:`u_{\mathrm{sed}}` (``u``, ``us``, ``un``) can also be computed via multiple methods (``method_grainspeed``). It can either be set equal to the governing wind velocity (``windspeed``) or computed via the  determined by the ``method_grainspeed`` parameter. For more information see the ... section ...
 
 .. note:: 
    The subscripts ``s`` and ``n`` indicate the cross-shore and longshore direction of the vector respectively. For all vector variables (like ``uw``, ``ustar``,  ``tau``, ``u``,  ``q``) no subscript means the magnitude, while s and n are the components.
@@ -45,7 +45,7 @@ BED INTERACTION ``process_bedinteraction``
 
 
 Wind and shear Velocity
-^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~
 
 The shear velocity :math:`u_*` (``ustar``) acts as the primary driver of transport. It is initially computed for a flat bed using the Prandtl-Von Kármán Law of the Wall, based on wind velocity :math:`u_w` (``uw``) at a given height (provided via the ``wind_file``). This core wind process is required for all simulations and is enabled via ``process_wind``.
 
@@ -70,7 +70,7 @@ Equation
 For more information, see the :ref:`Vegetation <vegetation>` section.
 
 Velocity threshold
-^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~
 
 While shear velocity drives transport, the threshold velocity :math:`u_{\mathrm{th}}` (``uth``) serves as a limiter. It acts as a collective parameter for multiple supply-limiting processes, scaling the base threshold :math:`u_{\mathrm{*th,0}}` (``uth0``) by various environmental factors. Threshold calculations are enabled via ``process_threshold``.
 
@@ -82,7 +82,7 @@ While shear velocity drives transport, the threshold velocity :math:`u_{\mathrm{
 The base threshold :math:`u_{\mathrm{* th, 0}}` is computed based on the local grain size and density (activated via ``th_grainsize``). This base value is then scaled by supply-limiting factors depending on the enabled model processes. The influence of surface moisture (:math:`f_{\mathrm{M}}`) is activated via ``th_moisture``, while sheltering by non-erodible roughness elements (:math:`f_{\mathrm{R}}`) is configured via ``th_sheltering``. The restricting effect of a non-erodible layer can be included using ``th_nelayer``. For more information, see the :ref:`Velocity threshold <shear-threshold>` section.
 
 Vegetation
-^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~
 
 AeoLiS simulates the dynamic growth and spreading of vegetation, enabled via ``process_vegetation``. The specific vegetation formulation is selected using ``method_vegetation`` (``duran`` for the original implementation, ``grass`` for the newest implementation (REF van Westen 2026)). In the original description, vegetation density rhoveg (``rhoveg``) is computed through the vegetation height hveg (``hveg``) w.r.t. the maximum height (``Hveg``):
 
@@ -95,7 +95,7 @@ Equation dhveg
 Growth is governed by specific parameters for intrinsic vertical growth :math:`V_{\mathrm{ver}}` (``V_ver``) and sensitivity to sediment burial :math:`\gamma_{\mathrm{veg}}` (``veg_gamma``). For more information, see the :ref:`Vegetation <vegetation>` section.
 
 Hydrodynamics and Surface Moisture
-^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~
 
 Water levels, wave runup, and groundwater can wet the beach, temporally increasing the shear velocity threshold, and mix sediment fractions. The model reads input water levels (``tide_file``) and wave heights (``wave_file``), activated via ``process_tide`` and ``process_wave``. The water level is first projected to the domain, resulting in the Still Water Level (``SWL``). After computing the wave runup (``R``), enabled via ``process_runup``), the Total Water Level (``TWL`` = ``SWL`` + ``R``) can be computed. The waterlevel ``zs`` maximum of bed level (``zb``) and TWL. Water depth is ``hw``. Applying masks (``tide_mask``, ``wave_mask``, ``runup_mask``) can be used to spatially modify the acting hydrodynamics. For more information on the hydrodynamics, see the ... section.
 
@@ -104,7 +104,7 @@ Inundation wets the bed, increasing the surface moisture (``moist``) and once th
 Wave impact can mix multiple sediment fractions over several bed layers down to the depth of disturbance , the ... section. (``process_mixtoplayer``)
 
 Morphological Change
-^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~
 
 Gradients in aeolian sediment transport can cause the bed level (``zb``) to change (``dzb``), enabled by ``process_bedupdate``:
 
@@ -115,6 +115,15 @@ Computed from pickup rates (``pickup``), which is ...  More information in the :
 To redistributes sediment when the local slope exceeds the maximum angle of repose (``theta_dyn`` and ``theta_stat``), avalanching can be enabled through ``process_avalanche``. 
 
 Submerged cells are subject to distinct bed level assumptions and marine erosion, managed by configurations like ``process_wet_bed_reset``. 
+
+
+.. _fig-aeolis-overview:
+
+.. figure:: /images/aeolis_overview.png
+   :width: 900px
+   :align: center
+
+   Overview of the AeoLiS model
 
 
 .. _sediment-transport:
@@ -223,7 +232,7 @@ subsequent dune formation.
 .. _multi-fraction:
 
 Multi-fraction sediment transport
--------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The formulation for the equilibrium or saturated sediment
 concentration :math:`c_{\mathrm{sat}}` (Equation
@@ -379,7 +388,7 @@ m/s for sand.
 .. _sediment-sorting:
 
 Sediment Sorting and Beach Armoring
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Since the equilibrium or saturated sediment concentration
 :math:`c_{\mathrm{sat},k}` is weighted over multiple sediment fractions in
@@ -446,44 +455,6 @@ lower bed layers (Figure :numref:`fig-bedcomposition`, detail, upper
 right panel). If more fines are deposited than passed to the lower bed
 layers the bed surface layer becomes increasingly fine.
 
-.. _roughness-elements:
-
-Non-erodible Roughness Elements
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Sediment sorting may lead to the emergence of non-erodible elements
-from the bed. Non-erodible roughness elements may shelter the erodible
-bed from wind erosion due to shear partitioning, resulting in a
-reduced sediment availability :cite:`Raupach1993`. Therefore the
-equation of :cite:`Raupach1993` is implemented according to:
-
-.. math::
-   :label: raupach
-           
-   u_{\mathrm{* th, R}} = u_{\mathrm{* th}} \cdot \sqrt{ \left( 1 - m \cdot \sum_{k=k_0}^{n_{\mathrm{k}}}{w_k^{\mathrm{bed}}} \right) \left( 1 + \frac{m \beta}{\sigma} \cdot \sum_{k=k_0}^{n_{\mathrm{k}}}{w_k^{\mathrm{bed}}} \right) }
-
-in which :math:`\sigma` is the ratio between the frontal area and the
-basal area of the roughness elements and :math:`\beta` is the ratio
-between the drag coefficients of the roughness elements and the bed
-without roughness elements. :math:`m` is a factor to account for the
-difference between the mean and maximum shear stress and is usually
-chosen 1.0 in wind tunnel experiments and may be lowered to 0.5 for
-field applications. The roughness density :math:`\lambda` in the
-original equation of :cite:`Raupach1993` is obtained from the mass
-fraction in the bed surface layer :math:`w_k^{\mathrm{bed}}` according
-to:
-
-.. math::
-   :label: rough
-   
-   \lambda = \frac{\sum_{k=k_0}^{n_{\mathrm{k}}}{w_k^{\mathrm{bed}}}}{\sigma}
-
-in which :math:`k_0` is the index of the smallest non-erodible
-sediment fraction in current conditions and :math:`n_{\mathrm{k}}` is the
-total number of sediment fractions. It is assumed that the sediment
-fractions are ordered by increasing size. Whether a fraction is
-erodible depends on the sediment transport capacity.
-
 .. _sediment-mixing:
 
 Hydraulic Mixing
@@ -521,6 +492,9 @@ local wave height maximized by a maximum wave height over depth ratio
 :math:`\gamma` [-]. :math:`d` [m] is the water depth that is provided to the model
 through an input time series of water levels. Typical values for
 :math:`f_{\Delta z_{\mathrm{d}}}` are 0.05 to 0.4 and 0.5 for :math:`\gamma`.
+
+
+
 
 .. _threshold:
 
@@ -594,44 +568,43 @@ which is implemented as an infinite shear velocity threshold.
 Roughness elements
 ^^^^^^^^^^^^^^^^^^^
 
-The shear velocity threshold is updated based on the presence of
-roughness elements following :cite:`Raupach1993`:
+Sediment sorting may lead to the emergence of non-erodible elements
+from the bed. Non-erodible roughness elements may shelter the erodible
+bed from wind erosion due to shear partitioning, resulting in a
+reduced sediment availability :cite:`Raupach1993`. Therefore the
+equation of :cite:`Raupach1993` is implemented according to:
 
 .. math::
-   :label: shear-rough
+   :label: raupach
+           
+   u_{\mathrm{* th, R}} = u_{\mathrm{* th}} \cdot \sqrt{ \left( 1 - m \cdot \sum_{k=k_0}^{n_{\mathrm{k}}}{w_k^{\mathrm{bed}}} \right) \left( 1 + \frac{m \beta}{\sigma} \cdot \sum_{k=k_0}^{n_{\mathrm{k}}}{w_k^{\mathrm{bed}}} \right) }
 
-  f_{u_{\mathrm{* th},R}} = \sqrt{(1 - m \cdot \sum_{k=k_0}^{n_k}{\hat{w}_k^{\mathrm{bed}}})
-    (1 + \frac{m \beta}{\sigma} \cdot \sum_{k=k_0}^{n_k}{\hat{w}_k^{\mathrm{bed}}})}
-
-by assuming:
+in which :math:`\sigma` is the ratio between the frontal area and the
+basal area of the roughness elements and :math:`\beta` is the ratio
+between the drag coefficients of the roughness elements and the bed
+without roughness elements. :math:`m` is a factor to account for the
+difference between the mean and maximum shear stress and is usually
+chosen 1.0 in wind tunnel experiments and may be lowered to 0.5 for
+field applications. The roughness density :math:`\lambda` in the
+original equation of :cite:`Raupach1993` is obtained from the mass
+fraction in the bed surface layer :math:`w_k^{\mathrm{bed}}` according
+to:
 
 .. math::
-   :label: lambda-rough
+   :label: rough
    
-  \lambda = \frac{\sum_{k=k_0}^{n_k}{\hat{w}_k^{\mathrm{bed}}}}{\sigma}
+   \lambda = \frac{\sum_{k=k_0}^{n_{\mathrm{k}}}{w_k^{\mathrm{bed}}}}{\sigma}
 
-where :math:`f_{u_{\mathrm{* th},R}}` [-] is a factor in Equation
-:eq:`apx-shearvelocity`, :math:`k_0` is the sediment fraction index of
-the smallest non-erodible fraction in current conditions and :math:`n_k` is
-the number of sediment fractions defined. The implementation is
-discussed in detail in section \ref{sec:roughness}.
+in which :math:`k_0` is the index of the smallest non-erodible
+sediment fraction in current conditions and :math:`n_{\mathrm{k}}` is the
+total number of sediment fractions. It is assumed that the sediment
+fractions are ordered by increasing size. Whether a fraction is
+erodible depends on the sediment transport capacity.
 
-Salt content
+Non-erodible layer
 ^^^^^^^^^^^^
 
-The shear velocity threshold is updated based on salt content
-following :cite:`Nickling1981`:
 
-.. math::
-   :label: salt-rough
-   
-   f_{u_{\mathrm{* th}},S} = 1.03 \cdot \exp(0.1027 \cdot p_{\mathrm{s}})
-
-where :math:`f_{u_{\mathrm{* th},S}}` [-] is a factor in Equation
-:eq:`apx-shearvelocity` and :math:`p_{\mathrm{s}}` [-] is the salt
-content [mg/g]. Currently, no model is implemented that predicts the
-instantaneous salt content. The spatial varying salt content needs to
-be specified by the user, for example through the BMI interface.
 
 .. _wind-shear:
 
