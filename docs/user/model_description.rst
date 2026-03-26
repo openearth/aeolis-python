@@ -14,7 +14,7 @@ The simulation advances sequentially through time steps, repeating all activated
 
 Aeolian Sediment Transport
 ~~~~~~~~~~~~~~~~~~
-For detailed information, see the :ref:`sediment transport section <aeolian-sediment-transport>`.
+Detailed section: :ref:`aeolian-sediment-transport`.
 
 Aeolian sediment transport is the core of the AeoLiS model. It is computed using a two-dimensional advection scheme, simplified here for one-dimensional transport of a single sediment fraction:
 
@@ -27,7 +27,7 @@ The saturated sediment concentration :math:`c_{\mathrm{sat}}` (``Cu``) defines t
 
 Solving this advection equation is one of the most computationally expensive parts of the model. You can choose different numerical approaches using the ``solver`` keyword. For detailed guidance on these options, see the :ref:`solver guide <solver-guide>`.
 
-Several methods are available to compute the saturated sediment concentration (``method_transport``). The equation by :cite:`Bagnold1937a` (``bagnold``) is the default:
+Several methods are available to compute the saturated sediment concentration (``method_transport``), as explained in the :ref:`saturated sediment transport <saturated-sediment-transport>` section. The equation by :cite:`Bagnold1937a` (``bagnold``) is the default:
 
 .. math::
    :label: bagnold_overview
