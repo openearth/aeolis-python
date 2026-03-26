@@ -263,10 +263,58 @@ Depending on the configuration, several other formulations can be selected to co
 
 
 .. _sediment-velocity:
-Sediment Transport Velocity
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-PLACEHOLDER TEXT
+Sediment Transport Velocity
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The horizontal sediment velocity :math:`u_{\mathrm{sed}}` (``u``, ``us``, ``un``) [:math:`\mathrm{m/s}`] determines the advection speed of the sediment concentration. It can be computed using different approaches selected via the ``method_grainspeed`` parameter. For detailed guidance on selecting the appropriate method and its impact on computational time and landform evolution, see :ref:`this guide <solver-guide>`.
+
+The simplest approach (``windspeed``) assumes the horizontal sediment velocity is equal to the wind velocity :math:`u_{\mathrm{w}}` (``uw``) [:math:`\mathrm{m/s}`]:
+
+.. math::
+   :label: used_windspeed
+
+   u_{\mathrm{sed}} = u_{\mathrm{w}}
+
+While this method is the fastest and most robust, it significantly overpredicts the horizontal sediment velocity because grains in saltation move much slower than the wind. Consequently, it fails to capture localized deposition patterns or landform migration, making it suitable only for bulk transport calculations.
+
+Predictions of the actual saltation velocity provide a more realistic description of horizontal sediment movement :cite:`sauermann2001continuum`. The sediment velocity can be determined from a momentum balance :cite:`duran2007thesis` consisting of three terms: the drag force acting on the grains, the loss of momentum during grain-bed interaction (splashing), and the downhill gravity force:
+
+.. math::
+   :label: used_momentum
+   
+   \frac{(\vec{v}_{\mathrm{eff}} - \vec{u}_{\mathrm{sed}})|\vec{v}_{\mathrm{eff}} - \vec{u}_{\mathrm{sed}}|}{u_{\mathrm{f}}^2} - \frac{\vec{u}_{\mathrm{sed}}}{2 \alpha |\vec{u}_{\mathrm{sed}}|} - \vec{\nabla z_{\mathrm{B}}} = 0
+
+where :math:`v_{\mathrm{eff}}` [:math:`\mathrm{m/s}`] is the effective wind velocity driving the grains, which depends on the shear velocity :math:`u_*` and the threshold shear velocity :math:`u_{\mathrm{*th}}`. :math:`u_{\mathrm{f}}` [:math:`\mathrm{m/s}`] is the fluid threshold velocity (or grain settling velocity), :math:`\nabla z_{\mathrm{B}}` [:math:`\mathrm{-}`] is the bed slope, and :math:`\alpha` [:math:`\mathrm{-}`] is an effective restitution coefficient for the grain-bed interaction (e.g., :math:`\alpha = 0.42` for :math:`d = 250` :math:`\mathrm{\mu m}`). 
+
+Note that the computed :math:`u_{\mathrm{sed}}` represents the collective horizontal sediment movement, not the velocity of individual grains. AeoLiS provides three options based on this momentum balance:
+
+* **``duran_full``**: Solves the full momentum balance equation (Equation :eq:`used_momentum`) numerically for each timestep. This method is computationally heavy but necessary for accurate sediment velocities on steep topography (e.g., steep blowout cliffs).
+
+* **``duran``**: Uses an analytical approximation of the full momentum balance. It accounts for spatial variations and slope effects by assuming slopes are relatively gentle to avoid computationally expensive numerical solving:
+
+  .. math::
+     :label: used_duran_approx
+
+     u_{\mathrm{sed}} \approx \left( v_{\mathrm{eff}} - \frac{u_{\mathrm{f}}}{\sqrt{2\alpha A}} \right) \hat{e}_{\tau} - \frac{\sqrt{2\alpha} u_{\mathrm{f}}}{A} \nabla z_{\mathrm{B}}
+
+  where :math:`\hat{e}_{\tau}` is the wind direction unit vector and :math:`A \equiv |\hat{e}_{\tau} + 2\alpha \nabla z_{\mathrm{B}}|`. The first term points toward the wind direction, while the second is directed along the surface gradient, accounting for the competing effects of wind and gravity.
+
+* **``duran_uniform``**: Assumes a flat bed (:math:`\nabla z_{\mathrm{B}} = 0`). The sediment velocity is spatially uniform, simplifying the equation further to:
+
+  .. math::
+     :label: used_duran_uniform
+
+     u_{\mathrm{sed}} = v_{\mathrm{eff}} - \frac{u_{\mathrm{f}}}{\sqrt{2\alpha}}
+
+.. tip::
+   **Guidance on selecting a grain speed method**
+
+   * Use ``duran`` for most simulations involving landform evolution (e.g., barchans, parabolic dunes) where topographic steering is important.
+   * Use ``duran_full`` only for simulations involving topography with very steep gradients (e.g., blowout cliffs).
+   * Use ``duran_uniform`` for static topography where you need realistic, localized deposition patterns but no landform migration.
+   * Use ``windspeed`` only for basic, bulk transport calculations where morphodynamics are irrelevant.
+
 
 
 .. _multi-fraction-sediment-transport:
