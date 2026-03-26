@@ -12,6 +12,9 @@ For guidance on setting up an AeoLiS model, see the :ref:`model in- & output gui
 
 The simulation advances sequentially through time steps, repeating all activated processes and continuously updating the morphological model state. The simulation duration runs from a defined start time (``tstart``) to an end time (``tstop``), both specified in seconds relative to a designated reference date (``refdate``). A typical internal time step (``dt``) is 3600 seconds (1 hour). As the model progresses, it exports user-defined variables (``output_vars``) to a NetCDF file (default: ``aeolis.nc``, defined by ``output_file``) at customized intervals (``output_times``).
 
+.. note:: 
+   In the AeoLiS source code, all model parameters are stored in two dictionaries for BMI-compatibility. All parameters with spatial dimensions (ny,nx) are stored in the ``s``-dictionary (e.g., ``s['x']``) and all single value parameters are stored in the ``p``-dictionary (e.g., p[``dt``]).
+
 Sediment Transport
 ^^^^^^^^^^^^^^^^^^^
 For detailed information, see the :ref:`sediment transport section <aeolian-sediment-transport>`.
@@ -215,36 +218,48 @@ Solving this advection equation is one of the most computationally expensive pro
 
 
 .. _saturated-sediment-transport:
+
 Saturated Sediment Transport
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The equilibrium, or saturated, sediment concentration :math:`c_{\mathrm{sat}}` is computed using an
-empirical sediment transport formulation (e.g. :cite:`Bagnold1937a`):
+The equilibrium, or saturated, sediment concentration :math:`c_{\mathrm{sat}}` (``Cu``) [:math:`\mathrm{kg/m^2}`] is computed using an empirical sediment transport formulation selected via the ``method_transport`` parameter. The default formulation is based on Bagnold (:cite:`Bagnold1937a`) via the ``bagnold`` setting:
 
 .. math::
-   :label: equilibrum-transport
-          
-   q_{\mathrm{sat}} = C \frac{\rho_{\mathrm{a}}}{g} \sqrt{\frac{d_{\mathrm{n}}}{D_{\mathrm{n}}}} \left ( u_* - u_{\mathrm{th}} \right )^3
+   :label: bagnold_qsat
 
-in which :math:`q_{\mathrm{sat}}` [kg/m/s] is the equilibrium or
-saturated sediment transport rate and represents the sediment
-transport capacity. :math:`u_*` [m/s] is the shear velocity
-and :math:`u_{\mathrm{th}}` the velocity threshold [m/s]. The properties of
-the sediment in transport are represented by a series of parameters:
-:math:`C` [--] is a parameter to account for the grain size distribution
-width, :math:`\rho_{\mathrm{a}}` [:math:`\mathrm{kg/m^3}`] is the density of the
-air, :math:`g` [:math:`\mathrm{m/s^2}`] is the gravitational constant,
-:math:`d_{\mathrm{n}}` [m] is the nominal grain size and :math:`D_{\mathrm{n}}`
-[m] is a reference grain size.
+   q_{\mathrm{sat}} = C_{\mathrm{b}} \frac{\rho_{\mathrm{a}}}{g} \left( u_* - u_{\mathrm{th}} \right)^3
 
-The equilibrium sediment transport rate :math:`q_{\mathrm{sat}}` is
-divided by the sediment velocity :math:`u_sed` to obtain a mass per unit
-area (per unit width):
+in which :math:`q_{\mathrm{sat}}` [:math:`\mathrm{kg/m/s}`] is the saturated sediment transport rate representing the sediment transport capacity. :math:`u_*` (``ustar``) [:math:`\mathrm{m/s}`] is the shear velocity, and :math:`u_{\mathrm{th}}` (``uth``) [:math:`\mathrm{m/s}`] is the velocity threshold. The properties of the sediment and air are represented by a series of parameters: :math:`C_{\mathrm{b}}` (``Cb``) [:math:`\mathrm{-}`] is an empirical constant, :math:`\rho_{\mathrm{a}}` (``rhoa``) [:math:`\mathrm{kg/m^3}`] is the density of the air, and :math:`g` (``g``) [:math:`\mathrm{m/s^2}`] is the gravitational constant.
+
+The saturated sediment concentration :math:`c_{\mathrm{sat}}` is directly related to the saturated sediment transport rate :math:`q_{\mathrm{sat}}` and the sediment velocity :math:`u_{\mathrm{sed}}` (``u``) [:math:`\mathrm{m/s}`] through the relationship :math:`q_{\mathrm{sat}} = c_{\mathrm{sat}} \cdot u_{\mathrm{sed}}`. Therefore, to obtain the mass per unit area, the transport rate is divided by the sediment velocity:
 
 .. math::
-   :label: equilibrium-conc
-   
-   c_{\mathrm{sat}} = \max \left ( 0 \quad ; \quad C \frac{\rho_{\mathrm{a}}}{g} \sqrt{\frac{d_{n}}{D_{n}}} \frac{\left ( u_* - u_{\mathrm{th}} \right )^3}{u_z} \right )
+   :label: bagnold_csat
+
+   c_{\mathrm{sat}} = \max \left( 0 \quad ; \quad C_{\mathrm{b}} \frac{\rho_{\mathrm{a}}}{g} \frac{\left( u_* - u_{\mathrm{th}} \right)^3}{u_{\mathrm{sed}}} \right)
+
+Depending on the configuration, several other formulations can be selected to compute the saturated sediment concentration:
+
+* **``kawamura``**:
+
+  .. math::
+     :label: kawamura
+
+     c_{\mathrm{sat}} = C_{\mathrm{k}} \frac{\rho_{\mathrm{a}}}{g} \frac{\left( u_* + u_{\mathrm{th}} \right)^2 \left( u_* - u_{\mathrm{th}} \right)}{u_{\mathrm{sed}}}
+
+* **``lettau``**:
+
+  .. math::
+     :label: lettau
+
+     c_{\mathrm{sat}} = C_{\mathrm{l}} \frac{\rho_{\mathrm{a}}}{g} \frac{u_*^2 \left( u_* - u_{\mathrm{th}} \right)}{u_{\mathrm{sed}}}
+
+* **``dk``**:
+
+  .. math::
+     :label: dk
+
+     c_{\mathrm{sat}} = C_{\mathrm{dk}} \frac{\rho_{\mathrm{a}}}{g} \frac{0.8 u_{\mathrm{th}} \left( u_*^2 - \left( 0.8 u_{\mathrm{th}} \right)^2 \right)}{u_{\mathrm{sed}}}
 
 
 .. _sediment-velocity:
