@@ -736,7 +736,7 @@ Below is a second example demonstrating how to animate time-series output of the
     
     # 3. Define the update function for the animation
     def update(frame):
-        pc.set_array(ustar_mag[frame, :, :].ravel())                 # update basemap
+        pc.set_array(ustar[frame, :, :].ravel())                 # update basemap
         Q.set_UVC(ustars[frame, :, :], ustarn[frame, :, :])          # update quiver
         title.set_text(f'Shear Velocity at t = {time[frame]:.0f} s') # update title
         return pc, Q, title
