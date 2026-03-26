@@ -10,7 +10,7 @@ This section provides a summary of the main processes, equations, and configurat
 
 For guidance on setting up an AeoLiS model, see the :ref:`model in- & output guide <model-input-output>`. The main configuration file (default: ``aeolis.txt``) is the basis of the model setup and contains all parameter settings and process-flags, and serves as the central reference for other input files. The computational domain is constructed using x- and y-coordinates (``xgrid_file``, ``ygrid_file``) alongside the initial bed elevation (``bed_file``). External environmental forcing is defined through continuous time series of wind (``wind_file``), water levels (``tide_file``), and waves (``wave_file``).
 
-The simulation advances sequentially through time steps, repeating all activated processes and continuously updating the morphological model state. The simulation duration runs from a defined start time (``tstart``) [:math:`\mathrm{s}`] to an end time (``tstop``) [:math:`\mathrm{s}`], both specified in seconds relative to a designated reference date (``refdate``). A typical internal time step (``dt``) [:math:`\mathrm{s}`] is 3600 seconds (1 hour). As the model progresses, it exports user-defined variables (``output_vars``) to a NetCDF file (default: ``aeolis.nc``, defined by ``output_file``) at customized intervals (``output_times``).
+The simulation advances sequentially through time steps, repeating all activated processes and continuously updating the morphological model state. The simulation duration runs from a defined start time (``tstart``) to an end time (``tstop``), both specified in seconds relative to a designated reference date (``refdate``). A typical internal time step (``dt``) is 3600 seconds (1 hour). As the model progresses, it exports user-defined variables (``output_vars``) to a NetCDF file (default: ``aeolis.nc``, defined by ``output_file``) at customized intervals (``output_times``).
 
 Sediment Transport
 ~~~~~~~~~~~~~~~~~~
@@ -23,7 +23,7 @@ Aeolian sediment transport is the core of the AeoLiS model. It is computed using
            
    \frac{\partial c}{\partial t} + u_{\mathrm{sed}} \frac{\partial c}{\partial x} = E - D = \min \left ( \frac{\partial m_{\mathrm{a}}}{\partial t} \quad ; \quad \frac{c_{\mathrm{sat}} - c}{T} \right )
 
-The right-hand side of the advection equation represents the net entrainment—the difference between erosion (:math:`E`) [:math:`\mathrm{kg/m^2/s}`] and deposition (:math:`D`) [:math:`\mathrm{kg/m^2/s}`]. The saturated sediment concentration :math:`c_{\mathrm{sat}}` (``Cu``) [:math:`\mathrm{kg/m^2}`] defines the transport capacity, while :math:`c` (``Ct``) [:math:`\mathrm{kg/m^2}`] is the instantaneous concentration in the air. Transport is activated in the configuration file using ``process_transport``. This net entrainment is governed by the adaptation timescale :math:`T` (``T``) [:math:`\mathrm{s}`], which determines how quickly the concentration reaches equilibrium. To allow sediment to actually erode from or deposit to the bed, ``process_bedupdate`` must be enabled. 
+The right-hand side of the advection equation represents the net entrainment (``pickup``); the difference between erosion :math:`E` and deposition :math:`D` [:math:`\mathrm{kg/m^2/s}`]. The saturated sediment concentration :math:`c_{\mathrm{sat}}` (``Cu``) [:math:`\mathrm{kg/m^2}`] defines the transport capacity, while :math:`c` (``Ct``) [:math:`\mathrm{kg/m^2}`] is the instantaneous concentration in the air. Transport is activated in the configuration file using ``process_transport``. This net entrainment is governed by the adaptation timescale :math:`T` (``T``) [:math:`\mathrm{s}`], which determines how quickly the concentration reaches equilibrium. To allow sediment to actually erode from or deposit to the bed, ``process_bedupdate`` must be enabled. 
 
 Solving this advection equation is one of the most computationally expensive parts of the model. You can choose different numerical approaches using the ``solver`` keyword. For detailed guidance on these options, see the :ref:`solver guide <solver-guide>`.
 
@@ -37,9 +37,9 @@ Several methods are available to compute the saturated sediment concentration (`
 The sediment velocity :math:`u_{\mathrm{sed}}` (``u``, ``us``, ``un``) [:math:`\mathrm{m/s}`] is determined by the ``method_grainspeed`` parameter. It can either be set equal to the governing wind speed (``windspeed``) or calculated using a saltation model (e.g., ``duran``). For more information on grain speed computations, see the :ref:`sediment velocity <sediment-velocity>` section.
 
 .. note:: 
-   For all vector variables (like ``uw`` [:math:`\mathrm{m/s}`], ``ustar`` [:math:`\mathrm{m/s}`],  ``tau`` [:math:`\mathrm{N/m^2}`], ``u`` [:math:`\mathrm{m/s}`],  ``q`` [:math:`\mathrm{kg/m/s}`]), the subscripts ``s`` and ``n`` (e.g., ``uws``, ``uwn``) indicate the cross-shore and longshore directions, respectively, and the name without a subscript represents the overall magnitude. 
+   For all vector variables (like ``uw``, ``ustar``,  ``tau``, ``u``,  ``q``), the subscripts ``s`` and ``n`` (e.g., ``uws``, ``uwn``) indicate the cross-shore and longshore directions, respectively, and the name without a subscript represents the overall magnitude. 
 
-AeoLiS supports the inclusion of multiple sediment fractions (``grain_size`` [:math:`\mathrm{m}`], ``grain_dist`` [:math:`\mathrm{-}`]) across multiple vertical layers (``nlayers`` [:math:`\mathrm{-}`]). This allows for the simulation of sediment sorting, mixing, and armoring. More details are provided in the :ref:`multi-fraction sediment transport <multi-fraction-sediment-transport>` section.
+AeoLiS supports the inclusion of multiple sediment fractions (``grain_size``, ``grain_dist``) across multiple vertical layers (``nlayers``). This allows for the simulation of sediment sorting, mixing, and armoring. More details are provided in the :ref:`multi-fraction sediment transport <multi-fraction-sediment-transport>` section.
 
 Enabling ``process_bedinteraction`` incorporates a bed interaction parameter into the advection equation. For more information, see the :ref:`bed interaction approach <bed-interaction-approach>` section.
 
@@ -47,7 +47,7 @@ Wind and Shear Velocity
 ^^^^^^^^^^^^^^^^^^^^^^^^
 Detailed section: :ref:`wind-shear-velocity`
 
-The shear velocity :math:`u_*` (``ustar``) [:math:`\mathrm{m/s}`] acts as the primary driver of sediment transport. It is initially computed for a flat bed using the Prandtl-Von Kármán Law of the Wall, based on the wind velocity :math:`u_w` (``uw``) [:math:`\mathrm{m/s}`] at a given elevation [:math:`\mathrm{m}`]. Wind conditions are provided via the ``wind_file`` and the computation is enabled via ``process_wind``.
+The shear velocity :math:`u_*` (``ustar``) [:math:`\mathrm{m/s}`] acts as the primary driver of sediment transport. It is initially computed for a flat bed using the Prandtl-Von Kármán Law of the Wall, based on the wind velocity :math:`u_w` (``uw``) [:math:`\mathrm{m/s}`] at a given elevation. Wind conditions are provided via the ``wind_file`` and the computation is enabled via ``process_wind``.
 
 .. math::
    :label: lawofwall_overview
@@ -147,55 +147,56 @@ To redistribute sediment when the local slope becomes too steep, avalanching can
 
 
 .. _aeolian-sediment-transport:
-
 Aeolian Sediment Transport
-------------------------------
+--------------------------
 
 Calculating aeolian sediment transport is the core of the AeoLiS model. 
 The model is based on the approach of :cite:`deVries2014a` which is extended to compute the
 spatiotemporal varying sediment availability through simulation of the
 process of beach armoring. For this purpose the bed is discretized in
-horizontal grid cells and in vertical bed layers (2DV). Moreover, the
-grain size distribution is discretized into fractions. This allows the
-grain size distribition to vary both horizontally and vertically. A
+horizontal grid cells and in vertical bed layers (``nlayers``) [:math:`\mathrm{-}`]. Moreover, the
+grain size distribution is discretized into fractions (``grain_size`` [:math:`\mathrm{m}`], ``grain_dist`` [:math:`\mathrm{-}`]). This allows the
+grain size distribution to vary both horizontally and vertically. A
 bed composition module is used to compute the sediment availability
 for each sediment fraction individually. This model approach is a
 generalization of existing model concepts, like the shear velocity
 threshold and critical fetch, and therefore compatible with these
 existing concepts.
 
-.. _advection-equation:
 
+.. _advection-equation:
 Advection Equation
-^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~
 
 A 1D advection scheme is adopted in correspondence with
-:cite:`deVries2014a` in which :math:`c` [:math:`\mathrm{kg/m^2}`] is
+:cite:`deVries2014a` in which :math:`c` (``Ct``) [:math:`\mathrm{kg/m^2}`] is
 the instantaneous sediment mass per unit area in transport:
 
 .. math::
    :label: advection
            
-   \frac{\partial c}{\partial t} + u_z \frac{\partial c}{\partial x} = E - D
+   \frac{\partial c}{\partial t} + u_{\mathrm{sed}} \frac{\partial c}{\partial x} = E - D
 
-:math:`t` [s] denotes time and :math:`x` [m] denotes the cross-shore
-distance from a zero-transport boundary. :math:`E` and :math:`D`
+Here, :math:`t` (``_time``) [:math:`\mathrm{s}`] denotes time, :math:`x` (``x``) [:math:`\mathrm{m}`] denotes the cross-shore
+distance, and :math:`u_{\mathrm{sed}}` (``u``, ``us``, ``un``) [:math:`\mathrm{m/s}`] is the sediment velocity. :math:`E` and :math:`D`
 [:math:`\mathrm{kg/m^2/s}`] represent the erosion and deposition terms
-and hence combined represent the net entrainment of sediment. Note
-that Equation :eq:`advection` differs from Equation 9 in
-:cite:`deVries2014a` as they use the saltation height :math:`h` [m]
-and the sediment concentration :math:`C_{\mathrm{c}}`
-[:math:`\mathrm{kg/m^3}`]. As :math:`h` is not solved for, the
-presented model computes the sediment mass per unit area :math:`c = h
-C_{\mathrm{c}}` rather than the sediment concentration
-:math:`C_{\mathrm{c}}`. For conciseness we still refer to :math:`c` as
-the *sediment concentration*.
+and hence combined represent the net entrainment of sediment (``pickup``). 
+
+.. note:: 
+   Equation :eq:`advection` differs from Equation 9 in
+   :cite:`deVries2014a` as they use the saltation height :math:`h` [:math:`\mathrm{m}`]
+   and the volumetric sediment concentration :math:`C_{\mathrm{c}}`
+   [:math:`\mathrm{kg/m^3}`]. As :math:`h` is not solved for, the
+   presented model computes the sediment mass per unit area :math:`c = h
+   C_{\mathrm{c}}` rather than the sediment concentration
+   :math:`C_{\mathrm{c}}`. For conciseness we still refer to :math:`c` as
+   the *sediment concentration*.
 
 The net entrainment is determined based on a balance between the
 equilibrium or saturated sediment concentration
-:math:`c_{\mathrm{sat}}` [:math:`\mathrm{kg/m^2}`] and the
-instantaneous sediment transport concentration :math:`c` and is
-maximized by the available sediment in the bed :math:`m_{\mathrm{a}}`
+:math:`c_{\mathrm{sat}}` (``Cu``) [:math:`\mathrm{kg/m^2}`] and the
+instantaneous sediment transport concentration :math:`c`, and is
+maximized by the available sediment in the bed :math:`m_{\mathrm{a}}` (``mass``)
 [:math:`\mathrm{kg/m^2}`] according to:
 
 .. math::
@@ -203,12 +204,17 @@ maximized by the available sediment in the bed :math:`m_{\mathrm{a}}`
            
    E - D = \min \left ( \frac{\partial m_{\mathrm{a}}}{\partial t} \quad ; \quad \frac{c_{\mathrm{sat}} - c}{T} \right )
 
-:math:`T` [s] represents an adaptation time scale that is assumed
+:math:`T` (``T``) [:math:`\mathrm{s}`] represents an adaptation time scale that is assumed
 to be equal for both erosion and deposition. A time scale of 1 second
 is commonly used :cite:`deVries2014a`.
 
-.. _saturated-sediment-transport:
+Solving this advection equation is one of the most computationally expensive processes in the model. The numerical approach can be selected using the ``solver`` parameter, which provides three options: ``steadystate``, ``euler_backward``, and ``euler_forward``. 
 
+.. note::
+   The ``steadystate`` solver is the default and recommended option for most applications. It is the most thoroughly tested and fastest option available. The steady-state assumption is generally valid for aeolian transport because wind and sediment transport adjust to local conditions on a scale of seconds to minutes, which is orders of magnitude faster than the timescale of typical timesteps in the AeoLiS model (hours). For detailed guidance on configuring these numerical approaches, see the :ref:`solver guide <solver-guide>`.
+
+
+.. _saturated-sediment-transport:
 Saturated Sediment Transport
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
