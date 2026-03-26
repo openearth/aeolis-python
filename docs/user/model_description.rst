@@ -13,7 +13,7 @@ For more information on the model in- and output, see the :ref:`model-input-outp
 Timesteps....
 
 Sediment Transport
-^^^^^^^^^^^^^^^^^^
+"""""""""""""""
 
 Calculating aeolian sediment transport is the core of the AeoLiS model. Sediment transport is computed using a two-dimensional advection scheme, simplified here for one-dimensional transport of a single sediment fraction:
 
@@ -45,7 +45,7 @@ BED INTERACTION ``process_bedinteraction``
 
 
 Wind and shear Velocity
-~~~~~~~~~~~~~~~~~~~~~~~
+"""""""""""""""
 
 The shear velocity :math:`u_*` (``ustar``) acts as the primary driver of transport. It is initially computed for a flat bed using the Prandtl-Von Kármán Law of the Wall, based on wind velocity :math:`u_w` (``uw``) at a given height (provided via the ``wind_file``). This core wind process is required for all simulations and is enabled via ``process_wind``.
 
@@ -70,7 +70,7 @@ Equation
 For more information, see the :ref:`Vegetation <vegetation>` section.
 
 Velocity threshold
-~~~~~~~~~~~~~~~~~~
+"""""""""""""""
 
 While shear velocity drives transport, the threshold velocity :math:`u_{\mathrm{th}}` (``uth``) serves as a limiter. It acts as a collective parameter for multiple supply-limiting processes, scaling the base threshold :math:`u_{\mathrm{*th,0}}` (``uth0``) by various environmental factors. Threshold calculations are enabled via ``process_threshold``.
 
@@ -95,7 +95,7 @@ Equation dhveg
 Growth is governed by specific parameters for intrinsic vertical growth :math:`V_{\mathrm{ver}}` (``V_ver``) and sensitivity to sediment burial :math:`\gamma_{\mathrm{veg}}` (``veg_gamma``). For more information, see the :ref:`Vegetation <vegetation>` section.
 
 Hydrodynamics and Surface Moisture
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+"""""""""""""""
 
 Water levels, wave runup, and groundwater can wet the beach, temporally increasing the shear velocity threshold, and mix sediment fractions. The model reads input water levels (``tide_file``) and wave heights (``wave_file``), activated via ``process_tide`` and ``process_wave``. The water level is first projected to the domain, resulting in the Still Water Level (``SWL``). After computing the wave runup (``R``), enabled via ``process_runup``), the Total Water Level (``TWL`` = ``SWL`` + ``R``) can be computed. The waterlevel ``zs`` maximum of bed level (``zb``) and TWL. Water depth is ``hw``. Applying masks (``tide_mask``, ``wave_mask``, ``runup_mask``) can be used to spatially modify the acting hydrodynamics. For more information on the hydrodynamics, see the ... section.
 
@@ -104,7 +104,7 @@ Inundation wets the bed, increasing the surface moisture (``moist``) and once th
 Wave impact can mix multiple sediment fractions over several bed layers down to the depth of disturbance , the ... section. (``process_mixtoplayer``)
 
 Morphological Change
-~~~~~~~~~~~~~~~~~~~~
+"""""""""""""""
 
 Gradients in aeolian sediment transport can cause the bed level (``zb``) to change (``dzb``), enabled by ``process_bedupdate``:
 
@@ -117,7 +117,7 @@ To redistributes sediment when the local slope exceeds the maximum angle of repo
 Submerged cells are subject to distinct bed level assumptions and marine erosion, managed by configurations like ``process_wet_bed_reset``. 
 
 
----
+------------------------
 
 .. _sediment-transport:
 
