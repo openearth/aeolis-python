@@ -270,7 +270,7 @@ Loading spatial grid dimensions and generating multi-dimensional input grids.
     np.savetxt('hveg.grd', hveg_flat)
     np.savetxt('Nt.grd', Nt_flat)
 
-.. _time-series:
+.. _timeseries:
 
 Time-series (*.txt)
 ^^^^^^^^^^^^^^^^^^^
