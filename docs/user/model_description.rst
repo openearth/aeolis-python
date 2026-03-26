@@ -10,7 +10,7 @@ This section provides a summary of the main processes, equations, and configurat
 
 For guidance on setting up an AeoLiS model, see the :ref:`model in- & output guide <model-input-output>`. The main configuration file (default: ``aeolis.txt``) is the basis of the model setup and contains all parameter settings and process-flags, and serves as the central reference for other input files. The computational domain is constructed using x- and y-coordinates (``xgrid_file``, ``ygrid_file``) alongside the initial bed elevation (``bed_file``). External environmental forcing is defined through continuous time series of wind (``wind_file``), water levels (``tide_file``), and waves (``wave_file``).
 
-The simulation advances sequentially through time steps, repeating all activated processes and continuously updating the morphological model state. The simulation duration runs from a defined start time (``tstart``) to an end time (``tstop``), both specified in seconds relative to a designated reference date (``refdate``). A typical internal time step (``dt``) is 3600 seconds (1 hour). As the model progresses, it exports user-defined variables (``output_vars``) to a NetCDF file (default: ``aeolis.nc``, defined by ``output_file``) at customized intervals (``output_times``).
+The simulation advances sequentially through time steps, repeating all activated processes and continuously updating the morphological model state. The simulation duration runs from a defined start time (``tstart``) [:math:`\mathrm{s}`] to an end time (``tstop``) [:math:`\mathrm{s}`], both specified in seconds relative to a designated reference date (``refdate``). A typical internal time step (``dt``) [:math:`\mathrm{s}`] is 3600 seconds (1 hour). As the model progresses, it exports user-defined variables (``output_vars``) to a NetCDF file (default: ``aeolis.nc``, defined by ``output_file``) at customized intervals (``output_times``).
 
 Sediment Transport
 ~~~~~~~~~~~~~~~~~~
@@ -23,7 +23,7 @@ Aeolian sediment transport is the core of the AeoLiS model. It is computed using
            
    \frac{\partial c}{\partial t} + u_{\mathrm{sed}} \frac{\partial c}{\partial x} = E - D = \min \left ( \frac{\partial m_{\mathrm{a}}}{\partial t} \quad ; \quad \frac{c_{\mathrm{sat}} - c}{T} \right )
 
-The right-hand side of the advection equation represents the net entrainment—the difference between erosion (:math:`E`) and deposition (:math:`D`). The saturated sediment concentration :math:`c_{\mathrm{sat}}` (``Cu``) defines the transport capacity, while :math:`c` (``Ct``) is the instantaneous concentration in the air. Transport is activated in the configuration file using ``process_transport``. This net entrainment is governed by the adaptation timescale :math:`T` (``T``), which determines how quickly the concentration reaches equilibrium. To allow sediment to actually erode from or deposit to the bed, ``process_bedupdate`` must be enabled. 
+The right-hand side of the advection equation represents the net entrainment—the difference between erosion (:math:`E`) [:math:`\mathrm{kg/m^2/s}`] and deposition (:math:`D`) [:math:`\mathrm{kg/m^2/s}`]. The saturated sediment concentration :math:`c_{\mathrm{sat}}` (``Cu``) [:math:`\mathrm{kg/m^2}`] defines the transport capacity, while :math:`c` (``Ct``) [:math:`\mathrm{kg/m^2}`] is the instantaneous concentration in the air. Transport is activated in the configuration file using ``process_transport``. This net entrainment is governed by the adaptation timescale :math:`T` (``T``) [:math:`\mathrm{s}`], which determines how quickly the concentration reaches equilibrium. To allow sediment to actually erode from or deposit to the bed, ``process_bedupdate`` must be enabled. 
 
 Solving this advection equation is one of the most computationally expensive parts of the model. You can choose different numerical approaches using the ``solver`` keyword. For detailed guidance on these options, see the :ref:`solver guide <solver-guide>`.
 
@@ -34,12 +34,12 @@ Several methods are available to compute the saturated sediment concentration (`
 
    c_{\mathrm{sat}} = \max \left ( 0 \quad ; \quad \alpha C \frac{\rho_{\mathrm{a}}}{g} \sqrt{\frac{d_{n}}{D_{n}}} \frac{\left ( u_* - u_{\mathrm{th}} \right )^3}{u_{\mathrm{sed}}} \right )
 
-The sediment velocity :math:`u_{\mathrm{sed}}` (``u``, ``us``, ``un``) is determined by the ``method_grainspeed`` parameter. It can either be set equal to the governing wind speed (``windspeed``) or calculated using a saltation model (e.g., ``duran``). For more information on grain speed computations, see the :ref:`sediment velocity <sediment-velocity>` section.
+The sediment velocity :math:`u_{\mathrm{sed}}` (``u``, ``us``, ``un``) [:math:`\mathrm{m/s}`] is determined by the ``method_grainspeed`` parameter. It can either be set equal to the governing wind speed (``windspeed``) or calculated using a saltation model (e.g., ``duran``). For more information on grain speed computations, see the :ref:`sediment velocity <sediment-velocity>` section.
 
 .. note:: 
-   For all vector variables (like ``uw``, ``ustar``,  ``tau``, ``u``,  ``q``), the subscripts ``s`` and ``n`` (e.g., ``uws``, ``uwn``) indicate the cross-shore and longshore directions, respectively, and the name without a subscript represents the overall magnitude. 
+   For all vector variables (like ``uw`` [:math:`\mathrm{m/s}`], ``ustar`` [:math:`\mathrm{m/s}`],  ``tau`` [:math:`\mathrm{N/m^2}`], ``u`` [:math:`\mathrm{m/s}`],  ``q`` [:math:`\mathrm{kg/m/s}`]), the subscripts ``s`` and ``n`` (e.g., ``uws``, ``uwn``) indicate the cross-shore and longshore directions, respectively, and the name without a subscript represents the overall magnitude. 
 
-AeoLiS supports the inclusion of multiple sediment fractions (``grain_size``, ``grain_dist``) across multiple vertical layers (``nlayers``). This allows for the simulation of sediment sorting, mixing, and armoring. More details are provided in the :ref:`multi-fraction sediment transport <multi-fraction-sediment-transport>` section.
+AeoLiS supports the inclusion of multiple sediment fractions (``grain_size`` [:math:`\mathrm{m}`], ``grain_dist`` [:math:`\mathrm{-}`]) across multiple vertical layers (``nlayers`` [:math:`\mathrm{-}`]). This allows for the simulation of sediment sorting, mixing, and armoring. More details are provided in the :ref:`multi-fraction sediment transport <multi-fraction-sediment-transport>` section.
 
 Enabling ``process_bedinteraction`` incorporates a bed interaction parameter into the advection equation. For more information, see the :ref:`bed interaction approach <bed-interaction-approach>` section.
 
@@ -47,14 +47,14 @@ Wind and Shear Velocity
 ^^^^^^^^^^^^^^^^^^^^^^^^
 Detailed section: :ref:`wind-shear-velocity`
 
-The shear velocity :math:`u_*` (``ustar``) acts as the primary driver of sediment transport. It is initially computed for a flat bed using the Prandtl-Von Kármán Law of the Wall, based on the wind velocity :math:`u_w` (``uw``) at a given elevation. Wind conditions are provided via the ``wind_file`` and the computation is enabled via ``process_wind``.
+The shear velocity :math:`u_*` (``ustar``) [:math:`\mathrm{m/s}`] acts as the primary driver of sediment transport. It is initially computed for a flat bed using the Prandtl-Von Kármán Law of the Wall, based on the wind velocity :math:`u_w` (``uw``) [:math:`\mathrm{m/s}`] at a given elevation [:math:`\mathrm{m}`]. Wind conditions are provided via the ``wind_file`` and the computation is enabled via ``process_wind``.
 
 .. math::
    :label: lawofwall_overview
 
    u_* = \frac{u_w}{\ln \left( \frac{z}{z_0} \right)}\kappa
 
-Topography can steer the wind, causing perturbations in the shear stress :math:`\tau` (``tau``), where :math:`\tau = \rho_a u_*^2`:
+Topography can steer the wind, causing perturbations in the shear stress :math:`\tau` (``tau``) [:math:`\mathrm{N/m^2}`], where :math:`\tau = \rho_a u_*^2`:
 
 .. math::
    :label: topo_steering_overview
@@ -63,7 +63,7 @@ Topography can steer the wind, causing perturbations in the shear stress :math:`
 
 This steering process can be activated using the ``process_shear`` keyword. Different methods are available to compute these shear perturbations, which can be selected through ``method_shear``. More information on these computations is given in the :ref:`topographic steering section <topographic-steering>`.
 
-The presence of vegetation can also reduce the effective shear stress. This drag reduction is parameterized using the Raupach formulation, which relies on a vegetation-related roughness parameter :math:`\Gamma` (``gamma_vegshear``) and the basal cover :math:`\rho_{\mathrm{veg}}` (``rhoveg``):
+The presence of vegetation can also reduce the effective shear stress. This drag reduction is parameterized using the Raupach formulation, which relies on a vegetation-related roughness parameter :math:`\Gamma` (``gamma_vegshear``) [:math:`\mathrm{-}`] and the basal cover :math:`\rho_{\mathrm{veg}}` (``rhoveg``) [:math:`\mathrm{-}`]:
 
 .. math::
    :label: raupach_overview
@@ -77,14 +77,14 @@ Shear Velocity threshold
 ^^^^^^^^^^^^^^^^^^^^
 Detailed section: :ref:`shear-velocity-threshold`
 
-Where shear velocity drives transport, the threshold velocity :math:`u_{\mathrm{th}}` (``uth``) serves as a supply-limiter. It acts as a collective parameter for all supply-limiting processes, scaling the base threshold :math:`u_{\mathrm{*th,0}}` (``uth0``) by various environmental factors. Threshold calculations are enabled via ``process_threshold``.
+Where shear velocity drives transport, the threshold velocity :math:`u_{\mathrm{th}}` (``uth``) [:math:`\mathrm{m/s}`] serves as a supply-limiter. It acts as a collective parameter for all supply-limiting processes, scaling the base threshold :math:`u_{\mathrm{*th,0}}` (``uth0``) [:math:`\mathrm{m/s}`] by various environmental factors. Threshold calculations are enabled via ``process_threshold``.
 
 .. math::
   :label: threshold_overview
   
   u_{\mathrm{* th}} = u_{\mathrm{* th, 0}} \cdot f_{\mathrm{M}} \cdot f_{\mathrm{R}} \cdot f_{\mathrm{S}}
 
-The base threshold :math:`u_{\mathrm{* th, 0}}` is computed based on the local grain size and density (activated via ``th_grainsize``). This base value is then scaled by supply-limiting factors depending on the enabled model processes. The influence of surface moisture (:math:`f_{\mathrm{M}}`) is activated via ``th_moisture``, while sheltering by non-erodible roughness elements (:math:`f_{\mathrm{R}}`) is configured via ``th_sheltering``. The restricting effect of a non-erodible layer can be included using ``th_nelayer``.
+The base threshold :math:`u_{\mathrm{* th, 0}}` [:math:`\mathrm{m/s}`] is computed based on the local grain size [:math:`\mathrm{m}`] and density [:math:`\mathrm{kg/m^3}`] (activated via ``th_grainsize``). This base value is then scaled by supply-limiting factors depending on the enabled model processes. The influence of surface moisture (:math:`f_{\mathrm{M}}`) [:math:`\mathrm{-}`] is activated via ``th_moisture``, while sheltering by non-erodible roughness elements (:math:`f_{\mathrm{R}}`) [:math:`\mathrm{-}`] is configured via ``th_sheltering``. The restricting effect of a non-erodible layer can be included using ``th_nelayer``.
 
 Vegetation
 ^^^^^^^^^^^
@@ -92,7 +92,7 @@ Detailed section: :ref:`vegetation`
 
 Vegetation plays a key role in the development of dunes. The simulation of vegetation growth and spreading, along with the subsequent reduction in shear stress, can be enabled via ``process_vegetation``. The specific vegetation formulation is selected using ``method_vegetation`` (``duran`` for the original implementation, or ``grass`` for the newer framework by :cite:t:`vanWesten2026`). 
 
-In the original description, the vegetation density :math:`\rho_{\mathrm{veg}}` (``rhoveg``) is computed based on the current vegetation height :math:`h_{\mathrm{veg}}` (``hveg``) relative to the maximum attainable height :math:`H_{\mathrm{max}}` (``hveg_max`` or ``Hveg``):
+In the original description, the vegetation density :math:`\rho_{\mathrm{veg}}` (``rhoveg``) [:math:`\mathrm{-}`] is computed based on the current vegetation height :math:`h_{\mathrm{veg}}` (``hveg``) [:math:`\mathrm{m}`] relative to the maximum attainable height :math:`H_{\mathrm{max}}` (``hveg_max`` or ``Hveg``) [:math:`\mathrm{m}`]:
 
 .. math::
    :label: rhoveg_overview
@@ -108,7 +108,7 @@ The vertical development of the vegetation over time is described by:
 
    \frac{\partial h_{\mathrm{veg}}}{\partial t} = V_{\mathrm{ver}} \left( 1 - \frac{h_{\mathrm{veg}}}{H_{\mathrm{max}}} \right) - \gamma_{\mathrm{veg}} |\Delta z_{\mathrm{burial}}|
 
-This growth is governed by the intrinsic vertical growth rate :math:`V_{\mathrm{ver}}` (``V_ver``) and the plant's sensitivity to sediment burial or erosion :math:`\gamma_{\mathrm{veg}}` (``veg_gamma``). For a complete overview of the growth, mortality, and lateral spreading dynamics, see the detailed :ref:`vegetation documentation <vegetation>`.
+This growth is governed by the intrinsic vertical growth rate :math:`V_{\mathrm{ver}}` (``V_ver``) [:math:`\mathrm{m/s}`] and the plant's sensitivity to sediment burial or erosion :math:`\gamma_{\mathrm{veg}}` (``veg_gamma``) [:math:`\mathrm{-}`]. For a complete overview of the growth, mortality, and lateral spreading dynamics, see the detailed :ref:`vegetation documentation <vegetation>`.
 
 Hydrodynamics and Surface Moisture
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -116,9 +116,9 @@ Detailed section: :ref:`hydrodynamics-moisture`
 
 Water levels, wave runup, and groundwater can wet the beach, temporarily increasing the shear velocity threshold and mixing sediment fractions. The model reads input water levels (``tide_file``) and wave heights (``wave_file``), which are activated via ``process_tide`` and ``process_wave``. 
 
-The input water level is first projected onto the domain to establish the Still Water Level (``SWL``). If wave runup is enabled (``process_runup``), the runup height (``R``) is computed and added to form the Total Water Level (``TWL``, where TWL = SWL + R). The local water surface elevation (``zs``) is then determined as the maximum of the bed level (``zb``) and the TWL, from which the actual water depth (``hw``) is derived. Spatial masks (``tide_mask``, ``wave_mask``, ``runup_mask``) can be applied to restrict or modify where these hydrodynamics act.
+The input water level is first projected onto the domain to establish the Still Water Level (``SWL``) [:math:`\mathrm{m}`]. If wave runup is enabled (``process_runup``), the runup height (``R``) [:math:`\mathrm{m}`] is computed and added to form the Total Water Level (``TWL``) [:math:`\mathrm{m}`], where TWL = SWL + R. The local water surface elevation (``zs``) [:math:`\mathrm{m}`] is then determined as the maximum of the bed level (``zb``) [:math:`\mathrm{m}`] and the TWL, from which the actual water depth (``hw``) [:math:`\mathrm{m}`] is derived. Spatial masks (``tide_mask``, ``wave_mask``, ``runup_mask``) can be applied to restrict or modify where these hydrodynamics act.
 
-Inundation wets the bed, increasing the surface moisture (``moist``). Once the beach is exposed, infiltration and evaporation gradually dry the surface. This moisture tracking is activated via ``process_moist``. A more advanced description of intertidal groundwater fluctuations by :cite:t:`Hallin2023` can also be enabled through ``process_groundwater``. For more information on these computations, see the :ref:`surface moisture section <surface-moisture>`.
+Inundation wets the bed, increasing the surface moisture (``moist``) [:math:`\mathrm{-}`]. Once the beach is exposed, infiltration and evaporation gradually dry the surface. This moisture tracking is activated via ``process_moist``. A more advanced description of intertidal groundwater fluctuations by :cite:t:`Hallin2023` can also be enabled through ``process_groundwater``. For more information on these computations, see the :ref:`surface moisture section <surface-moisture>`.
 
 Furthermore, wave impacts can mix multiple sediment fractions across several bed layers down to the depth of disturbance. This mixing process is enabled via ``process_mixtoplayer``. For more details on how waves rework the bed, see the :ref:`hydraulic sediment mixing section <hydraulic-sediment-mixing>`.
 
@@ -126,16 +126,16 @@ Morphological Change
 ^^^^^^^^^^^^^^^^^^^^
 Detailed section: :ref:`morphological-change`
 
-Gradients in aeolian sediment transport result in net erosion or deposition, causing the bed level :math:`z_B$` (``zb``) to change over time; :math:`\Delta z_B$` (``dzb``). This morphological updating is enabled by ``process_bedupdate``:
+Gradients in aeolian sediment transport result in net erosion or deposition, causing the bed level :math:`z_B` (``zb``) [:math:`\mathrm{m}`] to change over time; :math:`\Delta z_B` (``dzb``) [:math:`\mathrm{m}`]. This morphological updating is enabled by ``process_bedupdate``:
 
 .. math::
    :label: bedupdate_overview
 
    \frac{\partial z}{\partial t} = - \frac{1}{\rho_{\mathrm{sed}}(1 - p)} (E - D)
 
-This change is driven directly by the net entrainment :math:`(E - D)` computed in the advection equation, scaled by the sediment density :math:`\rho_{\mathrm{sed}}` and the sediment porosity :math:`p`. Together, the density and porosity represent the bulk density of the bed. For more detailed mechanics on this mass balance, see the :ref:`morphological change section <morphological-change>`.
+This change is driven directly by the net entrainment :math:`(E - D)` [:math:`\mathrm{kg/m^2/s}`] computed in the advection equation, scaled by the sediment density :math:`\rho_{\mathrm{sed}}` [:math:`\mathrm{kg/m^3}`] and the sediment porosity :math:`p` [:math:`\mathrm{-}`]. Together, the density and porosity represent the bulk density of the bed. For more detailed mechanics on this mass balance, see the :ref:`morphological change section <morphological-change>`.
 
-To redistribute sediment when the local slope becomes too steep, avalanching can be enabled through ``process_avalanche``. This routine triggers when the bed slope exceeds the static angle of repose (``theta_stat``) and relaxes the slope back to the dynamic angle of repose (``theta_dyn``). 
+To redistribute sediment when the local slope becomes too steep, avalanching can be enabled through ``process_avalanche``. This routine triggers when the bed slope exceeds the static angle of repose (``theta_stat``) [:math:`\mathrm{^\circ}`] and relaxes the slope back to the dynamic angle of repose (``theta_dyn``) [:math:`\mathrm{^\circ}`].
 
 .. _fig-aeolis-overview:
 
