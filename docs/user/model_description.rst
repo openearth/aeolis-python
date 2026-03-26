@@ -310,9 +310,9 @@ Note that the computed :math:`u_{\mathrm{sed}}` represents the collective horizo
 .. tip::
    **Guidance on selecting a grain speed method**
 
-   * Use ``duran`` for most simulations involving landform evolution (e.g., barchans, parabolic dunes) where topographic steering is important.
+   * Use ``duran`` for most simulations involving landform evolution where topographic steering is important.
    * Use ``duran_full`` only for simulations involving topography with very steep gradients (e.g., blowout cliffs).
-   * Use ``duran_uniform`` for static topography where you need realistic, localized deposition patterns but no landform migration.
+   * Use ``duran_uniform`` for static topography where you need realistic deposition patterns but no landform migration.
    * Use ``windspeed`` only for basic, bulk transport calculations where morphodynamics are irrelevant.
 
 
@@ -597,6 +597,9 @@ Shear Velocity
 
 PLACEHOLDER: LAW OF THE WALL
 
+.. tip:: 
+   Although ``k`` physical parameter, often used to calibrate transport. Pragmatic workflow is select ``bagnold``, set up flat bed transport with representative conditions and use ``k`` to calibrate overall transport magnitudes before adding more complexity to the model.
+
 .. _topographic-steering:
 Topographic Steering
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -681,6 +684,9 @@ where the polynomial coefficients are:
 
    a_2=-\frac{3 z_{\mathrm{brink}} + 2 z_{\mathrm{brink}}' l_r}{l_r^2} \qquad \qquad a_3=\frac{2 z_{\mathrm{brink}} +  z_{\mathrm{brink}}' l_r}{l_r^3}
 
+.. tip:: 
+   Separation bubble (``process_separation``) usefull for aerodyanmically steered landforms, but often flawed in case of more complex topographies e.g. due to vegetation.
+
 .. _fig-concept-topo-steering:
 
 .. figure:: /images/concept_topo_steering.jpg
@@ -715,9 +721,11 @@ The underlying implementation of the perturbation theory and separation bubble o
 7. Interpolate the total shear stress results from the computational grid to the original grid.
 8. Rotate the wind shear stress results and the original grid back to the original orientation.
 
-.. note:: 
-   The extra rotations in the last two steps are necessary as a simplified, but faster in terms of computational time, interpolation method is used.
-
+.. tip:: 
+    This rotational grid is a computationally expensive process, so wise to optimize; couple of points:
+      * The secondary rotational grid has its own resolution (``dx`` and ``dy``) in the main configuration file. Make sure these are not coarser than the main grid, so you don't lose information. 
+      * Shear if FFT; ideally the bed at either side of the domain have same height, because the gradient between them will be included in the FFT. To avoid wiggles at boundaries buffer zone needed that connects the two outside of the domain of interest. Width must be manually set (``buffer``). Rule of thumb; at least 5 times max height difference between domain edges. Check for wiggles on domain edge after to see if adequate. Afterwards, maybe smaller for computational efficiency.
+      * Since secondary grid is always a bounding box, the increase in size is largest for non-rectangular grids. Imagine a 1x100 grid, under oblique winds (45 deg), the secondary grid will have at least 71x71 cells (sqrt(2) * 100.. correct?). Chosing ``method_shear = 1Dstacks`` direct analyitical solution, so no FFT or second grid needed. Choose this option if (semi-)1D simulation.
 .. _vid-rotating-shear:
 
 .. video:: /images/rotating_shear.mp4
@@ -842,6 +850,9 @@ Threshold: Non-erodible layer
 
 PLACEHOLDER
 
+.. tip:: 
+   No groundwater on upper beach or dunes; non-erodible layer can function as placeholder if profile needs to be kept stable.
+
 
 
 .. _vegetation:
@@ -925,7 +936,8 @@ across the domain, except in eroding grid cells (where bed elevation decreases),
 propagation is determined by identifying the boundaries between vegetated and non-vegetated cells, with the 
 parameter ρ_{lat} adjusting the likelihood of lateral propagation at these boundaries.
 
-
+.. tip:: 
+   Meaning of these variables (Vver or Gh) -> 4 m/year does not mean vegetation 4 meter high after 1 year.
 
 .. _vegetation-induced-shear-reduction:
 Vegetation-induced Shear Reduction
@@ -956,6 +968,7 @@ Computing bed-interaction (zeta) over vegetation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 PLACEHOLDER
+
 
 .. _vegetation-mortality:
 Vegetation Mortality
