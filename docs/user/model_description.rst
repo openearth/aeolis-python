@@ -100,7 +100,7 @@ In the original description, the vegetation density :math:`\rho_{\mathrm{veg}}` 
 .. math::
    :label: rhoveg_overview
 
-   \rho_{\mathrm{veg}} = \rho_{\mathrm{max}} \frac{h_{\mathrm{veg}}}{H_{\mathrm{max}}}
+   \rho_{\mathrm{veg}} = \sqrt{\frac{h_{\mathrm{veg}}}{H_{\mathrm{max}}}}
 
 This density determines the magnitude of the shear stress reduction acting on the sand bed (as described by the Raupach formulation in the shear velocity section). 
 
