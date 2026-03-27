@@ -92,7 +92,7 @@ In the original description, the vegetation density :math:`\rho_{\mathrm{veg}}` 
 .. math::
    :label: rhoveg_overview
 
-   \rho_{\mathrm{veg}} = \sqrt{\frac{h_{\mathrm{veg}}}{H_{\mathrm{max}}}}
+   \rho_{\mathrm{veg}} = (\frac{h_{\mathrm{veg}}}{H_{\mathrm{max}}})^2
 
 This density determines the magnitude of the shear stress reduction acting on the sand bed, which relies on a vegetation-related roughness parameter :math:`\Gamma` (``gamma_vegshear``) [:math:`\mathrm{-}`] and the basal cover :math:`\rho_{\mathrm{veg}}` (``rhoveg``) [:math:`\mathrm{-}`]:
 
