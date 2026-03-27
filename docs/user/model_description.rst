@@ -366,8 +366,8 @@ is determined by a bed interaction parameter :math:`\zeta` (``bi``).
 .. note::
    The bed interaction parameter (``bi``) described here is currently distinct from the recently introduced bed-interaction factor (``zeta``). While conceptually similar, they serve different purposes:
 
-   * **``bi``**: A static variable that weights the contribution of the bed composition (sand in the bed) versus the airborne composition (sand already in transport) when computing the transport rate for multiple sediment fractions.
-   * **``zeta``**: A dynamically computed factor based on surface properties that decouples the air and bed. It determines the extent to which transport is governed by bed conditions (supply-limited) versus airborne conditions (wind-driven capacity) (see :ref:`this section <bed-interaction-approach>`).
+   * ``bi``: A static variable that weights the contribution of the bed composition (sand in the bed) versus the airborne composition (sand already in transport) when computing the transport rate for multiple sediment fractions.
+   * ``zeta``: A dynamically computed factor based on surface properties that decouples the air and bed. It determines the extent to which transport is governed by bed conditions (supply-limited) versus airborne conditions (wind-driven capacity) (see :ref:`this section <bed-interaction-approach>`).
 
    Future updates should aim to consolidate these two parameters.
 
@@ -593,7 +593,7 @@ More information on the computation of hydrodynamic forcing by the AeoLiS model 
 
 .. _bed-interaction-approach:
 
-Bed-interaction Approach (zeta)
+Bed-interaction Approach (:math:`\zeta`)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Most existing aeolian models assume that local bed properties dictate the saturated sediment concentration for the entire transport column, relying on a single value for :math:`c_{\mathrm{sat}}` in the advection equation (Equation :eq:`erodep`). However, this assumes that conditions at or near the bed instantly influence the entire air column, which would cause immediate deposition over obstacles like vegetation.
@@ -624,27 +624,26 @@ The dimensionless weights :math:`w_{\mathrm{air}}` and :math:`w_{\mathrm{bed}}` 
 
 This formulation allows the model to dynamically simulate different surface types through the parameter :math:`\zeta`:
 
-* **Bare sediment surface (** :math:`\zeta = 1` **):** All transport interacts with the bed. If local shear drops or the threshold increases, deposition occurs directly (scaled only by the adaptation time :math:`T` in Equation :eq:`erodep`). Under these conditions, Equation :eq:`csat_combined` simplifies to :math:`c_{\mathrm{sat}} = c_{\mathrm{sat,bed}}`. 
-* **Non-erodible surface (** :math:`\zeta = 0` **):** Transport is fully decoupled from conditions at the bed. Even if the local pickup capacity is zero (:math:`c_{\mathrm{sat,bed}} = 0`), sediment entering from upwind passes over the cell without depositing, effectively creating an infinite deposition length.
-* **Vegetation (** :math:`0 < \zeta < 1` **):** The vegetation canopy intercepts a portion of the sediment flux, while the remainder skims over the top. Consequently, the effective deposition length scale increases, allowing the depositional area to extend further downwind into the vegetation patch.
+* Bare sediment surface (:math:`\zeta = 1`): All transport interacts with the bed. If local shear drops or the threshold increases, deposition occurs directly (scaled only by the adaptation time :math:`T` in Equation :eq:`erodep`). Under these conditions, Equation :eq:`csat_combined` simplifies to :math:`c_{\mathrm{sat}} = c_{\mathrm{sat,bed}}`. 
+* Non-erodible surface (:math:`\zeta = 0`): Transport is fully decoupled from conditions at the bed. Even if the local pickup capacity is zero (:math:`c_{\mathrm{sat,bed}} = 0`), sediment entering from upwind passes over the cell without depositing, effectively creating an infinite deposition length.
+* Vegetation (:math:`0 < \zeta < 1` **): The vegetation canopy intercepts a portion of the sediment flux, while the remainder skims over the top. Consequently, the effective deposition length scale increases, allowing the depositional area to extend further downwind into the vegetation patch.
 
 The actual dynamic computation of :math:`\zeta` based on vegetation height and the vertical transport profile is described further down in the :ref:`vegetation section <vegetation>`.
 
 .. note::
    The bed interaction parameter (``bi``) described earlier is currently distinct from the recently introduced bed-interaction factor (``zeta``). While conceptually similar, they serve different purposes:
 
-   * **``bi``**: A static variable that weights the contribution of the bed composition (sand in the bed) versus the airborne composition (sand already in transport) when computing the transport rate for multiple sediment fractions.
-   * **``zeta``**: A dynamically computed factor based on surface properties that decouples the air and bed. It determines the extent to which transport is governed by bed conditions (supply-limited) versus air conditions (wind-driven capacity).
+   * ``bi``: A static variable that weights the contribution of the bed composition (sand in the bed) versus the airborne composition (sand already in transport) when computing the transport rate for multiple sediment fractions.
+   * ``zeta``: A dynamically computed factor based on surface properties that decouples the air and bed. It determines the extent to which transport is governed by bed conditions (supply-limited) versus air conditions (wind-driven capacity).
 
    Future updates aim to consolidate these two parameters.
-
 
 .. _wind-shear-velocity:
 
 Wind and Shear Velocity
 -----------------------------------
 
-Wind is the primary driver of aeolian sediment transport. Time-varying wind conditions are provided to the model through the ``wind_file``, which contains both the wind magnitude [:math:`\mathrm{m/s}`] and direction [:math:`\mathrm{^\circ}`]. This wind velocity is measured at a specific reference height :math:`z` (``z``) [:math:`\mathrm{m}`], which defaults to 10 m. The model automatically interpolates the input time series to the internal computational time steps and decomposes the wind into cross-shore :math:`u_{\mathrm{w,s}}` (``uws``) and longshore :math:`u_{\mathrm{w,n}}` (``uwn``) [:math:`\mathrm{m/s}`] components.
+Wind is the primary driver of aeolian sediment transport (``process_wind``). Time-varying wind conditions are provided to the model through the ``wind_file``, which contains both the wind magnitude [:math:`\mathrm{m/s}`] and direction [:math:`\mathrm{^\circ}`]. This wind velocity is measured at a specific reference height :math:`z` (``z``) [:math:`\mathrm{m}`], which defaults to 10 m. The model automatically interpolates the input time series to the internal computational time steps and decomposes the wind into cross-shore :math:`u_{\mathrm{w,s}}` (``uws``) and longshore :math:`u_{\mathrm{w,n}}` (``uwn``) [:math:`\mathrm{m/s}`] components.
 
 .. _shear-velocity:
 
@@ -662,12 +661,12 @@ where :math:`\kappa` (``kappa``) [:math:`\mathrm{-}`] is the Von Kármán consta
 
 The model offers multiple methods to compute the roughness length :math:`z_0`, selected via the ``method_roughness`` parameter:
 
-* **``constant``** (default): Uses the user-defined roughness parameter :math:`k` (``k``) [:math:`\mathrm{m}`] directly as the roughness length (:math:`z_0 = k`). This is implemented to ensure backward compatibility and does not follow the standard Nikuradse definition.
-* **``constant_nikuradse``**: Follows the definition introduced by Nikuradse, scaling the user-defined bed roughness by 30 (:math:`z_0 = k / 30`).
-* **``mean_grainsize_initial``**: Computes a static roughness based on the initial mean grain size across the domain (:math:`z_0 = d_{\mathrm{mean}} / 30`). This is most applicable to flat beds with a uniform grain size distribution.
-* **``mean_grainsize_adaptive``**: Dynamically updates the roughness through time and space based on the evolving local mean grain size.
-* **``median_grainsize_adaptive``**: Uses the local median grain size :math:`d_{50}` (:math:`z_0 = 2d_{50} / 30`). This approach is based on Sherman and Greenwood (1982) and is appropriate for naturally occurring grain size distributions.
-* **``vanrijn_strypsteen``**: An advanced dynamic formulation based on van Rijn and Strypsteen (2019) and Strypsteen et al. (2021). It calculates the roughness dynamically using the local :math:`d_{50}` and :math:`d_{90}` to account for the additional roughness generated by the saltation layer and ripple formation phases.
+* ``constant`` (default): Uses the user-defined roughness parameter :math:`k` (``k``) [:math:`\mathrm{m}`] directly as the roughness length (:math:`z_0 = k`). This is implemented to ensure backward compatibility and does not follow the standard Nikuradse definition.
+* ``constant_nikuradse``: Follows the definition introduced by Nikuradse, scaling the user-defined bed roughness by 30 (:math:`z_0 = k / 30`).
+* ``mean_grainsize_initial``: Computes a static roughness based on the initial mean grain size across the domain (:math:`z_0 = d_{\mathrm{mean}} / 30`). This is most applicable to flat beds with a uniform grain size distribution.
+* ``mean_grainsize_adaptive``: Dynamically updates the roughness through time and space based on the evolving local mean grain size.
+* ``median_grainsize_adaptive``: Uses the local median grain size :math:`d_{50}` (:math:`z_0 = 2d_{50} / 30`). This approach is based on Sherman and Greenwood (1982) and is appropriate for naturally occurring grain size distributions.
+* ``vanrijn_strypsteen``: An advanced dynamic formulation based on van Rijn and Strypsteen (2019) and Strypsteen et al. (2021). It calculates the roughness dynamically using the local :math:`d_{50}` and :math:`d_{90}` to account for the additional roughness generated by the saltation layer and ripple formation phases.
 
 .. tip::
    Although the bed roughness :math:`k` (``k``) is a physical parameter, it can be used in practice to calibrate transport rates. A pragmatic workflow is to select the ``bagnold`` transport method, establish flat-bed transport with representative conditions, and use ``k`` (with ``method_roughness = constant``) to calibrate the transport magnitudes before adding more complexity to the model. This approach could be effective if your primary goal is to simulate representative morphological evolution and you're less interested in the accuracy of the physical representation of the aeolian transport.
@@ -678,7 +677,7 @@ The model offers multiple methods to compute the roughness length :math:`z_0`, s
 Topographic Steering
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To simulate the topographic steering effects on dunes, Computational Fluid Dynamics (CFD) methods are often used. However, their high computational expense makes them unsuitable for long-term morphodynamic simulations. To reduce computational costs, the topographic steering of the wind due to smooth gradients is implemented following an analytical perturbation theory for turbulent boundary layer flow :cite:`weng1991air, kroy2002minimal`. 
+To simulate the topographic steering effects on dunes, Computational Fluid Dynamics (CFD) methods are often used. However, their high computational expense makes them unsuitable for long-term morphodynamic simulations. To reduce computational costs, the topographic steering of the wind due to smooth gradients is implemented following an analytical perturbation theory for turbulent boundary layer flow :cite:`weng1991air, kroy2002minimal` (``process_shear``). 
 
 This approach builds upon the flat bed shear velocity :math:`u_{*0}` (``ustar0``) [:math:`\mathrm{m/s}`] established in the previous step. This velocity provides a baseline, unperturbed shear stress :math:`\vec{\tau}_{0}` (``tau0``) [:math:`\mathrm{N/m^2}`], where :math:`|\vec{\tau}_{0}| = \rho_{\mathrm{a}} u_{*0}^2`. The method then computes the topographically steered shear stress :math:`\vec{\tau}(x,y)` (``tau``) by applying a spatial perturbation :math:`\delta\vec{\tau}(x,y)` to this baseline:
 
@@ -718,7 +717,7 @@ where :math:`\tilde{}` indicates the Fourier-transformed components of the param
 where :math:`L` (``L``) [m] is the typical length scale of the hill.
 
 .. tip:: 
-   **Tuning the length scale :math:`L` (``L``):** The typical length scale of the hill (:math:`L`) influences the strength of the shear perturbation. A higher :math:`L` will result in a stronger shear stress perturbation (higher wind speed-up over the crest or reduction at the toe) and thus in a more outspoken morphodynamic shape. A practical approach is to vary this parameter between 10 and 1000 depending on your desired morphological outcome.
+   Tuning the length scale :math:`L` (``L``): The typical length scale of the hill (:math:`L`) influences the strength of the shear perturbation. A higher :math:`L` will result in a stronger shear stress perturbation (higher wind speed-up over the crest or reduction at the toe) and thus in a more outspoken morphodynamic shape. A practical approach is to vary this parameter between 10 and 1000 m depending on your desired morphological outcome.
 
 For one-dimensional situations, a simplified solution of the shear perturbation approach is implemented. By ignoring some minor terms, it provides a less computationally expensive approach :cite:`kroy2002minimal`:
 
@@ -741,9 +740,11 @@ Finally, the computed shear stresses are converted back into shear velocities. T
 Flow separation
 ^^^^^^^^^^^^^^^^^
 
-The implementation of the shear perturbation theory by :cite:`weng1991air` is only valid in situations with relatively smooth surfaces. The occurrence of steep slopes limits the validity of the approach. To address this, a description of flow separation is used following the Coastal Dune Model (CDM) :cite:`sauermann2001continuum, kroy2002minimal, DuranMoore2013`. A smooth envelope is created, which separates the main flow when a sharp edge is detected in the windward direction. This smooth envelope is called a separation bubble, :math:`z_{sep}` [m] (Figure :numref:`fig-concept-topo-steering`). This separation bubble represents the surface that divides the region of flow reversal from the main flow stream along the smooth hill. Subsequently, in all cells for which the bed level is lower than the separation bubble (:math:`z_b < z_{sep}`), the shear velocity :math:`u_{*}` is set to 0 m/s. This assumes that eventual flow reversal velocities are not significant enough to initiate aeolian transport.
+The implementation of the shear perturbation theory by :cite:`weng1991air` is only valid in situations with relatively smooth surfaces. The occurrence of steep slopes limits the validity of the approach. To address this, a description of flow separation is used following the Coastal Dune Model (CDM) :cite:`sauermann2001continuum, kroy2002minimal, DuranMoore2013` (``process_separation``). 
 
-The separation bubble surface :math:`z_{sep}` is modelled by a third-order polynomial. The height of the brinkline, or the location where the separation bubble starts to detach from the bed, is defined by :math:`z_b(x_{\mathrm{brink}}) \equiv z_{\mathrm{brink}}`. Assuming a maximum slope :math:`c` [deg] for the separation surface that determines the shape of the bubble, the reattachment length :math:`l_r` is obtained by:
+A smooth envelope is created, which separates the main flow when a sharp edge is detected in the windward direction, i.e. when the bed slope is steeper than a certain user-defined angle (``mu_b``). This smooth envelope is called a separation bubble, :math:`z_{sep}` (``zsep``) [m] (Figure :numref:`fig-concept-topo-steering`). This separation bubble represents the surface that divides the region of flow reversal from the main flow stream along the smooth hill. Subsequently, in all cells for which the bed level is lower than the separation bubble (:math:`z_b < z_{sep}`), the shear velocity :math:`u_{*}` is set to 0 m/s. This assumes that eventual flow reversal velocities are not significant enough to initiate aeolian transport.
+
+The separation bubble surface :math:`z_{sep}` is modelled by a third-order polynomial. The height of the brinkline, or the location where the separation bubble starts to detach from the bed, is defined by :math:`z_b(x_{\mathrm{brink}}) \equiv z_{\mathrm{brink}}`. Assuming a maximum slope :math:`c` (``c_b``) [deg] for the separation surface that determines the shape of the bubble, the reattachment length :math:`l_r` is obtained by:
 
 .. math::
    :label: reattachment_length
@@ -765,7 +766,7 @@ where the polynomial coefficients are:
    a_2=-\frac{3 z_{\mathrm{brink}} + 2 z_{\mathrm{brink}}' l_r}{l_r^2} \qquad \qquad a_3=\frac{2 z_{\mathrm{brink}} +  z_{\mathrm{brink}}' l_r}{l_r^3}
 
 .. tip:: 
-   Separation bubble (``process_separation``) usefull for aerodyanmically steered landforms, but often flawed in case of more complex topographies e.g. due to vegetation.
+   Enabling the separation bubble (``process_separation = T``) is recommended for solely aerodynamically dominated landforms (e.g., barchan dunes). However, it can produce undesirable morphodynamics in complex or irregular topographies, such as densely vegetated environments, so use it judiciously.
 
 .. _fig-concept-topo-steering:
 
@@ -802,10 +803,13 @@ The underlying implementation of the perturbation theory and separation bubble o
 8. Rotate the wind shear stress results and the original grid back to the original orientation.
 
 .. tip:: 
-    This rotational grid is a computationally expensive process, so wise to optimize; couple of points:
-      * The secondary rotational grid has its own resolution (``dx`` and ``dy``) in the main configuration file. Make sure these are not coarser than the main grid, so you don't lose information. 
-      * Shear if FFT; ideally the bed at either side of the domain have same height, because the gradient between them will be included in the FFT. To avoid wiggles at boundaries buffer zone needed that connects the two outside of the domain of interest. Width must be manually set (``buffer``). Rule of thumb; at least 5 times max height difference between domain edges. Check for wiggles on domain edge after to see if adequate. Afterwards, maybe smaller for computational efficiency.
-      * Since secondary grid is always a bounding box, the increase in size is largest for non-rectangular grids. Imagine a 1x100 grid, under oblique winds (45 deg), the secondary grid will have at least 71x71 cells (sqrt(2) * 100.. correct?). Chosing ``method_shear = 1Dstacks`` direct analyitical solution, so no FFT or second grid needed. Choose this option if (semi-)1D simulation.
+   Generating the rotational grid is computationally expensive. Consider the following optimizations to improve performance:
+
+   * **Resolution:** The secondary rotational grid uses its own resolution parameters (``dx`` and ``dy``) defined in the configuration file. Ensure these are not coarser than your primary grid resolution to prevent information loss.
+   * **Buffer zones (FFT):** The FFT method assumes periodic boundaries. If the bed elevations at opposite edges of the domain differ, the FFT will artificially include this steep gradient, causing numerical wiggles. To mitigate this, define a buffer zone (``buffer``) that smoothly connects the edges outside your domain of interest. As a rule of thumb, set the buffer width to at least 5 times the maximum height difference between the domain edges. Check the boundaries for wiggles after an initial run, and reduce the buffer size if possible to save computational time.
+   * **Grid shape and 1D alternative:** Because the secondary grid acts as a bounding box, its size increases drastically for highly non-rectangular domains under oblique winds (e.g., a 1x100 grid under a 45° wind requires a secondary grid of approximately 71x71 cells). For (semi-)1D simulations, avoid this overhead by selecting ``method_shear = 1Dstacks``. This uses a direct analytical solution, bypassing the need for FFTs and rotational grids.
+
+
 .. _vid-rotating-shear:
 
 .. video:: /images/rotating_shear.mp4
@@ -818,11 +822,12 @@ The underlying implementation of the perturbation theory and separation bubble o
 
 
 .. _shear-velocity-threshold:
+
 Shear Velocity Threshold
 ---------------------------
 
 The shear velocity threshold represents the influence of bed surface
-properties in the saturated sediment transport equation. The shear
+properties in the saturated sediment transport equation (``process_threshold``). The shear
 velocity threshold is computed for each grid cell and sediment
 fraction separately based on local bed surface properties, like
 moisture, roughness elements and salt content. For each bed surface
@@ -835,14 +840,15 @@ initial shear velocity threshold:
   u_{\mathrm{* th}} = 
   f_{u_{\mathrm{* th}}, \mathrm{M}} \cdot 
   f_{u_{\mathrm{* th}}, \mathrm{R}} \cdot 
-  f_{u_{\mathrm{* th}}, \mathrm{S}} \cdot 
+  f_{u_{\mathrm{* th}}, \mathrm{NE}} \cdot 
   u_{\mathrm{* th, 0}}
 
 .. _base-threshold-grainsize:
-Base Threshold: Grainsize
+
+Grainsize (base)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The initial shear velocity threshold :math:`u_{\mathrm{* th, 0}}` [m/s] is
+The base shear velocity threshold :math:`u_{\mathrm{* th, 0}}` (``uth0``) [m/s] is
 computed based on the grain size following :cite:`Bagnold1937b`:
 
 .. math::
@@ -850,18 +856,19 @@ computed based on the grain size following :cite:`Bagnold1937b`:
 
    u_{\mathrm{* th, 0}} = A \sqrt{ \frac{\rho_{\mathrm{p}} - \rho_{\mathrm{a}}}{\rho_{\mathrm{a}}} \cdot g \cdot d_{\mathrm{n}}}
 
-where :math:`A` [-] is an empirical constant, :math:`\rho_{\mathrm{p}}`
-[:math:`\mathrm{kg/m^3}`] is the grain density, :math:`\rho_{\mathrm{a}}`
-[:math:`\mathrm{kg/m^3}`] is the air density, :math:`g` [:math:`\mathrm{m/s^2}`] is the
-gravitational constant and :math:`d_{\mathrm{n}}` [m] is the nominal grain
+where :math:`A` (``Aa``) [-] is an empirical constant, :math:`\rho_{\mathrm{p}}` (``rhog``)
+[:math:`\mathrm{kg/m^3}`] is the grain density, :math:`\rho_{\mathrm{a}}` (``rhoa``)
+[:math:`\mathrm{kg/m^3}`] is the air density, :math:`g` (``g``) [:math:`\mathrm{m/s^2}`] is the
+gravitational constant and :math:`d_{\mathrm{n}}` (``grain_size``) [m] is the nominal grain
 size of the sediment fraction.
 
 
 .. _threshold-moisture-content:
+
 Moisture content
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The shear velocity threshold is updated based on moisture content
+The shear velocity threshold (``th_moisture``) is updated based on moisture content
 following :cite:`Belly1964`:
 
 .. math::
@@ -888,13 +895,14 @@ volumetric content) cease transport :cite:`DelgadoFernandez2010`,
 which is implemented as an infinite shear velocity threshold.
 
 .. _threshold-roughness-elements:
+
 Roughness elements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Sediment sorting may lead to the emergence of non-erodible elements
 from the bed. Non-erodible roughness elements may shelter the erodible
 bed from wind erosion due to shear partitioning, resulting in a
-reduced sediment availability :cite:`Raupach1993`. Therefore the
+reduced sediment availability :cite:`Raupach1993` (``th_sheltering``). Therefore the
 equation of :cite:`Raupach1993` is implemented according to:
 
 .. math::
@@ -902,10 +910,10 @@ equation of :cite:`Raupach1993` is implemented according to:
            
    u_{\mathrm{* th, R}} = u_{\mathrm{* th}} \cdot \sqrt{ \left( 1 - m \cdot \sum_{k=k_0}^{n_{\mathrm{k}}}{w_k^{\mathrm{bed}}} \right) \left( 1 + \frac{m \beta}{\sigma} \cdot \sum_{k=k_0}^{n_{\mathrm{k}}}{w_k^{\mathrm{bed}}} \right) }
 
-in which :math:`\sigma` is the ratio between the frontal area and the
-basal area of the roughness elements and :math:`\beta` is the ratio
+in which :math:`\sigma` (``sigma``) is the ratio between the frontal area and the
+basal area of the roughness elements and :math:`\beta` (``beta``) is the ratio
 between the drag coefficients of the roughness elements and the bed
-without roughness elements. :math:`m` is a factor to account for the
+without roughness elements. :math:`m` (``m``) is a factor to account for the
 difference between the mean and maximum shear stress and is usually
 chosen 1.0 in wind tunnel experiments and may be lowered to 0.5 for
 field applications. The roughness density :math:`\lambda` in the
@@ -925,13 +933,28 @@ fractions are ordered by increasing size. Whether a fraction is
 erodible depends on the sediment transport capacity.
 
 .. _threshold-non-erodible-layer:
+
 Non-erodible layer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-PLACEHOLDER
+The model allows for the definition of a spatially varying non-erodible layer beneath the active sand surface (``ne_file``). When the bed elevation :math:`z_{\mathrm{b}}` (``zb``) [:math:`\mathrm{m}`] erodes down to the elevation of this non-erodible layer :math:`z_{\mathrm{ne}}` (``zne``) [:math:`\mathrm{m}`], the sediment supply is completely cut off. 
+
+This process (``th_nelayer``) implements the restriction by forcing the non-erodible scaling factor :math:`f_{u_{\mathrm{* th}}, \mathrm{NE}}` to approach infinity:
+
+.. math::
+   :label: nelayer
+
+   f_{u_{\mathrm{* th}}, \mathrm{NE}} = 
+   \begin{cases} 
+      \infty & \text{if } z_{\mathrm{b}} \leq z_{\mathrm{ne}} \\ 
+      1 & \text{if } z_{\mathrm{b}} > z_{\mathrm{ne}} 
+   \end{cases}
+
+This effectively raises the velocity threshold to infinity, instantly ceasing any further entrainment from that grid cell. 
 
 .. tip:: 
-   No groundwater on upper beach or dunes; non-erodible layer can function as placeholder if profile needs to be kept stable.
+   AeoLiS does not include groundwater processes on the upper beach or in the dunes. I you suspect a wet layer restricts erosion on the upper beach or within dune slacks, the non-erodible layer can function as a proxy to keep the profile stable. It is also an essential processes for simulating bedforms migrating over hard surfaces, such as barchan dunes.
+
 
 
 
