@@ -66,17 +66,9 @@ Topography can steer the wind, causing perturbations in the shear stress :math:`
 
 This steering process can be activated using the ``process_shear`` keyword. Different methods are available to compute these shear perturbations, which can be selected through ``method_shear``. More information on these computations is given in the :ref:`topographic steering section <topographic-steering>`.
 
-The presence of vegetation can also reduce the effective shear stress. This drag reduction is parameterized using the Raupach formulation, which relies on a vegetation-related roughness parameter :math:`\Gamma` (``gamma_vegshear``) [:math:`\mathrm{-}`] and the basal cover :math:`\rho_{\mathrm{veg}}` (``rhoveg``) [:math:`\mathrm{-}`]:
+The presence of vegetation can also reduce the effective shear stress. For more information, see the :ref:`vegetation documentation <vegetation>`. 
 
-.. math::
-   :label: raupach_overview
-
-   u_{*\mathrm{eff}} = \frac{u_*}{\sqrt{1 + \Gamma \rho_{\mathrm{veg}}}}
-
-For more information on how this interacts with plant growth, see the :ref:`vegetation documentation <vegetation>`.
-
-
-Shear Velocity threshold
+Shear Velocity Threshold
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 Detailed section: :ref:`shear-velocity-threshold`
 
@@ -102,7 +94,12 @@ In the original description, the vegetation density :math:`\rho_{\mathrm{veg}}` 
 
    \rho_{\mathrm{veg}} = \sqrt{\frac{h_{\mathrm{veg}}}{H_{\mathrm{max}}}}
 
-This density determines the magnitude of the shear stress reduction acting on the sand bed (as described by the Raupach formulation in the shear velocity section). 
+This density determines the magnitude of the shear stress reduction acting on the sand bed, which relies on a vegetation-related roughness parameter :math:`\Gamma` (``gamma_vegshear``) [:math:`\mathrm{-}`] and the basal cover :math:`\rho_{\mathrm{veg}}` (``rhoveg``) [:math:`\mathrm{-}`]:
+
+.. math::
+   :label: raupach_overview
+
+   u_{*}= \frac{u_*}{\sqrt{1 + \Gamma \rho_{\mathrm{veg}}}}
 
 The vertical development of the vegetation over time is described by:
 
@@ -111,7 +108,8 @@ The vertical development of the vegetation over time is described by:
 
    \frac{\partial h_{\mathrm{veg}}}{\partial t} = V_{\mathrm{ver}} \left( 1 - \frac{h_{\mathrm{veg}}}{H_{\mathrm{max}}} \right) - \gamma_{\mathrm{veg}} |\Delta z_{\mathrm{burial}}|
 
-This growth is governed by the intrinsic vertical growth rate :math:`V_{\mathrm{ver}}` (``V_ver``) [:math:`\mathrm{m/s}`] and the plant's sensitivity to sediment burial or erosion :math:`\gamma_{\mathrm{veg}}` (``veg_gamma``) [:math:`\mathrm{-}`]. For a complete overview of the growth, mortality, and lateral spreading dynamics, see the detailed :ref:`vegetation documentation <vegetation>`.
+This growth is governed by the intrinsic vertical growth rate :math:`V_{\mathrm{ver}}` (``V_ver``) [:math:`\mathrm{m/s}`] and the plant's sensitivity to sediment burial or erosion :math:`\gamma_{\mathrm{veg}}` (``veg_gamma``) [:math:`\mathrm{-}`]. 
+
 
 Hydrodynamics and Surface Moisture
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -136,7 +134,7 @@ Gradients in aeolian sediment transport result in net erosion or deposition, cau
 
    \frac{\partial z}{\partial t} = - \frac{1}{\rho_{\mathrm{sed}}(1 - p)} (E - D)
 
-This change is driven directly by the net entrainment :math:`(E - D)` [:math:`\mathrm{kg/m^2/s}`] computed in the advection equation, scaled by the sediment density :math:`\rho_{\mathrm{sed}}` [:math:`\mathrm{kg/m^3}`] and the sediment porosity :math:`p` [:math:`\mathrm{-}`]. Together, the density and porosity represent the bulk density of the bed. For more detailed mechanics on this mass balance, see the :ref:`morphological change section <morphological-change>`.
+This change is driven directly by the net entrainment :math:`(E - D)` (``pickup``) [:math:`\mathrm{kg/m^2/s}`] computed in the advection equation, scaled by the sediment density :math:`\rho_{\mathrm{sed}}` (``rhog``) [:math:`\mathrm{kg/m^3}`] and the sediment porosity :math:`p` (``porosity``) [:math:`\mathrm{-}`]. Together, the density and porosity represent the bulk density of the bed. For more detailed mechanics on this mass balance, see the :ref:`morphological change section <morphological-change>`.
 
 To redistribute sediment when the local slope becomes too steep, avalanching can be enabled through ``process_avalanche``. This routine triggers when the bed slope exceeds the static angle of repose (``theta_stat``) [:math:`\mathrm{^\circ}`] and relaxes the slope back to the dynamic angle of repose (``theta_dyn``) [:math:`\mathrm{^\circ}`].
 
@@ -267,7 +265,7 @@ Depending on the configuration, several other formulations can be selected to co
 Sediment Transport Velocity
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The horizontal sediment velocity :math:`u_{\mathrm{sed}}` (``u``, ``us``, ``un``) [:math:`\mathrm{m/s}`] determines the advection speed of the sediment concentration. It can be computed using different approaches selected via the ``method_grainspeed`` parameter. For detailed guidance on selecting the appropriate method and its impact on computational time and landform evolution, see :ref:`this guide <solver-guide>`.
+The horizontal sediment velocity :math:`u_{\mathrm{sed}}` (``u``) [:math:`\mathrm{m/s}`] determines the advection speed of the sediment concentration. It can be computed using different approaches selected via the ``method_grainspeed`` parameter. For detailed guidance on selecting the appropriate method and its impact on computational time and landform evolution, see :ref:`this guide <solver-guide>`.
 
 The simplest approach (``windspeed``) assumes the horizontal sediment velocity is equal to the wind velocity :math:`u_{\mathrm{w}}` (``uw``) [:math:`\mathrm{m/s}`]:
 
@@ -276,7 +274,7 @@ The simplest approach (``windspeed``) assumes the horizontal sediment velocity i
 
    u_{\mathrm{sed}} = u_{\mathrm{w}}
 
-While this method is the fastest and most robust, it significantly overpredicts the horizontal sediment velocity because grains in saltation move much slower than the wind. Consequently, it fails to capture localized deposition patterns or landform migration, making it suitable only for bulk transport calculations.
+While this method is the fastest and most robust, it overpredicts the horizontal sediment velocity because grains in saltation move slower than the wind. Consequently, it fails to capture deposition patterns, making it suitable only for bulk transport calculations.
 
 Predictions of the actual saltation velocity provide a more realistic description of horizontal sediment movement :cite:`sauermann2001continuum`. The sediment velocity can be determined from a momentum balance :cite:`duran2007thesis` consisting of three terms: the drag force acting on the grains, the loss of momentum during grain-bed interaction (splashing), and the downhill gravity force:
 
@@ -311,7 +309,7 @@ AeoLiS provides three options based on this momentum balance:
      u_{\mathrm{sed}} = v_{\mathrm{eff}} - \frac{u_{\mathrm{f}}}{\sqrt{2\alpha}}
 
 .. tip::
-   **Guidance on selecting a grain speed method**
+   **Guidance on selecting a grain speed method (see :ref:`this guide <solver-guide>` for more information)**
 
    * Use ``duran`` for most simulations involving landform evolution where topographic steering is important.
    * Use ``duran_full`` only for simulations involving topography with very steep gradients (e.g., blowout cliffs).
@@ -363,7 +361,16 @@ nature of saltation, in which continuous interaction with the bed
 forms the saltation cascade, both the grain size distribution in the
 bed and in the air are likely to contribute to the interaction between
 sediment fractions. The ratio between both contributions in the model
-is determined by a bed interaction parameter :math:`\zeta`.
+is determined by a bed interaction parameter :math:`\zeta` (``bi``).
+
+.. note::
+   The bed interaction parameter (``bi``) described here is currently distinct from the recently introduced bed-interaction factor (``zeta``). While conceptually similar, they serve different purposes:
+
+   * **``bi``**: A static variable that weights the contribution of the bed composition (sand in the bed) versus the airborne composition (sand already in transport) when computing the transport rate for multiple sediment fractions.
+   * **``zeta``**: A dynamically computed factor based on surface properties that decouples the air and bed. It determines the extent to which transport is governed by bed conditions (supply-limited) versus airborne conditions (wind-driven capacity) (see :ref:`this section <bed-interaction-approach>`).
+
+   Future updates should aim to consolidate these two parameters.
+
 
 The weighting of erosion and deposition of individual fractions is
 computed according to:
@@ -396,7 +403,7 @@ denotes the degree of saturation of the air column for fraction
 :math:`k`. The degree of saturation determines if erosion of a fraction may
 occur. Also in saturated situations erosion of a sediment fraction can
 occur due to an exchange of momentum between sediment fractions, which
-is represented by the bed interaction parameter :math:`\zeta`. The effective
+is represented by the bed interaction parameter :math:`\zeta` (``bi``). The effective
 degree of saturation is therefore also influenced by the bed
 interaction parameter and defined as:
 
@@ -521,8 +528,8 @@ sediment to the other layers.
    non-uniform deposition over the sediment fractions. Symbols refer
    to Equations :eq:`advection` and :eq:`erodep`.
 
-Each layer in each grid cell describes a grain size distribution over
-a predefined number of sediment fractions (Figure
+Each layer in each grid cell describes a grain size distribution (``grain_size``, ``grain_dist``)) over
+a predefined number of sediment fractions (``nfractions``) (Figure
 :numref:`fig-bedcomposition`, detail). Sediment may enter or leave a
 grid cell only through the bed surface layer. Since the velocity
 threshold depends among others on the grain size, erosion from the bed
@@ -567,7 +574,7 @@ In the model the mixing of sediment is simulated by averaging the
 sediment distribution over the depth of disturbance
 (:math:`\Delta z_{\mathrm{d}}`). The depth of disturbance is linearly
 related to the breaker height (e.g. :cite:`King1951`, :cite:`Williams1971`, :cite:`Masselink2007`). :cite:`Masselink2007` proposes an empirical factor
-:math:`f_{\Delta z_{\mathrm{d}}}` [-] that relates the depth of disturbance
+:math:`f_{\Delta z_{\mathrm{d}}}` (``facdod``) [-] that relates the depth of disturbance
 directly to the local breaker height according to:
 
 .. math::
@@ -575,11 +582,13 @@ directly to the local breaker height according to:
    
    \Delta z_{\mathrm{d}} = f_{\Delta z_{\mathrm{d}}} \cdot \min \left ( H \quad ; \quad \gamma \cdot d \right )
 
-in which the offshore wave height :math:`H` [m] is taken as the
+in which :math:`\Delta z_{\mathrm{d}}` (``DOD``) [m] is the depth of disturbance, and the offshore wave height :math:`H` (``Hsmix``) [m] is taken as the
 local wave height maximized by a maximum wave height over depth ratio
-:math:`\gamma` [-]. :math:`d` [m] is the water depth that is provided to the model
+:math:`\gamma` (``gamma``) [-]. :math:`d` [m] is the water depth that is provided to the model
 through an input time series of water levels. Typical values for
 :math:`f_{\Delta z_{\mathrm{d}}}` are 0.05 to 0.4 and 0.5 for :math:`\gamma`.
+
+More information on the computation of hydrodynamic forcing by the AeoLiS model is described in :ref:`this hydrodynamics section <water-levels-waves-run-up>`.
 
 
 .. _bed-interaction-approach:
@@ -781,7 +790,7 @@ size of the sediment fraction.
 
 
 .. _threshold-moisture-content:
-Threshold: Moisture content
+Moisture content
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The shear velocity threshold is updated based on moisture content
@@ -811,7 +820,7 @@ volumetric content) cease transport :cite:`DelgadoFernandez2010`,
 which is implemented as an infinite shear velocity threshold.
 
 .. _threshold-roughness-elements:
-Threshold: Roughness elements
+Roughness elements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Sediment sorting may lead to the emergence of non-erodible elements
@@ -848,7 +857,7 @@ fractions are ordered by increasing size. Whether a fraction is
 erodible depends on the sediment transport capacity.
 
 .. _threshold-non-erodible-layer:
-Threshold: Non-erodible layer
+Non-erodible layer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 PLACEHOLDER
