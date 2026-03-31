@@ -1441,7 +1441,7 @@ Beach shape and size contributes to the overall sediment supply available for ae
 ``wet_bed_reset``maintains stability of the bed by assuming any beach volume loss from aeolian sediment transport below the maximum wave runup level is replenished by marine processes. This assumption means the inundated beach profile is continuously reset to its initial morphology (Figure 1a). Input dune toe elevation and beach slope are not used in this method. 
 
 .. note::
-``wet_bed_reset`` is the default ``method_wet_supply``, while the other methods may only be necessary if modeling a long-term dune evolution case study with high shoreline change rates. 
+   ``wet_bed_reset`` is the default ``method_wet_supply``, while the other methods may only be necessary if modeling a long-term dune evolution case study with    high shoreline change rates.
 
 ``vertical_beach_growth`` converts a user input horizontal ``shoreline_change_rate`` (default 0 m contour) into a vertical beach accretion rate with the following equation: 
 
