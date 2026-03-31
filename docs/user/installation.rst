@@ -109,7 +109,6 @@ Open **Terminal** and run:
 
    curl -Ls https://astral.sh/uv/install.sh | sh
 
-----
 
 **Verify Installation**
 
@@ -196,7 +195,6 @@ Press **Enter**.
 
 Click **Open** when prompted.
 
-----
 
 Step 6: Open VS Code Terminal
 -----------------------------
@@ -206,7 +204,6 @@ All commands from here use the VS Code terminal.
 - Click **View** → **Terminal**
 - Or press ``Ctrl+` `` (Windows/Linux) / ``Cmd + ` `` (macOS)
 
-----
 
 Step 7: Create Python Environment with uv
 -----------------------------------------
@@ -233,7 +230,7 @@ Step 7: Create Python Environment with uv
 
    source .venv_aeolis/bin/activate
 
-----
+
 
 If you get a "scripts disabled" error on Windows:
 
@@ -243,7 +240,6 @@ If you get a "scripts disabled" error on Windows:
 
 Then try activating again.
 
-----
 
 Step 8: Install AeoLiS
 ----------------------
@@ -267,7 +263,6 @@ Step 8: Install AeoLiS
 
    aeolis --help
 
-----
 
 Step 9: Configure VS Code Python Interpreter
 --------------------------------------------
@@ -276,7 +271,7 @@ Step 9: Configure VS Code Python Interpreter
 2. Select **Python: Select Interpreter**
 3. Choose the one with ``.venv_aeolis``
 
-----
+
 
 Usage Guide
 -------------------------
@@ -302,7 +297,7 @@ Create ``run_console.py``:
 
 Run with ``F5``.
 
-----
+
 
 .. tip ::
 
@@ -316,4 +311,4 @@ Run with ``F5``.
 
       uv pip install setuptools==70.*
 
-----
+
