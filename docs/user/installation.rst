@@ -76,7 +76,7 @@ Example from command line:
 
 
 Installation with uv + Visual Studio Code
-===========================================================
+-----------------------------------------
 
 AeoLiS can also be installed using a combination of uv and VS Code:
 
@@ -88,10 +88,9 @@ With this method, everything is in VS Code (code, terminal, Git)
 
 
 Step 1: Install uv
-------------------
+~~~~~~~~~~~~~~~~~~
 
-Windows
-~~~~~~~
+**Windows**
 
 Open **PowerShell** and run:
 
@@ -101,8 +100,7 @@ Open **PowerShell** and run:
 
 
 
-macOS/Linux
-~~~~~~~~~~~
+**macOS/Linux**
 
 
 Open **Terminal** and run:
@@ -112,8 +110,7 @@ Open **Terminal** and run:
    curl -Ls https://astral.sh/uv/install.sh | sh
 
 
-Verify Installation
-~~~~~~~~~~~~~~~~~~~
+**Verify Installation**
 
 After installation, verify that uv is working by running:
 
@@ -126,7 +123,7 @@ You should see a version number (for example, ``uv 0.5.x``).
 
 
 Step 2: Install Visual Studio Code
-----------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 1. Download from https://code.visualstudio.com/
 2. Run the installer with default settings
@@ -134,16 +131,14 @@ Step 2: Install Visual Studio Code
 
 
 Step 3: Install VS Code Extensions
-----------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-3.1 Open Extensions Panel
-~~~~~~~~~~~~~~~~~~~~~~~~~
+**3.1 Open Extensions Panel**
 
 - Click the Extensions icon in the left sidebar (four squares icon)
 - Or press ``Ctrl+Shift+X``
 
-3.2 Install Python Extension
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+**3.2 Install Python Extension**
 
 1. Search for **Python**
 2. Install the extension by **Microsoft**
@@ -152,7 +147,7 @@ Step 3: Install VS Code Extensions
 
 
 Step 4: Install Git
--------------------
+~~~~~~~~~~~~~~~~~~~
 
 **Windows**:
 1. Download Git from https://git-scm.com/
@@ -165,24 +160,21 @@ Step 4: Install Git
 
 
 Step 5: Clone AeoLiS Repository Using VS Code
----------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Note:** We'll use VS Code's graphical interface to clone the repository, not terminal commands.
 
-5.1 Open Command Palette
-~~~~~~~~~~~~~~~~~~~~~~~~
+**5.1 Open Command Palette**
 
 - Click **View** → **Command Palette**
 - Or press ``Ctrl+Shift+P`` (windows/Linux) / ``Cmd + Shift + P`` (macOS)
 
-5.2 Start Git Clone
-~~~~~~~~~~~~~~~~~~~
+**5.2 Start Git Clone**
 
 1. Type: **Git: Clone**
 2. Press **Enter**
 
-5.3 Enter Repository URL
-~~~~~~~~~~~~~~~~~~~~~~~~
+**5.3 Enter Repository URL**
 
 Paste:
 
@@ -192,20 +184,18 @@ Paste:
 
 Press **Enter**.
 
-5.4 Choose Location
-~~~~~~~~~~~~~~~~~~~
+**5.4 Choose Location**
 
 1. Select a folder (e.g., ``/Users/YourName/Github/``)
 2. Click **Select as Repository Destination**
 
-5.5 Open the Project
-~~~~~~~~~~~~~~~~~~~~
+**5.5 Open the Project**
 
 Click **Open** when prompted.
 
 
 Step 6: Open VS Code Terminal
------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 All commands from here use the VS Code terminal.
 
@@ -214,17 +204,15 @@ All commands from here use the VS Code terminal.
 
 
 Step 7: Create Python Environment with uv
------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-7.1 Create Virtual Environment
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+**7.1 Create Virtual Environment**
 
 .. code-block:: bash
 
    uv venv --python 3.12 .venv_aeolis
 
-7.2 Activate Environment
-~~~~~~~~~~~~~~~~~~~~~~~~
+**7.2 Activate Environment**
 
 **Windows (PowerShell / Command Prompt):**
 
@@ -250,10 +238,9 @@ Then try activating again.
 
 
 Step 8: Install AeoLiS
-----------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
-8.1 Install in Editable Mode
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+**8.1 Install in Editable Mode**
 
 .. code-block:: bash
 
@@ -264,8 +251,7 @@ Step 8: Install AeoLiS
 - Changes take effect immediately
 - No reinstall needed
 
-8.2 Verify Installation
-~~~~~~~~~~~~~~~~~~~~~~~
+**8.2 Verify Installation**
 
 .. code-block:: bash
 
@@ -273,7 +259,7 @@ Step 8: Install AeoLiS
 
 
 Step 9: Configure VS Code Python Interpreter
---------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 1. Press ``Ctrl+Shift+P`` (Windows/Linux) / ``Cmd+Shift+P`` (macOS)
 2. Select **Python: Select Interpreter**
@@ -282,7 +268,7 @@ Step 9: Configure VS Code Python Interpreter
 
 
 Usage Guide
--------------------------
+~~~~~~~~~~~
 
 **Option 1: Run via VS Code Terminal**
 
