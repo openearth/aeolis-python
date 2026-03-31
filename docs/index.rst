@@ -26,9 +26,10 @@ If you have questions about the model that is of interest to the community, plea
 - Bart van Westen (Bart.vanWesten@deltares.nl) at Deltares
 - Nick Cohn (nicholas.t.cohn@usace.army.mil) at U.S. Army Engineer Research and Development Center (ERDC)
 - Sierd de Vries (Sierd.deVries@tudelft.nl) (founder) at Delft University of Technology
-- Christa van IJzendoorn (vanijzec@oregonstate.edu) at Oregon State University
+- Christa van IJzendoorn (c.o.vanijzendoorn@uu.nl) at Utrecht University
 - Caroline Hallin (caroline.hallin@tvrl.lth.se) at Lund University
 - Glenn Strypsteen (glenn.strypsteen@kuleuven.be) at Katholieke Universiteit Leuven
+- Selwyn Heminway (heminwas@oregonstate.edu) at Oregon State University
 
 Acknowledgements
 ================
