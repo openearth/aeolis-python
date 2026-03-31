@@ -1422,11 +1422,39 @@ PLACEHOLDER
 .. _marine_driven_morphodynamics
 Marine-driven Morphodynamics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Dune Erosion
+""""""""""""""
+
 Wave-driven dune erosion occurs when the TWL exceeds the dune toe elevation (``dune_toe_elevation``) [m]. The amount of sediment eroded from the dune is dependent on the frequency of collisions with the dune and the exceedenace of the TWL over the dune toe elevation. The volume of eroded sediment is calculated following the Palmsten and Holman (2012) dune erosion formula: 
 
 .. math::
 
    V = 4 C_s (TWL - z_{\mathrm{toe}})^2 N_c
 
-where :math:`V` $[m^3/m]$ is volume eroded, :math:`C_s` is the dune erodibility coefficient, and :math:`N_c` is the number of bore collisions.
+where :math:`V` \left[ \frac{m^3}{m} \right] is volume eroded, :math:`C_s` is the dune erodibility coefficient, and :math:`N_c` is the number of bore collisions. The volume of sediment is removed landward of the dune toe elevation contour and the avalanching process prevents formation of vertial scarps. 
 
+Beach Evolution
+""""""""""""""
+
+Beach shape and size contributes to the overall sediment supply available for aeolian sediment transport. AeoLiS includes numerous approaches to represent temporal and spatial variability in sediment supply related to beach evolution (Figure 1a-d). These approaches do not explicitly currently account for wave-driven processes and their role on beach shape and volume changes, however the available methods are meant to mimic realistic expected behaviors and avoid the need to couple model interfaces with external tools. For the purposes of this beach sediment supply function, the shoreline is defined as the seaward boundary of the beach profile (default :math:'xshoreline' and :math:'zshoreline' are 0 m; e.g., Figure 1e-f)) and shoreline change rate (:math:'shoreline_change_rate') is the rate of change at the 0 m contour. Four specific methods, specified in the input file as ``method_wet_supply``, are implemented, as follows below:
+
+``wet_bed_reset``maintains stability of the bed by assuming any beach volume loss from aeolian sediment transport below the maximum wave runup level is replenished by marine processes. This assumption means the inundated beach profile is continuously reset to its initial morphology (Figure 1a). Input dune toe elevation and beach slope are not used in this method. 
+
+.. note::
+``wet_bed_reset`` is the default ``method_wet_supply``, while the other methods may only be necessary if modeling a long-term dune evolution case study with high shoreline change rates. 
+
+``vertical_beach_growth`` converts a user input horizontal ``shoreline_change_rate`` (default 0 m contour) into a vertical beach accretion rate with the following equation: 
+
+.. math::
+   v_{\mathrm{rate}} = \mathrm{SCR} \cos\left(\frac{\pi}{2} - \tan^{-1}(\mathrm{beach_slope})\right)
+
+The ``vertical_beach_growth`` method models a linear beach with increased elevation every time step (Figure 1c). The beach maintains a fixed input ``beach_slope`` throughout the simulation and has an upper bound of the input ``dune_toe_elevation`` (Figure 1g-h). Though this method simulates sediment supply to the dune, it is important to note that over longer simulation time, the beach width is not maintained. 
+
+``constant_SCR_constant_tanB`` simulates horizontal and vertical shoreline change using a fixed input ``beach_slope`` and fixed input ``dune_toe_elevation``. Like method vertical_beach_growth, ``constant_SCR_constant_tanB`` generates a new linear beach profile at each timestep, based on the input ``beach_slope`` and upper bounded by the input ``dune_toe_elevation``. However, this method also extends the beach seaward to maintain the beach width throughout the simulation (Figure 1b), resulting in the evolution of both shoreline elevation and position (Figure 1e-f). To use ``constant_SCR_constant_tanB``, it is important to note that the initial input grids must have extra seaward x-domain added to allow the beach to prograde.  
+
+``constant_SCR_variable_tanB`` simulates horizontal shoreline change while allowing the ``beach_slope`` to evolve with the shoreline position and dune toe elevation to vary slightly with the upper bound of the input ``dune_toe_elevation`` (Figure 1d-h). A new beach slope is calculated and used to generate a linear beach each timestep. Similar to the ``constant_SCR_constant_tanB``, the x-domain of the input files must be extended seaward to implement this method. This method simulates more natural beach and dune evolution than the other methods available. 
+
+
+
+
+   
