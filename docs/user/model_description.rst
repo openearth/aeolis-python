@@ -1150,8 +1150,7 @@ PLACEHOLDER
 Marine-driven Bed Level Change
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-PLACEHOLDER
-
+Bed-level change due to marine-driven dune erosion occurs when the total water level exceeds the based of the dune, or the dune toe :math:`\zToe` (``zToe``). See :ref:`Marine-driven Morphodynamics <Marine-driven Morphodynamics>` for more information. 
 
 .. _groundwater-module:
 Groundwater Module (Hallin, 2023)
