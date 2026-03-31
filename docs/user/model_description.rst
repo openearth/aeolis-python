@@ -1150,7 +1150,7 @@ PLACEHOLDER
 Marine-driven Bed Level Change
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Bed-level change due to marine-driven dune erosion occurs when the total water level exceeds the base of the dune, or the dune toe elevation (``dune_toe_elevation``). See :ref:`marine_driven_morphodynamics` for more information.
+Bed-level change due to marine-driven dune erosion occurs when the total water level exceeds the base of the dune, or the dune toe elevation (``dune_toe_elevation``). See :ref:`dune-erosion` for more information.
 
 .. _groundwater-module:
 Groundwater Module (Hallin, 2023)
@@ -1419,11 +1419,10 @@ Avalanching
 
 PLACEHOLDER
 
-.. _marine_driven_morphodynamics
-Marine-driven Morphodynamics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. _dune-erosion
+
 Dune Erosion
-""""""""""""""
+^^^^^^^^^^^^
 
 Wave-driven dune erosion occurs when the TWL exceeds the dune toe elevation (``dune_toe_elevation``) [m]. The amount of sediment eroded from the dune is dependent on the frequency of collisions with the dune and the exceedenace of the TWL over the dune toe elevation. The volume of eroded sediment is calculated following the Palmsten and Holman (2012) dune erosion formula: 
 
@@ -1434,7 +1433,7 @@ Wave-driven dune erosion occurs when the TWL exceeds the dune toe elevation (``d
 where :math:`V` \left[ \frac{m^3}{m} \right] is volume eroded, :math:`C_s` is the dune erodibility coefficient, and :math:`N_c` is the number of bore collisions. The volume of sediment is removed landward of the dune toe elevation contour and the avalanching process prevents formation of vertial scarps. 
 
 Beach Evolution
-""""""""""""""
+^^^^^^^^^^^^^^^
 
 Beach shape and size contributes to the overall sediment supply available for aeolian sediment transport. AeoLiS includes numerous approaches to represent temporal and spatial variability in sediment supply related to beach evolution (Figure 1a-d). These approaches do not explicitly currently account for wave-driven processes and their role on beach shape and volume changes, however the available methods are meant to mimic realistic expected behaviors and avoid the need to couple model interfaces with external tools. For the purposes of this beach sediment supply function, the shoreline is defined as the seaward boundary of the beach profile (default :math:'xshoreline' and :math:'zshoreline' are 0 m; e.g., Figure 1e-f)) and shoreline change rate (:math:'shoreline_change_rate') is the rate of change at the 0 m contour. Four specific methods, specified in the input file as ``method_wet_supply``, are implemented, as follows below:
 
@@ -1446,7 +1445,7 @@ Beach shape and size contributes to the overall sediment supply available for ae
 ``vertical_beach_growth`` converts a user input horizontal ``shoreline_change_rate`` (default 0 m contour) into a vertical beach accretion rate with the following equation: 
 
 .. math::
-   v_{\mathrm{rate}} = \mathrm{SCR} \cos\left(\frac{\pi}{2} - \tan^{-1}(\mathrm{beach_slope})\right)
+   v_{\mathrm{rate}} = \mathrm{SCR} \cos\left(\frac{\pi}{2} - \tan^{-1}(\mathrm{beach\slope})\right)
 
 The ``vertical_beach_growth`` method models a linear beach with increased elevation every time step (Figure 1c). The beach maintains a fixed input ``beach_slope`` throughout the simulation and has an upper bound of the input ``dune_toe_elevation`` (Figure 1g-h). Though this method simulates sediment supply to the dune, it is important to note that over longer simulation time, the beach width is not maintained. 
 
