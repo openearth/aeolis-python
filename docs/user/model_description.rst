@@ -1454,7 +1454,9 @@ The ``vertical_beach_growth`` method models a linear beach with increased elevat
 
 ``constant_SCR_variable_tanB`` simulates horizontal shoreline change while allowing the ``beach_slope`` to evolve with the shoreline position and dune toe elevation to vary slightly with the upper bound of the input ``dune_toe_elevation`` (Figure 1d-h). A new beach slope is calculated and used to generate a linear beach each timestep. Similar to the ``constant_SCR_constant_tanB``, the x-domain of the input files must be extended seaward to implement this method. This method simulates more natural beach and dune evolution than the other methods available. 
 
+.. _fig-method_wet_supply:
 
-
+.. figure:: /images/aeolis_wet_supply.jpg
+   :alt: wet_supply
 
    
