@@ -48,8 +48,8 @@ Installing from source
    
    .. code:: shell
 
-    cd aeolis-python/
-    pip install .
+      cd aeolis-python/
+      pip install .
    
 3. AeoLiS users who intend to modify the sourcecode can install additional dependencies for test and documentation as follows. Go to root directory `aeolis-python/` and:
    
@@ -184,14 +184,12 @@ Paste:
 
 Press **Enter**.
 
-5.4 Choose Location
-~~~~~~~~~~~~~~~~~~~
+**5.4 Choose Location**
 
 1. Select a folder (e.g., ``/Users/YourName/Github/``)
 2. Click **Select as Repository Destination**
 
-5.5 Open the Project
-~~~~~~~~~~~~~~~~~~~~
+**5.5 Open the Project**
 
 Click **Open** when prompted.
 
@@ -208,15 +206,13 @@ All commands from here use the VS Code terminal.
 Step 7: Create Python Environment with uv
 -----------------------------------------
 
-7.1 Create Virtual Environment
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+**7.1 Create Virtual Environment**
 
 .. code-block:: bash
 
    uv venv --python 3.12 .venv_aeolis
 
-7.2 Activate Environment
-~~~~~~~~~~~~~~~~~~~~~~~~
+**7.2 Activate Environment**
 
 **Windows (PowerShell / Command Prompt):**
 
@@ -244,8 +240,7 @@ Then try activating again.
 Step 8: Install AeoLiS
 ----------------------
 
-8.1 Install in Editable Mode
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+**8.1 Install in Editable Mode**
 
 .. code-block:: bash
 
@@ -256,8 +251,7 @@ Step 8: Install AeoLiS
 - Changes take effect immediately
 - No reinstall needed
 
-8.2 Verify Installation
-~~~~~~~~~~~~~~~~~~~~~~~
+**8.2 Verify Installation**
 
 .. code-block:: bash
 
@@ -276,16 +270,14 @@ Step 9: Configure VS Code Python Interpreter
 Usage Guide
 -------------------------
 
-Option 1: Run via VS Code Terminal
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+**Option 1: Run via VS Code Terminal**
 
 .. code-block:: powershell
 
    .venv_aeolis\Scripts\activate
    aeolis run path/to/aeolis.txt
 
-Option 2: Run via Editor (Debug Mode)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+**Option 2: Run via Editor (Debug Mode)**
 
 Create ``run_console.py``:
 
