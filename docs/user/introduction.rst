@@ -30,12 +30,25 @@ Model overview
 
 AeoLiS publications
 ----------------------
+2026
+^^^^
+Kelley, M. M., Sankey, J. B., Cohn, N., East, A., Kasprak, A., Fairley, H., Caster, J., & van Westen, B. (in prep.). First application of AeoLiS to model fluvial-aeolian morphodynamics. Manuscript prepared for Geophysical Research Letters (GRL)
+
+Heminway, S. S., Cohn, N. T., van IJzendoorn, C., Ruggiero, P., Wengrove, M. E., Hacker, S. D., Whalen, D., Weiner, H., & Kaminsky, G. M. (2026). Comparing process-based and reduced complexity dune evolution models: A case study of Long Beach, WA, USA. In C. Coelho, C. Hallin, F. Sancho, & P. A. Silva (Eds.), Coastal Dynamics 2025 (Coastal Research Library, Vol. 41). Springer, Cham. https://doi.org/10.1007/978-3-032-15473-6_27
+
+Burvingt, O., Lerma, A. N., & Castelle, B. (2026). Observations and modelling of coastal dune dynamics along the Gironde coast, France. In C. Coelho, C. Hallin, F. Sancho, & P. A. Silva (Eds.), Coastal Dynamics 2025 (Coastal Research Library, Vol. 41). Springer, Cham. https://doi.org/10.1007/978-3-032-15473-6_22
+
+2025
+^^^^
+de Vries, S., van Westen, B., Hallin, C., Strypsteen, G., van IJzendoorn, C., & Cohn, N. (2025). AEOLIS: Modelling aeolian sediment transport processes for predicting dune development and NbS design. Coastal Engineering Proceedings, (38), sediment.69. https://doi.org/10.9753/icce.v38.sediment.69
 
 2024
 ^^^^
+Laporte-Fauret, Q., Wengrove, M., Ruggiero, P., Hacker, S. D., Cohn, N., Zarnetske, P. L., & Piercy, C. D. (2024). A new approach to account for species-specific sand capture by plants in an aeolian sediment transport and coastal dune building model. Journal of Geophysical Research: Earth Surface, 129(12). https://doi.org/10.1029/2024JF007867
+
 van Westen, B., De Vries, S., Cohn, N., Van IJzendoorn, C., Strypsteen, G., Hallin, C. (2024). AeoLiS: Numerical modelling of coastal dunes and aeolian landform development for real-world applications, Environmental Modelling & Software, 179, 106093, Doi: https://doi.org/10.1016/j.envsoft.2024.106093.
 
-Strypsteen, G., de Vries, S., Bonte, D., Homberger, J.M., Hallin, C., Rauwoens, P. (2024). Planted vegetation on a sandy beach regulates maximum size of corresponding dune evolution. Coastal Engineering (preprint under review). Doi: http://dx.doi.org/10.2139/ssrn.4872614
+Strypsteen, G., de Vries, S., van Westen, B., Bonte, D., Homberger, J.-M., Hallin, C., & Rauwoens, P. (2024). Vertical growth rate of planted vegetation controls dune growth on a sandy beach. Coastal Engineering, 194, 104624. https://doi.org/10.1016/j.coastaleng.2024.104624
 
 Heminway, S.S., Cohn, N., Davis, E.H., White, A., Hein, C.J., Zinnert, J.C., 2024. Exploring Ecological, Morphological, and Environmental Controls on Coastal Foredune Evolution at Annual Scales Using a Process-Based Model. Sustainability, 16, 3460. https://doi.org/10.3390/su16083460
 
