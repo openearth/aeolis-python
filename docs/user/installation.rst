@@ -90,7 +90,8 @@ With this method, everything is in VS Code (code, terminal, Git)
 Step 1: Install uv
 ------------------
 
-**Windows**
+Windows
+~~~~~~~
 
 Open **PowerShell** and run:
 
@@ -100,7 +101,8 @@ Open **PowerShell** and run:
 
 
 
-**macOS/Linux**
+macOS/Linux
+~~~~~~~~~~~
 
 
 Open **Terminal** and run:
@@ -110,7 +112,8 @@ Open **Terminal** and run:
    curl -Ls https://astral.sh/uv/install.sh | sh
 
 
-**Verify Installation**
+Verify Installation
+~~~~~~~~~~~~~~~~~~~
 
 After installation, verify that uv is working by running:
 
@@ -133,12 +136,14 @@ Step 2: Install Visual Studio Code
 Step 3: Install VS Code Extensions
 ----------------------------------
 
-**3.1 Open Extensions Panel**
+3.1 Open Extensions Panel
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - Click the Extensions icon in the left sidebar (four squares icon)
 - Or press ``Ctrl+Shift+X``
 
-**3.2 Install Python Extension**
+3.2 Install Python Extension
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 1. Search for **Python**
 2. Install the extension by **Microsoft**
@@ -164,17 +169,20 @@ Step 5: Clone AeoLiS Repository Using VS Code
 
 **Note:** We'll use VS Code's graphical interface to clone the repository, not terminal commands.
 
-**5.1 Open Command Palette**
+5.1 Open Command Palette
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 - Click **View** → **Command Palette**
 - Or press ``Ctrl+Shift+P`` (windows/Linux) / ``Cmd + Shift + P`` (macOS)
 
-**5.2 Start Git Clone**
+5.2 Start Git Clone
+~~~~~~~~~~~~~~~~~~~
 
 1. Type: **Git: Clone**
 2. Press **Enter**
 
-**5.3 Enter Repository URL**
+5.3 Enter Repository URL
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 Paste:
 
@@ -184,12 +192,14 @@ Paste:
 
 Press **Enter**.
 
-**5.4 Choose Location**
+5.4 Choose Location
+~~~~~~~~~~~~~~~~~~~
 
 1. Select a folder (e.g., ``/Users/YourName/Github/``)
 2. Click **Select as Repository Destination**
 
-**5.5 Open the Project**
+5.5 Open the Project
+~~~~~~~~~~~~~~~~~~~~
 
 Click **Open** when prompted.
 
@@ -206,13 +216,15 @@ All commands from here use the VS Code terminal.
 Step 7: Create Python Environment with uv
 -----------------------------------------
 
-**7.1 Create Virtual Environment**
+7.1 Create Virtual Environment
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: bash
 
    uv venv --python 3.12 .venv_aeolis
 
-**7.2 Activate Environment**
+7.2 Activate Environment
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Windows (PowerShell / Command Prompt):**
 
@@ -240,7 +252,8 @@ Then try activating again.
 Step 8: Install AeoLiS
 ----------------------
 
-**8.1 Install in Editable Mode**
+8.1 Install in Editable Mode
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: bash
 
@@ -251,7 +264,8 @@ Step 8: Install AeoLiS
 - Changes take effect immediately
 - No reinstall needed
 
-**8.2 Verify Installation**
+8.2 Verify Installation
+~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: bash
 
