@@ -9,6 +9,7 @@ tstart                  = 0                    	     	  % (0.)[s] Starting time 
 tstop                   = 812862000                       % (3600)[s] End time of the simulation - 812862000 two years: 94608000
 restart                 = None                            % (None) [s] Interval for which to write restart files
 refdate                 = 1997-09-17                      % ('2020-01-01 00:00')[-] Reference datetime in netCDF output
+callback		        = callback.py:update
 
 %% -------------------- [Grid files *.grd] ------------------- %%
 xgrid_file              = input_files/x_ext.grd             % (None) Filename of ASCII file with x-coordinates of grid cells
@@ -189,7 +190,7 @@ max_iter_ava            = 1000                            % [-] Maximum number o
 %% -------------------- [Dune Erosion] ------------------------ %%
 beach_slope             = 0.0156			  % Based on data analysis
 dune_toe_elevation      = 4.398				  % Based on data analysis
-Cs 			= 0.0011 			  % Cs is a nondimensional calibration coefficient dependent on grain size and wave height, used in dune erosion module Palmsten and Holman (2011) equation
+Cs 			            = 0.0011 			  % Cs is a nondimensional calibration coefficient dependent on grain size and wave height, used in dune erosion module Palmsten and Holman (2011) equation
 
 %%---------------------[Sediment supply] ------------------------%%
 method_sed_supply	= constant_SCR_variable_tanB
