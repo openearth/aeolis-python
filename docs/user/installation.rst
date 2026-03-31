@@ -52,10 +52,10 @@ Installing from source
     pip install .
    
 3. AeoLiS users who intend to modify the sourcecode can install additional dependencies for test and documentation as follows. Go to root directory `aeolis-python/` and:
-
+   
    .. code:: shell
-
-   pip install -e .[dev]
+   
+      pip install -e .[dev]
 
 Running AeoLiS
 ----------------
