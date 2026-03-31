@@ -44,13 +44,18 @@ Installing from source
 
 1. Clone the repository using Git, or download the source code.
 
-2. Go to the `aeolis-python` directory and install using pip
+2. AeoLiS users may install the package with only the required dependencies. Go to the `aeolis-python` directory and install using pip
    
    .. code:: shell
 
     cd aeolis-python/
     pip install .
    
+3. AeoLiS users who intend to modify the sourcecode can install additional dependencies for test and documentation as follows. Go to root directory `aeolis-python/` and:
+
+   .. code:: shell
+
+   pip install -e .[dev]
 
 Running AeoLiS
 ----------------
