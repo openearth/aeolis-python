@@ -1150,7 +1150,7 @@ PLACEHOLDER
 Marine-driven Bed Level Change
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Bed-level change due to marine-driven dune erosion occurs when the total water level exceeds the base of the dune, or the dune toe (``zToe``). See :ref:`marine-driven_morphodynamics` for more information.
+Bed-level change due to marine-driven dune erosion occurs when the total water level exceeds the base of the dune, or the dune toe elevation (``dune_toe_elevation``). See :ref:`marine_driven_morphodynamics` for more information.
 
 .. _groundwater-module:
 Groundwater Module (Hallin, 2023)
@@ -1419,9 +1419,14 @@ Avalanching
 
 PLACEHOLDER
 
-.. _marine-driven_morphodynamics
+.. _marine_driven_morphodynamics
 Marine-driven Morphodynamics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Wave-driven dune erosion occurs when the TWL exceeds the dune toe elevation (``dune_toe_elevation``) [m]. The amount of sediment eroded from the dune is dependent on the frequency of collisions with the dune and the exceedenace of the TWL over the dune toe elevation. The volume of eroded sediment is calculated following the Palmsten and Holman (2012) dune erosion formula: 
 
-PLACEHOLDER: See section...
+.. math::
+
+   V = 4 C_s (TWL - z_{\mathrm{toe}})^2 N_c
+
+where :math:`V` $[m^3/m]$ is volume eroded, :math:`C_s` is the dune erodibility coefficient, and :math:`N_c` is the number of bore collisions.
 
