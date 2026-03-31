@@ -953,7 +953,7 @@ This process (``th_nelayer``) implements the restriction by forcing the non-erod
 This effectively raises the velocity threshold to infinity, instantly ceasing any further entrainment from that grid cell. 
 
 .. tip:: 
-   AeoLiS does not include groundwater processes on the upper beach or in the dunes. I you suspect a wet layer restricts erosion on the upper beach or within dune slacks, the non-erodible layer can function as a proxy to keep the profile stable. It is also an essential processes for simulating bedforms migrating over hard surfaces, such as barchan dunes.
+   AeoLiS does not include groundwater processes on the upper beach or in the dunes. If you suspect a wet layer restricts erosion on the upper beach or within dune slacks, the non-erodible layer can function as a proxy to keep the profile stable. It is also an essential processes for simulating bedforms migrating over hard surfaces, such as barchan dunes.
 
 
 
