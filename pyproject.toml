@@ -12,7 +12,7 @@ exclude = [
 
 [project]
 name = "aeolis"
-version = "3.0.1"
+version = "3.1.0"
 authors = [
   { name="Sierd de Vries", email="sierd.devries@tudelft.nl" },
 ]
@@ -28,6 +28,7 @@ keywords = ["aeolian sediment", "transport", "model", "deltares", "tudelft"]
 dependencies = [
   "docopt",
   "typer",
+  "setuptools<80",
   "bmi-python",
   "netCDF4",
   "scipy",
@@ -35,6 +36,7 @@ dependencies = [
   "matplotlib",
   "numba",
   "windrose",
+  "ffmpeg",
 ]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
