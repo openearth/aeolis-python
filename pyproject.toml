@@ -28,7 +28,7 @@ keywords = ["aeolian sediment", "transport", "model", "deltares", "tudelft"]
 dependencies = [
   "docopt",
   "typer",
-  "setuptools<80"
+  "setuptools<80",
   "bmi-python",
   "netCDF4",
   "scipy",
@@ -36,7 +36,7 @@ dependencies = [
   "matplotlib",
   "numba",
   "windrose",
-  "ffmpeg"
+  "ffmpeg",
 ]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
