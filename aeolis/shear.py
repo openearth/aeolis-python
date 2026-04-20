@@ -38,7 +38,7 @@ import time
 
 # package modules
 from aeolis.utils import *
-
+from aeolis.separation import compute_separation
 
 # initialize logger
 logger = logging.getLogger(__name__)
@@ -142,10 +142,8 @@ class WindShear:
         self.z0 = z0
        
 
-    def __call__(self, x, y, z, taux, tauy, u0, udir, 
-                 process_separation, c, mu_b, 
-                 taus0, taun0, sep_filter_iterations, zsep_y_filter,
-                 plot=False):
+    def __call__(self, p, x, y, z, u0, udir, 
+                 taux, tauy, taus0, taun0, plot=False):
         
         '''Compute wind shear for given wind speed and direction
         
@@ -222,10 +220,9 @@ class WindShear:
         # rotate to horizontal computational grid and add to tau0 
         # =====================================================================
 
-        # Compute separation bubble
-        if process_separation:
-            zsep = self.separation(c, mu_b, sep_filter_iterations, zsep_y_filter)
-            z_origin = gc['z'].copy()
+        if p['process_separation']:
+            z_origin = gc['z'][:].copy()
+            zsep = compute_separation(p, gc['z'], gc['dx'])
             gc['z'] = np.maximum(gc['z'], zsep)
                     
         # Compute wind shear stresses on computational grid 
@@ -238,7 +235,7 @@ class WindShear:
         gc['taux'] = np.maximum(gc['taux'], 0.)
 
         # Compute the influence of the separation on the shear stress
-        if process_separation:
+        if p['process_separation']:
             gc['hsep'] = gc['z'] - z_origin
             self.separation_shear(gc['hsep'])
 
@@ -264,7 +261,7 @@ class WindShear:
         gi['taux'] = self.interpolate(gc['x'], gc['y'], gc['taux'], gi['x'], gi['y'], taus0)
         gi['tauy'] = self.interpolate(gc['x'], gc['y'], gc['tauy'], gi['x'], gi['y'], taun0) 
         
-        if process_separation:
+        if p['process_separation']:
             gi['hsep'] = self.interpolate(gc['x'], gc['y'], gc['hsep'], gi['x'], gi['y'], 0. )
             
         # Final plots and lay-out    
@@ -368,158 +365,6 @@ class WindShear:
         
         return self
     
-        
-    
-    def separation(self, c, mu_b, sep_filter_iterations, zsep_y_filter):
-        
-        # Initialize grid and bed dimensions
-        gc = self.cgrid
-         
-        x = gc['x']
-        y = gc['y']
-        z = gc['z']
-                
-        nx = len(gc['z'][1])
-        ny = len(gc['z'][0])
-        dx = gc['dx']
-        dy = gc['dy']
-    
-        # Initialize arrays
-
-        dzx = np.zeros(gc['z'].shape)  
-
-        dzdx0 = np.zeros(gc['z'].shape)
-        dzdx1 = np.zeros(gc['z'].shape)
-                
-        stall = np.zeros(gc['z'].shape)
-        bubble = np.zeros(gc['z'].shape)
-        
-        k = np.array(range(0, nx))
-              
-        zsep =  np.zeros(z.shape)                                                  # total separation bubble      
-        zsep_new =  np.zeros(z.shape)                                               # first-oder separation bubble surface
-                
-        zfft = np.zeros((ny,nx), dtype=complex)
-
-        # Compute bed slope angle in x-dir
-        dzx[:,:-2] = np.rad2deg(np.arctan((z[:,2:]-z[:,:-2])/(2.*dx)))
-        dzx[:,-2] = dzx[:,-3]
-        dzx[:,-1] = dzx[:,-2]
-              
-        # Determine location of separation bubbles
-        '''Separation bubble exist if bed slope angle (lee side) 
-        is larger than max angle that wind stream lines can 
-        follow behind an obstacle (mu_b = ..)'''
-
-        stall += np.logical_and(abs(dzx) > mu_b, dzx < 0.) 
-        
-        stall[:,1:-1] += np.logical_and(stall[:,1:-1]==0, stall[:,:-2]>0., stall[:,2:]>0.)
-
-        # Define separation bubble
-        bubble[:,:-1] = (stall[:,:-1] == 0.) * (stall[:,1:] > 0.) 
-        
-        # Better solution for cleaner separation bubble, but no working Barchan dune (yet)
-        p = 1
-        bubble[:,p:] = bubble[:,:-p]
-        bubble[:,-p:] = 0
-        
-        bubble = bubble.astype(int)
-        
-        # Count separation bubbles
-        n = np.sum(bubble)
-        bubble_n = np.asarray(np.where(bubble == True)).T
-
-        
-        # Walk through all separation bubbles and determine polynoms
-        j = 9999
-        for k in range(0, n):
-            
-            i = bubble_n[k,1]
-            j = bubble_n[k,0]  
-            
-            #Bart: check for negative wind direction
-            if np.sum(gc['taux']) >= 0:
-                idir = 1
-            else:
-                idir = -1
-            
-            ix_neg = (dzx[j, i+idir*5:] >= 0)                                         # i + 5??     
-            
-            if np.sum(ix_neg) == 0:
-                zbrink = z[j,i]                                                 # z level of brink at z(x0) 
-            else:
-                zbrink = z[j,i] - z[j,i+idir*5+idir*np.where(ix_neg)[0][0]]
-            
-            # Better solution and cleaner separation bubble, but no working Barchan dune (yet)
-            dzdx0 = (z[j,i] - z[j,i-3]) / (3.*dx)
-            
-            a = dzdx0 / c
-            ls = np.minimum(np.maximum((3.*zbrink/(2.*c) * (1. + a/4. + a**2/8.)), 0.1), 200.)
-            
-            a2 = -3 * zbrink/ls**2 - 2 * dzdx0 / ls
-            a3 =  2 * zbrink/ls**3 +     dzdx0 / ls**2
-          
-            i_max = min(i+int(ls/dx)+1,int(nx-1))
-
-            if idir == 1:
-                xs = x[j,i:i_max] - x[j,i]
-            else:
-                xs = -(x[j,i:i_max] - x[j,i])
-                
-            zsep_new[j,i:i_max] = (a3*xs**3 + a2*xs**2 + dzdx0*xs + z[j,i])
-            
-            # Choose maximum of bedlevel, previous zseps and new zseps
-            zsep[j,:] = np.maximum.reduce([z[j,:], zsep[j,:], zsep_new[j,:]])
-            
-            for filter_iter in range(sep_filter_iterations):
-                
-                zsep_new = np.zeros(zsep.shape) 
-                
-                Cut = 1.5
-                dk = 2.0 * np.pi / (np.max(x))
-                zfft[j,:] = np.fft.fft(zsep[j,:])
-                zfft[j,:] *= np.exp(-(dk*k*dx)**2/(2.*Cut**2))
-                zsep_fft = np.real(np.fft.ifft(zfft[j,:]))
-                
-                if np.sum(ix_neg) == 0:
-                    zbrink = zsep_fft[i]                                                 
-                else:
-                    zbrink = zsep_fft[i] - zsep_fft[i+idir*5+idir*np.where(ix_neg)[0][0]]
-                
-                # First order polynom
-                dzdx1 = (zsep_fft[i] - zsep_fft[i-3])/(3.*dx)
-                
-                a = dzdx1 / c
-            
-                ls = np.minimum(np.maximum((3.*zbrink/(2.*c) * (1. + a/4. + a**2/8.)), 0.1), 200.)
-                
-                
-                a2 = -3 * zbrink/ls**2 - 2 * dzdx1 / ls
-                a3 =  2 * zbrink/ls**3 +     dzdx1 / ls**2
-              
-                i_max1 = min(i+idir*int(ls/dx),int(nx-1))
-    
-                if idir == 1:
-                    xs1 = x[j,i:i_max1] - x[j,i]
-                else:
-                    xs1 = -(x[j,i:i_max1] - x[j,i])
-            
-                zsep_new[j, i:i_max1] = (a3*xs1**3 + a2*xs1**2 + dzdx1*xs1 + zbrink)
-            
-                # Pick the maximum seperation bubble hieght at all locations
-                zsep[j,:] = np.maximum.reduce([z[j,:], zsep[j,:], zsep_new[j,:]])
-
-        
-        # Smooth surface of separation bubbles over y direction
-        if zsep_y_filter:
-            zsep = ndimage.gaussian_filter1d(zsep, sigma=0.2, axis=0)
-
-        #Correct for any seperation bubbles that are below the bed surface following smoothing
-        ilow = zsep < z
-        zsep[ilow] = z[ilow]
-            
-        return zsep
-                
     
     def compute_shear(self, u0, nfilter=(1., 2.)):                               
         '''Compute wind shear perturbation for given free-flow wind

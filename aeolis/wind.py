@@ -36,7 +36,7 @@ from scipy.optimize import root_scalar
 # package modules
 import aeolis.shear
 from aeolis.utils import *
-
+from aeolis.separation import compute_separation, set_sep_params
 
 # initialize logger
 logger = logging.getLogger(__name__)
@@ -71,6 +71,11 @@ def initialize(s, p):
     z0    = calculate_z0(p, s)
     
     if p['process_shear']:
+
+        # Get separation parameters based on Perturbation theory settings
+        if p['process_separation'] and p['sep_auto_tune']:
+            p = set_sep_params(p, s)
+
         if p['ny'] > 0:
             if p['method_shear'] == 'fft':
                 s['shear'] = aeolis.shear.WindShear(s['x'], s['y'], s['zb'],
@@ -219,10 +224,11 @@ def calculate_z0(p, s):
     return z0
 
 
+# Compute shear velocity field (including separation)
 def shear(s,p):
     
-    # Compute shear velocity field (including separation)
 
+    # Quasi-2D shear model (DUNA (?) approach)
     if 'shear' in s.keys() and p['process_shear'] and p['ny'] > 0 and p['method_shear'] == 'duna2d':
 
         shear_params = {'alfa': 3, 'beta': 1, 'c': p['c_b'], 'mu_b': p['mu_b'], 'sep_filter_iterations': p['sep_filter_iterations'], 'zsep_y_filter': p['zsep_y_filter'], 'process_separation': p['process_separation'], 'tau_sep': 0.5, 'slope': 0.2, 'rhoa': p['rhoa'], 'shear_type': p['method_shear']}
@@ -235,6 +241,7 @@ def shear(s,p):
 
         s = stress_velocity(s, p)
 
+    # Quasi-2D shear model (1D analytical over 2D grid)
     elif 'shear' in s.keys() and p['process_shear'] and p['ny'] > 0 and p['method_shear'] == 'quasi2d':
 
         z0 = calculate_z0(p, s)
@@ -248,20 +255,16 @@ def shear(s,p):
         s['taun'] = - s['tau'] * np.cos((-p['alfa'] + s['udir']) / 180. * np.pi)
         s = stress_velocity(s, p)
 
+    # 2D shear model (FFT approach)
     elif 'shear' in s.keys() and p['process_shear'] and p['ny'] > 0:
-        s['shear'](x=s['x'], y=s['y'], z=s['zb'],
-                   taux=s['taus'], tauy=s['taun'],
-                   u0=s['uw'][0,0], udir=s['udir'][0,0],
-                   process_separation = p['process_separation'],
-                   c = p['c_b'],
-                   mu_b = p['mu_b'],
-                   taus0 = s['taus0'][0,0], taun0 = s['taun0'][0,0],
-                   sep_filter_iterations=p['sep_filter_iterations'],
-                   zsep_y_filter=p['zsep_y_filter'])
 
+        # Run shear model
+        s['shear'](p=p, x=s['x'], y=s['y'], z=s['zb'], u0=s['uw'][0,0], udir=s['udir'][0,0],
+                   taux=s['taus'], tauy=s['taun'], taus0 = s['taus0'][0,0], taun0 = s['taun0'][0,0])
+
+        # Get shear stress (tau) from module, compute magnitude and transform to shear velocity
         s['taus'], s['taun'] = s['shear'].get_shear()
         s['tau'] = np.hypot(s['taus'], s['taun'])
-        
         s = stress_velocity(s,p)
                                
         # Returns separation surface     
@@ -269,15 +272,22 @@ def shear(s,p):
             s['hsep'] = s['shear'].get_separation()
             s['zsep'] = s['hsep'] + s['zb']
         
-
+    # 1D shear model
     elif p['process_shear'] and p['ny'] == 0: #NTC - Added in 1D only capabilities
         s = compute_shear1d(s, p)
         s = stress_velocity(s, p)
 
         if p['process_separation']:
-            zsep = separation1d(s, p)
-            s['zsep'] = zsep
+            dx = s['ds'][0, 0]
+            z_bed = s['zb'][0, :]       # 1D bed
+            udir = s['udir'][0, 0]      # wind-aligned direction
+
+            # Compute separation bubble
+            zsep = compute_separation(p, z_bed, dx, udir)
+            s['zsep'] = zsep[np.newaxis, :]     # shape back to (1, nx)
             s['hsep'] = s['zsep'] - s['zb']
+
+            # Compute influence of searation bubble on shear
             tau_sep = 0.5
             slope = 0.2  # according to Durán 2010 (Sauermann 2001: c = 0.25 for 14 degrees)
             delta = 1. / (slope * tau_sep)
@@ -285,23 +295,6 @@ def shear(s,p):
             s['taus'] *= zsepdelta
             s['taun'] *= zsepdelta
             s = stress_velocity(s, p)
-
-    # if p['process_nelayer']:
-    # if p['th_nelayer']:
-
-    #     ustar = s['ustar'].copy()
-    #     ustars = s['ustars'].copy()
-    #     ustarn = s['ustarn'].copy()
-            
-    #     s['zne'][:,:] = p['ne_file']
-            
-    #     ix = s['zb'] <= s['zne']
-    #     s['ustar'][ix] = np.maximum(0., s['ustar'][ix] - (s['zne'][ix]-s['zb'][ix])* (1/p['layer_thickness']) * s['ustar'][ix])
-        
-    #     ix = ustar != 0.
-    #     s['ustars'][ix] = s['ustar'][ix] * (ustars[ix] / ustar[ix])
-    #     s['ustarn'][ix] = s['ustar'][ix] * (ustarn[ix] / ustar[ix])
-
 
     return s
 

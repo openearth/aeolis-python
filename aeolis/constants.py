@@ -244,8 +244,15 @@ DEFAULT_CONFIG = {
     'k'                             : 0.001,              # [m] Bed roughness
     'L'                             : 100.,               # [m] Typical length scale of dune feature (perturbation)
     'l'                             : 10.,                # [m] Inner layer height (perturbation)
-    'c_b'                           : 0.2,                # [-] Slope at the leeside of the separation bubble # c = 0.2 according to Durán 2010 (Sauermann 2001: c = 0.25 for 14 degrees)
-    'mu_b'                          : 30,                 # [deg] Minimum required slope for the start of flow separation
+    
+    # Separation bubble parameters
+    'sep_auto_tune'                 : True,               # [-] Boolean for automatic tuning of separation bubble parameters based on characteristic length scales
+    'sep_look_dist'                 : 50.,                # [m] Flow separation: Look-ahead distance for upward curvature anticipation
+    'sep_k_press_up'                : 0.05,               # [-] Flow separation: Press-up curvature 
+    'sep_k_crit_down'              : 0.18,               # [1/m] Flow separation: Maximum downward curvature
+    'sep_s_crit'                    : 0.18,               # [-] Flow separation: Critical bed slope below which reattachment is forced
+    'sep_s_leeside'                 : 0.25,               # [-] Maximum downward leeside slope of the streamline
+
     'buffer_width'                  : 10,                 # [m] Width of the bufferzone around the rotational grid for wind perturbation
     'sep_filter_iterations'         : 0,                  # [-] Number of filtering iterations on the sep-bubble (0 = no filtering)
     'zsep_y_filter'                 : False,              # [-] Boolean for turning on/off the filtering of the separation bubble in y-direction
