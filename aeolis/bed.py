@@ -576,8 +576,8 @@ def average_change(l, s, p):
 
 @njit
 def arrange_layers(m,dm,d,nl,ix_ero,ix_dep):
-    '''Arranges mass redistrubution between layers. 
-    This function is called in the bed.update fucntion to speed up code using numba
+    '''Arranges mass redistribution between layers. 
+    This function is called in the bed.update function to speed up code using numba
     
     
 
@@ -586,7 +586,7 @@ def arrange_layers(m,dm,d,nl,ix_ero,ix_dep):
     m       :   array
                 mass in layers
     dm      :   array
-                total mass exchanged between layers derrived from pickup
+                total mass exchanged between layers derived from pickup
     d       :   array
                 normalized mass in layers
     nl      :   int
