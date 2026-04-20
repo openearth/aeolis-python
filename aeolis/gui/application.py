@@ -210,10 +210,19 @@ class AeolisGUI:
                                        command=self.browse_save_location)
         save_browse_button.grid(row=3, column=2, sticky=W, pady=5, padx=5)
 
-        # Save button
+        # Save button (diffs only)
         save_config_button = ttk.Button(file_ops_frame, text="Save Configuration", 
-                                       command=self.save_config_file)
+                           command=self.save_config_file)
         save_config_button.grid(row=4, column=1, sticky=W, pady=10, padx=10)
+        save_config_desc = ttk.Label(file_ops_frame, text="Writes only parameters that differ from defaults.")
+        save_config_desc.grid(row=4, column=2, sticky=W, pady=10, padx=5)
+
+        # Save full button (all params)
+        save_full_config_button = ttk.Button(file_ops_frame, text="Save Full Configuration", 
+                            command=self.save_full_config_file)
+        save_full_config_button.grid(row=5, column=1, sticky=W, pady=5, padx=10)
+        save_full_config_desc = ttk.Label(file_ops_frame, text="Writes every parameter, including defaults.")
+        save_full_config_desc.grid(row=5, column=2, sticky=W, pady=5, padx=5)
 
     def create_domain_tab(self, tab_control):
         # Create the 'Domain' tab
@@ -445,7 +454,9 @@ class AeolisGUI:
         try:
             # Update dictionary with current entry values
             for field, entry in self.entries.items():
-                self.dic[field] = entry.get()
+                value = entry.get()
+                # Convert empty strings and whitespace-only strings to None
+                self.dic[field] = None if value.strip() == '' else value
             
             # Write the configuration file
             aeolis.inout.write_configfile(save_path, self.dic)
@@ -455,6 +466,31 @@ class AeolisGUI:
         except Exception as e:
             import traceback
             error_msg = f"Failed to save config file: {str(e)}\n\n{traceback.format_exc()}"
+            messagebox.showerror("Error", error_msg)
+            print(error_msg)
+
+    def save_full_config_file(self):
+        """Save the full configuration (including defaults) to a file"""
+        save_path = self.save_config_entry.get()
+        
+        if not save_path:
+            messagebox.showwarning("Warning", "Please specify a file path to save the configuration.")
+            return
+        
+        try:
+            # Update dictionary with current entry values
+            for field, entry in self.entries.items():
+                value = entry.get()
+                self.dic[field] = None if value.strip() == '' else value
+            
+            # Write the full configuration file
+            aeolis.inout.write_configfile(save_path, self.dic, include_defaults=True)
+            
+            messagebox.showinfo("Success", f"Full configuration saved to:\n{save_path}")
+            
+        except Exception as e:
+            import traceback
+            error_msg = f"Failed to save full config file: {str(e)}\n\n{traceback.format_exc()}"
             messagebox.showerror("Error", error_msg)
             print(error_msg)
 

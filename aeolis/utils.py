@@ -255,7 +255,7 @@ def print_value(val, fill='<novalue>'):
 
     if isiterable(val):
         return ' '.join([print_value(x) for x in val])
-    elif val is None:
+    elif val is None or val == '':
         return fill
     elif isinstance(val, bool):
         return 'T' if val else 'F'
