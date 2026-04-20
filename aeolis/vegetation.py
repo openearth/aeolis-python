@@ -218,20 +218,7 @@ def grow (s, p): #DURAN 2006
 
     if p['process_tide']:
 
-        elev_dry = s['zb']>=s['TWL']
-
-        try:
-            if elev_dry.flat[0] and s['TWL'].flat[0] < p['veg_min_elevation']:
-                #exception if TWL is below bathymetry & no intersection 
-                limit = 0 
-            else:
-                limit = int(np.where(np.diff(elev_dry))[1][0]) # finds most seaward intersection of TWL and zb 
-            ix_flooded1 = (s['zb'][:,:limit] < s['TWL'][:,:limit]) # identifies flooded area before limit
-            rest = np.full((3, (len(s['TWL'][0])-limit)), False, dtype=bool) # creates a False array to fill in the rest of the profile 
-            ix_flooded = np.concatenate((ix_flooded1, rest), axis=1) # adds the arrays together 
-        except:
-            ix_flooded = (s['zb'] < s['TWL'])
-           
+        ix_flooded = (s['zb'] < s['TWL'])  
         s['rhoveg'][ix_flooded]     = 0. 
         s['hveg'][ix_flooded]       = 0.
         s['vegetated'][ix_flooded]  = False

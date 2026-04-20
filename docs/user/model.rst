@@ -753,7 +753,7 @@ be specified by the user, for example through the BMI interface.
 
 Beach evolution parameters
 ---------------
-The description of implementation of beach sediment supply function is based on :cite:`Heminway2025`:. 
+The description of implementation of beach sediment supply function is based on :cite:`Heminway2026`:. 
 
 Beach shape and size contributes to the overall sediment supply available 
 for aeolian sediment transport. AeoLiS includes numerous approaches to 
@@ -765,7 +765,7 @@ and avoid the need to couple model interfaces with external tools. For the
 purposes of this beach sediment supply function, the shoreline is defined as 
 the seaward boundary of the beach profile (default xshoreline and zshoreline 
 are 0 m; e.g., Figure 1e-f)) and shoreline change rate (SCR) is the rate of 
-change at the 0 m contour. Four specific methods, specified in the input file 
+change at the 0 m contour. Four specific methods, usable in a callback function and specified in the input file 
 as `method_sed_supply`, are implemented, as follows below:
 
 `wet_bed_reset`maintains stability of the bed by assuming any beach volume
