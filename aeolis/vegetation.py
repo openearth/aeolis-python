@@ -217,7 +217,8 @@ def grow (s, p): #DURAN 2006
     #     s['lateral']    *= (s['zb'] +0.01 >= s['zs'])
 
     if p['process_tide']:
-        ix_flooded = (s['zb'] < s['TWL'])
+
+        ix_flooded = (s['zb'] < s['TWL'])  
         s['rhoveg'][ix_flooded]     = 0. 
         s['hveg'][ix_flooded]       = 0.
         s['vegetated'][ix_flooded]  = False

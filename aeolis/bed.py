@@ -32,6 +32,7 @@ import numpy as np
 import aeolis.gridparams
 from matplotlib import pyplot as plt
 from numba import njit
+import math
 
 # package modules
 from aeolis.utils import *
@@ -125,7 +126,7 @@ def initialize(s, p):
     # initialize threshold
     if p['threshold_file'] is not None:
         s['uth'] = p['threshold_file'][:,:,np.newaxis].repeat(nf, axis=-1)
-        
+
     return s
 
 
@@ -197,14 +198,11 @@ def mixtoplayer(s, p):
 
         
             s['mass'][ix] = mass[ix]
-            
     return s
 
 
-def wet_bed_reset(s, p):
-    ''' Reset wet bed to initial bed level if the total water level is above the bed level.
-
-
+def wet_supply(s, p):
+    ''' Increase elevation of beach topography. ELABORATE ON THIS
 
     Parameters
     ----------
@@ -219,19 +217,21 @@ def wet_bed_reset(s, p):
         Spatial grids
 
     '''
+        
+    # Original wet-bed-reset function; basic resetting of the bed when inundated
+    if p['process_wet_supply'] or p['process_wet_bed_reset']:
 
-    if p['process_wet_bed_reset']:
-        
-        Tbedreset = p['dt_opt'] / p['Tbedreset']
-        
-        ix = s['TWL'] > (s['zb'])
-        s['zb'][ix] += (s['zb0'][ix] - s['zb'][ix]) * Tbedreset
+        if p['method_wet_supply'] == 'wet_bed_reset':            
+            Tbedreset = p['dt_opt'] / p['Tbedreset'] # []s
             
+            ix = s['TWL'] > (s['zb'])
+            s['zb'][ix] += (s['zb0'][ix] - s['zb'][ix]) * Tbedreset
+
     return s
 
 
-
 def update(s, p):
+
     '''Update bathymetry and bed composition
 
     Update bed composition by moving sediment fractions between bed
@@ -346,7 +346,7 @@ def update(s, p):
         s['zb'] += dz
         if p['process_tide']:
             s['zs'] += dz #???
-    
+
     return s
 
 
@@ -496,13 +496,12 @@ def average_change(l, s, p):
     if p['_time'] < p['avg_time']:
         s['dzbveg'] *= 0.
     
-    
     return s
 
 @njit
 def arrange_layers(m,dm,d,nl,ix_ero,ix_dep):
-    '''Arranges mass redistrubution between layers. 
-    This function is called in the bed.update fucntion to speed up code using numba
+    '''Arranges mass redistribution between layers. 
+    This function is called in the bed.update function to speed up code using numba
     
     
 
@@ -511,7 +510,7 @@ def arrange_layers(m,dm,d,nl,ix_ero,ix_dep):
     m       :   array
                 mass in layers
     dm      :   array
-                total mass exchanged between layers derrived from pickup
+                total mass exchanged between layers derived from pickup
     d       :   array
                 normalized mass in layers
     nl      :   int
@@ -535,5 +534,5 @@ def arrange_layers(m,dm,d,nl,ix_ero,ix_dep):
     m[ix_dep,-1,:] -= dm[ix_dep,:] * d[ix_dep,-1,:]
 
     return m
-    
+
 
