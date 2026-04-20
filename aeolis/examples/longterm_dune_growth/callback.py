@@ -3,23 +3,22 @@ from xml.parsers.expat import model
 
 import numpy as np 
 
-def update(model):
-    rhoveg, hveg, vegetated = veg_mortality_fix(model.get_var('zb'),model.get_var('TWL'))
-    model.set_var('rhoveg', rhoveg)
-    model.set_var('hveg', hveg)
-    model.set_var('vegetated', vegetated) 
+def update(self):
 
-    zb = wet_supply(model.get_var('x'), model.get_var('zb'), model.get_var('beach_slope'), model.get_var('shoreline_change_rate'), model.get_var('dune_toe_elevation'))
-    model.set_var('zb', zb)
+    veg_mortality_fix(self.get_var('zb'),self.get_var('TWL'), self)
 
-def veg_mortality_fix(zb, TWL):
+    scr = self.p['shoreline_change_rate']
+    zb = wet_supply(self.get_var('x'), self.get_var('zb'), self.p['beach_slope'], scr, self.p['dune_toe_elevation'], self)
+    self.s['zb'] = zb
+
+def veg_mortality_fix(zb, TWL, self):
     #Fixes mortality bug within the model, only killing vegetation seaward of the TWL and profile intersection'
-    veg_min_elevation = model.get_var('veg_min_elevation')
-    process_tide = model.get_var('process_tide')
+    veg_min_elevation = self.p['veg_min_elevation']
+    process_tide = self.get_var('process_tide')
 
-    rhoveg = model.get_var('rhoveg')
-    hveg = model.get_var('hveg')
-    vegetated = model.get_var('vegetated')
+    rhoveg = self.get_var('rhoveg')
+    hveg = self.get_var('hveg')
+    vegetated = self.get_var('vegetated')
 
     if process_tide:
 
@@ -44,11 +43,13 @@ def veg_mortality_fix(zb, TWL):
             hveg[ix_flooded]       = 0.
             vegetated[ix_flooded]  = False
             # s['lateral'][ix_flooded]    = False
-        
-    return rhoveg, hveg, vegetated
+    self.set_var('rhoveg', rhoveg)
+    self.set_var('hveg', hveg)
+    self.set_var('vegetated', vegetated) 
+    # return rhoveg, hveg, vegetated
 
 
-def wet_supply(x, zb, beach_slope, shoreline_change_rate, dune_toe_elevation):
+def wet_supply(x_0, zb, beach_slope, shoreline_change_rate, dune_toe_elevation, self):
 
     ''' Increase elevation of beach topography.
 
@@ -65,10 +66,10 @@ def wet_supply(x, zb, beach_slope, shoreline_change_rate, dune_toe_elevation):
         Spatial grids
 
     '''
-    process_wet_supply = model.get_var('process_wet_supply')
-    method_wet_supply = model.get_var('method_wet_supply')
-    zshoreline = model.get_var('zshoreline')
-    xshoreline = model.get_var('xshoreline')
+    process_wet_supply = self.p['process_wet_supply']
+    method_wet_supply = self.p['method_wet_supply']
+    zshoreline = self.p['zshoreline']
+    # xshoreline = self.p['xshoreline']
     #IN SOURCE CODE!!!!!!!!!!!!
     # Original wet-bed-reset function; basic resetting of the bed when inundated
     # if p['process_wet_supply'] or p['process_wet_bed_reset']:
@@ -83,11 +84,11 @@ def wet_supply(x, zb, beach_slope, shoreline_change_rate, dune_toe_elevation):
 
         if method_wet_supply == 'vertical_beach_growth':
             beach_inc = shoreline_change_rate*math.cos((math.pi/2)-math.atan(beach_slope))
-            vrate = (beach_inc*(1/365.25/24/3600))*p['dt'] #(m/timestep)
+            vrate = (beach_inc*(1/365.25/24/3600))*self.p['dt'] #(m/timestep)
             ny, nx = zb.shape  
 
             for iy in range(ny):
-                x_all = x[iy,:]
+                x_all = x_0[iy,:]
                 zb_all = zb[iy,:]               
                 xi =  (zb_all < dune_toe_elevation)
                 beach_z = zb_all[xi]
@@ -99,20 +100,19 @@ def wet_supply(x, zb, beach_slope, shoreline_change_rate, dune_toe_elevation):
 
         if method_wet_supply == 'constant_SCR_constant_tanB':
 
-            beach_inc = p['shoreline_change_rate']*math.cos((math.pi/2)-math.atan(p['beach_slope']))
-            vrate = (beach_inc/(365.25*24*3600))*p['dt'] #(m/timestep)
+            beach_inc = shoreline_change_rate*math.cos((math.pi/2)-math.atan(beach_slope))
+            vrate = (beach_inc/(365.25*24*3600))*self.p['dt'] #(m/timestep)
             ny, nx = zb.shape  
 
             for iy in range(ny):
-
-                x_all = x[iy,:]
+                x_all = x_0[iy,:]
                 zb_all = zb[iy,:]
 
-                xi = zb_all < p['dune_toe_elevation']
+                xi = zb_all < dune_toe_elevation
                 beach_z = zb_all[xi]
                 x = x_all[xi]
 
-                xi3 = np.where(beach_z > p['zshoreline'])
+                xi3 = np.where(beach_z > zshoreline)
                 xi3 = xi3[0][0]
                 b = beach_z[xi3] + vrate
 
@@ -125,12 +125,13 @@ def wet_supply(x, zb, beach_slope, shoreline_change_rate, dune_toe_elevation):
 
         if method_wet_supply == 'constant_SCR_variable_tanB':
             beach_inc = shoreline_change_rate*math.cos((math.pi/2)-math.atan(beach_slope))
-            vrate = (beach_inc/(365.25*24*3600))*p['dt'] #(m/timestep)
-            hrate = (shoreline_change_rate/(365.25*24*3600))*p['dt'] #(m/timestep)
-            ny, nx = zb.shape        
+            vrate = (beach_inc/(365.25*24*3600))*self.p['dt'] #(m/timestep)
+            hrate = (shoreline_change_rate/(365.25*24*3600))*self.p['dt'] #(m/timestep)
+            ny, nx = zb.shape  
 
             for iy in range(ny):
-                x_all = x[iy,:]
+                # print('x=' + str(x))
+                x_all = x_0[iy,:]
                 zb_all = zb[iy,:]
 
                 xi = zb_all <= dune_toe_elevation

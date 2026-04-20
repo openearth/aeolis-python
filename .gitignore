@@ -109,3 +109,7 @@ dev-notes/
 *.nc
 *.mat
 *.log
+
+#short course development files
+aeolis/examples/longterm_dune_growth/short_course_activity/
+aeolis/examples/longterm_dune_growth/mod_conifg_file.py
