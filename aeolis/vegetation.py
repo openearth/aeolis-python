@@ -221,7 +221,7 @@ def grow (s, p): #DURAN 2006
         elev_dry = s['zb']>=s['TWL']
 
         try:
-            if elev_dry[0][0] == True and s['TWL'][0][0] < p['veg_min_elevation']:
+            if elev_dry.flat[0] and s['TWL'].flat[0] < p['veg_min_elevation']:
                 #exception if TWL is below bathymetry & no intersection 
                 limit = 0 
             else:
