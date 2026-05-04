@@ -1040,9 +1040,9 @@ The optimal burial rate for maximum vegetation growth for marram grass is around
 
 **Method** ``grass`` 
 
-Vegetation development is simulated through two completely decoupled processes: vertical tiller growth and horizontal tiller establishment (:ref:`fig-vegetation-development`).
+Vegetation development is simulated through two completely decoupled processes: vertical tiller growth and horizontal tiller establishment (:ref:`vid-vegetation-development`).
 
-.. _fig-vegetation-development:
+.. _vid-vegetation-development:
 
 .. video:: /images/vegetation_growth.mp4
    :autoplay:
@@ -1122,7 +1122,7 @@ Here, :math:`c_1` [:math:`\mathrm{-}`] is a dimensionless calibration constant c
 .. _fig-vegetation-shear-params:
 
 .. figure:: /images/rveg_shear_reduction.png
-   :width: 900px
+   :width: 700px
    :align: center
 
    Influence of varying vegetation metrics and calibration parameters on the spatial distribution of shear reduction and corresponding bed level changes.
@@ -1147,7 +1147,7 @@ To capture realistic "skimming" flows over dense grass canopies, the new framewo
 .. _fig-vegetation-sediment-transport:
 
 .. figure:: /images/vegetation_sediment_aeolis.png
-   :width: 900px
+   :width: 800px
    :align: center
 
    Vertical transport distribution over bare sand, non-erodible layers, and varying vegetation canopies, illustrating the computation of the bed-interaction parameter :math:`\zeta`.
