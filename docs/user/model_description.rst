@@ -966,8 +966,9 @@ Vegetation
 The vegetation module in AeoLiS describes the intrinsic growth of vegetation, accounting for factors such as growth and decay due to burial :cite:`DuranMoore2013`, lateral expansion and establishment :cite:`Keijsers2016`, as well as simulating the destruction of vegetation caused by hydrodynamic processes. In the event of cell inundation, vegetation density is subsequently reduced. 
 
 The specific vegetation formulation is selected using ``method_vegetation``. The model currently supports two approaches:
-1. **Original Method (**``duran``**)**: The standard, generalized approach typical of established aeolian sediment transport models, relying on a fixed geometric relationship between plant height and cover.
-2. **New Ecomorphodynamic Framework (**``grass``**)**: A newly implemented framework explicitly designed for dune grasses (e.g., European and American marram grass). It decouples vertical growth from horizontal expansion and introduces advanced concepts like canopy bending, statistical seed dispersal, Lotka-Volterra competition, wake recovery, and stratified two-layer sediment transport (:ref:`fig-vegetation-overview`).
+
+1. **Original Method (**``duran``**):** The standard, generalized approach typical of established aeolian sediment transport models, relying on a fixed geometric relationship between plant height and cover.
+2. **New Ecomorphodynamic Framework (**``grass``**):** A newly implemented framework explicitly designed for dune grasses (e.g., European and American marram grass). It decouples vertical growth from horizontal expansion and introduces advanced concepts like canopy bending, statistical seed dispersal, Lotka-Volterra competition, wake recovery, and stratified two-layer sediment transport (:ref:`fig-vegetation-overview`).
 
 .. warning::
    The ``grass`` framework is a new addition based on recent research. It is currently in a more experimental state compared to the extensively tested ``duran`` method.
@@ -986,7 +987,8 @@ The specific vegetation formulation is selected using ``method_vegetation``. The
 Vegetation Metrics
 ^^^^^^^^^^^^^^^^^^^
 
-**Original Method (**``duran``**)**
+**Method:** ``duran``
+
 In the original description, the basal vegetation density :math:`\rho_{\text{veg}}` (``rhoveg``) [:math:`\mathrm{-}`] can vary in space and time. It is determined by the ratio of the actual vegetation height :math:`h_{\text{veg}}` (``hveg``) [:math:`\mathrm{m}`] to the maximum attainable vegetation height :math:`H_{\text{veg}}` (``Hveg``) [:math:`\mathrm{m}`], varying between 0 and 1 :cite:`DuranHerrmann2006`:
 
 .. math::
@@ -996,7 +998,8 @@ In the original description, the basal vegetation density :math:`\rho_{\text{veg
 
 This assumption is based on the idea that burying vegetation reduces its height, which indicates a simultaneous decrease in actual cover. The change in vegetation density per grid cell is directly linked to the alteration in vegetation height within that specific cell. 
 
-**New Ecomorphodynamic Framework (**``grass``**)**
+**Method:** ``grass``
+
 The new framework decouples plant structure into two independent state variables: tiller density :math:`N_t` (``N_t``) [:math:`\mathrm{tillers/m^2}`] and tiller height :math:`h_{\text{veg}}` (``hveg``) [:math:`\mathrm{m}`]. This separation enables the explicit representation of distinct morphological states, such as sparse/tall canopies or dense/short canopies. 
 
 To capture fine-scale spatial dynamics, such as clonal expansion, these vegetation metrics and their subsequent developmental processes are resolved on an automatically generated higher-resolution sub-grid (:math:`\Delta x \leq 1` m).
@@ -1022,7 +1025,8 @@ Here, :math:`r_{\text{stem}}` [:math:`\mathrm{-}`] specifies the fraction of the
 Vegetation Development
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-**Original Method (**``duran``**)**
+**Method:** ``duran``
+
 Vegetation growth and decay follow the model proposed by :cite:`DuranHerrmann2006`, modified to include an optimal burial rate :math:`\Delta z_{\text{b,opt}}` [:math:`\mathrm{m/yr}`] that shifts the peak of optimal growth:
 
 .. math::
@@ -1037,12 +1041,13 @@ The optimal burial rate for maximum vegetation growth for marram grass is around
 .. tip:: 
    Meaning of these variables: An intrinsic vertical growth rate of :math:`V_{\text{ver}} = 4` m/year does not mean the vegetation will be 4 meters high after 1 year, as growth follows a logistic curve that slows as it reaches :math:`H_{\text{veg}}`.
 
-**New Ecomorphodynamic Framework (**``grass``**)**
+**Method:** ``grass``
+
 Vegetation development is simulated through two completely decoupled processes: vertical tiller growth and horizontal tiller establishment (:ref:`fig-vegetation-development`).
 
 .. _fig-vegetation-development:
 
-.. figure:: /images/vegetation_development.gif
+.. figure:: /images/vegetation_growth.mp4
    :width: 900px
    :align: center
 
@@ -1075,15 +1080,17 @@ To account for inter-specific competition in multi-species simulations, the logi
    S_{x,j} = G_x N_{t,j} B_{x,i} \left( \frac{h_{\text{veg},j}}{H_{\text{veg}}} \right)
 
 The spatial dispersal mechanisms differ fundamentally:
-* **Clonal Expansion (**:math:`w^{(c)}`**):** Modeled as a short-range, Lévy-like spreading strategy using a truncated Pareto distribution governed by a shape parameter :math:`\mu_c` [:math:`\mathrm{-}`].
-* **Seedling Dispersal (**:math:`w^{(s)}`**):** Stochastically sampled using a two-dimensional Student's *t*-distribution (2Dt), capturing heavy-tailed long-distance transport.
+
+* **Clonal Expansion:** Modeled as a short-range, Lévy-like spreading strategy using a truncated Pareto distribution governed by a shape parameter :math:`\mu_c` [:math:`\mathrm{-}`]. Dispersal weights :math:`w^{(c)}` are discretized into a spatial kernel and sampled via a Poisson distribution.
+* **Seedling Dispersal:** Stochastically sampled using a two-dimensional Student's *t*-distribution (2Dt), capturing heavy-tailed long-distance transport via a scale parameter :math:`a_s` [:math:`\mathrm{m^2}`] and shape parameter :math:`\nu_s` [:math:`\mathrm{-}`] to define dispersal weights :math:`w^{(s)}`.
 
 .. _vegetation-induced-shear-reduction:
 
 Vegetation-induced Shear Reduction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-**Original Method (**``duran``**)**
+**Method:** ``duran``
+
 Inspired by the Coastal Dune Model (CDM), AeoLiS incorporates vegetation-wind interaction using the simplified expression:
 
 .. math::
@@ -1093,7 +1100,8 @@ Inspired by the Coastal Dune Model (CDM), AeoLiS incorporates vegetation-wind in
 
 The ratio of shear velocity in the presence of vegetation (:math:`u_{*,\text{veg}}`) [:math:`\mathrm{m/s}`] to the unobstructed shear velocity (:math:`u_*`) [:math:`\mathrm{m/s}`] is driven by the basal vegetation cover :math:`\rho_{\text{veg}}` and a fixed vegetation-related roughness parameter :math:`\Gamma` (``gamma_vegshear``, default = 16) [:math:`\mathrm{-}`].
 
-**New Ecomorphodynamic Framework (**``grass``**)**
+**Method:** ``grass``
+
 Rather than relying on the basal cover assumption, the updated framework calculates local shear velocity reduction by explicitly using the frontal area index :math:`\lambda_{\text{veg}}`:
 
 .. math::
@@ -1114,7 +1122,7 @@ Here, :math:`c_1` [:math:`\mathrm{-}`] is a dimensionless calibration constant c
 
 .. _fig-vegetation-shear-params:
 
-.. figure:: /images/vegetation_shear_params.png
+.. figure:: /images/rveg_shear_reduction.png
    :width: 900px
    :align: center
 
@@ -1126,17 +1134,20 @@ Here, :math:`c_1` [:math:`\mathrm{-}`] is a dimensionless calibration constant c
 Computing bed-interaction (zeta) over vegetation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-**Original Method (**``duran``**)**
+**Method:** ``duran``
+
 In the standard advection scheme, the model implicitly assumes that local bed properties dictate the saturation concentration for the entire transport column. Therefore, the bed-interaction factor :math:`\zeta` [:math:`\mathrm{-}`] is essentially assumed to be 1, meaning any reduction in shear stress due to vegetation immediately forces the entire sediment flux to deposit.
 
-**New Ecomorphodynamic Framework (**``grass``**)**
+**Method:** ``grass``
+
 To capture realistic "skimming" flows over dense grass canopies, the new framework divides the saturation concentration :math:`c_{\text{sat}}` into two distinct modes (:ref:`fig-vegetation-sediment-transport`):
+
 1. **Bed-affected transport (**:math:`c_{\text{sat,bed}}`**):** Sediment directly interacting with the canopy and restricted by local drag reduction.
 2. **Airborne transport (**:math:`c_{\text{sat,air}}`**):** Sediment elevated above the canopy, responding to the free-stream wind and bypassing the vegetation.
 
 .. _fig-vegetation-sediment-transport:
 
-.. figure:: /images/vegetation_sediment_transport.png
+.. figure:: /images/vegetation_sediment_aeolis.png
    :width: 900px
    :align: center
 
@@ -1166,10 +1177,12 @@ The final bed-interaction factor accounts for airborne sediment bouncing through
 Vegetation Mortality
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-**Original Method (**``duran``**)**
+**Method:** ``duran``
+
 Vegetation is subject to destruction caused by hydrodynamic processes. In the event of cell inundation by high water levels, the vegetation density :math:`\rho_{\text{veg}}` in the affected grid cells is instantaneously or proportionally reduced to mimic storm-induced erosion of the canopy.
 
-**New Ecomorphodynamic Framework (**``grass``**)**
+**Method:** ``grass``
+
 Because tiller height and tiller density are fundamentally coupled, changes in one necessitate updates in the other. Mortality and structural changes occur through three primary drivers:
 
 **1. Burial and Erosion Dieback:** 
