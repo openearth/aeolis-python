@@ -963,23 +963,21 @@ This effectively raises the velocity threshold to infinity, instantly ceasing an
 Vegetation 
 ----------
 
-The vegetation module in AeoLiS describes the intrinsic growth of vegetation, accounting for factors such as growth and decay due to burial :cite:`DuranMoore2013`, lateral expansion and establishment :cite:`Keijsers2016`, as well as simulating the destruction of vegetation caused by hydrodynamic processes. In the event of cell inundation, vegetation density is subsequently reduced. 
+The vegetation method is selected using ``method_vegetation``. The model currently supports two approaches:
 
-The specific vegetation formulation is selected using ``method_vegetation``. The model currently supports two approaches:
-
-1. **Original Method (**``duran``**):** The standard, generalized approach typical of established aeolian sediment transport models, relying on a fixed geometric relationship between plant height and cover.
-2. **New Ecomorphodynamic Framework (**``grass``**):** A newly implemented framework explicitly designed for dune grasses (e.g., European and American marram grass). It decouples vertical growth from horizontal expansion and introduces advanced concepts like canopy bending, statistical seed dispersal, Lotka-Volterra competition, wake recovery, and stratified two-layer sediment transport (:ref:`fig-vegetation-overview`).
+1. **Original Method** (``duran``): A standard approach typical of established aeolian sediment transport models, relying on a fixed geometric relationship between plant height and cover.
+2. **New Ecomorphodynamic Framework** (``grass``): A newly implemented framework designed for dune grasses (e.g., European and American marram grass). It decouples vertical growth from horizontal expansion and introduces concepts like vegetation bending, seed dispersal, competition, wake recovery, and two-layer sediment transport (:ref:`fig-vegetation-overview`).
 
 .. warning::
-   The ``grass`` framework is a new addition based on recent research. It is currently in a more experimental state compared to the extensively tested ``duran`` method.
+   The ``grass`` framework is a new addition based on recent research (still in review). It is currently in a more experimental state compared to the more extensively applied ``duran`` method.
 
 .. _fig-vegetation-overview:
 
 .. figure:: /images/vegetation_overview.png
-   :width: 900px
+   :width: 800px
    :align: center
 
-   Conceptual overview of the proposed vegetation framework illustrating its four core components: vegetation metrics, development, shear reduction, and the two-layer sediment transport approach.
+   Conceptual overview of the new vegetation framework illustrating its four core components: vegetation metrics, development, shear reduction, and the two-layer sediment transport approach.
 
 
 .. _vegetation-metrics:
@@ -987,9 +985,7 @@ The specific vegetation formulation is selected using ``method_vegetation``. The
 Vegetation Metrics
 ^^^^^^^^^^^^^^^^^^^
 
-**Method:** ``duran``
-
-In the original description, the basal vegetation density :math:`\rho_{\text{veg}}` (``rhoveg``) [:math:`\mathrm{-}`] can vary in space and time. It is determined by the ratio of the actual vegetation height :math:`h_{\text{veg}}` (``hveg``) [:math:`\mathrm{m}`] to the maximum attainable vegetation height :math:`H_{\text{veg}}` (``Hveg``) [:math:`\mathrm{m}`], varying between 0 and 1 :cite:`DuranHerrmann2006`:
+(**Method:** ``duran``) The basal vegetation density :math:`\rho_{\text{veg}}` (``rhoveg``) [:math:`\mathrm{-}`] can vary in space and time. It is determined by the ratio of the actual vegetation height :math:`h_{\text{veg}}` (``hveg``) [:math:`\mathrm{m}`] to the maximum attainable vegetation height :math:`H_{\text{veg}}` (``Hveg``) [:math:`\mathrm{m}`], varying between 0 and 1 :cite:`DuranHerrmann2006`:
 
 .. math::
    :label: Vegetation_density_duran
@@ -998,9 +994,7 @@ In the original description, the basal vegetation density :math:`\rho_{\text{veg
 
 This assumption is based on the idea that burying vegetation reduces its height, which indicates a simultaneous decrease in actual cover. The change in vegetation density per grid cell is directly linked to the alteration in vegetation height within that specific cell. 
 
-**Method:** ``grass``
-
-The new framework decouples plant structure into two independent state variables: tiller density :math:`N_t` (``N_t``) [:math:`\mathrm{tillers/m^2}`] and tiller height :math:`h_{\text{veg}}` (``hveg``) [:math:`\mathrm{m}`]. This separation enables the explicit representation of distinct morphological states, such as sparse/tall canopies or dense/short canopies. 
+(**Method:** ``grass``) The new framework decouples plant structure into two independent state variables: tiller density :math:`N_t` (``N_t``) [:math:`\mathrm{tillers/m^2}`] and tiller height :math:`h_{\text{veg}}` (``hveg``) [:math:`\mathrm{m}`]. This separation enables the explicit representation of distinct morphological states, such as sparse/tall canopies or dense/short canopies. 
 
 To capture fine-scale spatial dynamics, such as clonal expansion, these vegetation metrics and their subsequent developmental processes are resolved on an automatically generated higher-resolution sub-grid (:math:`\Delta x \leq 1` m).
 
