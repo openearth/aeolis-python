@@ -985,7 +985,7 @@ The vegetation method is selected using ``method_vegetation``. The model current
 Vegetation Metrics
 ^^^^^^^^^^^^^^^^^^^
 
-(**Method:** ``duran``) The basal vegetation density :math:`\rho_{\text{veg}}` (``rhoveg``) [:math:`\mathrm{-}`] can vary in space and time. It is determined by the ratio of the actual vegetation height :math:`h_{\text{veg}}` (``hveg``) [:math:`\mathrm{m}`] to the maximum attainable vegetation height :math:`H_{\text{veg}}` (``Hveg``) [:math:`\mathrm{m}`], varying between 0 and 1 :cite:`DuranHerrmann2006`:
+(**method** ``duran``) The basal vegetation density :math:`\rho_{\text{veg}}` (``rhoveg``) [:math:`\mathrm{-}`] can vary in space and time. It is determined by the ratio of the actual vegetation height :math:`h_{\text{veg}}` (``hveg``) [:math:`\mathrm{m}`] to the maximum attainable vegetation height :math:`H_{\text{veg}}` (``Hveg``) [:math:`\mathrm{m}`], varying between 0 and 1 :cite:`DuranHerrmann2006`:
 
 .. math::
    :label: Vegetation_density_duran
@@ -994,11 +994,11 @@ Vegetation Metrics
 
 This assumption is based on the idea that burying vegetation reduces its height, which indicates a simultaneous decrease in actual cover. The change in vegetation density per grid cell is directly linked to the alteration in vegetation height within that specific cell. 
 
-(**Method:** ``grass``) The new framework decouples plant structure into two independent state variables: tiller density :math:`N_t` (``N_t``) [:math:`\mathrm{tillers/m^2}`] and tiller height :math:`h_{\text{veg}}` (``hveg``) [:math:`\mathrm{m}`]. This separation enables the explicit representation of distinct morphological states, such as sparse/tall canopies or dense/short canopies. 
+(**method** ``grass``) The new framework decouples plant structure into two independent state variables: tiller density :math:`N_t` (``N_t``) [:math:`\mathrm{tillers/m^2}`] and tiller height :math:`h_{\text{veg}}` (``hveg``) [:math:`\mathrm{m}`]. This separation enables the representation of distinct morphological states, such as sparse/tall canopies or dense/short canopies. 
 
-To capture fine-scale spatial dynamics, such as clonal expansion, these vegetation metrics and their subsequent developmental processes are resolved on an automatically generated higher-resolution sub-grid (:math:`\Delta x \leq 1` m).
+To capture fine-scale spatial dynamics, such as clonal expansion, these vegetation metrics and their subsequent developmental processes are resolved on an automatically generated higher-resolution sub-grid (:math:`\Delta x \leq 1` m). The resolution increase can be set using the ``veg_res_factor``. To prevent excessive computational demand, the timestepping for the vegetation module specifically can be adjusted using ``dt_veg``.
 
-For dune grasses (e.g., European beachgrass), typical tiller densities range from 400 to 1110 tillers/m², heights reach 0.65 to 0.85 m, and tiller diameters :math:`d_t` are 0.004–0.008 m. From these dimensions, the frontal area index :math:`\lambda_{\text{veg}}` (``lambdaveg``) [:math:`\mathrm{m^2/m^2}`] and the basal cover fraction :math:`\rho_{\text{veg}}` (``rhoveg``) [:math:`\mathrm{m^2/m^2}`] are derived explicitly:
+For dune grasses (e.g., European beachgrass), typical tiller densities range from 400 to 1110 tillers/m², heights reach 0.65 to 0.85 m, and tiller diameters :math:`d_t` are 0.004–0.008 m (``d_tiller``). From these dimensions, the frontal area index :math:`\lambda_{\text{veg}}` (``lamveg``) [:math:`\mathrm{m^2/m^2}`] and the basal cover fraction :math:`\rho_{\text{veg}}` (``rhoveg``) [:math:`\mathrm{m^2/m^2}`] are derived explicitly:
 
 .. math::
    :label: Vegetation_density_grass
@@ -1012,7 +1012,7 @@ Because grass tillers bend under wind forcing, their effective height interactin
 
    h'_{\text{veg}} = h_{\text{veg}} \left[ r_{\text{stem}} + (1 - r_{\text{stem}}) \left( \alpha_u u_w + \alpha_N N_t + \alpha_0 \right) \right]
 
-Here, :math:`r_{\text{stem}}` [:math:`\mathrm{-}`] specifies the fraction of the stem that remains rigid, while the empirical constants :math:`\alpha_u` [:math:`\mathrm{s/m}`], :math:`\alpha_N` [:math:`\mathrm{m^2}`], and :math:`\alpha_0` [:math:`\mathrm{-}`] control the sensitivity to wind stress and the structural support provided by neighboring tillers.
+Here, :math:`r_{\text{stem}}` [:math:`\mathrm{-}`] (``r_stem``) specifies the fraction of the stem that remains rigid, while the empirical constants :math:`\alpha_u` [:math:`\mathrm{s/m}`], :math:`\alpha_N` [:math:`\mathrm{m^2}`], and :math:`\alpha_0` [:math:`\mathrm{-}`] (``alpha_uw``, ``alpha_Nt``, ``alpha_0``) control the sensitivity to wind stress and the structural support provided by neighboring tillers.
 
 .. _vegetation-development:
 
