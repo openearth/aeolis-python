@@ -967,10 +967,19 @@ The vegetation module in AeoLiS describes the intrinsic growth of vegetation, ac
 
 The specific vegetation formulation is selected using ``method_vegetation``. The model currently supports two approaches:
 1. **Original Method (**``duran``**)**: The standard, generalized approach typical of established aeolian sediment transport models, relying on a fixed geometric relationship between plant height and cover.
-2. **New Ecomorphodynamic Framework (**``grass``**)**: A newly implemented framework explicitly designed for dune grasses (e.g., European and American marram grass). It decouples vertical growth from horizontal expansion and introduces advanced concepts like canopy bending, statistical seed dispersal, Lotka-Volterra competition, wake recovery, and stratified two-layer sediment transport. 
+2. **New Ecomorphodynamic Framework (**``grass``**)**: A newly implemented framework explicitly designed for dune grasses (e.g., European and American marram grass). It decouples vertical growth from horizontal expansion and introduces advanced concepts like canopy bending, statistical seed dispersal, Lotka-Volterra competition, wake recovery, and stratified two-layer sediment transport (:ref:`fig-vegetation-overview`).
 
 .. warning::
    The ``grass`` framework is a new addition based on recent research. It is currently in a more experimental state compared to the extensively tested ``duran`` method.
+
+.. _fig-vegetation-overview:
+
+.. figure:: /images/vegetation_overview.png
+   :width: 900px
+   :align: center
+
+   Conceptual overview of the proposed vegetation framework illustrating its four core components: vegetation metrics, development, shear reduction, and the two-layer sediment transport approach.
+
 
 .. _vegetation-metrics:
 
@@ -1023,13 +1032,22 @@ Vegetation growth and decay follow the model proposed by :cite:`DuranHerrmann200
 
 Here, :math:`\gamma_{\text{veg}}` (``veg_gamma``, default = 1) [:math:`\mathrm{-}`] accounts for the impact of sediment burial. :math:`V_{\text{ver}}` (``V_ver``) is the maximum vertical growth rate [:math:`\mathrm{m/yr}`], while the sediment burial rate :math:`\Delta z_{\text{burial}}` [:math:`\mathrm{m/yr}`] is determined as the bed level change averaged over a trailing time window (default is one day) to prevent vegetation from overreacting to instantaneous bed level fluctuations. 
 
-The optimal burial rate for maximum vegetation growth for marram grass is around 0.31 m/year with a burying tolerance of 0.78 to 0.96 m burial/year :cite:`Nolet2018`. Vegetation can begin to grow through lateral propagation or random germination handled on a cell-by-cell basis using a probabilistic approach similar to :cite:`Keijsers2016`, controlled by germination probability (``rho_ger``) and lateral propagation likelihood (``rho_lat``).
+The optimal burial rate for maximum vegetation growth for marram grass is around 0.31 m/year with a burying tolerance of 0.78 to 0.96 m burial/year :cite:`Nolet2018`. Vegetation can begin to grow through lateral propagation or random germination handled on a cell-by-cell basis using a probabilistic approach similar to :cite:`Keijsers2016`.
 
 .. tip:: 
    Meaning of these variables: An intrinsic vertical growth rate of :math:`V_{\text{ver}} = 4` m/year does not mean the vegetation will be 4 meters high after 1 year, as growth follows a logistic curve that slows as it reaches :math:`H_{\text{veg}}`.
 
 **New Ecomorphodynamic Framework (**``grass``**)**
-Vegetation development is simulated through two completely decoupled processes:
+Vegetation development is simulated through two completely decoupled processes: vertical tiller growth and horizontal tiller establishment (:ref:`fig-vegetation-development`).
+
+.. _fig-vegetation-development:
+
+.. figure:: /images/vegetation_development.gif
+   :width: 900px
+   :align: center
+
+   Simulated spatial and temporal evolution of tiller density and height demonstrating local growth, clonal expansion, seedling dispersal, and inter-species competition.
+
 
 **1. Vertical Tiller Growth:**
 Vertical growth utilizes a generalized logistic growth equation, driven by the intrinsic growth rate :math:`G_h` [:math:`\mathrm{m/yr}`] and an exponent :math:`\phi_h` [:math:`\mathrm{-}`] that provides greater control over the growth trajectory:
@@ -1039,12 +1057,7 @@ Vertical growth utilizes a generalized logistic growth equation, driven by the i
 
    \frac{\partial h_{\text{veg}}}{\partial t} = G_h \left(1 - \frac{h_{\text{veg}}}{H_{\text{veg}}}\right)^{\phi_h} + B_h
 
-The response to sediment burial and erosion :math:`B_h` relies on the sensitivity parameter :math:`\gamma_h` [:math:`\mathrm{-}`] and an optimal burial rate :math:`\Delta z_{\text{opt},h}` [:math:`\mathrm{m/yr}`] (e.g., 0.2–1.0 m/yr for marram grass), producing an asymmetric response to burial versus erosion:
-
-.. math::
-   :label: burial_height_grass
-
-   B_h = -\gamma_h \left| \Delta z_{\text{burial}} - \Delta z_{\text{opt},h} \right|
+The response to sediment burial and erosion :math:`B_h` relies on the sensitivity parameter :math:`\gamma_h` [:math:`\mathrm{-}`] and an optimal burial rate :math:`\Delta z_{\text{opt},h}` [:math:`\mathrm{m/yr}`] (e.g., 0.2–1.0 m/yr for marram grass), producing an asymmetric response to burial versus erosion.
 
 **2. Horizontal Tiller Establishment (Density):**
 Tiller density evolves through the recruitment of new tillers via seedling germination (:math:`s`) and clonal expansion (:math:`c`). Tiller production occurs in a source cell (:math:`j`) and is distributed to a target cell (:math:`i`) based on dispersal weights :math:`w_{ij}`:
@@ -1054,25 +1067,16 @@ Tiller density evolves through the recruitment of new tillers via seedling germi
 
    \frac{\partial N_{t,i}}{\partial t} = \sum_j w^{(s)}_{ij} S_{s,j} \;+\; \sum_j w^{(c)}_{ij} S_{c,j} \left(1 - \sum_n \alpha_{AB} \frac{\bar{N}_{t,i}^{(B)}}{N_{t,\text{max}}^{(B)}}\right)
 
-To account for inter-specific competition in multi-species simulations, the logistic saturation term utilizes a Lotka-Volterra approach, where :math:`\alpha_{AB}` [:math:`\mathrm{-}`] defines the competitive effect of species :math:`A` on target species :math:`B`.
-
-Production in the source cell is calculated via:
+To account for inter-specific competition in multi-species simulations, the logistic saturation term utilizes a Lotka-Volterra approach, where :math:`\alpha_{AB}` [:math:`\mathrm{-}`] defines the competitive effect of species :math:`A` on target species :math:`B`. Production in the source cell is calculated via:
 
 .. math::
    :label: tiller_production
 
    S_{x,j} = G_x N_{t,j} B_{x,i} \left( \frac{h_{\text{veg},j}}{H_{\text{veg}}} \right)
 
-Here, :math:`G_c` [:math:`\mathrm{tillers/tiller/yr}`] is the intrinsic clonal production rate, and :math:`G_s` [:math:`\mathrm{tillers/m^2/yr}`] is the effective seedling production rate. The burial response :math:`B_{c/s}` limits establishment if burial/erosion exceeds a critical tolerance :math:`\Delta z_{\text{tol},c/s}` [:math:`\mathrm{m/yr}`]:
-
-.. math::
-   :label: burial_tolerance
-
-   B_{c/s} = \max \left( 0, 1 - \frac{\left| \Delta z_{\text{burial}} - \Delta z_{\text{opt},c/s} \right|}{\Delta z_{\text{tol},c/s}} \right)
-
 The spatial dispersal mechanisms differ fundamentally:
-* **Clonal Expansion (**:math:`w^{(c)}`**):** Modeled as a short-range, Lévy-like spreading strategy using a truncated Pareto distribution governed by a shape parameter :math:`\mu_c` [:math:`\mathrm{-}`] and range limits :math:`\ell_{\text{min},c}` and :math:`\ell_{\text{max},c}`. Dispersal is discretized into a spatial kernel and sampled via a Poisson distribution.
-* **Seedling Dispersal (**:math:`w^{(s)}`**):** Because seeds can travel long distances, they are stochastically sampled using a two-dimensional Student's *t*-distribution (2Dt), capturing heavy-tailed long-distance transport via a scale parameter :math:`a_s` [:math:`\mathrm{m^2}`] and shape parameter :math:`\nu_s` [:math:`\mathrm{-}`].
+* **Clonal Expansion (**:math:`w^{(c)}`**):** Modeled as a short-range, Lévy-like spreading strategy using a truncated Pareto distribution governed by a shape parameter :math:`\mu_c` [:math:`\mathrm{-}`].
+* **Seedling Dispersal (**:math:`w^{(s)}`**):** Stochastically sampled using a two-dimensional Student's *t*-distribution (2Dt), capturing heavy-tailed long-distance transport.
 
 .. _vegetation-induced-shear-reduction:
 
@@ -1087,26 +1091,35 @@ Inspired by the Coastal Dune Model (CDM), AeoLiS incorporates vegetation-wind in
 
    \frac{u_{*,\text{veg}}}{u_*} = \frac{1}{\sqrt{1 + \Gamma \rho_{\text{veg}}}}
 
-The ratio of shear velocity in the presence of vegetation (:math:`u_{*,\text{veg}}`) [:math:`\mathrm{m/s}`] to the unobstructed shear velocity (:math:`u_*`) [:math:`\mathrm{m/s}`] is driven by the basal vegetation cover :math:`\rho_{\text{veg}}` and a fixed vegetation-related roughness parameter :math:`\Gamma` (``gamma_vegshear``, default = 16) [:math:`\mathrm{-}`], originally derived from creosote communities.
+The ratio of shear velocity in the presence of vegetation (:math:`u_{*,\text{veg}}`) [:math:`\mathrm{m/s}`] to the unobstructed shear velocity (:math:`u_*`) [:math:`\mathrm{m/s}`] is driven by the basal vegetation cover :math:`\rho_{\text{veg}}` and a fixed vegetation-related roughness parameter :math:`\Gamma` (``gamma_vegshear``, default = 16) [:math:`\mathrm{-}`].
 
 **New Ecomorphodynamic Framework (**``grass``**)**
-Rather than relying on the basal cover assumption, the updated framework calculates local shear velocity reduction by returning to the original formulation by :cite:`Raupach1993`, explicitly using the frontal area index :math:`\lambda_{\text{veg}}`:
+Rather than relying on the basal cover assumption, the updated framework calculates local shear velocity reduction by explicitly using the frontal area index :math:`\lambda_{\text{veg}}`:
 
 .. math::
    :label: shear_reduction_vegetation_grass
 
    R_{\mathrm{0,veg}} = \frac{u_{*,\text{veg}}}{u_*} = \frac{1}{\sqrt{1 + m \beta_{\text{veg}} \lambda_{\text{veg}}}}
 
-Here, :math:`\beta_{\text{veg}}` (``beta_veg``) [:math:`\mathrm{-}`] represents the drag efficiency of the vegetation elements relative to the bare surface (the primary species-specific calibration parameter), and :math:`m` [:math:`\mathrm{-}`] accounts for spatial non-uniformity in the surface shear stress distribution. 
+Here, :math:`\beta_{\text{veg}}` (``beta_veg``) [:math:`\mathrm{-}`] represents the drag efficiency of the vegetation elements relative to the bare surface, and :math:`m` [:math:`\mathrm{-}`] accounts for spatial non-uniformity in the surface shear stress distribution. 
 
-Beyond local drag reduction, the framework captures non-local shear stress recovery in the sheltered wake downwind of the plant. Using a decay function proposed by :cite:`Okin2008`, the spatial reduction factor :math:`R_{\text{veg}}(x)` [:math:`\mathrm{-}`] gradually recovers to free-stream conditions:
+Beyond local drag reduction, the framework captures non-local shear stress recovery in the sheltered wake downwind of the plant (:ref:`fig-vegetation-shear-params`). Using a decay function proposed by :cite:`Okin2008`, the spatial reduction factor :math:`R_{\text{veg}}(x)` [:math:`\mathrm{-}`] gradually recovers to free-stream conditions:
 
 .. math::
    :label: wake_recovery
 
    R_{\text{veg}}(x) = 1 - (1 - R_{\mathrm{0,veg}}) e^{-x c_1 / h'_{\text{veg}}}
 
-Here, :math:`c_1` [:math:`\mathrm{-}`] is a dimensionless calibration constant controlling the wake length. The model computes this wake effect along the wind direction and applies the strongest reduction impacting any given grid cell.
+Here, :math:`c_1` [:math:`\mathrm{-}`] is a dimensionless calibration constant controlling the wake length.
+
+.. _fig-vegetation-shear-params:
+
+.. figure:: /images/vegetation_shear_params.png
+   :width: 900px
+   :align: center
+
+   Influence of varying vegetation metrics and calibration parameters on the spatial distribution of shear reduction and corresponding bed level changes.
+
 
 .. _vegetation-computing-zeta:
 
@@ -1117,11 +1130,20 @@ Computing bed-interaction (zeta) over vegetation
 In the standard advection scheme, the model implicitly assumes that local bed properties dictate the saturation concentration for the entire transport column. Therefore, the bed-interaction factor :math:`\zeta` [:math:`\mathrm{-}`] is essentially assumed to be 1, meaning any reduction in shear stress due to vegetation immediately forces the entire sediment flux to deposit.
 
 **New Ecomorphodynamic Framework (**``grass``**)**
-To capture realistic "skimming" flows over dense grass canopies, the new framework divides the saturation concentration :math:`c_{\text{sat}}` into two distinct modes:
+To capture realistic "skimming" flows over dense grass canopies, the new framework divides the saturation concentration :math:`c_{\text{sat}}` into two distinct modes (:ref:`fig-vegetation-sediment-transport`):
 1. **Bed-affected transport (**:math:`c_{\text{sat,bed}}`**):** Sediment directly interacting with the canopy and restricted by local drag reduction.
 2. **Airborne transport (**:math:`c_{\text{sat,air}}`**):** Sediment elevated above the canopy, responding to the free-stream wind and bypassing the vegetation.
 
-The combined saturation is computed via weighted sum: :math:`c_{\text{sat}} = w_{\text{air}} c_{\text{sat,air}} + w_{\text{bed}} c_{\text{sat,bed}}`. These dimensionless weights are controlled by the bed-interaction factor :math:`\zeta` (``zeta``) [:math:`\mathrm{-}`], which dictates the fraction of the flux actively interacting with the bed (e.g., :math:`w_{\text{air}} = (1 - \zeta) \frac{c}{c_{\text{sat,air}}}`). For bare sediment, :math:`\zeta = 1`; for non-erodible surfaces, :math:`\zeta = 0`. 
+.. _fig-vegetation-sediment-transport:
+
+.. figure:: /images/vegetation_sediment_transport.png
+   :width: 900px
+   :align: center
+
+   Vertical transport distribution over bare sand, non-erodible layers, and varying vegetation canopies, illustrating the computation of the bed-interaction parameter :math:`\zeta`.
+
+
+The combined saturation is computed via weighted sum: :math:`c_{\text{sat}} = w_{\text{air}} c_{\text{sat,air}} + w_{\text{bed}} c_{\text{sat,bed}}`. These dimensionless weights are controlled by the bed-interaction factor :math:`\zeta` (``zeta``) [:math:`\mathrm{-}`], which dictates the fraction of the flux actively interacting with the bed. 
 
 To estimate :math:`\zeta` over vegetation, the model computes an uplifted vertical transport profile using a Weibull distribution:
 
@@ -1130,21 +1152,14 @@ To estimate :math:`\zeta` over vegetation, the model computes an uplifted vertic
 
    f(h) = \frac{k}{h_{\text{scale}}} \left(\frac{h}{h_{\text{scale}}}\right)^{k-1} \exp\left[-\left(\frac{h}{h_{\text{scale}}}\right)^k\right]
 
-The extent of the vegetation-induced lift is determined by a lifting coefficient :math:`\alpha_{\text{lift}}` [:math:`\mathrm{-}`] that scales the effective tiller height to define the physical lift height :math:`h_{\text{lift}} = L_h + \alpha_{\text{lift}} h'_{\text{veg}}` (where :math:`L_h` is the mean saltation decay length). The shape parameter :math:`k` [:math:`\mathrm{-}`] depends on :math:`h_{\text{lift}}` and empirical constants :math:`a_k` and :math:`b_k`. When transport is attached to a bare bed, :math:`k=1` (reducing to a standard exponential profile). The scale parameter :math:`h_{\text{scale}}` [:math:`\mathrm{m}`] is calculated analytically using the standard Gamma function (:math:`\Gamma(z)`) to ensure the mean matches the physical lift height:
-
-.. math::
-   :label: hscale_gamma
-
-   h_{\text{scale}} = \frac{h_{\text{lift}}}{\Gamma\left(1 + \frac{1}{k}\right)}
-
-By integrating this profile up to the effective tiller height :math:`h'_{\text{veg}}`, the model calculates the raw trapped fraction :math:`\zeta_0`. Because sparse vegetation does not trigger full skimming, this is adjusted by relative tiller density (using parameter :math:`\theta_\zeta`):
+The extent of the vegetation-induced lift is determined by a lifting coefficient :math:`\alpha_{\text{lift}}` [:math:`\mathrm{-}`] that scales the effective tiller height to define the physical lift height :math:`h_{\text{lift}} = L_h + \alpha_{\text{lift}} h'_{\text{veg}}`. By integrating this profile up to the effective tiller height :math:`h'_{\text{veg}}`, the model calculates the raw trapped fraction :math:`\zeta_0`. Because sparse vegetation does not trigger full skimming, this is adjusted by relative tiller density (using parameter :math:`\theta_\zeta`):
 
 .. math::
    :label: zeta_density
 
    \zeta_0 = 1 - \left(\frac{N_t}{N_{t,\text{max}}}\right)^{\theta_\zeta} (1 - \zeta_0)
 
-The final bed-interaction factor accounts for airborne sediment bouncing through the canopy using a numerical bounce factor :math:`b` [:math:`\mathrm{-}`]: :math:`\zeta = \zeta_0 (1 - b)`. To prevent abrupt deposition in the vegetation wake, the spatial recovery of :math:`\zeta` is smoothed proportionally to the leeside shear reduction :math:`R_{\text{veg}}/R_{0,\text{veg}}`.
+The final bed-interaction factor accounts for airborne sediment bouncing through the canopy using a numerical bounce factor :math:`b` [:math:`\mathrm{-}`]: :math:`\zeta = \zeta_0 (1 - b)`. 
 
 .. _vegetation-mortality:
 
