@@ -985,7 +985,8 @@ The vegetation method is selected using ``method_vegetation``. The model current
 Vegetation Metrics
 ^^^^^^^^^^^^^^^^^^^
 
-(**method** ``duran``) The basal vegetation density :math:`\rho_{\text{veg}}` (``rhoveg``) [:math:`\mathrm{-}`] can vary in space and time. It is determined by the ratio of the actual vegetation height :math:`h_{\text{veg}}` (``hveg``) [:math:`\mathrm{m}`] to the maximum attainable vegetation height :math:`H_{\text{veg}}` (``Hveg``) [:math:`\mathrm{m}`], varying between 0 and 1 :cite:`DuranHerrmann2006`:
+**Method** ``duran`
+The basal vegetation density :math:`\rho_{\text{veg}}` (``rhoveg``) [:math:`\mathrm{-}`] can vary in space and time. It is determined by the ratio of the actual vegetation height :math:`h_{\text{veg}}` (``hveg``) [:math:`\mathrm{m}`] to the maximum attainable vegetation height :math:`H_{\text{veg}}` (``Hveg``) [:math:`\mathrm{m}`], varying between 0 and 1 :cite:`DuranHerrmann2006`:
 
 .. math::
    :label: Vegetation_density_duran
@@ -994,7 +995,9 @@ Vegetation Metrics
 
 This assumption is based on the idea that burying vegetation reduces its height, which indicates a simultaneous decrease in actual cover. The change in vegetation density per grid cell is directly linked to the alteration in vegetation height within that specific cell. 
 
-(**method** ``grass``) The new framework decouples plant structure into two independent state variables: tiller density :math:`N_t` (``N_t``) [:math:`\mathrm{tillers/m^2}`] and tiller height :math:`h_{\text{veg}}` (``hveg``) [:math:`\mathrm{m}`]. This separation enables the representation of distinct morphological states, such as sparse/tall canopies or dense/short canopies. 
+**Method** ``grass``
+
+The new framework decouples plant structure into two independent state variables: tiller density :math:`N_t` (``N_t``) [:math:`\mathrm{tillers/m^2}`] and tiller height :math:`h_{\text{veg}}` (``hveg``) [:math:`\mathrm{m}`]. This separation enables the representation of distinct morphological states, such as sparse/tall canopies or dense/short canopies. 
 
 To capture fine-scale spatial dynamics, such as clonal expansion, these vegetation metrics and their subsequent developmental processes are resolved on an automatically generated higher-resolution sub-grid (:math:`\Delta x \leq 1` m). The resolution increase can be set using the ``veg_res_factor``. To prevent excessive computational demand, the timestepping for the vegetation module specifically can be adjusted using ``dt_veg``.
 
@@ -1019,7 +1022,7 @@ Here, :math:`r_{\text{stem}}` [:math:`\mathrm{-}`] (``r_stem``) specifies the fr
 Vegetation Development
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-**Method:** ``duran``
+**Method** ``duran``
 
 Vegetation growth and decay follow the model proposed by :cite:`DuranHerrmann2006`, modified to include an optimal burial rate :math:`\Delta z_{\text{b,opt}}` [:math:`\mathrm{m/yr}`] that shifts the peak of optimal growth:
 
@@ -1035,28 +1038,30 @@ The optimal burial rate for maximum vegetation growth for marram grass is around
 .. tip:: 
    Meaning of these variables: An intrinsic vertical growth rate of :math:`V_{\text{ver}} = 4` m/year does not mean the vegetation will be 4 meters high after 1 year, as growth follows a logistic curve that slows as it reaches :math:`H_{\text{veg}}`.
 
-**Method:** ``grass``
+**Method** ``grass`` 
 
 Vegetation development is simulated through two completely decoupled processes: vertical tiller growth and horizontal tiller establishment (:ref:`fig-vegetation-development`).
 
 .. _fig-vegetation-development:
 
-.. figure:: /images/vegetation_growth.mp4
-   :width: 900px
-   :align: center
+.. video:: /images/vegetation_growth.mp4
+   :autoplay:
+   :loop:
+   :muted:
+   :width: 80%
 
    Simulated spatial and temporal evolution of tiller density and height demonstrating local growth, clonal expansion, seedling dispersal, and inter-species competition.
 
 
 **1. Vertical Tiller Growth:**
-Vertical growth utilizes a generalized logistic growth equation, driven by the intrinsic growth rate :math:`G_h` [:math:`\mathrm{m/yr}`] and an exponent :math:`\phi_h` [:math:`\mathrm{-}`] that provides greater control over the growth trajectory:
+Vertical growth utilizes a generalized logistic growth equation, driven by the intrinsic growth rate :math:`G_h` [:math:`\mathrm{m/yr}`] (``G_h``) and an exponent :math:`\phi_h` [:math:`\mathrm{-}`] (``phi_h``) that provides greater control over the growth trajectory:
 
 .. math::
    :label: growth_height_grass
 
    \frac{\partial h_{\text{veg}}}{\partial t} = G_h \left(1 - \frac{h_{\text{veg}}}{H_{\text{veg}}}\right)^{\phi_h} + B_h
 
-The response to sediment burial and erosion :math:`B_h` relies on the sensitivity parameter :math:`\gamma_h` [:math:`\mathrm{-}`] and an optimal burial rate :math:`\Delta z_{\text{opt},h}` [:math:`\mathrm{m/yr}`] (e.g., 0.2–1.0 m/yr for marram grass), producing an asymmetric response to burial versus erosion.
+The response to sediment burial and erosion :math:`B_h` relies on the sensitivity parameter :math:`\gamma_h` [:math:`\mathrm{-}`] (``gamma_h``) and an optimal burial rate :math:`\Delta z_{\text{opt},h}` [:math:`\mathrm{m/yr}`] (e.g., 0.2–1.0 m/yr for marram grass) (``dzb_opt_h``), producing an asymmetric response to burial versus erosion.
 
 **2. Horizontal Tiller Establishment (Density):**
 Tiller density evolves through the recruitment of new tillers via seedling germination (:math:`s`) and clonal expansion (:math:`c`). Tiller production occurs in a source cell (:math:`j`) and is distributed to a target cell (:math:`i`) based on dispersal weights :math:`w_{ij}`:
@@ -1066,7 +1071,7 @@ Tiller density evolves through the recruitment of new tillers via seedling germi
 
    \frac{\partial N_{t,i}}{\partial t} = \sum_j w^{(s)}_{ij} S_{s,j} \;+\; \sum_j w^{(c)}_{ij} S_{c,j} \left(1 - \sum_n \alpha_{AB} \frac{\bar{N}_{t,i}^{(B)}}{N_{t,\text{max}}^{(B)}}\right)
 
-To account for inter-specific competition in multi-species simulations, the logistic saturation term utilizes a Lotka-Volterra approach, where :math:`\alpha_{AB}` [:math:`\mathrm{-}`] defines the competitive effect of species :math:`A` on target species :math:`B`. Production in the source cell is calculated via:
+To account for inter-specific competition in multi-species simulations, the logistic saturation term utilizes a Lotka-Volterra approach, where :math:`\alpha_{AB}` [:math:`\mathrm{-}`] (``alpha_comp``) defines the competitive effect of species :math:`A` on target species :math:`B`. Production in the source cell is calculated via:
 
 .. math::
    :label: tiller_production
@@ -1083,7 +1088,7 @@ The spatial dispersal mechanisms differ fundamentally:
 Vegetation-induced Shear Reduction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-**Method:** ``duran``
+**Method** ``duran``
 
 Inspired by the Coastal Dune Model (CDM), AeoLiS incorporates vegetation-wind interaction using the simplified expression:
 
@@ -1094,7 +1099,7 @@ Inspired by the Coastal Dune Model (CDM), AeoLiS incorporates vegetation-wind in
 
 The ratio of shear velocity in the presence of vegetation (:math:`u_{*,\text{veg}}`) [:math:`\mathrm{m/s}`] to the unobstructed shear velocity (:math:`u_*`) [:math:`\mathrm{m/s}`] is driven by the basal vegetation cover :math:`\rho_{\text{veg}}` and a fixed vegetation-related roughness parameter :math:`\Gamma` (``gamma_vegshear``, default = 16) [:math:`\mathrm{-}`].
 
-**Method:** ``grass``
+**Method** ``grass``
 
 Rather than relying on the basal cover assumption, the updated framework calculates local shear velocity reduction by explicitly using the frontal area index :math:`\lambda_{\text{veg}}`:
 
@@ -1128,11 +1133,11 @@ Here, :math:`c_1` [:math:`\mathrm{-}`] is a dimensionless calibration constant c
 Computing bed-interaction (zeta) over vegetation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-**Method:** ``duran``
+**Method** ``duran``
 
 In the standard advection scheme, the model implicitly assumes that local bed properties dictate the saturation concentration for the entire transport column. Therefore, the bed-interaction factor :math:`\zeta` [:math:`\mathrm{-}`] is essentially assumed to be 1, meaning any reduction in shear stress due to vegetation immediately forces the entire sediment flux to deposit.
 
-**Method:** ``grass``
+**Method** ``grass``
 
 To capture realistic "skimming" flows over dense grass canopies, the new framework divides the saturation concentration :math:`c_{\text{sat}}` into two distinct modes (:ref:`fig-vegetation-sediment-transport`):
 
@@ -1171,11 +1176,11 @@ The final bed-interaction factor accounts for airborne sediment bouncing through
 Vegetation Mortality
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-**Method:** ``duran``
+**Method** ``duran``
 
 Vegetation is subject to destruction caused by hydrodynamic processes. In the event of cell inundation by high water levels, the vegetation density :math:`\rho_{\text{veg}}` in the affected grid cells is instantaneously or proportionally reduced to mimic storm-induced erosion of the canopy.
 
-**Method:** ``grass``
+**Method** ``grass``
 
 Because tiller height and tiller density are fundamentally coupled, changes in one necessitate updates in the other. Mortality and structural changes occur through three primary drivers:
 
