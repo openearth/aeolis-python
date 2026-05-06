@@ -989,21 +989,21 @@ Vegetation metrics define the spatial presence and physical structure of the pla
 
 **Method:** ``duran``
 
-For the default method, vegetation presence is described through the (basal) vegetation density :math:`\rho_{\text{veg}}` (``rhoveg``) [:math:`\mathrm{-}`]. This density determined by the ratio of the actual vegetation height :math:`h_{\text{veg}}` (``hveg``) [:math:`\mathrm{m}`] to the maximum attainable vegetation height :math:`H_{\text{veg}}` (``Hveg``) [:math:`\mathrm{m}`], varying between 0 and 1 :cite:`DuranHerrmann2006`:
+For the default method, vegetation presence is described through the (basal) vegetation density :math:`\rho_{\text{veg}}` (``rhoveg``) [:math:`\mathrm{-}`]. This density is determined by the ratio of the actual vegetation height :math:`h_{\text{veg}}` (``hveg``) [:math:`\mathrm{m}`] to the maximum attainable vegetation height :math:`H_{\text{veg}}` (``Hveg``) [:math:`\mathrm{m}`], varying between 0 and 1 :cite:`DuranHerrmann2006`:
 
 .. math::
    :label: Vegetation_density_duran
 
    \rho_{\text{veg}} = \left( \frac{h_{\text{veg}}}{H_{\text{veg}}} \right)^2
 
-This assumption is based on the idea that burying vegetation reduces its height, which indicates a simultaneous decrease in actual cover. The change in vegetation density per grid cell is directly linked to the alteration in vegetation height within that specific cell. 
+The change in vegetation density per grid cell is directly linked to the alteration in vegetation height within that specific cell. 
 
 .. note:: 
-   **Definition of vegetation cover** This geometric relation originates from arid creosote communities :cite:`DuranHerrmann2006` and does not reflect dune grass morphology. Vegetation cover is typically estimated visually, where a mature canopy represents 100% cover. Because this method links cover to relative height instead of physical density, translating field data into model inputs or validating outputs can be inconsistent. Keep this limitation in mind when simulating grass species using the ``duran`` method.
+   **Definition of vegetation cover** This geometric relation originates from arid creosote communities :cite:`DuranHerrmann2006` and does not reflect the individual tillers of dune grass. Vegetation cover is typically estimated visually, where a mature canopy represents 100% cover. Because this method links cover to relative height instead of physical density, translating field data into model inputs or validating outputs can be inconsistent. Keep this limitation in mind when simulating grass species using the ``duran`` method.
 
 **Method:** ``grass``
 
-The new framework decouples plant structure into two independent state variables: tiller density :math:`N_t` (``N_t``) [:math:`\mathrm{tillers/m^2}`] and tiller height :math:`h_{\text{veg}}` (``hveg``) [:math:`\mathrm{m}`]. This separation enables the representation of distinct morphological states, such as sparse/tall canopies or dense/short canopies, while using measurable traits. For dune grasses (e.g., European beachgrass), typical tiller densities range from 400 to 1110 tillers/m², heights reach 0.65 to 0.85 m, and tiller diameters :math:`d_t` are 0.004–0.008 m (``d_tiller``). From these dimensions, the frontal area index :math:`\lambda_{\text{veg}}` (``lamveg``) [:math:`\mathrm{m^2/m^2}`] and the basal cover fraction :math:`\rho_{\text{veg}}` (``rhoveg``) [:math:`\mathrm{m^2/m^2}`] are derived:
+The new framework decouples plant structure into two independent state variables: tiller density :math:`N_t` (``N_t``) [:math:`\mathrm{tillers/m^2}`] and tiller height :math:`h_{\text{veg}}` (``hveg``) [:math:`\mathrm{m}`]. This separation enables the representation of distinct morphological states, such as sparse/tall canopies or dense/short canopies, while using measurable traits. For dune grasses (e.g., European beachgrass), typical tiller densities range from 400 to 1110 tillers/m², heights reach 0.65 to 0.85 m, and tiller diameters :math:`d_t` are 0.004–0.008 m (``d_tiller``). From these dimensions, the frontal area index :math:`\lambda_{\text{veg}}` (``lamveg``) [:math:`\mathrm{m^2/m^2}`] and the basal cover fraction :math:`\rho_{\text{veg}}` (``rhoveg``) [:math:`\mathrm{m^2/m^2}`] are computed folling the original definition by :cite:`Raupach1993`:
 
 .. math::
    :label: Vegetation_density_grass
@@ -1064,7 +1064,7 @@ In the new framework, vegetation development is simulated through two completely
 
 
 **1. Vertical Tiller Growth:**
-Vertical growth utilizes a generalized logistic growth equation, driven by the intrinsic growth rate :math:`G_h` [:math:`\mathrm{m/yr}`] (``G_h``) and an exponent :math:`\phi_h` [:math:`\mathrm{-}`] (``phi_h``) that provides greater control over the growth trajectory:
+Vertical growth is described a generalized logistic growth equation (very similar to the ``duran`` approach), driven by the intrinsic growth rate :math:`G_h` [:math:`\mathrm{m/yr}`] (``G_h``) and an exponent :math:`\phi_h` [:math:`\mathrm{-}`] (``phi_h``) that provides greater control over the growth trajectory:
 
 .. math::
    :label: growth_height_grass
@@ -1088,7 +1088,7 @@ To account for inter-specific competition in multi-species simulations, the logi
 
    S_{x,j} = G_x N_{t,j} B_{x,i} \left( \frac{h_{\text{veg},j}}{H_{\text{veg}}} \right)
 
-The spatial dispersal mechanisms differ fundamentally:
+Two spatial dispersal mechanisms are implemented:
 
 * **Clonal Expansion:** Modeled as a short-range, Lévy-like spreading strategy using a truncated Pareto distribution governed by a shape parameter :math:`\mu_c` [:math:`\mathrm{-}`]. Dispersal weights :math:`w^{(c)}` are discretized into a spatial kernel and sampled via a Poisson distribution.
 * **Seedling Dispersal:** Stochastically sampled using a two-dimensional Student's *t*-distribution (2Dt), capturing heavy-tailed long-distance transport via a scale parameter :math:`a_s` [:math:`\mathrm{m^2}`] and shape parameter :math:`\nu_s` [:math:`\mathrm{-}`] to define dispersal weights :math:`w^{(s)}`.
