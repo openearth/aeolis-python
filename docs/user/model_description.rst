@@ -17,7 +17,7 @@ The simulation advances sequentially through time steps, repeating all activated
 
 Sediment Transport
 ^^^^^^^^^^^^^^^^^^^
-For detailed information, see the :ref:`sediment transport section <aeolian-sediment-transport>`.
+Detailed section: :ref:`sediment transport section <aeolian-sediment-transport>`.
 
 Aeolian sediment transport is the core of the AeoLiS model. It is computed using a two-dimensional advection scheme, simplified here for one-dimensional transport of a single sediment fraction:
 
@@ -965,11 +965,11 @@ Vegetation
 
 The vegetation method is selected using ``method_vegetation``. The model currently supports two approaches:
 
-1. **Original Method** (``duran``): A standard approach typical of established aeolian sediment transport models, relying on a fixed geometric relationship between plant height and cover.
-2. **New Ecomorphodynamic Framework** (``grass``): A newly implemented framework designed for dune grasses (e.g., European and American marram grass). It decouples vertical growth from horizontal expansion and introduces concepts like vegetation bending, seed dispersal, competition, wake recovery, and two-layer sediment transport (:ref:`fig-vegetation-overview`).
+1. **Original method** (``duran``): The default approach, similar to other existing aeolian sediment transport models.
+2. **Grass method** (``grass``): A newly implemented ecomorphodynamic framework designed for dune grasses (e.g., European and American marram grass). It decouples vertical growth from horizontal expansion and introduces concepts like vegetation bending, seed dispersal, competition, wake recovery, and two-layer sediment transport (:ref:`fig-vegetation-overview`).
 
 .. warning::
-   The ``grass`` framework is a new addition based on recent research (still in review). It is currently in a more experimental state compared to the more extensively applied ``duran`` method.
+   The ``grass`` framework is a new addition based on recent research (still in review). It is currently in a more experimental state compared to the ``duran`` method.
 
 .. _fig-vegetation-overview:
 
@@ -985,8 +985,11 @@ The vegetation method is selected using ``method_vegetation``. The model current
 Vegetation Metrics
 ^^^^^^^^^^^^^^^^^^^
 
-**Method** ``duran`
-The basal vegetation density :math:`\rho_{\text{veg}}` (``rhoveg``) [:math:`\mathrm{-}`] can vary in space and time. It is determined by the ratio of the actual vegetation height :math:`h_{\text{veg}}` (``hveg``) [:math:`\mathrm{m}`] to the maximum attainable vegetation height :math:`H_{\text{veg}}` (``Hveg``) [:math:`\mathrm{m}`], varying between 0 and 1 :cite:`DuranHerrmann2006`:
+Vegetation metrics define the spatial presence and physical structure of the plant canopy. These parameters link the model variables to field observations. By quantifying characteristics such as height, density, and cover fraction, they enable the calculation of aerodynamic roughness, shear stress reduction, and subsequent sediment trapping.
+
+**Method:** ``duran``
+
+For the default method, vegetation presence is described through the (basal) vegetation density :math:`\rho_{\text{veg}}` (``rhoveg``) [:math:`\mathrm{-}`]. This density determined by the ratio of the actual vegetation height :math:`h_{\text{veg}}` (``hveg``) [:math:`\mathrm{m}`] to the maximum attainable vegetation height :math:`H_{\text{veg}}` (``Hveg``) [:math:`\mathrm{m}`], varying between 0 and 1 :cite:`DuranHerrmann2006`:
 
 .. math::
    :label: Vegetation_density_duran
@@ -995,13 +998,12 @@ The basal vegetation density :math:`\rho_{\text{veg}}` (``rhoveg``) [:math:`\mat
 
 This assumption is based on the idea that burying vegetation reduces its height, which indicates a simultaneous decrease in actual cover. The change in vegetation density per grid cell is directly linked to the alteration in vegetation height within that specific cell. 
 
-**Method** ``grass``
+.. note:: 
+   **Definition of vegetation cover** This geometric relation originates from arid creosote communities :cite:`DuranHerrmann2006` and does not reflect dune grass morphology. Vegetation cover is typically estimated visually, where a mature canopy represents 100% cover. Because this method links cover to relative height instead of physical density, translating field data into model inputs or validating outputs can be inconsistent. Keep this limitation in mind when simulating grass species using the ``duran`` method.
 
-The new framework decouples plant structure into two independent state variables: tiller density :math:`N_t` (``N_t``) [:math:`\mathrm{tillers/m^2}`] and tiller height :math:`h_{\text{veg}}` (``hveg``) [:math:`\mathrm{m}`]. This separation enables the representation of distinct morphological states, such as sparse/tall canopies or dense/short canopies. 
+**Method:** ``grass``
 
-To capture fine-scale spatial dynamics, such as clonal expansion, these vegetation metrics and their subsequent developmental processes are resolved on an automatically generated higher-resolution sub-grid (:math:`\Delta x \leq 1` m). The resolution increase can be set using the ``veg_res_factor``. To prevent excessive computational demand, the timestepping for the vegetation module specifically can be adjusted using ``dt_veg``.
-
-For dune grasses (e.g., European beachgrass), typical tiller densities range from 400 to 1110 tillers/m², heights reach 0.65 to 0.85 m, and tiller diameters :math:`d_t` are 0.004–0.008 m (``d_tiller``). From these dimensions, the frontal area index :math:`\lambda_{\text{veg}}` (``lamveg``) [:math:`\mathrm{m^2/m^2}`] and the basal cover fraction :math:`\rho_{\text{veg}}` (``rhoveg``) [:math:`\mathrm{m^2/m^2}`] are derived explicitly:
+The new framework decouples plant structure into two independent state variables: tiller density :math:`N_t` (``N_t``) [:math:`\mathrm{tillers/m^2}`] and tiller height :math:`h_{\text{veg}}` (``hveg``) [:math:`\mathrm{m}`]. This separation enables the representation of distinct morphological states, such as sparse/tall canopies or dense/short canopies, while using measurable traits. For dune grasses (e.g., European beachgrass), typical tiller densities range from 400 to 1110 tillers/m², heights reach 0.65 to 0.85 m, and tiller diameters :math:`d_t` are 0.004–0.008 m (``d_tiller``). From these dimensions, the frontal area index :math:`\lambda_{\text{veg}}` (``lamveg``) [:math:`\mathrm{m^2/m^2}`] and the basal cover fraction :math:`\rho_{\text{veg}}` (``rhoveg``) [:math:`\mathrm{m^2/m^2}`] are derived:
 
 .. math::
    :label: Vegetation_density_grass
@@ -1017,30 +1019,38 @@ Because grass tillers bend under wind forcing, their effective height interactin
 
 Here, :math:`r_{\text{stem}}` [:math:`\mathrm{-}`] (``r_stem``) specifies the fraction of the stem that remains rigid, while the empirical constants :math:`\alpha_u` [:math:`\mathrm{s/m}`], :math:`\alpha_N` [:math:`\mathrm{m^2}`], and :math:`\alpha_0` [:math:`\mathrm{-}`] (``alpha_uw``, ``alpha_Nt``, ``alpha_0``) control the sensitivity to wind stress and the structural support provided by neighboring tillers.
 
+.. note:: 
+   **Resolution** To capture fine-scale spatial dynamics, such as clonal expansion, these vegetation metrics and their subsequent developmental processes are resolved on an automatically generated higher-resolution sub-grid (:math:`\Delta x \leq 1` m). The resolution increase can be set using the ``veg_res_factor``. To prevent excessive computational demand, the timestepping for the vegetation module specifically can be adjusted using ``dt_veg``.
+
+.. tip:: 
+   **Cover definitions** Because the two methods define vegetation metrics differently, their values differ significantly. For example, a mature canopy (:math:`h_{\text{veg}} = 1.0` m) under the ``duran`` method would yield a basal cover of 1.0 (100%), while the ``grass`` method results in much smaller values (using 133 tillers/m² and a 0.005 m diameter: cover = ~0.0026). Despite this large difference in basal cover, both methods can produce an similar frontal area (:math:`\lambda_{\text{veg}} \approx 0.67`) if the ``duran`` method utilizes a shape factor of 1.5. Due to these underlying differences, shear reduction parameters must be re-calibrated depending on the chosen method.
+
 .. _vegetation-development:
 
 Vegetation Development
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-**Method** ``duran``
+Vegetation development defines how the plant canopy evolves over space and time. It simulates vertical growth, horizontal expansion, and plant mortality driven by sediment burial, erosion, and inundation.
 
-Vegetation growth and decay follow the model proposed by :cite:`DuranHerrmann2006`, modified to include an optimal burial rate :math:`\Delta z_{\text{b,opt}}` [:math:`\mathrm{m/yr}`] that shifts the peak of optimal growth:
+**Method:** ``duran``
+
+Vegetation growth and decay follow the model proposed by :cite:`DuranHerrmann2006`, modified to include an optimal burial rate :math:`\Delta z_{\text{b,opt}}` (``dzb_opt``) [:math:`\mathrm{m/yr}`] that shifts the peak of optimal growth:
 
 .. math::
    :label: changes_vegetation_height_duran
 
    \frac{\partial h_{\text{veg}}}{\partial t} = V_{\text{ver}} \left(1 - \frac{h_{\text{veg}}}{H_{\text{veg}}}\right) - \gamma_{\text{veg}} \left| \Delta z_{\text{burial}} - \Delta z_{\text{b,opt}} \right|
 
-Here, :math:`\gamma_{\text{veg}}` (``veg_gamma``, default = 1) [:math:`\mathrm{-}`] accounts for the impact of sediment burial. :math:`V_{\text{ver}}` (``V_ver``) is the maximum vertical growth rate [:math:`\mathrm{m/yr}`], while the sediment burial rate :math:`\Delta z_{\text{burial}}` [:math:`\mathrm{m/yr}`] is determined as the bed level change averaged over a trailing time window (default is one day) to prevent vegetation from overreacting to instantaneous bed level fluctuations. 
+Here, :math:`\gamma_{\text{veg}}` (``veg_gamma``, default = 1) [:math:`\mathrm{-}`] accounts for the plant's sensitivity to sediment burial. :math:`V_{\text{ver}}` (``V_ver``) is the intrinsic vertical growth rate [:math:`\mathrm{m/yr}`], while the sediment burial rate :math:`\Delta z_{\text{burial}}` [:math:`\mathrm{m/yr}`] is determined as the bed level change averaged over a trailing time window to prevent vegetation from overreacting to instantaneous bed level fluctuations. The optimal burial rate enables the simulation of species that thrive under deposition rather than erosion. For reference, :cite:`Nolet2018` found this optimal value to be around 0.31 m/year for marram grass, with a burying tolerance spanning 0.78 to 0.96 m/year. 
 
-The optimal burial rate for maximum vegetation growth for marram grass is around 0.31 m/year with a burying tolerance of 0.78 to 0.96 m burial/year :cite:`Nolet2018`. Vegetation can begin to grow through lateral propagation or random germination handled on a cell-by-cell basis using a probabilistic approach similar to :cite:`Keijsers2016`.
+New vegetation establishes through either random germination or lateral propagation, handled on a cell-by-cell basis using a probabilistic approach :cite:`Keijsers2016`. Germination describes the random emergence of vegetation in any bare cell within the domain, controlled by an annual germination probability (``germinate``, e.g., 0.05). Lateral expansion operates similarly but restricts new establishment exclusively to cells adjacent to existing vegetation (``lateral``, e.g., 0.2).
 
 .. tip:: 
-   Meaning of these variables: An intrinsic vertical growth rate of :math:`V_{\text{ver}} = 4` m/year does not mean the vegetation will be 4 meters high after 1 year, as growth follows a logistic curve that slows as it reaches :math:`H_{\text{veg}}`.
+   **Interpreting growth rates:** The intrinsic vertical growth rate :math:`V_{\text{ver}}` represents the maximum potential growth under optimal conditions, not the actual annual increase in canopy height. For example, an individual shoot growing at 1 cm/day translates to an intrinsic rate of roughly 4 m/yr. However, the modeled patch-averaged height will increase at a substantially slower rate. This occurs due to the logistic growth curve (which slows down as the plant approaches :math:`H_{\text{veg}}`), suboptimal burial conditions, and the continuous spatial emergence of shorter, newly established vegetation.
 
 **Method** ``grass`` 
 
-Vegetation development is simulated through two completely decoupled processes: vertical tiller growth and horizontal tiller establishment (:ref:`vid-vegetation-development`).
+In the new framework, vegetation development is simulated through two completely decoupled processes: vertical tiller growth and horizontal tiller establishment (:ref:`vid-vegetation-development`).
 
 .. _vid-vegetation-development:
 
