@@ -6,71 +6,103 @@
 Welcome to AeoLiS's Documentation
 ==================================
 
-.. raw:: html
+This documentation describes the Python implementation of the AeoLiS. AeoLiS is an aeolian sediment transport and landform evolution model that is designed to account for sediment-supply-limiting factors in coastal environments. The source code of the Python implementation can be found in `GitHub <https://github.com/openearth/aeolis-python>`_.
 
-   <div style="overflow: hidden;">
-      <iframe src="https://www.youtube.com/embed/dHr2NlGkSE4?&autoplay=1"  width="100%" height="315" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; web-share"></iframe>
-   </div>
+The code is developed and maintained by a developer group that consists of members from Deltares, U.S. Army Engineer Research and Development Center (ERDC), Delft University of Technology, Oregon State University, and Lund University. We encourage contributions from the community. If you are interested in contributing to the code, please read the :ref:`developer documentation <quickstart>`.
 
--------
+.. _fig-developer-group:
 
-AeoLiS is a process-based model for simulating aeolian sediment transport in situations where supply-limiting factors are important,
-like in coastal environments. Supply-limitations currently supported are soil moisture contents, sediment sorting and armouring, bed slope effects, air humidity and roughness elements.
+.. figure:: images/aeolis_developer_group.jpg
+   :alt: Aeolis developer group
+   :width: 550px
+   :align: center
+   
+   AeoLiS developer group
 
-This documentation describes the Python implementation of the AeoLiS
-model. The source code of the Python implementation can be found in `GitHub <https://github.com/openearth/aeolis-python>`_.
+Contact
+=======
+If you have questions about the model that is of interest to the community, please post your question in the  `discussion forum <https://github.com/openearth/aeolis-python/discussions>`_.
 
-Contents
---------
-
-.. toctree::
-   :caption: User Documentation
-   :maxdepth: 2
-
-   user/installation
-   user/whatsnew
-   user/model
-   user/implementation
-   user/defaults
-   user/inputfiles
-   user/output
-   user/sourcecode
-   user/bibliography
-
-.. toctree::
-   :caption: Tutorials
-   :maxdepth: 2
-
-   tutorials/sandmotor
-   tutorials/2D-parabolic
-
-.. toctree::
-   :caption: Developer Documentation
-   :maxdepth: 2
-
-   developer/quickstart
-   developer/testing-introduction
-   developer/unit-testing
-
-.. toctree::
-   :caption: Current Development
-   :maxdepth: 2
-
-   developer/modularity
-   developer/domain-decomposition
-
+- Bart van Westen (Bart.vanWesten@deltares.nl) at Deltares
+- Nick Cohn (nicholas.t.cohn@usace.army.mil) at U.S. Army Engineer Research and Development Center (ERDC)
+- Sierd de Vries (Sierd.deVries@tudelft.nl) (founder) at Delft University of Technology
+- Christa van IJzendoorn (c.o.vanijzendoorn@uu.nl) at Utrecht University
+- Caroline Hallin (caroline.hallin@tvrl.lth.se) at Lund University
+- Glenn Strypsteen (glenn.strypsteen@kuleuven.be) at Katholieke Universiteit Leuven
+- Selwyn Heminway (heminwas@oregonstate.edu) at Oregon State University
 
 Acknowledgements
 ================
 
 * AeoLiS was initially developed at Delft University of Technology with support from the ERC-Advanced Grant 291206 Nearshore Monitoring and Modeling (`NEMO <http://nemo.citg.tudelft.nl>`_) and `Deltares <http://www.deltares.nl>`_.
-* AeoLiS is currently maintained by `Bart van Westen <Bart.vanWesten@deltares.nl>`_ at Deltares, `Nick Cohn <nick.cohn@usace.army.mil>`_ at U.S. Army Engineer Research and Development Center (ERDC) and `Sierd de Vries <Sierd.deVries@tudelft.nl>`_ at Delft University of Technology.
-* Further developement of AeoLiS is supported by the `Digital Competence Centre <https://dcc.tudelft.nl>`_, Delft University of Technology.
+* AeoLiS is currently maintained by `Bart van Westen <Bart.vanWesten@deltares.nl>`_ at Deltares, `Nick Cohn <nicholas.t.cohn@usace.army.mil>`_ at U.S. Army Engineer Research and Development Center (ERDC) and `Sierd de Vries <Sierd.deVries@tudelft.nl>`_ at Delft University of Technology.
+* Further development of AeoLiS is supported by the `Digital Competence Centre <https://dcc.tudelft.nl>`_, Delft University of Technology.
 
+.. list-table:: 
+   :widths: 50 50
+   :header-rows: 0
+   :class: borderless-table
 
-Indices and tables
-==================
+   * - .. video:: /images/01_blender_barchan.mp4
+          :autoplay:
+          :loop:
+          :muted:
+          :width: 100%
 
-* :ref:`genindex`
-* :ref:`search`
+     - .. video:: /images/02_blender_parabolic.mp4
+          :autoplay:
+          :loop:
+          :muted:
+          :width: 100%
+
+   * - .. video:: /images/03_blender_embryo.mp4
+          :autoplay:
+          :loop:
+          :muted:
+          :width: 100%
+
+     - .. video:: /images/04_blender_blowout.mp4
+          :autoplay:
+          :loop:
+          :muted:
+          :width: 100%
+
+Contents
+========
+
+.. toctree::
+   :caption: User Documentation
+   :maxdepth: 3
+
+   user/introduction
+   user/installation
+   user/model_description
+   user/model_setup
+   user/model_interaction
+   user/sourcecode
+   user/references
+   user/appendix
+
+.. toctree::
+   :caption: Tutorials and examples
+   :maxdepth: 3
+
+   tutorials/shortcourses
+   tutorials/demonstration_cases
+
+.. toctree::
+   :caption: Developer Documentation
+   :maxdepth: 3
+
+   developer/quickstart
+   developer/testing-introduction
+   developer/unit-testing
+   developer/whatsnew
+
+.. toctree::
+   :caption: Current Development
+   :maxdepth: 3
+
+   developer/modularity
+   developer/domain-decomposition
 

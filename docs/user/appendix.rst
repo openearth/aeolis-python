@@ -1,36 +1,13 @@
-Numerical implementation
-========================
+Appendix 
+=========
 
-The numerical implementation of the equations presented in
-:ref:`model` is explained here.  The implementation is available as
-Python package through the OpenEarth GitHub repository at:
-http://www.github.com/openearth/aeolis-python/
+Numerical details of solving the advection equation
+-----------------------------------------------------
 
-Advection equation
-------------------
 
-The advection equation is implemented in two-dimensional form
-following:
+.. _pieter_num:
 
-.. math::
-   :label: apx-advection
-   
-   \frac{\partial c}{\partial t} +
-   u_{z,\mathrm{x}} \frac{\partial c}{\partial x} + 
-   u_{z,\mathrm{y}} \frac{\partial c}{\partial y} = 
-   \frac{c_{\mathrm{sat}} - c}{T}
-
-in which :math:`c` [:math:`\mathrm{kg/m^2}`] is the sediment mass per
-unit area in the air, :math:`c_{\mathrm{sat}}` [:math:`\mathrm{kg/m^2}`] is the
-maximum sediment mass in the air that is reached in case of
-saturation, :math:`u_{z,\mathrm{x}}` and :math:`u_{z,\mathrm{y}}` are the x- and
-y-component of the wind velocity at height :math:`z` [m], :math:`T` [s] is an
-adaptation time scale, :math:`t` [s] denotes time and :math:`x` [m] and :math:`y` [m]
-denote cross-shore and alongshore distances respectively.
-
-The formulation is discretized in different ways to allow for different types of simulations balancing accuracy vs. computational resources. The conservative method combined with an euler backward scheme (written by Prof. Rauwoens) is the current default for most simulations. Non-conservative methods end explicit Euler forward schemes are also available. 
-
-Default scheme -- Conservative Euler Backward Implicit
+Conservative Euler Backward Implicit (pieter solver)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The default numerical method assumes the advection scheme in a conservative form in combination with an euler backward scheme. This scheme is prepared to use a TVD method but this is not implemented yet (add footnote{Total Variance Diminishing, this is explained in the lecture notes by Zijlema p94}) 
@@ -244,159 +221,11 @@ Also, the pickup per grid cell can be calculated using:
 
 note that this is only valid when using an Euler backward scheme. 
 
-Solving the Linear System of Equations
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The linear system of equations can be elaborated :
+.. _trunk_num:
 
-.. math::
-  :label: apx-system
-  
-  \left[
-    \begin{array}{cccccc}
-      A^0_1      & A^{1}_1    & \textbf{0} & \cdots       & \textbf{0}    & A^{n_{\mathrm{y}}+1}_1 \\
-      A^{-1}_2   & A^0_2      & \ddots     & \ddots       &               & \textbf{0} \\
-      \textbf{0} & \ddots     & \ddots     & \ddots       & \ddots        & \vdots     \\
-      \vdots     & \ddots     & \ddots     & \ddots       & \ddots        & \textbf{0} \\
-      \textbf{0} &            & \ddots     & \ddots       & A^0_{n_{\mathrm{y}}}      & A^1_{n_{\mathrm{y}}}   \\
-      A^{-n_{\mathrm{y}}-1}_{n_{\mathrm{y}}+1} & \textbf{0} & \cdots     & \textbf{0}   & A^{-1}_{n_{\mathrm{y}}+1} & A^0_{n_{\mathrm{y}}+1} \\
-    \end{array}
-  \right] \left[
-    \begin{array}{c}
-      \vec{\delta c}_1 \\ \vec{\delta c}_2 \\ \vdots \\ \vdots \\ \vec{\delta c}_{n_{\mathrm{y}}} \\ \vec{\delta c}_{n_{\mathrm{y}}+1} \\
-    \end{array} 
-  \right] = \left[ 
-    \begin{array}{c}
-      \vec{y}_1 \\ \vec{y}_2 \\ \vdots \\ \vdots \\ \vec{y}_{n_{\mathrm{y}}} \\ \vec{y}_{n_{\mathrm{y}}+1} \\
-    \end{array} 
-  \right]
-    
-where each item in the matrix is again a matrix :math:`A^l_j` and
-each item in the vectors is again a vector :math:`\vec{\delta c}_j` and
-:math:`\vec{y}_j` respectively. The form of the matrix :math:`A^l_j` depends on
-the diagonal index :math:`l` and reads:
-
-.. math::
-  :label: apx-diagonal
-   
-  A^0_j = 
-  \left[
-    \begin{array}{ccccccc}
-      0              & 0               & 0                & 0
-      & \cdots           & \cdots           & 0                 \\
-      a^{0,-1}_{2,j} & a^{0,0}_{2,j}    & a^{0,1}_{2,j}    & \ddots
-      &                  &                  & \vdots            \\
-      0              & a^{0,-1}_{3,j}   & a^{0,0}_{3,j}    & a^{0,1}_{3,j}
-      & \ddots           &                  & \vdots            \\
-      \vdots         & \ddots           & \ddots           & \ddots
-      & \ddots           & \ddots           & \vdots            \\
-      \vdots         &                  & \ddots           & a^{0,-1}_{n_{\mathrm{x}}-1,j}
-      & a^{0,0}_{n_{\mathrm{x}}-1,j} & a^{0,1}_{n_{\mathrm{x}}-1,j} & 0                 \\
-      \vdots         &                  &                  & 0
-      & a^{0,-1}_{n_{\mathrm{x}},j}  & a^{0,0}_{n_{\mathrm{x}},j}   & a^{0,1}_{n_{\mathrm{x}},j}    \\
-      0              & \cdots           & \cdots           & 0
-      & 1                & -2               & 1                 \\
-    \end{array}
-  \right]
-
-for :math:`l = 0` and 
-
-.. math::
-  :label: apx-offdiagonal
-   
-  A^l_j = 
-  \left[
-    \begin{array}{ccccccc}
-      1               & 0                & \cdots           & \cdots
-      & \cdots           & \cdots           & 0                 \\
-      0               & a^{l,0}_{2,j}    & \ddots           &
-      &                  &                  & \vdots            \\
-      \vdots          & \ddots           & a^{l,0}_{3,j}    & \ddots
-      &                  &                  & \vdots            \\
-      \vdots          &                  & \ddots           & \ddots
-      & \ddots           &                  & \vdots            \\
-      \vdots          &                  &                  & \ddots
-      & a^{l,0}_{n_{\mathrm{x}}-1,j} & \ddots           & \vdots            \\
-      \vdots          &                  &                  &
-      & \ddots           & a^{l,0}_{n_{\mathrm{x}},j}   & 0                 \\
-      0               & \cdots           & \cdots           & \cdots  
-      & \cdots           & 0                & 1                 \\
-    \end{array}
-  \right]
-
-for :math:`l \neq 0`. The vectors :math:`\vec{\delta c}_{j,k}` and :math:`\vec{y}_{j,k}`
-read:
-
-.. math::
-  :label: c-array
-
-  \begin{array}{rclrcl}
-    \vec{\delta c}_{j,k} &=& \left[ 
-      \begin{array}{c}
-        \delta c^{n+1}_{1,j,k} \\
-        \delta c^{n+1}_{2,j,k} \\
-        \delta c^{n+1}_{3,j,k} \\
-        \vdots \\
-        \delta c^{n+1}_{n_{\mathrm{x}}-1,j,k} \\
-        \delta c^{n+1}_{n_{\mathrm{x}},j,k} \\
-        \delta c^{n+1}_{n_{\mathrm{x}}+1,j,k} \\
-    \end{array}
-    \right] & ~ \mathrm{and} ~
-    \vec{y}_{j,k} &=& \left[ 
-      \begin{array}{c}
-        0 \\
-        y^n_{2,j,k} \\
-        y^n_{3,j,k} \\
-        \vdots \\
-        y^n_{n_{\mathrm{x}}-1,j,k} \\
-        y^n_{n_{\mathrm{x}},j,k} \\
-        0 \\
-      \end{array}
-    \right] \\
-    \end{array}
-
-:math:`n_{\mathrm{x}}` and :math:`n_{\mathrm{y}}` denote the number of
-spatial grid cells in x- and y-direction.
-
-Iterations to solve for multiple fractions
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The linear system defined in Equation :eq:`apx-system` is solved by a
-sparse matrix solver for each sediment fraction separately in
-ascending order of grain size. Initially, the weights
-:math:`\hat{w}^{n+1}_{i,j,k}` are chosen according to the grain size
-distribution in the bed and the air. The sediment availability
-constraint is checked after each solve:
-
-.. math::
-  :label: solve
-
-     m_{\mathrm{a}} \geq \frac{\hat{w}^{n+1}_{i,j,k} c^{n+1}_{\mathrm{sat},i,j,k} - c^{n+1}_{i,j,k}}{T} \Delta t^n
-
-If the constraint if violated, a new estimate for the weights
-is back-calculated following:
-
-.. math::
-  :label: solve-weights
-
-  \hat{w}^{n+1}_{i,j,k} = \frac{ c^{n+1}_{i,j,k} + m_{\mathrm{a}} \frac{T}{\Delta t^n} }{c^{n+1}_{\mathrm{sat},i,j,k}}
-
-The system is solved again using the new weights. This
-procedure is repeated until a weight is found that does not violate
-the sediment availability constraint. If the time step is not too
-large, the procedure typically converges in only a few
-iterations. Finally, the weights of the larger grains are increased
-proportionally as to ensure that the sum of all weights remains
-unity. If no larger grains are defined, not enough sediment is
-available for transport and the grid cell is truly
-availability-limited. This situation should only occur occasionally as
-the weights in the next time step are computed based on the new bed
-composition and thus will be skewed towards the large fractions. If
-the situation occurs regularly, the time step is chosen too large
-compared to the rate of armoring.
-
-Euler Schemes in non-conservative form
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Euler Schemes in non-conservative form (trunk solver)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Early model results relied on Euler schemes in a non conservative form. This allowed for a relatively easy implementation but did not guarantee mass conservation. In version 2 of AEOLIS the conservative form became the default. However, some users still use the older scheme.
 
@@ -637,100 +466,155 @@ boundaries are circular:
     c^{n+1}_{i,n_{\mathrm{y}}+1,k} &=& c^{n+1}_{i,1,k} \\
   \end{array}
 
-Shear stress perturbation for non-perpendicular wind directions
----------------------------------------------------------------
 
-The shear stress perturbation 𝛿𝜏 is estimated following the analytical description of the influence of alow and smooth hill in the wind profile by Weng et al. (1991). The perturbation is given by the Fouriertransformed components of the shear stress perturbation in the unperturbed wind direction which are the functions 𝛿𝜏𝑥(𝑘) and 𝛿𝜏𝑦(𝑘). The x-direction is defined by the direction of the wind velocity 𝑣0 on a flat bed, while the y direction is then the transverse.
+Solving the Linear System of Equations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-As a result, the perturbation theory can only estimate the shear stress induced by the morphology-wind interaction in parallel direction of wind. Therefore, model simulations were, up to now, limited to input wind directions parallel to the cross­shore axis of the grid.
-
-To overcome this limitation and to allow for modelling directional winds, an overlaying computational grid is introduced in AeoLiS, which rotates with the changing wind direction per time step. By doing this, the shear stresses are always estimated in the positive x-direction of the computational grid. The following steps are executed for each time step:
-
-1. Create a computational grid alligned with the wind direction (set_computational_grid)
-2. Add and fill buffer around the original grid
-3. Populate computation grid by rotating it to the current wind direction and interpolate the original topography on it. Additionally, edges around 
-4. Compute the morphology-wind induced shear stress by using the perturbation theory
-5. Add the only wind induced wind shear stresses to the computational grid
-6. Rotate both the grids and the total shear stress results in opposite direction
-7. Interpolate the total shear stress results from the computational grid to the original grid
-8. Rotate the wind shear stress results and the original grid back to the original orientation
-
-.. note:: 
-   The extra rotations in the last two steps are necessary as a simplified, but faster in terms of computational time, interpolation method is used.
-
-
-Boussinesq groundwater equation
--------------------------------
-The Boussinesq equation is solved numerically with a central finite difference 
-method in space and a fourth-order Runge-Kutta integration technique in time:
+The linear system of equations can be elaborated :
 
 .. math::
-  :label: solve-boussinesq
-
-       f(\eta ) = \frac{K}{{{n_e}}}\left[ {D\underbrace {\frac{{{\partial ^2}\eta }}{{\partial {x^2}}}}_a + \underbrace {\frac{\partial }{{\partial x}}\underbrace {\left\{ {\eta \frac{{\partial \eta }}{{\partial x}}} \right\}}_b}_c} \right]
-
-The Runge-Kutta time-stepping, where :math:`\Delta t` is the length of the timestep, is defined as,
-
-.. math::
-  :label: runge-kutta
+  :label: apx-system
   
-  \begin{gathered}
-  \eta _i^{t + 1} = \eta _i^t + \frac{{\Delta t}}{6}\left( {{f_1} + 2{f_2} + 2{f_3} + {f_4}} \right) \hfill \\
-  {f_1} = f(\eta _i^t) \hfill \\
-  {f_2} = f\left( {\eta _i^t + \frac{{\Delta t}}{2}{f_1}} \right) \hfill \\
-  {f_3} = f\left( {\eta _i^t + \frac{{\Delta t}}{2}{f_2}} \right) \hfill \\
-  {f_4} = f\left( {\eta _i^t + \Delta t{f_3}} \right) \hfill \\ 
-  \end{gathered}
-
-where, :math:`i` is the grid cell in x-direction and :math:`t` is the timestep. The central difference solution to :math:`f(\eta)` is obtained through discretisation of the Boussinesq equation,
+  \left[
+    \begin{array}{cccccc}
+      A^0_1      & A^{1}_1    & \textbf{0} & \cdots       & \textbf{0}    & A^{n_{\mathrm{y}}+1}_1 \\
+      A^{-1}_2   & A^0_2      & \ddots     & \ddots       &               & \textbf{0} \\
+      \textbf{0} & \ddots     & \ddots     & \ddots       & \ddots        & \vdots     \\
+      \vdots     & \ddots     & \ddots     & \ddots       & \ddots        & \textbf{0} \\
+      \textbf{0} &            & \ddots     & \ddots       & A^0_{n_{\mathrm{y}}}      & A^1_{n_{\mathrm{y}}}   \\
+      A^{-n_{\mathrm{y}}-1}_{n_{\mathrm{y}}+1} & \textbf{0} & \cdots     & \textbf{0}   & A^{-1}_{n_{\mathrm{y}}+1} & A^0_{n_{\mathrm{y}}+1} \\
+    \end{array}
+  \right] \left[
+    \begin{array}{c}
+      \vec{\delta c}_1 \\ \vec{\delta c}_2 \\ \vdots \\ \vdots \\ \vec{\delta c}_{n_{\mathrm{y}}} \\ \vec{\delta c}_{n_{\mathrm{y}}+1} \\
+    \end{array} 
+  \right] = \left[ 
+    \begin{array}{c}
+      \vec{y}_1 \\ \vec{y}_2 \\ \vdots \\ \vdots \\ \vec{y}_{n_{\mathrm{y}}} \\ \vec{y}_{n_{\mathrm{y}}+1} \\
+    \end{array} 
+  \right]
+    
+where each item in the matrix is again a matrix :math:`A^l_j` and
+each item in the vectors is again a vector :math:`\vec{\delta c}_j` and
+:math:`\vec{y}_j` respectively. The form of the matrix :math:`A^l_j` depends on
+the diagonal index :math:`l` and reads:
 
 .. math::
-  :label: a-solve
-  
-   {a_i} = \frac{{\eta _{i + 1}^{} - 2\eta _i^{} + \eta _{i - 1}^{}}}{{{{(\Delta x)}^2}}}
+  :label: apx-diagonal
+   
+  A^0_j = 
+  \left[
+    \begin{array}{ccccccc}
+      0              & 0               & 0                & 0
+      & \cdots           & \cdots           & 0                 \\
+      a^{0,-1}_{2,j} & a^{0,0}_{2,j}    & a^{0,1}_{2,j}    & \ddots
+      &                  &                  & \vdots            \\
+      0              & a^{0,-1}_{3,j}   & a^{0,0}_{3,j}    & a^{0,1}_{3,j}
+      & \ddots           &                  & \vdots            \\
+      \vdots         & \ddots           & \ddots           & \ddots
+      & \ddots           & \ddots           & \vdots            \\
+      \vdots         &                  & \ddots           & a^{0,-1}_{n_{\mathrm{x}}-1,j}
+      & a^{0,0}_{n_{\mathrm{x}}-1,j} & a^{0,1}_{n_{\mathrm{x}}-1,j} & 0                 \\
+      \vdots         &                  &                  & 0
+      & a^{0,-1}_{n_{\mathrm{x}},j}  & a^{0,0}_{n_{\mathrm{x}},j}   & a^{0,1}_{n_{\mathrm{x}},j}    \\
+      0              & \cdots           & \cdots           & 0
+      & 1                & -2               & 1                 \\
+    \end{array}
+  \right]
+
+for :math:`l = 0` and 
 
 .. math::
-      {b_i} = \frac{{\eta _i^{}\left( {\eta _{i + 1}^{} - \eta _{i - 1}^{}} \right)}}{{\Delta x}}
+  :label: apx-offdiagonal
+   
+  A^l_j = 
+  \left[
+    \begin{array}{ccccccc}
+      1               & 0                & \cdots           & \cdots
+      & \cdots           & \cdots           & 0                 \\
+      0               & a^{l,0}_{2,j}    & \ddots           &
+      &                  &                  & \vdots            \\
+      \vdots          & \ddots           & a^{l,0}_{3,j}    & \ddots
+      &                  &                  & \vdots            \\
+      \vdots          &                  & \ddots           & \ddots
+      & \ddots           &                  & \vdots            \\
+      \vdots          &                  &                  & \ddots
+      & a^{l,0}_{n_{\mathrm{x}}-1,j} & \ddots           & \vdots            \\
+      \vdots          &                  &                  &
+      & \ddots           & a^{l,0}_{n_{\mathrm{x}},j}   & 0                 \\
+      0               & \cdots           & \cdots           & \cdots  
+      & \cdots           & 0                & 1                 \\
+    \end{array}
+  \right]
+
+for :math:`l \neq 0`. The vectors :math:`\vec{\delta c}_{j,k}` and :math:`\vec{y}_{j,k}`
+read:
 
 .. math::
-      {c_i} = \frac{{\left( {b_{i + 1}^{} - b_{i - 1}^{}} \right)}}{{\Delta x}}
+  :label: c-array
 
-The seaward boundary condition is defined as the still water level plus the wave setup . 
-If the groundwater elevation is larger than the bed elevation, there is a seepage face, 
-and the groundwater elevation is set equal to the bed elevation. On the landward boundary, 
-a no-flow condition, :math:`\frac{{\partial \eta }}{{\partial t}} = 0` (Neumann condition), or constant head, :math:`\eta = constant` (Dirichlet condition), is prescribed.
+  \begin{array}{rclrcl}
+    \vec{\delta c}_{j,k} &=& \left[ 
+      \begin{array}{c}
+        \delta c^{n+1}_{1,j,k} \\
+        \delta c^{n+1}_{2,j,k} \\
+        \delta c^{n+1}_{3,j,k} \\
+        \vdots \\
+        \delta c^{n+1}_{n_{\mathrm{x}}-1,j,k} \\
+        \delta c^{n+1}_{n_{\mathrm{x}},j,k} \\
+        \delta c^{n+1}_{n_{\mathrm{x}}+1,j,k} \\
+    \end{array}
+    \right] & ~ \mathrm{and} ~
+    \vec{y}_{j,k} &=& \left[ 
+      \begin{array}{c}
+        0 \\
+        y^n_{2,j,k} \\
+        y^n_{3,j,k} \\
+        \vdots \\
+        y^n_{n_{\mathrm{x}}-1,j,k} \\
+        y^n_{n_{\mathrm{x}},j,k} \\
+        0 \\
+      \end{array}
+    \right] \\
+    \end{array}
 
+:math:`n_{\mathrm{x}}` and :math:`n_{\mathrm{y}}` denote the number of
+spatial grid cells in x- and y-direction.
 
-Basic Model Interface (BMI)
----------------------------
+Iterations to solve for multiple fractions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A Basic Model Interface (BMI, :cite:`Peckham2013`) is implemented
-that allows interaction with the model during run time. The model can
-be implemented as a library within a larger framework as the interface
-exposes the initialization, finalization and time stepping
-routines. As a convenience functionality the current implementation
-supports the specification of a callback function. The callback
-function is called at the start of each time step and can be used to
-exchange data with the model, e.g. update the topography from
-measurements.
+The linear system defined in Equation :eq:`apx-system` is solved by a
+sparse matrix solver for each sediment fraction separately in
+ascending order of grain size. Initially, the weights
+:math:`\hat{w}^{n+1}_{i,j,k}` are chosen according to the grain size
+distribution in the bed and the air. The sediment availability
+constraint is checked after each solve:
 
-An example of a callback function, that is referenced in the model
-input file or through the model command-line options as
-``callback.py:update``, is:
+.. math::
+  :label: solve
 
-.. code::
+     m_{\mathrm{a}} \geq \frac{\hat{w}^{n+1}_{i,j,k} c^{n+1}_{\mathrm{sat},i,j,k} - c^{n+1}_{i,j,k}}{T} \Delta t^n
 
-   import numpy as np
+If the constraint if violated, a new estimate for the weights
+is back-calculated following:
 
-   def update(model):
-     val = model.get_var('zb')
-     val_new = val.copy()
-     val_new[:,:] = np.loadtxt('measured_topography.txt')
-     model.set_var('zb', val_new)
+.. math::
+  :label: solve-weights
 
-.. .. rubric:: Bibliography
+  \hat{w}^{n+1}_{i,j,k} = \frac{ c^{n+1}_{i,j,k} + m_{\mathrm{a}} \frac{T}{\Delta t^n} }{c^{n+1}_{\mathrm{sat},i,j,k}}
 
-.. .. bibliography:: 
-..    :labelprefix: A
-..    :keyprefix: a-
+The system is solved again using the new weights. This
+procedure is repeated until a weight is found that does not violate
+the sediment availability constraint. If the time step is not too
+large, the procedure typically converges in only a few
+iterations. Finally, the weights of the larger grains are increased
+proportionally as to ensure that the sum of all weights remains
+unity. If no larger grains are defined, not enough sediment is
+available for transport and the grid cell is truly
+availability-limited. This situation should only occur occasionally as
+the weights in the next time step are computed based on the new bed
+composition and thus will be skewed towards the large fractions. If
+the situation occurs regularly, the time step is chosen too large
+compared to the rate of armoring.
 

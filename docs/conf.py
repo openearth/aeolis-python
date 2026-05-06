@@ -44,6 +44,8 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx_copybutton',
     'sphinxcontrib.bibtex',
+    'sphinx_rtd_theme',
+    'sphinxcontrib.video',
     # 'nbsphinx',
 ]
 
@@ -134,6 +136,11 @@ html_theme = 'sphinx_rtd_theme'
 # further.  For a list of options available for each theme, see the
 # documentation.
 #html_theme_options = {}
+html_theme_options = {
+    'collapse_navigation': True,  # Enable collapsing titles in the sidebar
+    'navigation_depth': 3,        # Adjust the depth of the navigation tree
+    'titles_only': False,         # Show only titles in the sidebar
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
@@ -157,7 +164,11 @@ html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-# html_static_path = ['_static']
+html_static_path = ['_static']
+
+html_css_files = [
+    'custom.css',
+]
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied

@@ -1,0 +1,120 @@
+.. _introduction:
+
+Introduction
+============
+AeoLiS is a process-based model for simulating aeolian sediment transport and morphological evolution in situations where supply-limiting factors are important,
+like in coastal environments. Supply-limitations currently supported are soil moisture contents, sediment sorting and armouring, bed slope effects, air humidity and roughness elements. AeoLiS includes a dynamic vegetation module that simulates the interaction between sediment transport and vegetation dynamics that allow for aeolian landform simulations.
+
+Model overview
+--------------
+
+.. _fig-aeolis-overview:
+
+.. raw:: html
+
+    <div style="text-align: center; margin-bottom: 20px;">
+        <img src="../_static/aeolis_overview.png" usemap="#image-map" style="max-width: 900px; width: 100%; height: auto;">
+        
+        <map name="image-map">
+            <area target="_blank" alt="Avalanching" title="Avalanching" href="https://aeolis.readthedocs.io/en/update_documentation/_modules/avalanching.html#avalanche" coords="1728,6796,2846,6942" shape="rect">
+        </map>
+        
+        <p style="font-style: italic; margin-top: 10px;">
+            Overview of the AeoLiS model - Model structure and the simulated processes.
+        </p>
+    </div>
+
+..
+    Applicability and limitations
+    -----------------------------
+
+AeoLiS publications
+----------------------
+2026
+^^^^
+Kelley, M. M., Sankey, J. B., Cohn, N., East, A., Kasprak, A., Fairley, H., Caster, J., & van Westen, B. (in prep.). First application of AeoLiS to model fluvial-aeolian morphodynamics. Manuscript prepared for Geophysical Research Letters (GRL)
+
+Heminway, S. S., Cohn, N. T., van IJzendoorn, C., Ruggiero, P., Wengrove, M. E., Hacker, S. D., Whalen, D., Weiner, H., & Kaminsky, G. M. (2026). Comparing process-based and reduced complexity dune evolution models: A case study of Long Beach, WA, USA. In C. Coelho, C. Hallin, F. Sancho, & P. A. Silva (Eds.), Coastal Dynamics 2025 (Coastal Research Library, Vol. 41). Springer, Cham. https://doi.org/10.1007/978-3-032-15473-6_27
+
+Burvingt, O., Lerma, A. N., & Castelle, B. (2026). Observations and modelling of coastal dune dynamics along the Gironde coast, France. In C. Coelho, C. Hallin, F. Sancho, & P. A. Silva (Eds.), Coastal Dynamics 2025 (Coastal Research Library, Vol. 41). Springer, Cham. https://doi.org/10.1007/978-3-032-15473-6_22
+
+2025
+^^^^
+de Vries, S., van Westen, B., Hallin, C., Strypsteen, G., van IJzendoorn, C., & Cohn, N. (2025). AEOLIS: Modelling aeolian sediment transport processes for predicting dune development and NbS design. Coastal Engineering Proceedings, (38), sediment.69. https://doi.org/10.9753/icce.v38.sediment.69
+
+2024
+^^^^
+Laporte-Fauret, Q., Wengrove, M., Ruggiero, P., Hacker, S. D., Cohn, N., Zarnetske, P. L., & Piercy, C. D. (2024). A new approach to account for species-specific sand capture by plants in an aeolian sediment transport and coastal dune building model. Journal of Geophysical Research: Earth Surface, 129(12). https://doi.org/10.1029/2024JF007867
+
+van Westen, B., De Vries, S., Cohn, N., Van IJzendoorn, C., Strypsteen, G., Hallin, C. (2024). AeoLiS: Numerical modelling of coastal dunes and aeolian landform development for real-world applications, Environmental Modelling & Software, 179, 106093, Doi: https://doi.org/10.1016/j.envsoft.2024.106093.
+
+Strypsteen, G., de Vries, S., van Westen, B., Bonte, D., Homberger, J.-M., Hallin, C., & Rauwoens, P. (2024). Vertical growth rate of planted vegetation controls dune growth on a sandy beach. Coastal Engineering, 194, 104624. https://doi.org/10.1016/j.coastaleng.2024.104624
+
+Heminway, S.S., Cohn, N., Davis, E.H., White, A., Hein, C.J., Zinnert, J.C., 2024. Exploring Ecological, Morphological, and Environmental Controls on Coastal Foredune Evolution at Annual Scales Using a Process-Based Model. Sustainability, 16, 3460. https://doi.org/10.3390/su16083460
+
+Orie, C., Cohn, N., Farthing, M., Dutta, S., Trautz, A., 2024. Examination of Analytical Shear Stress Predictions for Coastal Dune Evolution. EGUsphere, https://doi.org/10.5194/egusphere-2024-855. Preprint under review for ESurf
+
+van Westen, B., Luijendijk, A.P., de Vries, S., Cohn, N., Leijnse, T.W., de Schipper, M.A., 2024. Predicting marine and aeolian contributions to the sand engine’s evolution using coupled modelling. Coast. Eng. 188, 104444.
+
+McFall, B.C., Young, D.L., Whitmeyer, S.J., Buscombe, D., Cohn, N., Stasiewicz, J.B., Skaden, J.E., Walker, B.M., Stever, S.N., 2024. SandSnap: Measuring and mapping beach grain size using crowd-sourced smartphone images, Coastal Engineering, Volume 192, 104554, https://doi.org/10.1016/j.coastaleng.2024.104554.
+
+2023
+^^^^
+Dickey, J., Wengrove, M., Cohn, N., Ruggiero, P. & Hacker, S.D., 2023. Observations and modeling of shear stress reduction and sediment flux within sparse dune grass canopies on managed coastal dunes. Earth Surface Processes and Landforms, 48(5), 907–922. Available from: https://doi.org/10.1002/esp.5526
+
+Hallin, C., van IJzendoorn, C., Homberger, J.M., de Vries, S., 2023. Simulating surface soil moisture on sandy beaches. Coast. Eng. 185, 104376.
+
+Hallin, C., van IJzendoorn, C., Skaden, J., de Vries, S., 2023. Evaluation of threshold-based models to account for surface moisture in meso-scale aeolian sediment transport simulations. In: The Proceedings of the Coastal Sediments Conference. pp. 670–683.
+
+Heminway, S.S., Davis, E.H., Cohn, N., Skaden, J., Anderson, D., Hein, C.J., 2023. Modeled Changes in Foredune Morphology Influenced by Variable Storm Intensity and Sea-Level Rise. In Proceedings of the Coastal Sediments 2023; World Scientific: New Orleans, LA, USA, April 2023; pp. 684–697.
+
+Hovenga, P., Ruggiero, P., Itzkin, M., Jay, K.R., Moore, L., Hacker, H.D., 2023. Quantifying the relative influence of coastal foredune growth factors on the U.S. Mid-Atlantic Coast using field observations and the process-based numerical model Windsurf, Coastal Engineering, Volume 181, 104272, https://doi.org/10.1016/j.coastaleng.2022.104272.
+
+Skaden, J., Cohn, N., Goldstein, E., Dickhudt, P., Conery, I., Buscombe, D., 2023. Impact of alongshore and cross-shore variability in surface grain size on sediment supply to dunes. In Coastal Sediments 2023: The Proceedings of the Coastal Sediments 2023 (pp. 720-731).
+
+van IJzendoorn, C.O., Hallin, C., Reniers, A.J.H.M., de Vries, S., 2023. Modeling multi-fraction coastal aeolian sediment transport with horizontal and vertical grain-size variability. J. Geophys. Res: Earth Surf. 128 (7), e2023JF007155.
+
+van Westen, B., Leijnse, T., de Schipper, M., Cohn, N., & Luijendijk, A. (2023). Integrated modelling of coastal landforms. In Coastal Sediments 2023: The Proceedings of the Coastal Sediments 2023 (pp. 760-771).
+
+Zhu, L., Chen, Q., Cohn, N., Johnson, C., Johnson, B., 2023. Modeling long-term evolution of a beach-dune system: Caminada Headlands, Louisiana. In Coastal Sediments 2023: The Proceedings of the Coastal Sediments 2023 (pp. 782-796).
+
+2022
+^^^^
+Itzkin, M., Moore, L.J., Ruggiero, P., Hovenga, P.A., Hacker, S.D., 2022. Combining process-based and data-driven approaches to forecast beach and dune change, Environmental Modelling & Software, Volume 153, 105404, ISSN 1364-8152, https://doi.org/10.1016/j.envsoft.2022.105404.
+
+2019
+^^^^
+Cohn, N., Brodie, K., Ruggiero, P., van Westen, B, de Vries, S., 2019. Coastal inlet infilling from aeolian sediment transport. In Coastal Sediments 2019: Proceedings of the 9th International Conference, pp. 1212-1225.
+
+Cohn, N., Hoonhout, B.M., Goldstein, E.B., De Vries, S., Moore, L.J., Durán Vinent, O., Ruggiero, P., 2019 Exploring Marine and Aeolian Controls on Coastal Foredune Growth Using a Coupled Numerical Model. J. Mar. Sci. Eng., 7, 13. https://doi.org/10.3390/jmse7010013
+
+Hoonhout, B., de Vries, S., 2019. Simulating spatiotemporal aeolian sediment supply at a mega nourishment. Coast. Eng. 145, 21–35.
+
+Ruggiero, P., Cohn, N., Hoonhout, B., Goldstein, E., de Vries, S., Moore, L., Hacker, S. and Vinent, O.D., 2019. Simulating dune evolution on managed coastlines: Exploring management options with the Coastal Recovery from Storms Tool (CReST). Shore & Beach, 87(2), p.36.
+
+2018
+^^^^
+Wittebrood, M., de Vries, S., Goessen, P., Aarninkhof, S., 2018. Aeolian sediment transport at a man-made dune system; building with nature at the hondsbossche dunes. Coast. Eng. Proceedings (36), 83.
+
+2017
+^^^^
+Hoonhout, B., de Vries, S., 2017. Aeolian sediment supply at a mega nourishment. Coast. Eng. 123, 11–20.
+
+2016
+^^^^
+Hoonhout, B.M., de Vries, S., 2016. A process-based model for aeolian sediment transport and spatiotemporal varying sediment availability. J. Geophys. Res: Earth Surf. 121 (8), 1555–1575.
+
+2014
+^^^^
+de Vries, S., de Vries, J.v.T., Van Rijn, L., Arens, S., 2014. Aeolian sediment transport in supply limited situations. Aeolian Res. 12, 75–85.
+
+
+Student theses
+--------------
+Meijer, L.M., 2020. Numerical Modelling of Aeolian Sediment Transport, Vegetation Growth and Blowout Formation in Coastal Dunes. MSc Thesis, Delft University of Technology.
+
+Pak, T. 2019 Marine and aeolian sediment transport at the Hondsbossche Dunes. MSc Thesis, Delft University of Technology.
+
+van Manen, M. 2023. Numerical Modeling of Constructed Foredune Blowouts in the Dutch Dunes. MSc Thesis, Delft University of Technology.
+
+van Westen, B. 2018. Numerical modelling of aeolian coastal landform development. Master’s thesis, Delft University of Technology.
