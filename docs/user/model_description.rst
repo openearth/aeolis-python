@@ -1143,43 +1143,112 @@ Here, :math:`c_1` [:math:`\mathrm{-}`] is a dimensionless calibration constant c
 Computing bed-interaction (zeta) over vegetation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-**Method** ``duran``
+Aeolian transport models typically assume that local conditions at the bed dictate the sediment transport capacity for the entire air column above it. Consequently, if a vegetation patch reduces the wind shear at the surface, these models force all airborne sediment to deposit instantly at the leading edge. In reality, sediment transport is vertically stratified. While sediment moving near the bed or trapped within a canopy experiences strong drag, sediment suspended higher up could retain its momentum and "skim" over the vegetation, shifting deposition further downwind. 
 
-In the standard advection scheme, the model implicitly assumes that local bed properties dictate the saturation concentration for the entire transport column. Therefore, the bed-interaction factor :math:`\zeta` [:math:`\mathrm{-}`] is essentially assumed to be 1, meaning any reduction in shear stress due to vegetation immediately forces the entire sediment flux to deposit.
+To capture this skimming behavior, AeoLiS calculates a dimensionless bed-interaction factor, :math:`\zeta`, which determines exactly how much of the sediment flux actively interacts with the surface versus bypassing it. For context, recall the advection scheme, where net entrainment is driven by the balance between the instantaneous concentration :math:`c` and the saturation concentration :math:`c_{\mathrm{sat}}`:
 
-**Method** ``grass``
+.. math::
+   :label: advection_context
 
-To capture realistic "skimming" flows over dense grass canopies, the new framework divides the saturation concentration :math:`c_{\text{sat}}` into two distinct modes (:ref:`fig-vegetation-sediment-transport`):
+   \frac{\partial c}{\partial t} + u_{\mathrm{sed}} \frac{\partial c}{\partial x} = \frac{c_{\mathrm{sat}} - c}{T}
 
-1. **Bed-affected transport (**:math:`c_{\text{sat,bed}}`**):** Sediment directly interacting with the canopy and restricted by local drag reduction.
-2. **Airborne transport (**:math:`c_{\text{sat,air}}`**):** Sediment elevated above the canopy, responding to the free-stream wind and bypassing the vegetation.
+**Method:** ``duran``
+
+In the standard approach, the model assumes that local bed properties dictate the saturation concentration for the entire transport column. Therefore, the bed-interaction factor :math:`\zeta` [:math:`\mathrm{-}`] is assumed to be 1. This means any reduction in shear stress due to vegetation immediately forces the entire sediment flux to deposit.
+
+**Method:** ``grass``
+
+To successfully simulate sediment skimming over dense grass canopies, the new framework divides the saturation concentration :math:`c_{\mathrm{sat}}` into two distinct modes (:ref:`fig-vegetation-sediment-transport`):
+
+1. **Bed-affected transport** (:math:`c_{\mathrm{sat,bed}}`): Sediment affected by conditions at the bed, including the canopy.
+2. **Airborne transport** (:math:`c_{\mathrm{sat,air}}`): Sediment elevated above the canopy, responding to the free-stream wind and bypassing the vegetation.
 
 .. _fig-vegetation-sediment-transport:
 
 .. figure:: /images/vegetation_sediment_aeolis.png
-   :width: 800px
+   :width: 900px
    :align: center
 
    Vertical transport distribution over bare sand, non-erodible layers, and varying vegetation canopies, illustrating the computation of the bed-interaction parameter :math:`\zeta`.
 
+The combined saturation concentration :math:`c_{\mathrm{sat}}` [:math:`\mathrm{kg/m^3}`] is computed as the weighted sum of these two modes:
 
-The combined saturation is computed via weighted sum: :math:`c_{\text{sat}} = w_{\text{air}} c_{\text{sat,air}} + w_{\text{bed}} c_{\text{sat,bed}}`. These dimensionless weights are controlled by the bed-interaction factor :math:`\zeta` (``zeta``) [:math:`\mathrm{-}`], which dictates the fraction of the flux actively interacting with the bed. 
+.. math::
+   :label: csat_combined
 
-To estimate :math:`\zeta` over vegetation, the model computes an uplifted vertical transport profile using a Weibull distribution:
+   c_{\mathrm{sat}} = w_{\mathrm{air}} c_{\mathrm{sat,air}} + w_{\mathrm{bed}} c_{\mathrm{sat,bed}}
+
+The dimensionless weights :math:`w_{\mathrm{air}}` and :math:`w_{\mathrm{bed}}` [:math:`\mathrm{-}`] are controlled by the bed-interaction factor :math:`\zeta` (``zeta``) [:math:`\mathrm{-}`], which defines the fraction of the flux actively interacting with the bed. The airborne weight scales with the actual sediment concentration :math:`c` relative to the airborne carrying capacity:
+
+.. math::
+   :label: csat_weights
+
+   w_{\mathrm{air}} = (1 - \zeta) \frac{c}{c_{\mathrm{sat,air}}}, \quad \quad w_{\mathrm{bed}} = 1 - w_{\mathrm{air}}
+
+This formulation simulates transport across different surfaces:
+
+* **Bare sediment surface** (:math:`\zeta = 1`): All transport is affected by bed conditions. Bare sand and inundated cells default to 1.
+* **Non-erodible surface** (:math:`\zeta = 0`): Transport is decoupled from the bed, allowing sediment to bypass the cell without depositing.
+* **Intermediate** (:math:`0 < \zeta < 1` ): The canopy intercepts a portion of the sediment flux, while the remainder skims over the top.
+
+To estimate :math:`\zeta` over vegetation, the model computes the fraction of sediment transport occurring below the effective tiller height :math:`h'_{\mathrm{veg}}`. A standard flat-bed exponential transport profile concentrates sediment near the bed using a decay length :math:`L_h` (where :math:`L_h = 2 u_*^2/g`):
+
+.. math::
+   :label: exp_transport
+
+   f(h) = \frac{1}{L_h} \exp\left(-\frac{h}{L_h}\right)
+
+Integrating this exponential profile over a canopy yields :math:`\zeta \approx 1`, failing to reproduce skimming. To reproduce detached, uplifted transport behavior, this is extended to a Weibull distribution:
 
 .. math::
    :label: weibull_transport
 
-   f(h) = \frac{k}{h_{\text{scale}}} \left(\frac{h}{h_{\text{scale}}}\right)^{k-1} \exp\left[-\left(\frac{h}{h_{\text{scale}}}\right)^k\right]
+   f(h) = \frac{k}{h_{\mathrm{scale}}} \left(\frac{h}{h_{\mathrm{scale}}}\right)^{k-1} \exp\left[-\left(\frac{h}{h_{\mathrm{scale}}}\right)^k\right]
 
-The extent of the vegetation-induced lift is determined by a lifting coefficient :math:`\alpha_{\text{lift}}` [:math:`\mathrm{-}`] that scales the effective tiller height to define the physical lift height :math:`h_{\text{lift}} = L_h + \alpha_{\text{lift}} h'_{\text{veg}}`. By integrating this profile up to the effective tiller height :math:`h'_{\text{veg}}`, the model calculates the raw trapped fraction :math:`\zeta_0`. Because sparse vegetation does not trigger full skimming, this is adjusted by relative tiller density (using parameter :math:`\theta_\zeta`):
+The extent of the vegetation-induced lift is determined by a lifting coefficient :math:`\alpha_{\mathrm{lift}}` (``alpha_lift``) [:math:`\mathrm{-}`] that scales the effective tiller height to define the physical lift height :math:`h_{\mathrm{lift}}` [:math:`\mathrm{m}`]:
+
+.. math::
+   :label: hlift
+
+   h_{\mathrm{lift}} = L_h + \alpha_{\mathrm{lift}} h'_{\mathrm{veg}}
+
+The dimensionless shape parameter :math:`k` [:math:`\mathrm{-}`] is prescribed as a function of this lift height, utilizing empirical calibration constants :math:`a_k` and :math:`b_k` [:math:`\mathrm{-}`]. For a bare surface, :math:`h_{\mathrm{lift}} = L_h`, reducing the shape parameter to :math:`k=1` (recovering the standard exponential profile):
+
+.. math::
+   :label: kweibull
+
+   k = 1 + 2\left[1 - \exp\left(-a_k\left(\frac{h_{\mathrm{lift}}}{L_h} - 1\right)^{b_k}\right)\right]
+
+The Weibull scale parameter :math:`h_{\mathrm{scale}}` [:math:`\mathrm{m}`] is derived analytically using the standard Gamma function :math:`\Gamma(z)` to ensure the bulk transport correctly centers around :math:`h_{\mathrm{lift}}`:
+
+.. math::
+   :label: hscale
+
+   h_{\mathrm{scale}} = \frac{h_{\mathrm{lift}}}{\Gamma\left(1 + \frac{1}{k}\right)}
+
+By integrating this profile up to the effective tiller height :math:`h'_{\mathrm{veg}}`, the model calculates the raw trapped fraction :math:`\zeta_0`:
+
+.. math::
+   :label: zeta_veg
+
+   \zeta_0 = 1 - \exp\left[-\left(\frac{h'_{\mathrm{veg}}}{h_{\mathrm{scale}}}\right)^k\right]
+
+Because sparse vegetation does not cause in "full" skimming, this is adjusted by the relative tiller density using the parameter :math:`\theta_\zeta` (``theta_zeta``) [:math:`\mathrm{-}`]:
 
 .. math::
    :label: zeta_density
 
-   \zeta_0 = 1 - \left(\frac{N_t}{N_{t,\text{max}}}\right)^{\theta_\zeta} (1 - \zeta_0)
+   \zeta_0 = 1 - \left(\frac{N_t}{N_{t,\mathrm{max}}}\right)^{\theta_\zeta} (1 - \zeta_0)
 
-The final bed-interaction factor accounts for airborne sediment bouncing through the canopy using a numerical bounce factor :math:`b` [:math:`\mathrm{-}`]: :math:`\zeta = \zeta_0 (1 - b)`. 
+The final bed-interaction factor accounts for airborne sediment bouncing directly through the canopy using a numerical bounce factor :math:`b` (``bounce``) [:math:`\mathrm{-}`]: 
+
+.. math::
+   :label: zeta_final
+
+   \zeta = \zeta_0 (1 - b)
+
+Finally, to prevent abrupt deposition in the vegetation wake, the spatial recovery of :math:`\zeta` to its non-vegetated base value (:math:`\zeta = 1`) is smoothed proportionally to the leeside shear reduction (:math:`R_{\mathrm{veg}}/R_{0,\mathrm{veg}}`), ensuring gradual adjustment within the wake region.
+
 
 .. _vegetation-mortality:
 
