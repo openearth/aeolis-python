@@ -48,11 +48,19 @@ logger = logging.getLogger(__name__)
 
 def initialize(s,p):
     if p['process_fences']:
-        s['fence_height'][:,:] = p['fence_file']
-        s['fence_base'] = copy(s['zb'])  # initial fence base is the bed elevation
-        s['fence_top'] = s['fence_base'] + s['fence_height']
-        s['fence_height_init'] = s['fence_height']
+        # s['fence_height'][:,:] = p['fence_file']
+        # s['fence_base'] = copy(s['zb'])  # initial fence base is the bed elevation
+        # s['fence_top'] = s['fence_base'] + s['fence_height']
+        # s['fence_height_init'] = s['fence_height']
+        # s['zf'] = s['fence_height']
+
+        s['fence_top'] = p['fence_file']
+        s['fence_height'] = s['fence_top'] - s['zb']
+        ix = s['fence_height'] < 0.1
+        s['fence_height'][ix] = 0
+        s['fence_height_init'] = s['fence_height'].copy()
         s['zf'] = s['fence_height']
+
     return s
 
 def update_fences(s,p):
