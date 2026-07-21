@@ -16,6 +16,7 @@ const GridTab = (() => {
   let draft = null;            // {x0, y0, dx, nx, ny, rotation}
   let committed = null;        // params of the grid on disk
   let drawArmed = false;
+  let sketching = false;       // mouse is down, new outline being dragged
   let editing = false;         // handles visible
   let draggingHandle = false;  // a handle drag is in progress
   let handles = [];            // maplibre markers
@@ -101,6 +102,11 @@ const GridTab = (() => {
     _renderShear();
   }
 
+  function _labelsVisible() {
+    const layer = Layers.get("grid-labels");
+    return !layer || layer.visible !== false;
+  }
+
   function _renderGeometry() {
     const map = MapView.instance();
     const ring = outlineRing(draft).map(CRS.toLngLat);
@@ -122,6 +128,10 @@ const GridTab = (() => {
 
     const color = _lineColor();
     const saved = isSaved();
+    // while the draw mode is armed the old geometry fades out so the
+    // draw interaction is unmistakable; the freshly dragged outline
+    // itself renders at full strength
+    const fade = drawArmed && !sketching ? 0.35 : 1;
     MapView.ensureLayer({
       id: SRC_FILL, type: "fill", source: SRC_FILL,
       paint: { "fill-color": color, "fill-opacity": 0.06 },
@@ -137,6 +147,8 @@ const GridTab = (() => {
     map.setPaintProperty(SRC_FILL, "fill-color", color);
     map.setPaintProperty(SRC_LINES, "line-color", color);
     map.setPaintProperty(SRC_OUTLINE, "line-color", color);
+    map.setPaintProperty(SRC_LINES, "line-opacity", 0.4 * fade);
+    map.setPaintProperty(SRC_OUTLINE, "line-opacity", fade);
     // unsaved drafts render dashed
     map.setPaintProperty(SRC_OUTLINE, "line-dasharray", saved ? [1, 0] : [2.5, 1.8]);
 
@@ -144,12 +156,21 @@ const GridTab = (() => {
     for (const id of [SRC_FILL, SRC_LINES, SRC_OUTLINE]) {
       map.setLayoutProperty(id, "visibility", layerVisible ? "visible" : "none");
     }
-    _renderBoundaryLabels(layerVisible);
+    _renderBoundaryLabels(layerVisible && !drawArmed && _labelsVisible());
   }
 
   function _gridLayerVisible() {
     const layer = Layers.get("grid-main");
     return !layer || layer.visible !== false;
+  }
+
+  function _registerLabelLayer() {
+    const existing = Layers.get("grid-labels");
+    Layers.register({
+      id: "grid-labels", group: "grid", title: "Grid labels",
+      subtitle: "boundaries & corners",
+      visible: existing ? existing.visible : true,
+    });
   }
 
   function _renderBoundaryLabels(visible) {
@@ -335,6 +356,37 @@ const GridTab = (() => {
 
   /* ================= draw interaction ================= */
 
+  /* Big green Done button + hint, floating over the map while a draw
+   * or edit mode is active. */
+  function _syncModeChrome() {
+    const wrap = document.getElementById("map-wrap");
+    let done = document.getElementById("map-done-btn");
+    let hint = document.getElementById("map-hint");
+    const active = drawArmed || editing;
+    if (!active) {
+      if (done) done.remove();
+      if (hint) hint.remove();
+      return;
+    }
+    if (!done) {
+      done = U.el("button", { id: "map-done-btn" }, U.icon("check", 16), "Done");
+      done.addEventListener("click", () => {
+        if (drawArmed) _disarmDraw();
+        editing = false;
+        _syncButtons();
+        render();
+      });
+      wrap.append(done);
+    }
+    if (!hint) {
+      hint = U.el("div", { id: "map-hint" });
+      wrap.append(hint);
+    }
+    hint.textContent = drawArmed
+      ? "Click and drag on the map to draw the grid (Esc to cancel)"
+      : "Drag the handles: ⬤ move origin, ◯ resize, ↻ rotate";
+  }
+
   function armDraw(force = null) {
     const map = MapView.instance();
     const arm = force !== null ? force : !drawArmed;
@@ -345,10 +397,11 @@ const GridTab = (() => {
     map.getCanvas().style.cursor = "crosshair";
     map.dragPan.disable();
     _syncButtons();
-    U.toast("Click and drag to draw the grid area (Esc to cancel)");
+    render();
 
     const onDown = (ev) => {
       if (!drawArmed) return;
+      sketching = true;
       const anchor = CRS.fromLngLat(ev.lngLat);
       const dx = draft ? draft.dx : _defaultDx();
       draft = { x0: anchor[0], y0: anchor[1], dx, nx: 1, ny: 1, rotation: draft ? draft.rotation : 0 };
@@ -370,6 +423,7 @@ const GridTab = (() => {
       const onUp = () => {
         map.off("mousemove", onMove);
         map.off("mouseup", onUp);
+        sketching = false;
         _disarmDraw();
         editing = true;
         _syncButtons();
@@ -385,8 +439,10 @@ const GridTab = (() => {
   function _disarmDraw() {
     const map = MapView.instance();
     drawArmed = false;
+    sketching = false;
     map.getCanvas().style.cursor = "";
     map.dragPan.enable();
+    _syncModeChrome();
   }
 
   function _defaultDx() {
@@ -410,17 +466,25 @@ const GridTab = (() => {
     const panel = document.getElementById("grid-panel");
     U.clear(panel);
 
-    const drawBtn = U.el("button", { class: "toggle" }, "Draw grid on map");
-    drawBtn.addEventListener("click", () => armDraw());
-    const editBtn = U.el("button", { class: "toggle" }, "Edit handles");
-    editBtn.addEventListener("click", () => {
-      editing = !editing;
-      if (editing && drawArmed) _disarmDraw();
-      _syncButtons();
-      render();
+    const drawBtn = U.tbtn("draw", "Draw", {
+      toggle: true, title: "Draw a new grid on the map",
+      onclick: () => armDraw(),
+    });
+    const editBtn = U.tbtn("edit", "Edit", {
+      toggle: true, title: "Edit the grid with drag handles",
+      onclick: () => {
+        editing = !editing;
+        if (editing && drawArmed) _disarmDraw();
+        _syncButtons();
+        render();
+      },
+    });
+    const saveBtn = U.tbtn("save", "Save", {
+      primary: true, title: "Generate and save x.grd / y.grd",
+      onclick: _saveGrid,
     });
     buttons = { draw: drawBtn, edit: editBtn };
-    panel.append(U.el("div", { class: "btn-row" }, drawBtn, editBtn));
+    panel.append(U.el("div", { class: "tbtn-row" }, drawBtn, editBtn, saveBtn));
 
     // parameters table
     const rows = [
@@ -451,44 +515,39 @@ const GridTab = (() => {
     const derived = U.el("div", { class: "muted", id: "grid-derived" });
     panel.append(derived);
 
-    const saveBtn = U.el("button", { class: "primary" }, "Generate & save x.grd / y.grd");
-    saveBtn.addEventListener("click", _saveGrid);
-    panel.append(U.el("div", { class: "btn-row" }, saveBtn));
+    // secondary computational (shear) grid: own collapsible section
+    const shear = U.section("Computational (shear) grid", { collapsed: true });
+    shear.wrap.id = "grid-shear-section";
 
-    panel.append(U.el("div", { class: "muted", style: "font-size:12px" },
-      "Boundary convention: column 0 = offshore, last column = onshore, first/last row = lateral. ",
-      "Boundary types are set in Settings → Boundary conditions."));
-
-    // shear subgrid section (visible when process_shear is on)
-    const shearWrap = U.el("div", { class: "form-group", id: "grid-shear-section" });
-    shearWrap.append(U.el("span", { class: "fg-label" }, "2nd computational grid (wind shear)"));
     const shearToggle = U.el("input", { type: "checkbox", id: "shear-toggle" });
     shearToggle.checked = shearVisible;
     shearToggle.addEventListener("change", () => { shearVisible = shearToggle.checked; _renderShear(); });
-    shearWrap.append(U.el("div", { class: "form-row" },
-      U.el("label", { for: "shear-toggle" }, "Show on map"), shearToggle));
+    shear.body.append(U.el("div", { class: "choice-row" },
+      shearToggle, U.el("label", { for: "shear-toggle" }, "Show on map")));
 
     shearInfoEl = U.el("div", { class: "shear-info" });
-    shearWrap.append(shearInfoEl);
-
-    const settingsLink = U.el("button", { class: "ghost", style: "font-size:12px" },
-      "edit dx / dy / buffer_width in Settings →");
-    settingsLink.addEventListener("click", () => {
-      Tabs.activate("settings");
-      document.getElementById("cfg-search").value = "buffer_width";
-      SchemaForm.filter("buffer");
-    });
-    shearWrap.append(U.el("div", { class: "btn-row" }, settingsLink));
+    shear.body.append(shearInfoEl);
 
     const udirSlider = U.el("input", { type: "range", min: 0, max: 360, step: 5, value: shearUdir });
-    const udirLabel = U.el("label", {}, `example wind dir ${shearUdir}°`);
+    const udirLabel = U.el("label", { style: "flex:0 0 40%;font-size:12px;color:var(--muted)" },
+      `example wind dir ${shearUdir}°`);
     udirSlider.addEventListener("input", () => {
       shearUdir = Number(udirSlider.value);
       udirLabel.textContent = `example wind dir ${shearUdir}°`;
       _renderShear();
     });
-    shearWrap.append(U.el("div", { class: "form-row" }, udirLabel, udirSlider));
-    panel.append(shearWrap);
+    shear.body.append(U.el("div", { class: "form-row" }, udirLabel, udirSlider));
+
+    const settingsLink = U.miniBtn("gear", "Edit dx / dy / buffer_width (Settings)", () => {
+      Tabs.activate("settings");
+      document.getElementById("cfg-search").value = "buffer_width";
+      SchemaForm.filter("buffer");
+    });
+    shear.body.append(U.el("div", { class: "choice-row" },
+      settingsLink, U.el("span", { class: "muted", style: "font-size:12px" },
+        "cell size & buffer")));
+
+    panel.append(shear.wrap);
 
     _syncShearSection();
     _syncShearInfo(null);
@@ -499,6 +558,7 @@ const GridTab = (() => {
   function _syncButtons() {
     if (buttons.draw) buttons.draw.classList.toggle("active", drawArmed);
     if (buttons.edit) buttons.edit.classList.toggle("active", editing);
+    _syncModeChrome();
   }
 
   function _syncShearSection() {
@@ -533,8 +593,7 @@ const GridTab = (() => {
     if (key === "nx" || key === "ny") draft[key] = Math.max(1, Math.round(v));
     else if (key === "dx") draft.dx = Math.max(1e-6, v);
     else draft[key] = v;
-    editing = true;
-    _syncButtons();
+    // typing in the table must NOT switch on the handle-edit mode
     _syncTable();
     render();
   }
@@ -579,6 +638,7 @@ const GridTab = (() => {
       for (const key of ["xgrid_file", "ygrid_file", "nx", "ny"]) App.emit("config-changed", key);
       Layers.register({ id: "grid-main", group: "grid", title: "Model grid",
         subtitle: `${draft.nx}×${draft.ny}` });
+      _registerLabelLayer();
       _syncButtons();
       _syncTable();
       render();
@@ -599,6 +659,7 @@ const GridTab = (() => {
           nx: res.params.nx, ny: res.params.ny, rotation: res.params.rotation };
         Layers.register({ id: "grid-main", group: "grid", title: "Model grid",
           subtitle: `${draft.nx}×${draft.ny}` });
+        _registerLabelLayer();
         if (!res.params.uniform) {
           U.toast("Existing grid is not uniform; table shows an approximation", "error");
         }
@@ -620,7 +681,12 @@ const GridTab = (() => {
   function init() {
     Tabs.register("grid", {
       enter: () => { _syncShearSection(); render(); },
-      leave: () => { if (drawArmed) { _disarmDraw(); _syncButtons(); } },
+      leave: () => {
+        if (drawArmed) _disarmDraw();
+        editing = false;
+        _syncButtons();
+        render();
+      },
     });
     _buildPanel();
     App.on("project", async () => {
@@ -635,7 +701,7 @@ const GridTab = (() => {
       if (["dx", "dy", "buffer_width"].includes(key)) { _syncShearInfo(null); _renderShear(); }
     });
     App.on("layer-visibility", (layer) => {
-      if (layer.id === "grid-main") render();
+      if (layer.id === "grid-main" || layer.id === "grid-labels") render();
     });
     App.on("basemap", () => renderThrottled());
     App.on("crs", () => renderThrottled());
