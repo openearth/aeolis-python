@@ -9,6 +9,10 @@ exclude = [
   "/aeolis/examples/1D",
   "/aeolis/examples/grainsizevariations",
 ]
+# ship the web GUI frontend (html/js/css/vendored libs) as package data
+artifacts = [
+  "aeolis/webui/web/**",
+]
 
 [project]
 name = "aeolis"
@@ -53,6 +57,16 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
+  # native desktop window for the web GUI (aeolis webui)
+  webui = [
+    "pywebview",
+  ]
+  # optional data-source backends for the web GUI (downloads/reprojection)
+  webui-data = [
+    "rasterio",
+    "pyproj",
+    "cdsapi",
+  ]
   dev = [
     "pytest",
     "pytest-cov",

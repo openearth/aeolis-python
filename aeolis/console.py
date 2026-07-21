@@ -267,6 +267,33 @@ def gui(
     root.mainloop()
 
 
+@aeolis_app.command(
+    name="webui",
+    help="starts the modern AeoLiS web-based graphical user interface.",
+)
+def webui(
+    config: Annotated[
+        Optional[str],
+        typer.Argument(help="optional configuration file (aeolis.txt) to open"),
+    ] = None,
+    port: Annotated[
+        Optional[int], typer.Option(help="fixed server port (default: auto)")
+    ] = None,
+    browser: Annotated[
+        bool,
+        typer.Option(
+            "--browser",
+            help="open in the default browser instead of a native window",
+        ),
+    ] = False,
+):
+    print_license()
+
+    from aeolis.webui.launcher import launch
+
+    launch(configfile=config, port=port, browser=browser)
+
+
 def print_license():
     print("AeoLiS  Copyright (c) 2023  AeoLiS Development Team")
     print("This program comes with ABSOLUTELY NO WARRANTY.")
