@@ -383,6 +383,25 @@ table.data input { width: 100%; border: none; text-align: right; padding: 1px 2p
 .map-label.boundary-onshore { color: #8a5a16; border-color: #8a5a16; }
 .map-label.boundary-lateral { color: #5c6a7c; border-color: #5c6a7c; }
 
+/* grid edit handles */
+.grid-handle {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2.5px solid var(--accent);
+  cursor: grab;
+  box-shadow: 0 1px 4px rgba(0,0,0,.4);
+}
+.grid-handle:active { cursor: grabbing; }
+.grid-handle.origin { border-color: var(--ok); width: 17px; height: 17px; }
+.grid-handle.rotate {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: var(--accent);
+  background: #fff; border: 2px solid var(--accent);
+}
+
 /* layer / object rows in floating panels */
 .lp-group { margin-bottom: 4px; }
 .lp-group > .lp-group-head {
