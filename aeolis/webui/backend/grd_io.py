@@ -45,7 +45,9 @@ def generate(x0, y0, dx, nx, ny, rotation_deg):
 
 
 def write_grd(path, matrix):
-    np.savetxt(path, np.atleast_2d(matrix), fmt="%0.6e")
+    # 11 significant digits: RD-scale coordinates (~1e5-1e6 m) keep
+    # sub-millimetre precision through the ASCII roundtrip
+    np.savetxt(path, np.atleast_2d(matrix), fmt="%0.10e")
 
 
 def read_grd(path):
