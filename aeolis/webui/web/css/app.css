@@ -15,8 +15,9 @@
   --ok: #2c7a3f;
   --shadow: 0 2px 10px rgba(20, 30, 45, .12);
   --radius: 8px;
-  --sidebar-w: 380px;
-  --graphs-h: 240px;
+  /* responsive defaults: keep the map dominant on small screens */
+  --sidebar-w: clamp(280px, 24vw, 400px);
+  --graphs-h: clamp(150px, 24vh, 280px);
   --topbar-h: 46px;
   --playbar-h: 44px;
   font-size: 14px;
@@ -262,7 +263,16 @@ input:focus, select:focus, textarea:focus {
 .param-row input[type="text"], .param-row input[type="number"], .param-row select {
   flex: 1; min-width: 0; font-size: 12.5px; padding: 3px 6px;
 }
-.param-row.changed label { color: var(--accent); font-weight: 700; }
+/* non-default values: subtle dot in front of the input (no styling of
+ * the label itself; a bold blue label read as "something is wrong") */
+.param-row.changed { position: relative; }
+.param-row.changed::before {
+  content: "";
+  position: absolute; left: -8px; top: 50%;
+  width: 4px; height: 4px; border-radius: 50%;
+  background: var(--accent);
+  transform: translateY(-50%);
+}
 .param-row .info-dot {
   width: 14px; height: 14px; flex: none;
   border-radius: 50%;
@@ -287,6 +297,29 @@ input:focus, select:focus, textarea:focus {
 .form-row input, .form-row select { flex: 1; min-width: 0; }
 .btn-row { display: flex; gap: 6px; margin: 10px 0; flex-wrap: wrap; }
 
+/* radio/checkbox choice rows (wizards): natural widths, no stretching */
+.choice-row {
+  display: flex; align-items: center; gap: 8px; margin: 6px 0;
+}
+.choice-row input[type="radio"], .choice-row input[type="checkbox"] {
+  flex: none; margin: 0; accent-color: var(--accent);
+}
+.choice-row label { flex: none; font-size: 13px; color: var(--text); cursor: pointer; }
+.choice-row input[type="text"], .choice-row select { flex: none; }
+.choice-row .grow { flex: 1; }
+
+/* segmented control (type choice in wizards) */
+.seg {
+  display: inline-flex; border: 1px solid var(--border);
+  border-radius: 8px; overflow: hidden; margin: 4px 0 10px;
+}
+.seg button {
+  border: none; border-radius: 0; padding: 6px 16px;
+  font-size: 12.5px; font-weight: 600; color: var(--muted);
+  background: var(--panel-2);
+}
+.seg button.active { background: var(--accent); color: #fff; }
+
 /* generic tables (grid corner table, index edits) */
 table.data {
   width: 100%; border-collapse: collapse; font-size: 12.5px;
@@ -305,6 +338,80 @@ table.data input { width: 100%; border: none; text-align: right; padding: 1px 2p
   color: var(--muted);
 }
 .iconbtn:hover:not(:disabled) { color: var(--accent); background: var(--accent-soft); }
+
+/* ============ Toolbar buttons: icon + label below ============ */
+
+.tbtn-row { display: flex; gap: 8px; margin: 8px 0 10px; }
+.tbtn {
+  flex: 1 1 0; min-width: 62px; max-width: 110px;
+  display: inline-flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 3px;
+  padding: 8px 6px 6px;
+  border-radius: 8px;
+  color: var(--text);
+  transition: background .12s, color .12s, border-color .12s;
+}
+.tbtn svg { display: block; }
+.tbtn .tbtn-label { font-size: 11px; font-weight: 600; line-height: 1.1; }
+.tbtn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tbtn.primary:hover:not(:disabled) { background: var(--accent-hover); }
+.tbtn.toggle.active {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+}
+
+/* small square icon buttons in list rows */
+.mini-btn {
+  flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; padding: 0;
+  border-radius: 6px;
+  color: var(--muted);
+  background: var(--panel);
+}
+.mini-btn:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.mini-btn.danger-hover:hover { color: var(--danger); border-color: var(--danger); background: #fbeceb; }
+
+/* big floating "done" button on the map while drawing/editing */
+#map-done-btn {
+  position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+  z-index: 40;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 22px;
+  font-size: 14px; font-weight: 700;
+  background: var(--ok); border-color: var(--ok); color: #fff;
+  border-radius: 999px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.3);
+}
+#map-done-btn:hover { background: #256a36; }
+#map-hint {
+  position: absolute; top: 62px; left: 50%; transform: translateX(-50%);
+  z-index: 40;
+  background: rgba(28, 36, 48, .85); color: #fff;
+  border-radius: 999px; padding: 4px 14px;
+  font-size: 12px; pointer-events: none;
+}
+
+/* loading spinner (layer rows, buttons) */
+.spin {
+  display: inline-block; width: 13px; height: 13px; flex: none;
+  border: 2px solid var(--accent-soft); border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* disabled process groups (Settings): parked below a divider */
+.disabled-divider {
+  display: flex; align-items: center; gap: 10px;
+  margin: 18px 0 6px;
+  color: var(--muted); font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .6px;
+}
+.disabled-divider::before, .disabled-divider::after {
+  content: ""; flex: 1; height: 1px; background: var(--border);
+}
+.section.disabled-group { opacity: .55; }
+.section.disabled-group > header { font-weight: 600; }
 
 /* input wrap: permanent unit suffix + time tool */
 .input-wrap {
@@ -608,12 +715,14 @@ button.toggle.active {
   box-sizing: border-box;
 }
 .graph-head {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; gap: 8px;
   padding: 2px 4px;
 }
 .graph-title { font-weight: 700; font-size: 12.5px; }
+.graph-hint { flex: 1; text-align: right; font-size: 10.5px; }
+.graph-btns { display: inline-flex; gap: 2px; flex: none; }
 .graph-close { border: none; padding: 0 4px; font-size: 11px; color: var(--muted); }
-.graph-close:hover { color: var(--danger); background: none; }
+.graph-close:hover { color: var(--accent); background: var(--accent-soft); border-radius: 4px; }
 
 /* slide dot navigator */
 #graph-dots {

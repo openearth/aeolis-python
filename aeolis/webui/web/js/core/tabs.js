@@ -10,8 +10,13 @@ const Tabs = (() => {
 
   function activate(name) {
     if (name === active) return;
+    // a throwing hook must never block the tab switch itself
     const prev = hooks.get(active);
-    if (prev && prev.leave) prev.leave();
+    try {
+      if (prev && prev.leave) prev.leave();
+    } catch (err) {
+      console.warn(`tab '${active}' leave hook failed`, err);
+    }
 
     active = name;
     document.body.className = `tab-${name}`;
@@ -24,7 +29,11 @@ const Tabs = (() => {
     }
 
     const next = hooks.get(name);
-    if (next && next.enter) next.enter();
+    try {
+      if (next && next.enter) next.enter();
+    } catch (err) {
+      console.warn(`tab '${name}' enter hook failed`, err);
+    }
     App.emit("tab", name);
   }
 

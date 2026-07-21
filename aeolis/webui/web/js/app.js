@@ -65,6 +65,11 @@
       const info = await Api.get("/api/project");
       _showProjectModal(info.recent || []);
     });
+
+    // documentation (one entry point; pages are browsable inside the popup)
+    document.getElementById("btn-docs").addEventListener("click", () => {
+      DocsPopup.open("https://aeolis.readthedocs.io/en/update_documentation/", "AeoLiS documentation");
+    });
   }
 
   function _dragResize(grip, onMove, onDone) {
@@ -186,8 +191,14 @@
       if (st && st.crs) { App.state.crs = st.crs; App.state.crsFromState = true; }
     } catch { /* fresh project */ }
 
-    document.getElementById("sidebar").style.width = `${App.state.ui.sidebarWidth}px`;
-    document.getElementById("graphs-wrap").style.height = `${App.state.ui.graphsHeight}px`;
+    // clamp persisted sizes so a layout saved on a large monitor never
+    // squeezes the map on a smaller screen
+    const sbw = U.clamp(App.state.ui.sidebarWidth || 340, 260, window.innerWidth * 0.32);
+    const grh = U.clamp(App.state.ui.graphsHeight || 220, 120, window.innerHeight * 0.38);
+    App.state.ui.sidebarWidth = sbw;
+    App.state.ui.graphsHeight = grh;
+    document.getElementById("sidebar").style.width = `${sbw}px`;
+    document.getElementById("graphs-wrap").style.height = `${grh}px`;
     MapView.setBasemap(App.state.ui.basemap);
     App.emit("crs", App.state.crs);
 

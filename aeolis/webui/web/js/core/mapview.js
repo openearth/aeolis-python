@@ -145,9 +145,15 @@ const MapView = (() => {
 
   function setLabel(id, modelXY, text, className = "") {
     removeLabel(id);
+    // a misconfigured CRS can map model coords outside the valid
+    // lat/lng range; skip the label instead of throwing (an uncaught
+    // throw here would break whole render passes)
+    const lngLat = CRS.toLngLat(modelXY);
+    if (!Number.isFinite(lngLat[0]) || !Number.isFinite(lngLat[1])
+        || Math.abs(lngLat[1]) > 89.9) return null;
     const node = U.el("div", { class: `map-label ${className}` }, text);
     const marker = new maplibregl.Marker({ element: node, anchor: "center" })
-      .setLngLat(CRS.toLngLat(modelXY))
+      .setLngLat(lngLat)
       .addTo(map);
     markers.set(id, marker);
     return marker;

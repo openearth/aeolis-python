@@ -28,8 +28,9 @@ const App = (() => {
 
     ui: {                   // persisted per-project UI state
       basemap: "gray",
-      graphsHeight: 240,
-      sidebarWidth: 380,
+      // responsive defaults; clamped to the actual screen on restore
+      graphsHeight: Math.round(Math.min(280, Math.max(150, window.innerHeight * 0.24))),
+      sidebarWidth: Math.round(Math.min(400, Math.max(280, window.innerWidth * 0.24))),
       collapsed: {},
     },
   };
