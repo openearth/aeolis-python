@@ -40,7 +40,37 @@ def _start_server(port=None):
     return server
 
 
-def _open_native_window(url):
+def _set_windows_app_identity():
+    """Give the process its own taskbar identity so Windows uses our
+    window icon instead of the python.exe one (best-effort)."""
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("AeoLiS.WebUI")
+    except Exception:  # noqa: BLE001 - cosmetic only
+        pass
+
+
+def _apply_window_icon(window):
+    """Set the native window (title bar + taskbar) icon on Windows.
+    pywebview's own icon support is GTK/QT-only, so reach into the
+    WinForms form directly (best-effort)."""
+    icon_path = settings.WEB_DIR / "img" / "aeolis.ico"
+    if os.name != "nt" or not icon_path.is_file():
+        return
+
+    def _on_shown():
+        try:
+            from System.Drawing import Icon  # via pythonnet (pywebview dep)
+            window.native.Icon = Icon(str(icon_path))
+        except Exception:  # noqa: BLE001 - cosmetic only
+            pass
+
+    window.events.shown += _on_shown
+
+
+def _open_native_window(url, debug=False):
     """Open the GUI in a native window via pywebview. Returns False if
     pywebview is unavailable (caller falls back to the browser)."""
     try:
@@ -48,21 +78,24 @@ def _open_native_window(url):
     except ImportError:
         return False
 
+    _set_windows_app_identity()
     width, height = settings.WINDOW_SIZE
-    webview.create_window(
+    window = webview.create_window(
         settings.WINDOW_TITLE,
         url,
         width=width,
         height=height,
         min_size=(1024, 640),
+        maximized=True,
         confirm_close=False,
         text_select=True,
     )
-    webview.start()  # blocks until the window is closed
+    _apply_window_icon(window)
+    webview.start(debug=debug)  # blocks until the window is closed
     return True
 
 
-def launch(configfile=None, port=None, browser=False):
+def launch(configfile=None, port=None, browser=False, debug=False):
     """Start the AeoLiS web GUI.
 
     Parameters
@@ -73,6 +106,8 @@ def launch(configfile=None, port=None, browser=False):
         Fixed port; default scans from ``settings.BASE_PORT``.
     browser : bool
         Force a browser tab instead of the native window.
+    debug : bool
+        Enable the webview devtools (right-click -> Inspect).
     """
     _prepare_environment()
 
@@ -92,7 +127,7 @@ def launch(configfile=None, port=None, browser=False):
         if browser:
             webbrowser.open(url)
             _wait_forever()
-        elif not _open_native_window(url):
+        elif not _open_native_window(url, debug=debug):
             print(
                 "pywebview not installed (pip install aeolis[webui]) - "
                 "opening in the default browser instead."

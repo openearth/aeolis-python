@@ -77,6 +77,13 @@ const MapView = (() => {
       if (crsOut) crsOut.textContent = CRS.label();
     });
 
+    const crsOut = document.getElementById("crs-readout");
+    if (crsOut) {
+      crsOut.style.cursor = "pointer";
+      crsOut.title = "Click to view/change the coordinate reference system";
+      crsOut.addEventListener("click", () => CRS.openSelector());
+    }
+
     return new Promise((resolve) => map.on("load", () => resolve(map)));
   }
 

@@ -286,12 +286,19 @@ def webui(
             help="open in the default browser instead of a native window",
         ),
     ] = False,
+    debug: Annotated[
+        bool,
+        typer.Option(
+            "--debug",
+            help="enable the webview devtools (right-click -> Inspect)",
+        ),
+    ] = False,
 ):
     print_license()
 
     from aeolis.webui.launcher import launch
 
-    launch(configfile=config, port=port, browser=browser)
+    launch(configfile=config, port=port, browser=browser, debug=debug)
 
 
 def print_license():

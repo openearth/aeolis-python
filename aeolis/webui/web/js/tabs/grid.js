@@ -511,6 +511,14 @@ const GridTab = (() => {
         if (!res.params.uniform) {
           U.toast("Existing grid is not uniform; table shows an approximation", "error");
         }
+        // first open of this project: derive the CRS from the grid coords
+        if (!App.state.crsFromState) {
+          const detected = CRS.autodetectFromGrid();
+          if (detected) {
+            App.state.crsFromState = true;
+            U.toast(`Coordinate system detected: ${CRS.label()} (click the CRS chip to change)`, "");
+          }
+        }
         _syncTable();
         render();
       }

@@ -188,10 +188,11 @@
     chip.title = info.configfile;
 
     // restore persisted UI state
+    App.state.crsFromState = false;
     try {
       const st = await Api.get("/api/project/state");
       if (st && st.ui) Object.assign(App.state.ui, st.ui);
-      if (st && st.crs) App.state.crs = st.crs;
+      if (st && st.crs) { App.state.crs = st.crs; App.state.crsFromState = true; }
     } catch { /* fresh project */ }
 
     document.getElementById("sidebar").style.width = `${App.state.ui.sidebarWidth}px`;

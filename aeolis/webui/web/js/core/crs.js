@@ -89,5 +89,68 @@ const CRS = (() => {
     return def ? `EPSG:${epsg} — ${def.name}` : `EPSG:${epsg}`;
   }
 
-  return { list, set, isLocal, toLngLat, fromLngLat, detect, label };
+  /* Detect from the current grid (if any) and apply. */
+  function autodetectFromGrid() {
+    const p = (typeof GridTab !== "undefined") ? GridTab.params() : null;
+    if (!p) return null;
+    const detected = detect([p.x0, p.x0 + p.nx * p.dx], [p.y0, p.y0 + p.ny * p.dx]);
+    set(detected.mode, detected.epsg);
+    return detected;
+  }
+
+  /* Small selector popup, opened from the CRS chip on the map. */
+  function openSelector() {
+    const popup = Popup.open({ title: "Coordinate reference system", width: 440 });
+    const current = App.state.crs;
+
+    const modeProjected = U.el("input", { type: "radio", name: "crs-mode", id: "crs-projected" });
+    const modeLocal = U.el("input", { type: "radio", name: "crs-mode", id: "crs-local" });
+    (current.mode === "local" ? modeLocal : modeProjected).checked = true;
+
+    const epsgSelect = U.el("select", {});
+    for (const item of list()) {
+      epsgSelect.append(U.el("option", {
+        value: item.epsg,
+        selected: item.epsg === current.epsg ? "" : null,
+      }, `EPSG:${item.epsg} — ${item.name}`));
+    }
+
+    const detectBtn = U.el("button", { class: "ghost" }, "Auto-detect from grid");
+    const detectNote = U.el("span", { class: "muted", style: "font-size:12px" });
+    detectBtn.addEventListener("click", () => {
+      const detected = autodetectFromGrid();
+      if (!detected) { detectNote.textContent = "no grid available"; return; }
+      if (detected.mode === "local") { modeLocal.checked = true; }
+      else {
+        modeProjected.checked = true;
+        epsgSelect.value = String(detected.epsg);
+      }
+      detectNote.textContent = detected.mode === "local"
+        ? "detected: local/conceptual" : `detected: EPSG:${detected.epsg}`;
+    });
+
+    const applyBtn = U.el("button", { class: "primary" }, "Apply");
+    applyBtn.addEventListener("click", () => {
+      if (modeLocal.checked) set("local");
+      else set("projected", Number(epsgSelect.value));
+      popup.close();
+      U.toast(`CRS: ${label()}`, "ok");
+    });
+
+    popup.body.append(
+      U.el("div", { class: "form-row" },
+        modeProjected, U.el("label", { for: "crs-projected" }, "Projected (real-world)"), epsgSelect),
+      U.el("div", { class: "form-row" },
+        modeLocal, U.el("label", { for: "crs-local" },
+          "Local / conceptual (model meters, no basemap)")),
+      U.el("div", { class: "btn-row" }, detectBtn, detectNote),
+      U.el("div", { class: "muted", style: "font-size:11.5px;margin-top:6px" },
+        "The CRS tells the GUI how grid coordinates map onto the world. ",
+        "Changing it re-projects all layers; it does not alter any files."),
+      U.el("div", { class: "btn-row" }, applyBtn),
+    );
+  }
+
+  return { list, set, isLocal, toLngLat, fromLngLat, detect, label,
+    autodetectFromGrid, openSelector };
 })();
