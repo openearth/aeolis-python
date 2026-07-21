@@ -129,8 +129,21 @@ const Graphs = (() => {
 
   function _renderAvailability(conditions, output, domain) {
     const rows = [];
-    const simT0 = conditions.refdate_epoch + (conditions.tstart || 0);
-    const simT1 = conditions.refdate_epoch + (conditions.tstop || 0);
+    // prefer live (possibly unsaved) config values so edits in the
+    // Settings tab update the chart immediately
+    let refEpoch = conditions.refdate_epoch;
+    let tstart = conditions.tstart || 0;
+    let tstop = conditions.tstop || 0;
+    const cfg = App.state.config;
+    if (cfg && cfg.refdate) {
+      const raw = String(cfg.refdate);
+      const parsed = Date.parse(raw.replace(" ", "T") + (raw.length <= 16 ? ":00Z" : "Z"));
+      if (Number.isFinite(parsed)) refEpoch = parsed / 1000;
+      if (Number.isFinite(cfg.tstart)) tstart = cfg.tstart;
+      if (Number.isFinite(cfg.tstop)) tstop = cfg.tstop;
+    }
+    const simT0 = refEpoch + tstart;
+    const simT1 = refEpoch + tstop;
     rows.push({ label: "Simulation", spans: [[simT0, simT1, "sim"]] });
 
     for (const [kind, title] of [["wind", "Wind"], ["tide", "Water levels"], ["wave", "Waves"]]) {

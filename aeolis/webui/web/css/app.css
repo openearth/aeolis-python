@@ -308,6 +308,75 @@ table.data th, table.data td {
 table.data th { background: var(--panel-2); font-weight: 600; text-align: left; }
 table.data input { width: 100%; border: none; text-align: right; padding: 1px 2px; }
 
+/* topbar icon buttons */
+.iconbtn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 30px; padding: 0;
+  color: var(--muted);
+}
+.iconbtn:hover:not(:disabled) { color: var(--accent); background: var(--accent-soft); }
+
+/* input wrap: permanent unit suffix + time tool */
+.input-wrap {
+  flex: 1; min-width: 0;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.input-wrap input, .input-wrap select { flex: 1; min-width: 0; }
+.unit-suffix {
+  flex: none; color: var(--muted);
+  font-size: 11.5px; font-family: Consolas, monospace;
+  background: var(--panel-2);
+  border: 1px solid var(--border); border-radius: 4px;
+  padding: 2px 5px;
+}
+.time-tool-btn { flex: none; padding: 1px 5px; font-size: 12px; border: none; }
+input.readonly { background: var(--panel-2); color: var(--muted); }
+
+/* docs icon in section headers */
+.docs-icon {
+  font-size: 13px; color: var(--muted); cursor: pointer;
+  margin-left: 2px;
+}
+.docs-icon:hover { color: var(--accent); }
+
+/* ============ Popups (wizards, tools) ============ */
+
+.popup-backdrop {
+  position: fixed; inset: 0; z-index: 350;
+  background: rgba(15, 22, 32, .45);
+  display: flex; align-items: center; justify-content: center;
+}
+.popup-box {
+  background: var(--panel);
+  border-radius: 10px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.35);
+  max-width: 94vw; max-height: 88vh;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.popup-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px;
+  font-weight: 700;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--border);
+}
+.popup-close { border: none; padding: 2px 6px; color: var(--muted); }
+.popup-close:hover { color: var(--danger); background: none; }
+.popup-body { padding: 14px 18px; overflow-y: auto; }
+
+/* floating docs panel */
+.docs-popup {
+  position: fixed; top: 60px; right: 16px; bottom: 60px;
+  width: 520px; max-width: 90vw; z-index: 340;
+  background: var(--panel);
+  border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.3);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.docs-frame { flex: 1; border: none; width: 100%; }
+
 /* ============ Tooltip ============ */
 
 #tooltip {

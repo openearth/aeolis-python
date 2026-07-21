@@ -27,7 +27,15 @@
     </nav>
     <div id="topbar-right">
       <span id="project-chip" class="chip" title="No project open">No project</span>
-      <button id="btn-project" class="ghost">Open…</button>
+      <button id="btn-project" class="iconbtn" title="Open project…">
+        <svg viewBox="0 0 24 24" width="17" height="17"><path fill="currentColor" d="M4 4h6l2 2h8a1 1 0 0 1 1 1v2H3V5a1 1 0 0 1 1-1zm-1 6h19l-2.2 9.2a1 1 0 0 1-1 .8H5.2a1 1 0 0 1-1-.8L3 10z"/></svg>
+      </button>
+      <button id="btn-cfg-save" class="iconbtn" title="Save configuration" disabled>
+        <svg viewBox="0 0 24 24" width="17" height="17"><path fill="currentColor" d="M5 3h11l5 5v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm2 2v5h9V5H7zm10 15v-7H7v7h10z"/></svg>
+      </button>
+      <button id="btn-cfg-saveas" class="iconbtn" title="Save configuration as…" disabled>
+        <svg viewBox="0 0 24 24" width="17" height="17"><path fill="currentColor" d="M5 3h11l5 5v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm2 2v5h9V5H7zm3 9h4v2h2v2h-2v2h-4v-2H8v-2h2v-2z"/></svg>
+      </button>
     </div>
   </header>
 
@@ -39,10 +47,6 @@
       <div class="tabpanel" data-tab="settings">
         <div class="panel-head">
           <h2>Model settings</h2>
-          <div class="panel-actions">
-            <button id="btn-cfg-save" class="primary" disabled>Save</button>
-            <button id="btn-cfg-saveas" class="ghost" disabled>Save as…</button>
-          </div>
         </div>
         <input id="cfg-search" type="search" placeholder="Filter parameters…">
         <div id="settings-form" class="panel-body"></div>
@@ -150,6 +154,7 @@
   <script src="vendor/proj4.js"></script>
 
   <script src="js/core/util.js"></script>
+  <script src="js/core/popups.js"></script>
   <script src="js/core/filebrowser.js"></script>
   <script src="js/core/api.js"></script>
   <script src="js/core/state.js"></script>

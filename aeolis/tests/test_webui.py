@@ -23,9 +23,26 @@ from aeolis.webui.backend.schema_api import build_schema
 class TestSchema:
 
     def test_all_default_config_keys_covered(self):
+        from aeolis.webui.backend.schema_api import HIDDEN
         schema = build_schema()
         keys = {p["key"] for s in schema["sections"] for p in s["params"]}
-        assert keys == set(DEFAULT_CONFIG)
+        assert keys == set(DEFAULT_CONFIG) - HIDDEN
+        assert "alfa" in HIDDEN
+
+    def test_conditional_visibility_rules(self):
+        schema = build_schema()
+        by_key = {p["key"]: p for s in schema["sections"] for p in s["params"]}
+        assert by_key["Ck"]["visible_if"] == {"key": "method_transport", "in": ["kawamura"]}
+        assert by_key["veg_file"]["visible_if"]["in"] == ["duran"]
+        assert by_key["hveg_file"]["visible_if"]["in"] == ["grass"]
+        assert by_key["nx"]["readonly"] and by_key["ny"]["readonly"]
+        assert by_key["tstop"]["time_tool"]
+        # options verified against model source
+        assert "sauermann" in by_key["method_transport"]["options"]
+        assert by_key["method_moist_process"]["options"] == ["infiltration", "surf_moisture"]
+        # masks link to the Domain tab, 4D bedcomp does not
+        assert by_key["wave_mask"]["link"] == "domain"
+        assert by_key["bedcomp_file"]["link"] is None
 
     def test_sections_and_metadata(self):
         schema = build_schema()

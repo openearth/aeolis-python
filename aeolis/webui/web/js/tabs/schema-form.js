@@ -1,10 +1,12 @@
 /* Schema-driven configuration form.
  *
  * Renders the sections/parameters served by /api/schema as collapsible
- * groups, with typed inputs, an info tooltip per parameter (description
- * + unit + default from constants.py), changed-from-default
- * highlighting, and cross-tab links for file parameters produced by the
- * Grid / Domain / Conditions tabs.
+ * groups with typed inputs, permanent unit suffixes, info tooltips,
+ * changed-from-default highlighting, cross-tab links for file
+ * parameters, docs links per section, a date/duration helper for time
+ * parameters, and live conditional visibility (e.g. transport constants
+ * follow method_transport; a section whose parameters are all hidden is
+ * hidden entirely).
  */
 "use strict";
 
@@ -18,15 +20,19 @@ const SchemaForm = (() => {
 
   let container = null;
   let onChange = null;
+  let schema = null;
+  let searchTerm = "";
 
-  function build(containerEl, schema, values, onChangeCb) {
+  function build(containerEl, schemaObj, values, onChangeCb) {
     container = containerEl;
+    schema = schemaObj;
     onChange = onChangeCb;
     U.clear(container);
 
     for (const section of schema.sections) {
       container.append(_section(section, values));
     }
+    applyRules();
   }
 
   function _section(section, values) {
@@ -37,11 +43,27 @@ const SchemaForm = (() => {
     const head = U.el("header", {},
       U.el("span", { class: "caret" }, "▾"),
       section.name,
+      section.docs ? _docsIcon(section) : null,
       U.el("span", { class: "count" }, String(section.params.length)),
     );
-    const wrap = U.el("div", { class: "section collapsed", dataset: { section: section.name } }, head, body);
-    head.addEventListener("click", () => wrap.classList.toggle("collapsed"));
+    const wrap = U.el("div", {
+      class: "section collapsed",
+      dataset: { section: section.name },
+    }, head, body);
+    head.addEventListener("click", (ev) => {
+      if (ev.target.closest(".docs-icon")) return;
+      wrap.classList.toggle("collapsed");
+    });
     return wrap;
+  }
+
+  function _docsIcon(section) {
+    const icon = U.el("span", { class: "docs-icon", title: "Open documentation" }, "🕮");
+    icon.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      DocsPopup.open(section.docs, section.name);
+    });
+    return icon;
   }
 
   function _paramRow(param, values) {
@@ -66,11 +88,37 @@ const SchemaForm = (() => {
       link.addEventListener("click", () => Tabs.activate(param.link));
       row.append(link);
     } else {
-      row.append(_input(param, value));
+      row.append(_inputWrap(param, value));
     }
 
     _markChanged(row, param, value);
     return row;
+  }
+
+  function _inputWrap(param, value) {
+    const input = _input(param, value);
+    const showUnit = param.unit && param.unit !== "-" && param.type !== "bool";
+    const extras = [];
+    if (showUnit) extras.push(U.el("span", { class: "unit-suffix" }, param.unit));
+    if (param.time_tool) {
+      const clock = U.el("button", { class: "ghost time-tool-btn", title: "Compute from date/duration" }, "🕒");
+      clock.addEventListener("click", () => {
+        TimeTool.open(param.key, _refdateEpoch(), (seconds) => {
+          _commit(param, seconds);
+          const inp = container.querySelector(`[data-param="${param.key}"] input`);
+          if (inp) inp.value = _displayValue(seconds);
+        });
+      });
+      extras.push(clock);
+    }
+    if (!extras.length) return input;
+    return U.el("span", { class: "input-wrap" }, input, ...extras);
+  }
+
+  function _refdateEpoch() {
+    const raw = (App.state.config && App.state.config.refdate) || "2020-01-01 00:00";
+    const parsed = Date.parse(raw.replace(" ", "T") + (raw.length <= 16 ? ":00Z" : "Z"));
+    return Number.isFinite(parsed) ? parsed / 1000 : 0;
   }
 
   function _input(param, value) {
@@ -94,8 +142,13 @@ const SchemaForm = (() => {
       return select;
     }
 
-    // numbers, lists, strings, generic -> buffered text input
     const input = U.el("input", { type: "text", id, value: _displayValue(value) });
+    if (param.readonly) {
+      input.disabled = true;
+      input.classList.add("readonly");
+      input.title = "Derived from the grid files (set in the Grid tab)";
+      return input;
+    }
     const commit = () => {
       const parsed = _parseValue(param, input.value);
       if (parsed.ok) {
@@ -118,7 +171,9 @@ const SchemaForm = (() => {
     App.state.config[param.key] = value;
     const row = container.querySelector(`[data-param="${param.key}"]`);
     if (row) _markChanged(row, param, value);
+    applyRules();
     if (onChange) onChange(param.key, value);
+    App.emit("config-changed", param.key);
   }
 
   function _markChanged(row, param, value) {
@@ -154,9 +209,8 @@ const SchemaForm = (() => {
       const parts = text.split(/[\s,]+/).filter(Boolean);
       const nums = parts.map(Number);
       if (nums.every(Number.isFinite)) return { ok: true, value: nums };
-      return { ok: true, value: parts };   // list of strings (e.g. output_vars)
+      return { ok: true, value: parts };
     }
-    // str / file / any: numbers pass through as numbers for 'any'
     if (param.type === "any") {
       const v = Number(text);
       if (Number.isFinite(v) && /^[\d.eE+-]+$/.test(text)) return { ok: true, value: v };
@@ -164,32 +218,56 @@ const SchemaForm = (() => {
     return { ok: true, value: text };
   }
 
+  /* ================= conditional visibility ================= */
+
+  function _ruleSatisfied(rule) {
+    if (!rule) return true;
+    const current = App.state.config ? App.state.config[rule.key] : undefined;
+    return (rule.in || []).some((v) => v === current);
+  }
+
+  function applyRules() {
+    if (!container || !schema) return;
+    for (const section of schema.sections) {
+      const sectionEl = container.querySelector(`[data-section="${CSS.escape(section.name)}"]`);
+      if (!sectionEl) continue;
+      const sectionVisible = _ruleSatisfied(section.visible_if);
+      // the parameter controlling a section's visibility must never be
+      // hidden by it (e.g. method_vegetation inside "Vegetation (OLD)")
+      const controller = section.visible_if ? section.visible_if.key : null;
+      let anyVisible = false;
+      for (const param of section.params) {
+        const row = sectionEl.querySelector(`[data-param="${param.key}"]`);
+        if (!row) continue;
+        const ruleOk = (sectionVisible || param.key === controller)
+          && _ruleSatisfied(param.visible_if);
+        const searchOk = !searchTerm || param.key.toLowerCase().includes(searchTerm);
+        const show = ruleOk && searchOk;
+        row.style.display = show ? "" : "none";
+        if (show) anyVisible = true;
+      }
+      sectionEl.style.display = anyVisible ? "" : "none";
+      if (searchTerm && anyVisible) sectionEl.classList.remove("collapsed");
+    }
+  }
+
   /* ---- search filter ---- */
 
   function filter(term) {
-    term = term.trim().toLowerCase();
-    for (const section of container.querySelectorAll(".section")) {
-      let any = false;
-      for (const row of section.querySelectorAll(".param-row")) {
-        const key = row.dataset.param.toLowerCase();
-        const hit = !term || key.includes(term);
-        row.style.display = hit ? "" : "none";
-        if (hit) any = true;
+    searchTerm = term.trim().toLowerCase();
+    applyRules();
+    if (!searchTerm) {
+      for (const sectionEl of container.querySelectorAll(".section")) {
+        sectionEl.classList.add("collapsed");
       }
-      section.style.display = any ? "" : "none";
-      if (term && any) section.classList.remove("collapsed");
-      if (!term) section.classList.add("collapsed");
-    }
-    if (!term) {
       const first = container.querySelector(".section");
       if (first) first.classList.remove("collapsed");
     }
   }
 
-  /* Refresh the displayed value of a single parameter (e.g. after
-   * another tab wrote a file parameter). */
+  /* Refresh the displayed value of a single parameter. */
   function refreshParam(key) {
-    if (!container || !App.state.schema) return;
+    if (!container || !schema) return;
     const row = container.querySelector(`[data-param="${key}"]`);
     if (!row) return;
     const param = _findParam(key);
@@ -203,10 +281,11 @@ const SchemaForm = (() => {
       else if (input) input.checked = Boolean(value);
     }
     if (param) _markChanged(row, param, value);
+    applyRules();
   }
 
   function _findParam(key) {
-    for (const section of App.state.schema.sections) {
+    for (const section of schema.sections) {
       for (const param of section.params) {
         if (param.key === key) return param;
       }
@@ -214,5 +293,5 @@ const SchemaForm = (() => {
     return null;
   }
 
-  return { build, filter, refreshParam };
+  return { build, filter, refreshParam, applyRules };
 })();
