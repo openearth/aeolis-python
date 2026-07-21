@@ -10,6 +10,7 @@
 
   await MapView.init("map");
 
+  Draw.init();
   LayersPanel.init();
   ObjectsPanel.init();
 

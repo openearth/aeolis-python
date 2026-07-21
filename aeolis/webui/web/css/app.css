@@ -383,6 +383,16 @@ table.data input { width: 100%; border: none; text-align: right; padding: 1px 2p
 .map-label.boundary-onshore { color: #8a5a16; border-color: #8a5a16; }
 .map-label.boundary-lateral { color: #5c6a7c; border-color: #5c6a7c; }
 
+/* year chips (data availability) */
+.year-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
+.year-chip {
+  padding: 2px 8px; font-size: 12px;
+  border-radius: 999px;
+}
+.year-chip.on {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+}
+
 /* grid edit handles */
 .grid-handle {
   width: 14px; height: 14px;
