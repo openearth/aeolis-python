@@ -65,7 +65,12 @@ const CRS = (() => {
   /* Heuristic CRS detection from model coordinate ranges. */
   function detect(xs, ys) {
     const x = median(xs), y = median(ys);
-    if (Math.abs(x) <= 180 && Math.abs(y) <= 90 && Math.abs(x) > 2 && Math.abs(y) > 2) {
+    const finite = Array.from(xs).filter(Number.isFinite);
+    const span = finite.length ? Math.max(...finite) - Math.min(...finite) : 0;
+    // lon/lat only if values fit degrees AND the extent is plausibly
+    // sub-degree scale (a 10-unit-wide "degree" grid would be ~1000 km)
+    if (Math.abs(x) <= 180 && Math.abs(y) <= 90 && Math.abs(x) > 2 && Math.abs(y) > 2
+        && span < 2) {
       return { mode: "projected", epsg: 4326 };
     }
     if (x > -7000 && x < 300000 && y > 289000 && y < 629000) {
