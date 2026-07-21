@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AeoLiS</title>
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="vendor/maplibre-gl.css">
+  <link rel="stylesheet" href="vendor/uplot.min.css">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body class="tab-settings">
+
+  <!-- ============ Top bar ============ -->
+  <header id="topbar">
+    <div id="brand">
+      <img src="img/favicon.svg" alt="" width="22" height="22">
+      <span>AeoLiS</span>
+    </div>
+    <nav id="tabbar">
+      <button class="tab-btn active" data-tab="settings">Settings</button>
+      <button class="tab-btn" data-tab="grid">Grid</button>
+      <button class="tab-btn" data-tab="domain">Domain</button>
+      <button class="tab-btn" data-tab="conditions">Conditions</button>
+      <button class="tab-btn" data-tab="run">Run</button>
+      <button class="tab-btn" data-tab="viewer">Viewer</button>
+    </nav>
+    <div id="topbar-right">
+      <span id="project-chip" class="chip" title="No project open">No project</span>
+      <button id="btn-project" class="ghost">Open…</button>
+    </div>
+  </header>
+
+  <!-- ============ Main area ============ -->
+  <div id="main">
+
+    <!-- Left panel: one .tabpanel per tab -->
+    <aside id="sidebar">
+      <div class="tabpanel" data-tab="settings">
+        <div class="panel-head">
+          <h2>Model settings</h2>
+          <div class="panel-actions">
+            <button id="btn-cfg-save" class="primary" disabled>Save</button>
+            <button id="btn-cfg-saveas" class="ghost" disabled>Save as…</button>
+          </div>
+        </div>
+        <input id="cfg-search" type="search" placeholder="Filter parameters…">
+        <div id="settings-form" class="panel-body"></div>
+      </div>
+
+      <div class="tabpanel" data-tab="grid" hidden>
+        <div class="panel-head"><h2>Grid generation</h2></div>
+        <div id="grid-panel" class="panel-body"></div>
+      </div>
+
+      <div class="tabpanel" data-tab="domain" hidden>
+        <div class="panel-head"><h2>Domain</h2></div>
+        <div id="domain-panel" class="panel-body"></div>
+      </div>
+
+      <div class="tabpanel" data-tab="conditions" hidden>
+        <div class="panel-head"><h2>Boundary conditions</h2></div>
+        <div id="conditions-panel" class="panel-body"></div>
+      </div>
+
+      <div class="tabpanel" data-tab="run" hidden>
+        <div class="panel-head"><h2>Run simulation</h2></div>
+        <div id="run-panel" class="panel-body"></div>
+      </div>
+
+      <div class="tabpanel" data-tab="viewer" hidden>
+        <div class="panel-head"><h2>Viewer</h2></div>
+        <div id="viewer-panel" class="panel-body"></div>
+      </div>
+      <div id="sidebar-grip" title="Drag to resize"></div>
+    </aside>
+
+    <!-- Right side: map above, graphs below -->
+    <div id="viewport">
+      <div id="map-wrap">
+        <div id="map"></div>
+
+        <!-- Floating panels docked on the map -->
+        <div id="float-panels">
+          <section class="float-panel" id="layers-panel">
+            <header data-collapse="layers"><span class="caret">▾</span> Layers</header>
+            <div class="float-body" id="layers-body"></div>
+          </section>
+          <section class="float-panel" id="objects-panel">
+            <header data-collapse="objects"><span class="caret">▾</span> Objects</header>
+            <div class="float-body" id="objects-body"></div>
+          </section>
+        </div>
+
+        <div id="map-status">
+          <span id="coord-readout">–</span>
+          <span id="crs-readout" title="Coordinate reference system">EPSG:28992</span>
+        </div>
+      </div>
+
+      <div id="split-grip" title="Drag to resize graphs"></div>
+
+      <div id="graphs-wrap">
+        <div id="graphs-empty" class="empty-note">Graphs will appear here — boundary conditions,
+          output time series and data availability.</div>
+        <div id="graphs"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Playbar ============ -->
+  <footer id="playbar">
+    <button id="btn-play" title="Play / pause (space)">▶</button>
+    <button id="btn-step-back" title="Step back">⏮</button>
+    <button id="btn-step-fwd" title="Step forward">⏭</button>
+    <input id="timeline" type="range" min="0" max="1000" value="0" step="1">
+    <span id="time-label">–</span>
+    <label id="speed-wrap" title="Animation speed">
+      <span>speed</span>
+      <input id="rng-speed" type="range" min="0" max="4" value="2" step="0.1">
+    </label>
+  </footer>
+
+  <!-- ============ Modals ============ -->
+  <div id="modal-backdrop" hidden>
+    <div id="modal-project" class="modal" hidden>
+      <h2>Welcome to AeoLiS</h2>
+      <p class="muted">A project is a folder containing an <code>aeolis.txt</code> configuration.
+        All GUI data (raw downloads, polygons, caches) is kept in a <code>gui/</code> subfolder
+        of the same project folder.</p>
+      <div class="modal-actions">
+        <button id="btn-open-existing" class="primary">Open aeolis.txt…</button>
+        <button id="btn-new-project" class="ghost">New project…</button>
+      </div>
+      <div id="recent-list"></div>
+      <div class="modal-manual">
+        <input id="manual-path" type="text" placeholder="…or paste a path to aeolis.txt / project folder">
+        <button id="btn-open-manual" class="ghost">Open</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toasts"></div>
+
+  <!-- ============ Scripts (order matters) ============ -->
+  <script src="vendor/maplibre-gl.js"></script>
+  <script src="vendor/terra-draw.umd.js"></script>
+  <script src="vendor/terra-draw-maplibre-gl-adapter.umd.js"></script>
+  <script src="vendor/uplot.iife.min.js"></script>
+  <script src="vendor/proj4.js"></script>
+
+  <script src="js/core/util.js"></script>
+  <script src="js/core/api.js"></script>
+  <script src="js/core/state.js"></script>
+  <script src="js/core/tabs.js"></script>
+  <script src="js/core/crs.js"></script>
+  <script src="js/core/colormaps.js"></script>
+  <script src="js/core/mapview.js"></script>
+  <script src="js/core/objects.js"></script>
+  <script src="js/core/layers-panel.js"></script>
+  <script src="js/core/objects-panel.js"></script>
+  <script src="js/core/graphs.js"></script>
+  <script src="js/core/playbar.js"></script>
+
+  <script src="js/tabs/schema-form.js"></script>
+  <script src="js/tabs/settings.js"></script>
+  <script src="js/tabs/grid.js"></script>
+  <script src="js/tabs/domain.js"></script>
+  <script src="js/tabs/conditions.js"></script>
+  <script src="js/tabs/run.js"></script>
+  <script src="js/tabs/viewer.js"></script>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
