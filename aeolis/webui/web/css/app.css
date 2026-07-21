@@ -532,24 +532,31 @@ input.readonly { background: var(--panel-2); color: var(--muted); }
   background: var(--accent); border-color: var(--accent); color: #fff;
 }
 
-/* grid edit handles */
+/* toggle buttons (draw / edit modes) */
+button.toggle.active {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+}
+
+/* grid edit handles - distinct cursors per handle type */
 .grid-handle {
   width: 14px; height: 14px;
   border-radius: 50%;
   background: #fff;
   border: 2.5px solid var(--accent);
-  cursor: grab;
   box-shadow: 0 1px 4px rgba(0,0,0,.4);
 }
-.grid-handle:active { cursor: grabbing; }
-.grid-handle.origin { border-color: var(--ok); width: 17px; height: 17px; }
+.grid-handle.corner { cursor: nwse-resize; }
+.grid-handle.origin { border-color: var(--ok); width: 17px; height: 17px; cursor: move; }
 .grid-handle.rotate {
   width: 22px; height: 22px;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-size: 13px; font-weight: 700; color: var(--accent);
   background: #fff; border: 2px solid var(--accent);
+  cursor: grab;
 }
+.grid-handle.rotate:active { cursor: grabbing; }
+.shear-info { margin: 4px 0; }
 
 /* layer / object rows in floating panels */
 .lp-group { margin-bottom: 4px; }
