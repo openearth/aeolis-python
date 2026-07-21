@@ -340,7 +340,7 @@ DEFAULT_CONFIG = {
     'gw_mask'                       : None,               # Filename of ASCII file with mask for the groundwater level
     'vver_mask'                     : None,               # Filename of ASCII file with mask for the vertical vegetation growth   
 
-    # --- Nummerical Solver --- #
+    # --- Numerical solver --- #
     'T'                             : 1.,                 # [s] Adaptation time scale in advection equation
     'CFL'                           : 1.,                 # [-] CFL number to determine time step in explicit scheme
     'accfac'                        : 1.,                 # [-] Numerical acceleration factor
@@ -373,15 +373,15 @@ DEFAULT_CONFIG = {
     'k'                             : 0.001,              # [m] Bed roughness
     'kappa'                         : 0.41,               # [-] Von Kármán constant
 
-    # --- Shear / Perturbation / Topographic steering --- #
+    # --- Topographic steering (shear) --- #
     'method_shear'                  : 'fft',              # Name of method to compute topographic effects on wind shear stress (fft, quasi2d, duna2d (experimental))
-    'dx'                            : 1.,
-    'dy'                            : 1.,
+    'dx'                            : 1.,                 # [m] Cross-shore cell size of the rotating computational (shear) grid
+    'dy'                            : 1.,                 # [m] Alongshore cell size of the rotating computational (shear) grid
     'L'                             : 100.,               # [m] Typical length scale of dune feature (perturbation)
     'l'                             : 1.,                 # [m] Inner layer height (perturbation)
+    'buffer_width'                  : 10,                 # [m] Width of the bufferzone around the rotating computational (shear) grid
 
     # --- Flow separation bubble (OLD) --- #
-    'buffer_width'                  : 10,                 # [m] Width of the bufferzone around the rotational grid for wind perturbation
     'sep_filter_iterations'         : 0,                  # [-] Number of filtering iterations on the sep-bubble (0 = no filtering)
     'zsep_y_filter'                 : False,              # [-] Boolean for turning on/off the filtering of the separation bubble in y-direction
 
@@ -432,7 +432,7 @@ DEFAULT_CONFIG = {
     'max_moist'                     : 10.,           # NEWCH      # [%] Moisture content (volumetric in percent) above which the threshold shear velocity is set to infinity (no transport, default value Delgado-Fernandez, 2010)
     'max_moist'                     : 10.,                # [%] Moisture content (volumetric in percent) above which the threshold shear velocity is set to infinity (no transport, default value Delgado-Fernandez, 2010)
     
-    # --- Avalanching parameters --- #
+    # --- Avalanching --- #
     'theta_dyn'                     : 33.,                # [degrees] Initial Dynamic angle of repose, critical dynamic slope for avalanching
     'theta_stat'                    : 34.,                # [degrees] Initial Static angle of repose, critical static slope for avalanching
     'theta_dry'                     : 33.,                # [degrees] Angle of repose for dry sand (only used in compute_bedslope threshold)
