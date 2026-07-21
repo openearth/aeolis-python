@@ -238,60 +238,67 @@ MODEL_STATE = {
 #: AeoLiS model default configuration
 DEFAULT_CONFIG = {
 
-    # --- Grid files (convention *.grd) --- #
-    'xgrid_file'                    : None,               # Filename of ASCII file with x-coordinates of grid cells
-    'ygrid_file'                    : None,               # Filename of ASCII file with y-coordinates of grid cells
-    'bed_file'                      : None,               # Filename of ASCII file with bed level heights of grid cells
-    'ne_file'                       : None,               # Filename of ASCII file with non-erodible layer
-    'veg_file'                      : None,               # Filename of ASCII file with initial vegetation density
-
-    # --- Model, grid and time settings --- #
+    # --- Time settings --- #
+    'refdate'                       : '2020-01-01 00:00', # [-] Reference datetime in netCDF output
     'tstart'                        : 0.,                 # [s] Start time of simulation
     'tstop'                         : 3600.,              # [s] End time of simulation
     'dt'                            : 60.,                # [s] Time step size
     'restart'                       : None,               # [s] Interval for which to write restart files
-    'refdate'                       : '2020-01-01 00:00', # [-] Reference datetime in netCDF output
-    'callback'                      : None,               # Reference to callback function (e.g. example/callback.py':callback)
-    'wind_convention'               : 'nautical',         # Convention used for the wind direction in the input files (cartesian or nautical)
-    'alfa'                          : 0,                  # [deg] Real-world grid cell orientation wrt the North (clockwise)
-    'nx'                            : 0,                  # [-] Number of grid cells in x-dimension
-    'ny'                            : 0,                  # [-] Number of grid cells in y-dimension
 
-    # --- Input Timeseries --- #
+    # --- Main domain files (*.grd) --- #
+    'xgrid_file'                    : None,               # Filename of ASCII file with x-coordinates of grid cells
+    'ygrid_file'                    : None,               # Filename of ASCII file with y-coordinates of grid cells
+    'bed_file'                      : None,               # Filename of ASCII file with bed level heights of grid cells
+
+    # --- Other domain files (*.grd) --- #
+    'ne_file'                       : None,               # Filename of ASCII file with non-erodible layer
+    'veg_file'                      : None,               # Filename of ASCII file with initial vegetation density
+    'hveg_file'                     : None,               # Filename of ASCII file with initial vegetation height (shape: ny * nx * nspecies)
+    'Nt_file'                       : None,               # Filename of ASCII file with initial tiller density (shape: ny * nx * nspecies)
+    'bedcomp_file'                  : None,               # Filename of ASCII file with initial bed composition
+    'threshold_file'                : None,               # Filename of ASCII file with shear velocity threshold
+    'fence_file'                    : None,               # Filename of ASCII file with sand fence location/height (above the bed)
+    'supply_file'                   : None,               # Filename of ASCII file with a manual definition of sediment supply (mainly used in academic cases)
+    'wave_mask'                     : None,               # Filename of ASCII file with mask for wave height
+    'tide_mask'                     : None,               # Filename of ASCII file with mask for tidal elevation
+    'runup_mask'                    : None,               # Filename of ASCII file with mask for run-up
+    'threshold_mask'                : None,               # Filename of ASCII file with mask for the shear velocity threshold
+    'gw_mask'                       : None,               # Filename of ASCII file with mask for the groundwater level
+    'vver_mask'                     : None,               # Filename of ASCII file with mask for the vertical vegetation growth
+
+    # --- Timeseries --- #
     'wind_file'                     : None,               # Filename of ASCII file with time series of wind velocity and direction
     'tide_file'                     : None,               # Filename of ASCII file with time series of water levels
     'wave_file'                     : None,               # Filename of ASCII file with time series of wave heights
     'meteo_file'                    : None,               # Filename of ASCII file with time series of meteorlogical conditions
+    'wind_convention'               : 'nautical',         # Convention used for the wind direction in the input files (cartesian or nautical)
 
-    # --- Boundary conditions --- #
-    'boundary_lateral'              : 'flux',             # Name of lateral boundary conditions (circular, flux or constant)
-    'boundary_offshore'             : 'flux',             # Name of offshore boundary conditions (circular, flux or constant)
-    'boundary_onshore'              : 'flux',             # Name of onshore boundary conditions (circular, flux or constant)
-    'offshore_flux'                 : 1.,                 # [-] Factor to determine offshore boundary flux as a function of Cu (= 1 for saturated, = 0 for noflux)
-    'onshore_flux'                  : 1.,                 # [-] Factor to determine onshore boundary flux as a function of Cu (= 1 for saturated, = 0 for noflux)
-    'lateral_flux'                  : 1.,                 # [-] Factor to determine lateral boundary flux as a function of Cu (= 1 for saturated, = 0 for noflux)
-
-    # --- Sediment fractions and layers --- #
-    'grain_size'                    : [225e-6],           # [m] Average grain size of each sediment fraction
-    'grain_dist'                    : [1.],               # [-] Initial distribution of sediment fractions
-    'nlayers'                       : 3,                  # [-] Number of bed layers
-    'layer_thickness'               : .01,                # [m] Thickness of bed layers
-
-    # --- Output (and coupling) settings --- #
-    'visualization'                 : False,              # Boolean for visualization of model interpretation before and just after initialization
+    # --- Output settings --- #
     'output_times'                  : 60.,                # [s] Output interval in seconds of simulation time
     'output_file'                   : None,               # Filename of netCDF4 output file
     'output_types'                  : None,               # Names of statistical parameters to be included in output (avg, sum, var, min or max)
     'output_vars'                   : ['zb', 'zs',
                                        'Ct', 'Cu',
-                                       'uw', 'udir', 
+                                       'uw', 'udir',
                                        'uth', 'mass',
                                        'pickup', 'w'],    # Names of spatial grids to be included in output
-    'external_vars'                 : None,               # Names of variables that are overwritten by an external (coupling) model, i.e. CoCoNuT
-    'output_sedtrails'              : False,              # NEW! [T/F] Boolean to see whether additional output for SedTRAILS should be generated
-    'nfraction_sedtrails'           : 0,                  # [-] Index of selected fraction for SedTRAILS (0 if only one fraction)
-    
-    # --- Process Booleans (True/False) --- #
+    'visualization'                 : False,              # Boolean for visualization of model interpretation before and just after initialization
+
+    # --- Boundary conditions --- #
+    'boundary_offshore'             : 'constant',         # Name of offshore boundary conditions (circular, flux or constant)
+    'boundary_onshore'              : 'constant',         # Name of onshore boundary conditions (circular, flux or constant)
+    'boundary_lateral'              : 'constant',         # Name of lateral boundary conditions (circular, flux or constant)
+    'offshore_flux'                 : 1.,                 # [-] Factor to determine offshore boundary flux as a function of Cu (= 1 for saturated, = 0 for noflux)
+    'onshore_flux'                  : 1.,                 # [-] Factor to determine onshore boundary flux as a function of Cu (= 1 for saturated, = 0 for noflux)
+    'lateral_flux'                  : 1.,                 # [-] Factor to determine lateral boundary flux as a function of Cu (= 1 for saturated, = 0 for noflux)
+
+    # --- Sediment distribution --- #
+    'grain_size'                    : [225e-6],           # [m] Average grain size of each sediment fraction
+    'grain_dist'                    : [1.],               # [-] Initial distribution of sediment fractions
+    'nlayers'                       : 3,                  # [-] Number of bed layers
+    'layer_thickness'               : .01,                # [m] Thickness of bed layers
+
+    # --- Process Booleans --- #
     'process_wind'                  : True,               # Enable the process of wind
     'process_transport'             : True,               # Enable the process of transport
     'process_bedupdate'             : True,               # Enable the process of bed updating
@@ -302,7 +309,7 @@ DEFAULT_CONFIG = {
     'process_wave'                  : False,              # Enable the process of waves
     'process_runup'                 : False,              # Enable the process of wave runup
     'process_moist'                 : False,              # Enable the process of moist
-    'process_mixtoplayer'           : False,              # Enable the process of mixing 
+    'process_mixtoplayer'           : False,              # Enable the process of mixing
     'process_wet_bed_reset'         : False,              # Enable the process of bed-reset in the intertidal zone
     'process_meteo'                 : False,              # Enable the process of meteo
     'process_salt'                  : False,              # Enable the process of salt
@@ -317,8 +324,8 @@ DEFAULT_CONFIG = {
     'process_dune_erosion'          : False,              # Enable the process of wave-driven dune erosion
     'process_seepage_face'          : False,              # Enable the process of groundwater seepage (NB. only applicable to positive beach slopes)
     'process_bedinteraction'        : False,              # Enable the process of bed interaction in the advection equation
-    
-    # --- Threshold Booleans (True/False) --- #
+
+    # --- Threshold Booleans --- #
     'th_grainsize'                  : True,               # Enable wind velocity threshold based on grainsize
     'th_bedslope'                   : False,              # Enable wind velocity threshold based on bedslope
     'th_moisture'                   : False,              # Enable wind velocity threshold based on moisture
@@ -327,18 +334,18 @@ DEFAULT_CONFIG = {
     'th_salt'                       : False,              # Enable wind velocity threshold based on salt
     'th_sheltering'                 : False,              # Enable wind velocity threshold based on sheltering by roughness elements
     'th_nelayer'                    : False,              # Enable wind velocity threshold based on a non-erodible layer
-    
-    # --- Other spatial files / masks --- #
-    'bedcomp_file'                  : None,               # Filename of ASCII file with initial bed composition
-    'threshold_file'                : None,               # Filename of ASCII file with shear velocity threshold
-    'fence_file'                    : None,               # Filename of ASCII file with sand fence location/height (above the bed)
-    'supply_file'                   : None,               # Filename of ASCII file with a manual definition of sediment supply (mainly used in academic cases)
-    'wave_mask'                     : None,               # Filename of ASCII file with mask for wave height
-    'tide_mask'                     : None,               # Filename of ASCII file with mask for tidal elevation
-    'runup_mask'                    : None,               # Filename of ASCII file with mask for run-up
-    'threshold_mask'                : None,               # Filename of ASCII file with mask for the shear velocity threshold
-    'gw_mask'                       : None,               # Filename of ASCII file with mask for the groundwater level
-    'vver_mask'                     : None,               # Filename of ASCII file with mask for the vertical vegetation growth   
+
+    # --- Methods --- #
+    'solver'                        : 'steadystate',      # Name of the solver (steadystate, euler_backward, euler_forward)
+    'method_transport'              : 'bagnold',          # Name of method to compute equilibrium sediment transport rate
+    'method_grainspeed'             : 'windspeed',        # Name of method to assume/compute grainspeed (windspeed, duran, constant)
+    'method_shear'                  : 'fft',              # Name of method to compute topographic effects on wind shear stress (fft, quasi2d, duna2d (experimental))
+    'method_roughness'              : 'constant',         # Name of method to compute the roughness height z0, note that here the z0 = k
+    'method_moist_threshold'        : 'belly_johnson',    # Name of method to compute wind velocity threshold based on soil moisture content
+    'method_moist_process'          : 'infiltration',     # Name of method to compute soil moisture content(infiltration or surface_moisture)
+    'method_vegetation'             : 'duran',            # Name of method to compute vegetation: duran (original) or grass (new framework)
+    'vegshear_type'                 : 'raupach',          # Choose the Raupach grid based solver (1D or 2D) or the Okin approach (1D only)
+    'veggrowth_type'                : 'orig',             #'orig', 'duranmoore14'
 
     # --- Numerical solver --- #
     'T'                             : 1.,                 # [s] Adaptation time scale in advection equation
@@ -347,22 +354,12 @@ DEFAULT_CONFIG = {
     'max_bedlevel_change'           : 999.,               # [m] Maximum bedlevel change after one timestep. Next timestep dt will be modified (use 999. if not used)
     'max_error'                     : 1e-8,               # [-] Maximum error at which to quit iterative solution in implicit numerical schemes
     'max_iter'                      : 1000,               # [-] Maximum number of iterations at which to quit iterative solution in implicit numerical schemes
-    'solver'                        : 'steadystate',      # Name of the solver (steadystate, euler_backward, euler_forward)
     'solver_plot'                   : False,              # Boolean to plot convergence behaviour of the solver when max iterations is reached
     'solver_print'                  : True,               # Boolean to print convergence behaviour of the solver when max iterations is reached
 
-    # --- Boundary conditions -----------------------------------------------------------------------------------------
-    'boundary_lateral'              : 'constant',         # Name of lateral boundary conditions (circular, flux or constant)
-    'boundary_offshore'             : 'constant',         # Name of offshore boundary conditions (circular, flux or constant)
-    'boundary_onshore'              : 'constant',         # Name of onshore boundary conditions (circular, flux or constant)
-    'offshore_flux'                 : 1.,                 # [-] Factor to determine offshore boundary flux as a function of Cu (= 1 for saturated, = 0 for noflux)
-    'onshore_flux'                  : 1.,                 # [-] Factor to determine onshore boundary flux as a function of Cu (= 1 for saturated, = 0 for noflux)
-    'lateral_flux'                  : 1.,                 # [-] Factor to determine lateral boundary flux as a function of Cu (= 1 for saturated, = 0 for noflux)
-
-    # --- General physical constants and model parameters -------------------------------------------------------------
-    'method_roughness'              : 'constant',         # Name of method to compute the roughness height z0, note that here the z0 = k
+    # --- Model and physics parameters --- #
     'g'                             : 9.81,               # [m/s^2] Gravitational constant
-    'v'                             : 0.000015,           # [m^2/s] Air viscosity  
+    'v'                             : 0.000015,           # [m^2/s] Air viscosity
     'rhoa'                          : 1.225,              # [kg/m^3] Air density
     'rhog'                          : 2650.,              # [kg/m^3] Grain density
     'rhow'                          : 1025.,              # [kg/m^3] Water density
@@ -374,54 +371,57 @@ DEFAULT_CONFIG = {
     'kappa'                         : 0.41,               # [-] Von Kármán constant
 
     # --- Topographic steering (shear) --- #
-    'method_shear'                  : 'fft',              # Name of method to compute topographic effects on wind shear stress (fft, quasi2d, duna2d (experimental))
     'dx'                            : 1.,                 # [m] Cross-shore cell size of the rotating computational (shear) grid
     'dy'                            : 1.,                 # [m] Alongshore cell size of the rotating computational (shear) grid
     'L'                             : 100.,               # [m] Typical length scale of dune feature (perturbation)
     'l'                             : 1.,                 # [m] Inner layer height (perturbation)
     'buffer_width'                  : 10,                 # [m] Width of the bufferzone around the rotating computational (shear) grid
 
-    # --- Flow separation bubble (OLD) --- #
+    # --- Separation bubble --- #
+    'sep_look_dist'                 : 50.,                # [m] Flow separation: Look-ahead distance for upward curvature anticipation
+    'sep_k_press_up'                : 0.05,               # [-] Flow separation: Press-up curvature
+    'sep_k_crit_down'               : 0.18,               # [1/m] Flow separation: Maximum downward curvature
+    'sep_s_crit'                    : 0.18,               # [-] Flow separation: Critical bed slope below which reattachment is forced
+    'sep_s_leeside'                 : 0.25,               # [-] Maximum downward leeside slope of the streamline
     'sep_filter_iterations'         : 0,                  # [-] Number of filtering iterations on the sep-bubble (0 = no filtering)
     'zsep_y_filter'                 : False,              # [-] Boolean for turning on/off the filtering of the separation bubble in y-direction
 
-    # --- Sediment transport formulations --- #
-    'method_transport'              : 'bagnold',          # Name of method to compute equilibrium sediment transport rate
-    'method_grainspeed'             : 'windspeed',        # Name of method to assume/compute grainspeed (windspeed, duran, constant)
+    # --- Sediment transport --- #
     'Cb'                            : 1.5,                # [-] Constant in bagnold formulation for equilibrium sediment concentration
     'Ck'                            : 2.78,               # [-] Constant in kawamura formulation for equilibrium sediment concentration
     'Cl'                            : 6.7,                # [-] Constant in lettau formulation for equilibrium sediment concentration
     'Cdk'                           : 5.,                 # [-] Constant in DK formulation for equilibrium sediment concentration
+    'bi'                            : 1.,                 # [-] Bed interaction factor for sediment fractions
 
-    # --- Other sediment parameters --- #
+    # --- Armouring and sheltering --- #
     'sigma_shelter'                 : 4.2,                # [-] Ratio between basal area and frontal area of roughness elements
     'beta_shelter'                  : 130.,               # [-] Ratio between drag coefficient of roughness elements and bare surface
     'm_shelter'                     : 0.5,                # [-] Exponent in sheltering formulation
-    'bi'                            : 1.,                 # [-] Bed interaction factor for sediment fractions
 
-    # --- Bed update parameters --- #
-    'Tbedreset'                     : 86400.,             # [s] 
-    
-    # --- Moisture parameters --- #
-    'method_moist_threshold'        : 'belly_johnson',    # Name of method to compute wind velocity threshold based on soil moisture content
-    'method_moist_process'          : 'infiltration',     # Name of method to compute soil moisture content(infiltration or surface_moisture)
+    # --- Hydrodynamics and waves --- #
+    'eps'                           : 1e-3,               # [m] Minimum water depth to consider a cell "flooded"
+    'gamma'                         : .5,                 # [-] Maximum wave height over depth ratio
+    'xi'                            : .3,                 # [-] Surf similarity parameter
+    'facDOD'                        : .1,                 # [-] Ratio between depth of disturbance and local wave height
+    'Tbedreset'                     : 86400.,             # [s] Time scale for the wet-bed reset in the intertidal zone
+
+    # --- Moisture and groundwater --- #
     'Tdry'                          : 3600.*1.5,          # [s] Adaptation time scale for soil drying
-
-    # --- Moisture / Groundwater (Hallin) --- #
-    'boundary_gw'                   : 'no_flow',          # Landward groundwater boundary, dGw/dx = 0 (or 'static')
+    'max_moist'                     : 10.,                # [%] Moisture content (volumetric in percent) above which the threshold shear velocity is set to infinity (no transport, default value Delgado-Fernandez, 2010)
     'fc'                            : 0.11,               # [-] Moisture content at field capacity (volumetric)
     'w1_5'                          : 0.02,               # [-] Moisture content at wilting point (gravimetric)
-    'resw_moist'                    : 0.01,               # [-] Residual soil moisture content (volumetric) 
+    'resw_moist'                    : 0.01,               # [-] Residual soil moisture content (volumetric)
     'satw_moist'                    : 0.35,               # [-] Satiated soil moisture content (volumetric)
-    'resd_moist'                    : 0.01,               # [-] Residual soil moisture content (volumetric) 
-    'satd_moist'                    : 0.5,                # [-] Satiated soil moisture content (volumetric) 
+    'resd_moist'                    : 0.01,               # [-] Residual soil moisture content (volumetric)
+    'satd_moist'                    : 0.5,                # [-] Satiated soil moisture content (volumetric)
     'nw_moist'                      : 2.3,                # [-] Pore-size distribution index in the soil water retention function
-    'nd_moist'                      : 4.5,                # [-] Pore-size distribution index in the soil water retention function 
+    'nd_moist'                      : 4.5,                # [-] Pore-size distribution index in the soil water retention function
     'mw_moist'                      : 0.57,               # [-] m, van Genucthen param (can be approximated as 1-1/n)
     'md_moist'                      : 0.42,               # [-] m, van Genucthen param (can be approximated as 1-1/n)
     'alfaw_moist'                   : -0.070,             # [cm^-1] Inverse of the air-entry value for a wetting branch of the soil water retention function (Schmutz, 2014)
     'alfad_moist'                   : -0.035,             # [cm^-1] Inverse of the air-entry value for a drying branch of the soil water retention function (Schmutz, 2014)
     'thick_moist'                   : 0.002,              # [m] Thickness of surface moisture soil layer
+    'boundary_gw'                   : 'no_flow',          # Landward groundwater boundary, dGw/dx = 0 (or 'static')
     'K_gw'                          : 0.00078,            # [m/s] Hydraulic conductivity (Schmutz, 2014)
     'ne_gw'                         : 0.3,                # [-] Effective porosity
     'D_gw'                          : 12,                 # [m] Aquifer depth
@@ -429,23 +429,14 @@ DEFAULT_CONFIG = {
     'Cl_gw'                         : 0.7,                # [m] Groundwater overheight due to runup
     'in_gw'                         : 0,                  # [m] Initial groundwater level
     'GW_stat'                       : 1,                  # [m] Landward static groundwater boundary (if static boundary is defined)
-    'max_moist'                     : 10.,           # NEWCH      # [%] Moisture content (volumetric in percent) above which the threshold shear velocity is set to infinity (no transport, default value Delgado-Fernandez, 2010)
-    'max_moist'                     : 10.,                # [%] Moisture content (volumetric in percent) above which the threshold shear velocity is set to infinity (no transport, default value Delgado-Fernandez, 2010)
-    
+
     # --- Avalanching --- #
     'theta_dyn'                     : 33.,                # [degrees] Initial Dynamic angle of repose, critical dynamic slope for avalanching
     'theta_stat'                    : 34.,                # [degrees] Initial Static angle of repose, critical static slope for avalanching
     'theta_dry'                     : 33.,                # [degrees] Angle of repose for dry sand (only used in compute_bedslope threshold)
     'max_iter_ava'                  : 1000,               # [-] Maximum number of iterations at which to quit iterative solution in avalanching calculation
 
-    # --- Hydro and waves --- #
-    'eps'                           : 1e-3,               # [m] Minimum water depth to consider a cell "flooded"
-    'gamma'                         : .5,                 # [-] Maximum wave height over depth ratio
-    'xi'                            : .3,                 # [-] Surf similarity parameter
-    'facDOD'                        : .1,                 # [-] Ratio between depth of disturbance and local wave height
-
-    # --- Vegetation (OLD) --- #
-    'method_vegetation'             : 'duran',            # Name of method to compute vegetation: duran (original) or grass (new framework)
+    # --- Vegetation --- #
     'avg_time'                      : 86400.,             # [s] Indication of the time period over which the bed level change is averaged for vegetation growth
     'gamma_vegshear'                : 16.,                # [-] Roughness factor for the shear stress reduction by vegetation
     'hveg_max'                      : 1.,                 # [m] Max height of vegetation
@@ -455,94 +446,77 @@ DEFAULT_CONFIG = {
     'lateral'                       : 0.,                 # [1/year] Posibility of lateral expension per year
     'veg_gamma'                     : 1.,                 # [-] Constant on influence of sediment burial
     'veg_sigma'                     : 0.,                 # [-] Sigma in gaussian distrubtion of vegetation cover filter
-    'vegshear_type'                 : 'raupach',          # Choose the Raupach grid based solver (1D or 2D) or the Okin approach (1D only)
+    'veg_min_elevation'             : -10.,               # [m] Minimum elevation where vegetation can grow; default -10 disables restriction.
     'okin_c1_veg'                   : 0.48,               #x/h spatial reduction factor in Okin model for use with vegetation
     'okin_c1_fence'                 : 0.48,               #x/h spatial reduction factor in Okin model for use with sand fence module
     'okin_initialred_veg'           : 0.32,               #initial shear reduction factor in Okin model for use with vegetation
     'okin_initialred_fence'         : 0.32,               #initial shear reduction factor in Okin model for use with sand fence module
-    'veggrowth_type'                : 'orig',             #'orig', 'duranmoore14'
     'rhoveg_max'                    : 0.5,                #maximum vegetation density, only used in duran and moore 14 formulation
     't_veg'                         : 3,                  #time scale of vegetation growth (days), only used in duran and moore 14 formulation
     'v_gam'                         : 1,                  # only used in duran and moore 14 formulation
+    'veg_res_factor'                : 5,                  # [-] Vegetation subgrid refinement factor (dx_veg = dx / factor)
+    'dt_veg'                        : 86400.,             # [s] Time step for vegetation growth calculations
+    'species_names'                 : ['marram'],         # [-] Name(s) of vegetation species
+    'd_tiller'                      : [0.006],            # [m] Mean tiller diameter
+    'r_stem'                        : [0.2],              # [-] Fraction of rigid (non-bending) stem height
+    'alpha_uw'                      : [-0.0412],          # [s/m] Wind-speed sensitivity of vegetation bending
+    'alpha_Nt'                      : [1.95e-4],          # [m^2] Tiller-density sensitivity of vegetation bending
+    'alpha_0'                       : [0.9445],           # [-] Baseline bending factor (no wind, sparse vegetation)
+    'G_h'                           : [1.0],              # [m/yr] Intrinsic vertical vegetation growth rate
+    'G_c'                           : [2.5],              # [tillers/tiller/yr] Intrinsic clonal tiller production rate
+    'G_s'                           : [0.01],             # [tillers/tiller/yr] Intrinsic seedling establishment rate
+    'Hveg'                          : [0.8],              # [m] Maximum attainable vegetation height
+    'phi_h'                         : [1.0],              # [-] Saturation exponent for height growth
+    'Nt_max'                        : [900.0],            # [1/m^2] Maximum attainable tiller density
+    'R_cov'                         : [1.2],              # [m] Radius for neighbourhood density averaging
+    'lmax_c'                        : [0.9],              # [m] Maximum clonal dispersal distance
+    'mu_c'                          : [2.5],              # [-] Shape parameter of clonal dispersal kernel
+    'alpha_s'                       : [4.0],              # [m^2] Scale parameter of seed dispersal kernel
+    'nu_s'                          : [2.5],              # [-] Tail-heaviness of seed dispersal kernel
+    'T_burial'                      : 86400.*30.,         # [s] Time scale for sediment burial effect on vegetation growth (replaces avg_time)
+    'gamma_h'                       : [1.0],              # [-] Sensitivity of vertical growth to burial (1 / dzb_tol_h)
+    'dzb_tol_c'                     : [1.0],              # [m/yr] Tolerance burial range for clonal expansion
+    'dzb_tol_s'                     : [0.1],              # [m/yr] Tolerance burial range for seed establishment
+    'dzb_opt_h'                     : [0.5],              # [m/yr] Optimal burial rate for vertical growth
+    'dzb_opt_c'                     : [0.5],              # [m/yr] Optimal burial rate for clonal expansion
+    'dzb_opt_s'                     : [0.025],            # [m/yr] Optimal burial rate for seed establishment
+    'beta_veg'                      : [120.0],            # [-] Vegetation momentum-extraction efficiency (Raupach)
+    'm_veg'                         : [0.4],              # [-] Shear non-uniformity correction factor
+    'c1_okin'                       : [0.48],             # [-] Downwind decay coefficient in Okin shear reduction
+    'alpha_comp'                    : [0.],               # [-] Lotka–Volterra competition coefficients
+                                                          #      shape: nspecies * nspecies (flattened)
+                                                          #      alpha_comp[k,l] = effect of species l on species k
+    'T_flood'                       : 7200.,              # [s] Time scale for vegetation flood stress mortality (half-life under constant inundation)
+    'gamma_Nt_decay'                : [0.],               # [-] Sensitivity of tiller density decay to relative reduction in hveg
+    'pNt_zeta'                      : [0.3],              # [-] Exponent for reducing bed interaction parameter zeta based on tiller density
+    'bounce'                        : [0.75],             # [-] Fraction of sediment skimming over vegetation canopy (species-specific)
+    'alpha_lift'                    : [0.2],              # [-] Vegetation-induced upward lift (0-1) of transport-layer centroid
 
-    # --- Dune erosion parameters --- #
-    'dune_toe_elevation'            : 3,                  # Choose dune toe elevation, only used in the PH12 dune erosion solver
-    'beach_slope'                   : 0.1,                # Define the beach slope, only used in the PH12 dune erosion solver
-    'veg_min_elevation'             : -10.,               # Minimum elevation (m) where vegetation can grow; default -10 disables restriction.
-
-    # --- Bed interaction in advection equation (new process) --- #
-    'zeta_base'                     : 1.0,                # [-] Base value for bed interaction parameter in advection equation 
+    # --- Bed interaction --- #
+    'zeta_base'                     : 1.0,                # [-] Base value for bed interaction parameter in advection equation
     'zeta_sheltering'               : False,              # [-] Include sheltering effect of roughness elements on bed interaction parameter
     'zeta_grainspeed'               : False,              # [-] Include effect of the bed interaction parameter on the grainspeed
     'p_zeta_moist'                  : 0.8,                # [-] Exponent parameter for computing zeta from moisture
     'a_weibull'                     : 1.0,                # [-] Shape parameter k of Weibull function for bed interaction parameter zeta
     'b_weibull'                     : 0.5,                # [m] Scale parameter lambda of Weibull function for bed interaction parameter zeta
-    'bounce'                        : [0.75],              # [-] Fraction of sediment skimming over vegetation canopy (species-specific)
-    'alpha_lift'                    : [0.2],                # [-] Vegetation-induced upward lift (0-1) of transport-layer centroid
 
-    # --- Grass vegetation model (new vegetation framework) --- #
-    'method_vegetation'             : 'duran',       # ['duran' | 'grass'] Vegetation formulation
-    'veg_res_factor'                : 5,             # [-] Vegetation subgrid refinement factor (dx_veg = dx / factor)
-    'dt_veg'                        : 86400.,        # [s] Time step for vegetation growth calculations
-    'species_names'                 : ['marram'],    # [-] Name(s) of vegetation species
-    'hveg_file'                     : None,          # Filename of ASCII file with initial vegetation height (shape: ny * nx * nspecies)
-    'Nt_file'                       : None,          # Filename of ASCII file with initial tiller density (shape: ny * nx * nspecies)
+    # --- Dune erosion --- #
+    'dune_toe_elevation'            : 3,                  # [m] Choose dune toe elevation, only used in the PH12 dune erosion solver
+    'beach_slope'                   : 0.1,                # [-] Define the beach slope, only used in the PH12 dune erosion solver
 
-    'd_tiller'                      : [0.006],       # [m] Mean tiller diameter
-    'r_stem'                        : [0.2],         # [-] Fraction of rigid (non-bending) stem height
-    'alpha_uw'                      : [-0.0412],     # [s/m] Wind-speed sensitivity of vegetation bending
-    'alpha_Nt'                      : [1.95e-4],     # [m^2] Tiller-density sensitivity of vegetation bending
-    'alpha_0'                       : [0.9445],      # [-] Baseline bending factor (no wind, sparse vegetation)
-
-    'G_h'                           : [1.0],         # [m/yr] Intrinsic vertical vegetation growth rate
-    'G_c'                           : [2.5],         # [tillers/tiller/yr] Intrinsic clonal tiller production rate
-    'G_s'                           : [0.01],        # [tillers/tiller/yr] Intrinsic seedling establishment rate
-    'Hveg'                          : [0.8],         # [m] Maximum attainable vegetation height
-    'phi_h'                         : [1.0],         # [-] Saturation exponent for height growth
-
-    'Nt_max'                        : [900.0],       # [1/m^2] Maximum attainable tiller density
-    'R_cov'                         : [1.2],         # [m] Radius for neighbourhood density averaging
-
-    'lmax_c'                        : [0.9],         # [m] Maximum clonal dispersal distance
-    'mu_c'                          : [2.5],         # [-] Shape parameter of clonal dispersal kernel
-    'alpha_s'                       : [4.0],         # [m^2] Scale parameter of seed dispersal kernel
-    'nu_s'                          : [2.5],         # [-] Tail-heaviness of seed dispersal kernel
-
-    'T_burial'                      : 86400.*30.,    # [s] Time scale for sediment burial effect on vegetation growth (replaces avg_time)
-    'gamma_h'                       : [1.0],         # [-] Sensitivity of vertical growth to burial (1 / dzb_tol_h)
-    'dzb_tol_c'                     : [1.0],         # [m/yr] Tolerance burial range for clonal expansion
-    'dzb_tol_s'                     : [0.1],         # [m/yr] Tolerance burial range for seed establishment
-    'dzb_opt_h'                     : [0.5],         # [m/yr] Optimal burial rate for vertical growth
-    'dzb_opt_c'                     : [0.5],         # [m/yr] Optimal burial rate for clonal expansion
-    'dzb_opt_s'                     : [0.025],       # [m/yr] Optimal burial rate for seed establishment
-
-    'beta_veg'                      : [120.0],       # [-] Vegetation momentum-extraction efficiency (Raupach)
-    'm_veg'                         : [0.4],         # [-] Shear non-uniformity correction factor
-    'c1_okin'                       : [0.48],        # [-] Downwind decay coefficient in Okin shear reduction
-
-    'veg_sigma'                     : 0.,            # [-] Sigma in gaussian distrubtion of vegetation cover filter
-    # 'zeta_sigma'                    : 0.,            # [-] Standard deviation for smoothing vegetation bed interaction parameter
-
-    'alpha_comp'                    : [0.],          # [-] Lotka–Volterra competition coefficients
-                                                     #      shape: nspecies * nspecies (flattened)
-                                                     #      alpha_comp[k,l] = effect of species l on species k
-                                    
-    'T_flood'                       : 7200.,         # [s] Time scale for vegetation flood stress mortality (half-life under constant inundation)
-    'gamma_Nt_decay'                : [0.],            # [-] Sensitivity of tiller density decay to relative reduction in hveg
-    'pNt_zeta'                      : [0.3],           # [-] Exponent for reducing bed interaction parameter zeta based on tiller density 
-
-
-    # --- Separation bubble parameters --- #
-    'sep_look_dist'                 : 50.,           # [m] Flow separation: Look-ahead distance for upward curvature anticipation
-    'sep_k_press_up'                : 0.05,          # [-] Flow separation: Press-up curvature 
-    'sep_k_crit_down'               : 0.18,          # [1/m] Flow separation: Maximum downward curvature
-    'sep_s_crit'                    : 0.18,          # [-] Flow separation: Critical bed slope below which reattachment is forced
-    'sep_s_leeside'                 : 0.25,          # [-] Maximum downward leeside slope of the streamline
-
-    # --- Other --- #
+    # --- Salt --- #
     'Tsalt'                         : 3600.*24.*30.,      # [s] Adaptation time scale for salinitation
     'csalt'                         : 35e-3,              # [-] Maximum salt concentration in bed surface layer
+
+    # --- Other --- #
+    'callback'                      : None,               # Reference to callback function (e.g. example/callback.py':callback)
+    'external_vars'                 : None,               # Names of variables that are overwritten by an external (coupling) model, i.e. CoCoNuT
+    'output_sedtrails'              : False,              # NEW! [T/F] Boolean to see whether additional output for SedTRAILS should be generated
+    'nfraction_sedtrails'           : 0,                  # [-] Index of selected fraction for SedTRAILS (0 if only one fraction)
     'cpair'                         : 1.0035e-3,          # [MJ/kg/oC] Specific heat capacity air
+    'alfa'                          : 0,                  # [deg] Real-world grid cell orientation wrt the North (clockwise)
+    'nx'                            : 0,                  # [-] Number of grid cells in x-dimension
+    'ny'                            : 0,                  # [-] Number of grid cells in y-dimension
 }
 
 REQUIRED_CONFIG = ['nx', 'ny']
