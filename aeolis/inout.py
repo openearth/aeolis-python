@@ -121,6 +121,19 @@ def read_configfile(configfile, parse_files=True, load_defaults=True):
     return p
 
 
+def _equals_default(value, default):
+    '''Safely compare a configuration value against its default,
+    tolerating arrays/lists of different lengths and None values.'''
+    try:
+        v = np.asarray(value)
+        d = np.asarray(default)
+        if v.shape != d.shape:
+            return False
+        return bool(np.all(v == d))
+    except (TypeError, ValueError):
+        return value is default
+
+
 def write_configfile(configfile, p=None):
     '''Write model configuration file
 
@@ -240,7 +253,7 @@ def write_configfile(configfile, p=None):
                 value = p[key]
 
                 # Skip this key if its value matches the default
-                if key in DEFAULT_CONFIG and np.all(value == DEFAULT_CONFIG[key]) :
+                if key in DEFAULT_CONFIG and _equals_default(value, DEFAULT_CONFIG[key]):
                     continue
                 
                 comment = comments.get(key, '')
@@ -264,7 +277,7 @@ def write_configfile(configfile, p=None):
                 value = p[key]
                 
                 # Skip this key if its value matches the default
-                if key in DEFAULT_CONFIG and np.all(value == DEFAULT_CONFIG[key]):
+                if key in DEFAULT_CONFIG and _equals_default(value, DEFAULT_CONFIG[key]):
                     continue
                 
                 comment = comments.get(key, '')               
