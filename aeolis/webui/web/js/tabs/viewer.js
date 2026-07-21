@@ -1,9 +1,11 @@
-/* Viewer tab: explore model output and all other field layers.
+/* Viewer tab: the single place to manage everything shown on the map.
  *
- * - netCDF output: variable/statistic selection, instant time scrubbing
- *   (client LRU + prefetch + GPU frame interpolation via FieldLayer).
- * - Domain .grd files and downloaded raw data as toggleable layers.
- * - Per-layer styling: colormap, range (auto/manual), opacity.
+ * - Layer tree (Output / Interpolated .grd / Sample data / Grid /
+ *   Objects / Background) with visibility, ordering and per-layer
+ *   styling.
+ * - Objects management: rename, recolor, zoom, delete.
+ * - netCDF output: variable/statistic selection and instant time
+ *   scrubbing (client LRU + prefetch + GPU frame interpolation).
  */
 "use strict";
 
@@ -11,10 +13,10 @@ const ViewerTab = (() => {
 
   let meta = null;              // /api/output/meta
   let mesh = null;              // {x, y, n, s}
-  let variable = null;          // selected variable name
+  let variable = null;
   let extraIdx = "0";
-  let frameCache = new Map();   // t -> Float32Array
-  let frameRange = new Map();   // t -> [min,max]
+  let frameCache = new Map();
+  let frameRange = new Map();
   let inflight = new Map();
   let currentBracket = null;
   let autoRange = true;
@@ -23,12 +25,25 @@ const ViewerTab = (() => {
   const FRAME_CACHE_MAX = 60;
   const OUTPUT_LAYER = "field-output";
 
+  const GROUPS = [
+    ["output", "Model output"],
+    ["domain", "Interpolated (.grd)"],
+    ["rawdata", "Sample data"],
+    ["grid", "Grid"],
+    ["objects", "Objects"],
+    ["background", "Background"],
+  ];
+
   function init() {
     Tabs.register("viewer", { enter: _enter });
     App.on("project", () => { _reset(); _loadOutput(); });
     App.on("run-finished", () => _loadOutput(true));
     App.on("clock-tick", _onClock);
     App.on("layer-visibility", _onLayerVisibility);
+    App.on("layers", () => _renderTree());
+    App.on("objects", () => _renderTree());
+    App.on("basemap", () => _renderTree());
+    App.on("layer-order", _applyLayerOrder);
     _buildPanel();
   }
 
@@ -43,6 +58,186 @@ const ViewerTab = (() => {
   function _enter() {
     if (!meta) _loadOutput();
     _buildPanel();
+  }
+
+  /* ================= layer tree ================= */
+
+  function _renderTree() {
+    const tree = els.tree;
+    if (!tree) return;
+    U.clear(tree);
+
+    for (const [group, title] of GROUPS) {
+      if (group === "objects") { _renderObjectsGroup(tree, title); continue; }
+      if (group === "background") { _renderBackgroundGroup(tree, title); continue; }
+      const layers = Layers.byGroup(group);
+      if (!layers.length) continue;
+      tree.append(U.el("div", { class: "lp-group-head" }, title));
+      layers.forEach((layer, idx) => {
+        tree.append(_layerRow(layer, idx, layers.length));
+      });
+    }
+    if (!tree.children.length) {
+      tree.append(U.el("div", { class: "muted" }, "No layers yet."));
+    }
+  }
+
+  function _layerRow(layer, idx, count) {
+    const eye = U.el("span", { class: `eye ${layer.visible ? "" : "off"}`, title: "Show/hide" }, "👁");
+    eye.addEventListener("click", () => {
+      layer.visible = !layer.visible;
+      App.emit("layer-visibility", layer);
+      _renderTree();
+    });
+
+    const row = U.el("div", { class: "lp-row" }, eye,
+      U.el("span", { class: "lp-name", title: layer.title }, layer.title),
+      layer.subtitle ? U.el("span", { class: "lp-mini" }, layer.subtitle) : null);
+
+    // ordering within group (top row = drawn on top)
+    if (count > 1) {
+      const up = U.el("span", { class: "lp-mini lp-btn", title: "Raise" }, "↑");
+      const down = U.el("span", { class: "lp-mini lp-btn", title: "Lower" }, "↓");
+      up.addEventListener("click", () => Layers.move(layer.id, -1));
+      down.addEventListener("click", () => Layers.move(layer.id, +1));
+      if (idx > 0) row.append(up);
+      if (idx < count - 1) row.append(down);
+    }
+
+    // styling for field layers
+    const fieldId = _fieldIdFor(layer);
+    if (fieldId && FieldLayer.get(fieldId)) {
+      const style = U.el("span", { class: "lp-mini lp-btn", title: "Style…" }, "🎨");
+      style.addEventListener("click", () => _styleEditor(fieldId, layer.title));
+      row.append(style);
+    }
+    return row;
+  }
+
+  function _fieldIdFor(layer) {
+    if (layer.id === OUTPUT_LAYER) return OUTPUT_LAYER;
+    if (layer.id.startsWith("domain-") || layer.id.startsWith("raw-")) return `field-${layer.id}`;
+    return null;
+  }
+
+  function _renderObjectsGroup(tree, title) {
+    if (!App.state.objects.length) return;
+    tree.append(U.el("div", { class: "lp-group-head" }, title));
+    for (const obj of App.state.objects) {
+      const eye = U.el("span", { class: `eye ${obj.visible ? "" : "off"}` }, "👁");
+      eye.addEventListener("click", () => Objects.update(obj.id, { visible: !obj.visible }));
+
+      const swatch = U.el("span", { class: "lp-mini lp-btn", style: `color:${obj.color}`, title: "Change colour" }, "■");
+      swatch.addEventListener("click", () => {
+        const palette = ["#e6552f", "#2f7fe6", "#27a355", "#a034c6", "#e0a020", "#12a5b5", "#d1387f"];
+        const next = palette[(palette.indexOf(obj.color) + 1) % palette.length];
+        Objects.update(obj.id, { color: next });
+      });
+
+      const name = U.el("span", { class: "lp-name", title: "Double-click to rename" }, obj.name);
+      name.addEventListener("dblclick", () => {
+        const input = U.el("input", { type: "text", value: obj.name, style: "flex:1;font-size:12px" });
+        name.replaceWith(input);
+        input.focus(); input.select();
+        const commit = () => Objects.update(obj.id, { name: input.value.trim() || obj.name });
+        input.addEventListener("blur", commit);
+        input.addEventListener("keydown", (ev) => {
+          if (ev.key === "Enter") input.blur();
+          if (ev.key === "Escape") { input.value = obj.name; input.blur(); }
+        });
+      });
+
+      const zoom = U.el("span", { class: "lp-mini lp-btn", title: "Zoom to" }, "⌖");
+      zoom.addEventListener("click", () => {
+        const xs = obj.coords.map((c) => c[0]), ys = obj.coords.map((c) => c[1]);
+        MapView.fitModelBounds(Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys));
+      });
+
+      const del = U.el("span", { class: "lp-mini lp-btn", title: "Delete" }, "✕");
+      del.addEventListener("click", () => {
+        if (window.confirm(`Delete ${obj.name}?`)) Objects.remove(obj.id);
+      });
+
+      tree.append(U.el("div", { class: "lp-row" }, eye, swatch, name,
+        U.el("span", { class: "lp-mini" }, obj.kind), zoom, del));
+    }
+  }
+
+  function _renderBackgroundGroup(tree, title) {
+    if (CRS.isLocal()) return;
+    tree.append(U.el("div", { class: "lp-group-head" }, title));
+    for (const [key, label] of [["gray", "Grey map"], ["sat", "Satellite"], ["none", "None"]]) {
+      const active = App.state.ui.basemap === key;
+      const row = U.el("div", { class: `lp-row ${active ? "selected" : ""}` },
+        U.el("span", { class: "eye" }, active ? "●" : "○"),
+        U.el("span", { class: "lp-name" }, label));
+      row.addEventListener("click", () => MapView.setBasemap(key));
+      tree.append(row);
+    }
+  }
+
+  /* Apply the tree order to the map: iterate groups bottom-up so the
+   * first row of the tree ends up on top; grid and objects stay above
+   * the field layers. */
+  function _applyLayerOrder() {
+    const map = MapView.instance();
+    if (!map || !map.isStyleLoaded()) return;
+    const ordered = [];
+    for (const group of ["rawdata", "domain", "output"]) {
+      const layers = Layers.byGroup(group);
+      for (let i = layers.length - 1; i >= 0; i -= 1) {
+        const fieldId = _fieldIdFor(layers[i]);
+        if (fieldId && map.getLayer(fieldId)) ordered.push(fieldId);
+        const ptsId = `pts-${layers[i].id}`;
+        if (map.getLayer(ptsId)) ordered.push(ptsId);
+      }
+    }
+    // fields bottom-to-top, then grid, then objects on top
+    for (const id of [...ordered,
+      "grid-fill", "grid-lines", "grid-outline", "grid-shear", "grid-shear-inner",
+      "objects-fill", "objects-fill-outline", "objects-lines"]) {
+      if (map.getLayer(id)) map.moveLayer(id);
+    }
+  }
+
+  /* Per-layer style editor popup (any field layer). */
+  function _styleEditor(fieldId, title) {
+    const layer = FieldLayer.get(fieldId);
+    if (!layer) return;
+    const popup = Popup.open({ title: `Style — ${title}`, width: 380 });
+
+    const cmapSel = U.el("select", {});
+    for (const name of Colormaps.names()) {
+      cmapSel.append(U.el("option", { value: name, selected: name === layer.style.cmap ? "" : null }, name));
+    }
+    const preview = U.el("div", {
+      style: `height:10px;border-radius:5px;margin:4px 0;background:${Colormaps.cssGradient(layer.style.cmap)}`,
+    });
+    cmapSel.addEventListener("change", () => {
+      layer.setStyle({ cmap: cmapSel.value });
+      preview.style.background = Colormaps.cssGradient(cmapSel.value);
+    });
+
+    const minIn = U.el("input", { type: "text", value: U.fmtNum(layer.style.min, 4), style: "width:80px" });
+    const maxIn = U.el("input", { type: "text", value: U.fmtNum(layer.style.max, 4), style: "width:80px" });
+    const commitRange = () => {
+      const lo = Number(minIn.value), hi = Number(maxIn.value);
+      if (Number.isFinite(lo) && Number.isFinite(hi) && hi > lo) layer.setStyle({ min: lo, max: hi });
+    };
+    for (const input of [minIn, maxIn]) {
+      input.addEventListener("blur", commitRange);
+      input.addEventListener("keydown", (ev) => { if (ev.key === "Enter") input.blur(); });
+    }
+
+    const opacity = U.el("input", { type: "range", min: 0, max: 1, step: 0.05, value: layer.style.opacity });
+    opacity.addEventListener("input", () => layer.setStyle({ opacity: Number(opacity.value) }));
+
+    popup.body.append(
+      U.el("div", { class: "form-row" }, U.el("label", {}, "Colormap"), cmapSel),
+      preview,
+      U.el("div", { class: "form-row" }, U.el("label", {}, "Min / max"), minIn, maxIn),
+      U.el("div", { class: "form-row" }, U.el("label", {}, "Opacity"), opacity),
+    );
   }
 
   /* ================= output loading ================= */
@@ -82,6 +277,7 @@ const ViewerTab = (() => {
       _createOutputLayer();
       _buildPanel();
       await _showStep(0);
+      _applyLayerOrder();
     } catch (err) {
       console.warn("output load failed", err);
     }
@@ -152,7 +348,6 @@ const ViewerTab = (() => {
       } else {
         layer.setFrac(frac);
       }
-      // prefetch ahead for smooth playback
       if (k2 + 1 < meta.times.length) _fetchFrame(k2 + 1).catch(() => {});
       return;
     }
@@ -198,15 +393,22 @@ const ViewerTab = (() => {
       panel.append(U.el("div", { class: "muted" }, "Open a project first."));
       return;
     }
+
+    // --- layer tree ---
+    panel.append(U.el("span", { class: "fg-label" }, "Layers"));
+    els.tree = U.el("div", { class: "layer-tree" });
+    panel.append(els.tree);
+    _renderTree();
+
+    // --- output controls ---
     if (!meta) {
-      panel.append(U.el("div", { class: "muted" },
-        "No model output found yet — run a simulation in the Run tab, ",
-        "or toggle domain/raw layers in the Layers panel."));
-      _appendDomainSection(panel);
+      panel.append(U.el("div", { class: "muted", style: "margin-top:10px" },
+        "No model output yet — run a simulation in the Run tab."));
       return;
     }
 
-    // variable select
+    panel.append(U.el("span", { class: "fg-label", style: "margin-top:12px" }, "Output display"));
+
     const varSel = U.el("select", {});
     for (const v of meta.variables) {
       varSel.append(U.el("option", {
@@ -220,20 +422,17 @@ const ViewerTab = (() => {
       _renderExtraDims();
       await _onClock(App.state.clock.t);
     });
-    els.varSel = varSel;
     panel.append(U.el("div", { class: "form-row" }, U.el("label", {}, "Variable"), varSel));
 
-    // extra dims (fractions / layers)
     els.extraBox = U.el("div");
     panel.append(els.extraBox);
     _renderExtraDims();
 
-    // colormap
+    const layer = FieldLayer.get(OUTPUT_LAYER);
     const cmapSel = U.el("select", {});
     for (const name of Colormaps.names()) {
       cmapSel.append(U.el("option", { value: name }, name));
     }
-    const layer = FieldLayer.get(OUTPUT_LAYER);
     if (layer) cmapSel.value = layer.style.cmap;
     const cmapPreview = U.el("div", {
       style: `height:10px;border-radius:5px;margin:4px 0;background:${Colormaps.cssGradient(cmapSel.value)}`,
@@ -246,7 +445,6 @@ const ViewerTab = (() => {
     panel.append(U.el("div", { class: "form-row" }, U.el("label", {}, "Colormap"), cmapSel));
     panel.append(cmapPreview);
 
-    // range
     const autoCb = U.el("input", { type: "checkbox" });
     autoCb.checked = autoRange;
     autoCb.addEventListener("change", () => {
@@ -274,7 +472,6 @@ const ViewerTab = (() => {
       U.el("div", { class: "form-row" }, U.el("label", {}, "Min / max"), els.min, els.max),
     );
 
-    // opacity
     const opacity = U.el("input", { type: "range", min: 0, max: 1, step: 0.05,
       value: layer ? layer.style.opacity : 1 });
     opacity.addEventListener("input", () => {
@@ -283,12 +480,8 @@ const ViewerTab = (() => {
     });
     panel.append(U.el("div", { class: "form-row" }, U.el("label", {}, "Opacity"), opacity));
 
-    // probe: click a cell -> timeseries graph
     const probeBtn = U.el("button", { class: "ghost" }, "Probe cell (click map)");
     probeBtn.addEventListener("click", () => _armProbe(probeBtn));
-    panel.append(U.el("div", { class: "btn-row" }, probeBtn));
-
-    // zoom to output
     const zoomBtn = U.el("button", { class: "ghost" }, "Zoom to output");
     zoomBtn.addEventListener("click", () => {
       if (!mesh) return;
@@ -301,12 +494,10 @@ const ViewerTab = (() => {
       }
       MapView.fitModelBounds(minX, minY, maxX, maxY);
     });
-    panel.append(U.el("div", { class: "btn-row" }, zoomBtn));
+    panel.append(U.el("div", { class: "btn-row" }, probeBtn, zoomBtn));
 
     panel.append(U.el("div", { class: "muted", style: "font-size:11.5px" },
       `${meta.times.length} output steps — scrub or play with the time bar below.`));
-
-    _appendDomainSection(panel);
   }
 
   function _renderExtraDims() {
@@ -343,7 +534,6 @@ const ViewerTab = (() => {
       button.disabled = false;
       if (!mesh || !meta) return;
       const [px, py] = CRS.fromLngLat(ev.lngLat);
-      // nearest grid node
       let best = 0, bestDist = Infinity;
       for (let idx = 0; idx < mesh.x.length; idx += 1) {
         const dx = mesh.x[idx] - px, dy = mesh.y[idx] - py;
@@ -357,7 +547,6 @@ const ViewerTab = (() => {
           `/api/output/series?var=${variable}&j=${j}&i=${i}&k=${extraIdx}`);
         Graphs.add(`probe-${variable}-${j}-${i}`, {
           title: `${variable} @ cell (${j},${i})`,
-          height: 140,
           data: [res.t_epoch, res.values],
           series: [{}, { label: variable, stroke: "#b4423b", width: 1.5 }],
           timeBased: true,
@@ -375,27 +564,21 @@ const ViewerTab = (() => {
     });
   }
 
-  /* ================= domain / raw layers ================= */
-
-  function _appendDomainSection(panel) {
-    panel.append(U.el("div", { class: "muted", style: "margin-top:10px;font-size:11.5px" },
-      "Domain .grd files and downloaded raw data appear in the Layers panel ",
-      "(top right of the map) — toggle the eye to show them."));
-  }
+  /* ================= domain / raw layer toggling ================= */
 
   async function _onLayerVisibility(layerInfo) {
-    // output layer toggle
     if (layerInfo.id === OUTPUT_LAYER) {
       const layer = FieldLayer.get(OUTPUT_LAYER);
       if (layer) layer.setVisible(layerInfo.visible);
       return;
     }
-    // domain targets are registered lazily by domain tab? -> handle raw layers
     if (layerInfo.id.startsWith("raw-") && layerInfo.entry) {
       await _toggleRawLayer(layerInfo);
+      _applyLayerOrder();
     }
     if (layerInfo.id.startsWith("domain-")) {
       await _toggleDomainLayer(layerInfo);
+      _applyLayerOrder();
     }
   }
 
@@ -434,6 +617,7 @@ const ViewerTab = (() => {
         });
         layer.setFrames(parsed.values);
       }
+      _renderTree();
     } catch (err) {
       U.toast(`Layer failed: ${err.message}`, "error");
     }
@@ -454,8 +638,12 @@ const ViewerTab = (() => {
         min: parsed.range[0], max: parsed.range[1], opacity: 0.9,
       });
       layer.setFrames(parsed.values);
+      _renderTree();
     } catch (err) {
       U.toast(`Layer failed: ${err.message}`, "error");
+      // roll the eye back so the tree reflects reality
+      layerInfo.visible = false;
+      _renderTree();
     }
   }
 

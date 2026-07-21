@@ -57,7 +57,8 @@ const MapView = (() => {
       touchPitch: false,
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-left");
-    map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
+    // bottom-left is occupied by the coordinate/CRS readout
+    map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-right");
     map.touchZoomRotate.disableRotation();
 
     _buildBasemapSwitch();

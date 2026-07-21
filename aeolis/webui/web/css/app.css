@@ -163,35 +163,22 @@ input:focus, select:focus, textarea:focus {
   padding: 18px; text-align: center; font-style: italic;
 }
 
-/* ============ Floating map panels ============ */
+/* ============ Layer tree (Viewer tab) ============ */
 
-#float-panels {
-  position: absolute; top: 10px; right: 10px;
-  display: flex; flex-direction: column; gap: 8px;
-  width: 240px; z-index: 20;
-  max-height: calc(100% - 60px);
-}
-.float-panel {
-  background: rgba(255, 255, 255, .95);
+.layer-tree {
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  overflow: hidden;
-  display: flex; flex-direction: column;
-  min-height: 0;
-}
-.float-panel > header {
-  padding: 6px 10px;
-  font-weight: 700; font-size: 12.5px;
-  cursor: pointer; user-select: none;
   background: var(--panel-2);
-  border-bottom: 1px solid var(--border);
+  padding: 4px 8px 8px;
+  font-size: 12.5px;
 }
-.float-panel.collapsed > .float-body { display: none; }
-.float-panel.collapsed > header { border-bottom: none; }
-.float-panel .caret { display: inline-block; transition: transform .15s; }
-.float-panel.collapsed .caret { transform: rotate(-90deg); }
-.float-body { padding: 6px 8px; overflow-y: auto; font-size: 12.5px; }
+.layer-tree .lp-group-head {
+  font-weight: 700; color: var(--muted);
+  text-transform: uppercase; font-size: 10.5px; letter-spacing: .5px;
+  margin: 8px 0 2px;
+}
+.lp-btn { cursor: pointer; padding: 0 2px; }
+.lp-btn:hover { color: var(--accent); }
 
 #map-status {
   position: absolute; left: 8px; bottom: 8px; z-index: 20;
@@ -202,13 +189,15 @@ input:focus, select:focus, textarea:focus {
   font-variant-numeric: tabular-nums;
 }
 
-/* basemap switch (bottom-right of map) */
+/* basemap switch (top-right of map) */
 #basemap-switch {
-  position: absolute; right: 10px; bottom: 8px; z-index: 20;
+  position: absolute; right: 10px; top: 10px; z-index: 20;
   display: flex; gap: 0;
   border: 1px solid var(--border); border-radius: 6px; overflow: hidden;
   background: rgba(255,255,255,.9);
 }
+/* keep the maplibre scale bar clear of the readout */
+#map-wrap .maplibregl-ctrl-bottom-right { margin-bottom: 4px; }
 #basemap-switch button {
   border: none; border-radius: 0; padding: 4px 10px; font-size: 12px;
   background: transparent;

@@ -11,8 +11,6 @@
   await MapView.init("map");
 
   Draw.init();
-  LayersPanel.init();
-  ObjectsPanel.init();
 
   SettingsTab.init();
   GridTab.init();
@@ -61,13 +59,6 @@
       const map = MapView.instance();
       if (map) map.resize();
     });
-
-    // floating panel collapse
-    for (const header of document.querySelectorAll(".float-panel > header")) {
-      header.addEventListener("click", () => {
-        header.parentElement.classList.toggle("collapsed");
-      });
-    }
 
     // project button
     document.getElementById("btn-project").addEventListener("click", async () => {
