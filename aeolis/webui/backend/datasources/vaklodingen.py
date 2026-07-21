@@ -140,12 +140,15 @@ def download(bounds, years, dest_dir, job=None):
                 times = ds.variables["time"]
                 dates = netCDF4.num2date(times[:], times.units)
                 zvar = ds.variables["z"]
+                from aeolis.webui.backend.datasources.rws_lidar import bounds_tag
                 for t, date in enumerate(dates):
                     if int(date.year) not in years:
                         continue
                     stamp = f"{date.year:04d}{date.month:02d}"
                     tile_id = name.replace("vaklodingen", "").replace(".nc", "")
-                    out_name = f"vaklodingen{tile_id}_{stamp}.npz"
+                    # area tag: the stored subset depends on the bounds,
+                    # so a cached file is only valid for the same area
+                    out_name = f"vaklodingen{tile_id}_{stamp}_{bounds_tag(bounds)}.npz"
                     out_path = dest_dir / out_name
                     if not out_path.exists():
                         z = zvar[t, iy.min():iy.max() + 1, ix.min():ix.max() + 1]

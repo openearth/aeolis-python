@@ -256,11 +256,22 @@ def _gridfield(handler, query, tail):
         send_error_json(handler, f"{filename} does not exist", 404)
         return
     V = grd_io.read_grd(path)
+    n_species = 1
     if V.shape != X.shape:
-        send_error_json(handler, f"{filename} shape mismatch", 409)
-        return
+        # species-stacked file (hveg/Nt: flat ny*nx*nspecies, cf.
+        # grass.py reshape) -> slice out the requested species
+        if target in ("hveg", "Nt") and V.size % X.size == 0 and V.size // X.size >= 1:
+            n_species = V.size // X.size
+            k = max(0, min(n_species - 1, int(query.get("k", 0) or 0)))
+            V = V.reshape(X.shape[0], X.shape[1], n_species)[:, :, k]
+        else:
+            send_error_json(handler, f"{filename} shape mismatch", 409)
+            return
     payload, vmin, vmax = _pack_gridfield(X, Y, V)
-    send_bytes(handler, payload, extra_headers={"X-Data-Range": f"{vmin},{vmax}"})
+    send_bytes(handler, payload, extra_headers={
+        "X-Data-Range": f"{vmin},{vmax}",
+        "X-Species": str(n_species),
+    })
 
 
 @route("GET", "/api/domain/rawfield")

@@ -12,10 +12,18 @@ the requested area is only known after the (windowed) download, which
 reports "no coverage" when the window is empty.
 """
 
+import hashlib
 import urllib.request
 from datetime import datetime, timezone
 
 import numpy as np
+
+
+def bounds_tag(bounds):
+    """Short area fingerprint used in cached filenames, so data
+    downloaded for one grid location is never reused for another."""
+    key = "_".join(f"{v:.0f}" for v in bounds)
+    return hashlib.sha1(key.encode()).hexdigest()[:6]
 
 BASE = "https://downloads.rijkswaterstaatdata.nl"
 NODATA = -9999.0
@@ -132,7 +140,9 @@ def download(bounds, years, dest_dir, job=None):
                 if job.cancel_requested:
                     break
             res, paths = FILES[year]
-            out_name = f"rws_lidar_{year}_{res}m.tif"
+            # the filename carries an area tag: re-downloading for a new
+            # grid location must never reuse a cached file of the old one
+            out_name = f"rws_lidar_{year}_{res}m_{bounds_tag(bounds)}.tif"
             out_path = dest_dir / out_name
             if out_path.exists():
                 entries.append(_entry(year, res, out_name, bounds))

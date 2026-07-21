@@ -121,7 +121,12 @@ def _overview(handler, query, tail):
             if grids is not None:
                 try:
                     Z = grd_io.read_grd(current.root / str(filename))
-                    entry["shape_ok"] = Z.shape == grids[0].shape
+                    # species-stacked files (hveg/Nt) are fine as long as
+                    # the total size is a multiple of the grid size
+                    species_ok = (name in ("hveg", "Nt")
+                                  and Z.size % grids[0].size == 0
+                                  and Z.size // grids[0].size >= 1)
+                    entry["shape_ok"] = Z.shape == grids[0].shape or species_ok
                 except (ValueError, OSError):
                     entry["shape_ok"] = False
             entry["stale"] = entry["stale"] or not entry["shape_ok"]

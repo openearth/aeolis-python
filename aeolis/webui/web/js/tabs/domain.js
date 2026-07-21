@@ -64,27 +64,24 @@ const DomainTab = (() => {
     U.clear(panel);
 
     // --- sample data ---
-    const dlBtn = U.el("button", { class: "primary" }, "Download data…");
-    dlBtn.addEventListener("click", _downloadWizard);
-    const importBtn = U.el("button", { class: "ghost" }, "Import *.xyz…");
-    importBtn.addEventListener("click", _importXyz);
-
-    panel.append(
-      U.el("span", { class: "fg-label" }, "Sample data"),
-      U.el("div", { class: "btn-row" }, dlBtn, importBtn),
+    const samples = U.section("Sample data", { count: overview.entries.length });
+    samples.body.append(
+      U.el("div", { class: "tbtn-row" },
+        U.tbtn("download", "Download", { primary: true, title: "Download data from Dutch coastal sources", onclick: _downloadWizard }),
+        U.tbtn("upload", "Import", { title: "Import a *.xyz sample file", onclick: _importXyz })),
       _sampleList(),
     );
+    panel.append(samples.wrap);
 
     // --- interpolated data ---
-    panel.append(
-      U.el("span", { class: "fg-label", style: "margin-top:14px" }, "Interpolated data (.grd)"),
-      _targetList(),
-    );
-
+    const targetCount = Object.values(overview.targets).filter((t) => t.exists).length;
+    const targets = U.section("Interpolated data (.grd)", { count: targetCount });
+    targets.body.append(_targetList());
     if (!overview.grid_available) {
-      panel.append(U.el("div", { class: "muted", style: "margin-top:8px" },
+      targets.body.append(U.el("div", { class: "muted", style: "margin-top:8px" },
         "⚠ No model grid yet — create one in the Grid tab before interpolating."));
     }
+    panel.append(targets.wrap);
   }
 
   /* ---- sample list ---- */
@@ -113,35 +110,48 @@ const DomainTab = (() => {
       const row = U.el("div", { class: "lp-row" }, eye, name,
         U.el("span", { class: "lp-mini" }, entry.source));
 
-      if (idx > 0) {
-        const up = U.el("span", { class: "lp-mini lp-btn", title: "Raise" }, "↑");
-        up.addEventListener("click", () => _reorderSample(idx, idx - 1));
-        row.append(up);
-      }
-      if (idx < overview.entries.length - 1) {
-        const down = U.el("span", { class: "lp-mini lp-btn", title: "Lower" }, "↓");
-        down.addEventListener("click", () => _reorderSample(idx, idx + 1));
-        row.append(down);
-      }
-
-      const dup = U.el("span", { class: "lp-mini lp-btn", title: "Duplicate" }, "⧉");
-      dup.addEventListener("click", async () => {
-        await Api.post("/api/domain/sample_duplicate", { id: entry.id });
-        _refresh();
-      });
-      const mod = U.el("span", { class: "lp-mini lp-btn", title: "Modify…" }, "✎");
-      mod.addEventListener("click", () => _modifyWizard(entry));
-      const del = U.el("span", { class: "lp-mini lp-btn", title: "Remove" }, "✕");
-      del.addEventListener("click", async () => {
-        if (!window.confirm(`Remove ${entry.label}? (file stays on disk)`)) return;
-        await Api.post("/api/domain/forget", { id: entry.id });
-        Layers.unregister(layerId);
-        _refresh();
-      });
-      row.append(dup, mod, del);
+      const up = U.miniBtn("up", "Raise (drawn on top)", () => _reorderSample(idx, idx - 1));
+      const down = U.miniBtn("down", "Lower", () => _reorderSample(idx, idx + 1));
+      up.disabled = idx === 0;
+      down.disabled = idx === overview.entries.length - 1;
+      row.append(up, down,
+        U.miniBtn("copy", "Duplicate", async () => {
+          await Api.post("/api/domain/sample_duplicate", { id: entry.id });
+          _refresh();
+        }),
+        U.miniBtn("modify", "Modify…", () => _modifyWizard(entry)),
+        _deleteSampleBtn(entry, layerId));
       list.append(row);
     });
     return list;
+  }
+
+  function _deleteSampleBtn(entry, layerId) {
+    const btn = U.miniBtn("trash", "Remove…", () => {
+      const popup = Popup.open({ title: `Remove ${entry.label || entry.path}`, width: 420 });
+      const delFile = U.el("input", { type: "checkbox", id: "del-file", checked: "" });
+      const okBtn = U.el("button", { class: "danger" }, "Remove");
+      okBtn.addEventListener("click", async () => {
+        try {
+          await Api.post("/api/domain/forget", { id: entry.id, delete_file: delFile.checked });
+          Layers.unregister(layerId);
+          popup.close();
+          _refresh();
+        } catch (err) {
+          U.toast(err.message, "error");
+        }
+      });
+      const cancelBtn = U.el("button", { class: "ghost" }, "Cancel");
+      cancelBtn.addEventListener("click", popup.close);
+      popup.body.append(
+        U.el("div", { style: "font-size:13px" }, "Remove this sample layer from the project?"),
+        U.el("div", { class: "choice-row", style: "margin-top:8px" },
+          delFile, U.el("label", { for: "del-file" }, `also delete the file from disk (${entry.path})`)),
+        U.el("div", { class: "btn-row", style: "justify-content:flex-end" }, cancelBtn, okBtn),
+      );
+    });
+    btn.classList.add("danger-hover");
+    return btn;
   }
 
   async function _reorderSample(from, to) {
@@ -222,13 +232,10 @@ const DomainTab = (() => {
         }, "⚠ grid changed"));
       }
 
-      const interp = U.el("span", { class: "lp-mini lp-btn", title: "Interpolate…" }, "⇣");
-      interp.addEventListener("click", () => _interpolateWizard(name, info));
-      row.append(interp);
+      row.append(U.miniBtn("interp", "Interpolate…", () => _interpolateWizard(name, info)));
 
       if (info.exists && !name.endsWith("_mask")) {
-        const conv = U.el("span", { class: "lp-mini lp-btn", title: "Convert to sample data (for modification)" }, "→⛁");
-        conv.addEventListener("click", async () => {
+        row.append(U.miniBtn("copy", "Convert to sample data (for modification)", async () => {
           try {
             await Api.post("/api/domain/to_sample", { target: name });
             U.toast(`${name} converted to a sample layer`, "ok");
@@ -236,8 +243,7 @@ const DomainTab = (() => {
           } catch (err) {
             U.toast(err.message, "error");
           }
-        });
-        row.append(conv);
+        }));
       }
       list.append(row);
     }
@@ -376,16 +382,20 @@ const DomainTab = (() => {
     }
 
     popup.body.append(
-      U.el("div", { class: "form-row" }, useGrid,
-        U.el("label", { for: "dl-grid" }, "Grid extent + buffer"), buffer,
+      U.el("span", { class: "fg-label" }, "Area"),
+      U.el("div", { class: "choice-row" }, useGrid,
+        U.el("label", { for: "dl-grid" }, "Grid extent + buffer of"), buffer,
         U.el("span", { class: "muted" }, "m")),
-      U.el("div", { class: "form-row" }, useDraw,
-        U.el("label", { for: "dl-draw" }, "Drawn area"), drawBtn),
+      U.el("div", { class: "choice-row" }, useDraw,
+        U.el("label", { for: "dl-draw" }, "Drawn area"),
+        U.el("span", { class: "grow" }), drawBtn),
       areaNote,
+      U.el("div", { style: "border-top:1px solid var(--border);margin:12px 0 10px" }),
       U.el("div", { class: "btn-row" }, checkBtn),
       progress,
       results,
-      U.el("div", { class: "btn-row", style: "margin-top:10px" }, dlAllBtn, estNote),
+      U.el("div", { class: "btn-row", style: "margin-top:10px;justify-content:flex-end;align-items:center" },
+        estNote, dlAllBtn),
     );
   }
 
@@ -512,17 +522,18 @@ const DomainTab = (() => {
 
     popup.body.append(
       U.el("span", { class: "fg-label" }, "Which samples"),
-      U.el("div", { class: "form-row" }, scopeAll, U.el("label", { for: "ms-all" }, "All")),
-      U.el("div", { class: "form-row" }, scopePoly, U.el("label", { for: "ms-poly" }, "Inside polygon"),
+      U.el("div", { class: "choice-row" }, scopeAll, U.el("label", { for: "ms-all" }, "All")),
+      U.el("div", { class: "choice-row" }, scopePoly, U.el("label", { for: "ms-poly" }, "Inside polygon"),
         polySelect, drawBtn),
-      U.el("div", { class: "form-row" }, scopeIdx, U.el("label", { for: "ms-idx" }, "Index range"),
+      U.el("div", { class: "choice-row" }, scopeIdx, U.el("label", { for: "ms-idx" }, "Index range"),
         ...idxInputs),
       U.el("span", { class: "fg-label", style: "margin-top:8px" }, "Operation"),
       U.el("div", { class: "form-row" }, op, value),
       U.el("span", { class: "fg-label", style: "margin-top:8px" }, "Save"),
-      U.el("div", { class: "form-row" }, saveOver, U.el("label", { for: "msv-over" }, "Overwrite this layer")),
-      U.el("div", { class: "form-row" }, saveNew, U.el("label", { for: "msv-new" }, "Save as new layer"), newName),
-      U.el("div", { class: "btn-row" }, applyBtn),
+      U.el("div", { class: "choice-row" }, saveOver, U.el("label", { for: "msv-over" }, "Overwrite this layer")),
+      U.el("div", { class: "choice-row" }, saveNew, U.el("label", { for: "msv-new" }, "Save as new layer"),
+        U.el("span", { class: "grow" }), newName),
+      U.el("div", { class: "btn-row", style: "justify-content:flex-end" }, applyBtn),
     );
   }
 
