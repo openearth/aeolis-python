@@ -84,56 +84,192 @@ const DocsPopup = (() => {
 
 const TimeTool = (() => {
 
-  /* Helper to compute seconds for time parameters.
-   * refdateEpoch: epoch seconds of the config refdate.
-   * onApply(seconds) writes the value back into the form. */
-  function open(paramKey, refdateEpoch, onApply) {
-    const popup = Popup.open({ title: `Compute ${paramKey} [s]`, width: 480 });
+  // parameters that are points in time (a date makes sense) vs plain
+  // durations (dt, output interval, restart interval)
+  const POINT_PARAMS = new Set(["tstart", "tstop"]);
 
-    const result = U.el("input", { type: "text", readonly: "", style: "font-weight:700" });
-    const setResult = (seconds) => {
-      if (Number.isFinite(seconds)) result.value = String(Math.round(seconds));
+  /* Helper to compute seconds for time parameters. The result updates
+   * live while typing; one Apply button at the bottom. */
+  function open(paramKey, refdateEpoch, onApply) {
+    const popup = Popup.open({ title: `Set ${paramKey}`, width: 440 });
+    const isPoint = POINT_PARAMS.has(paramKey);
+    let seconds = null;
+
+    const resultLine = U.el("div", {
+      style: "font-size:15px;font-weight:700;margin:2px 0 0",
+    }, "–");
+    const resultNote = U.el("div", { class: "muted", style: "font-size:12px" });
+
+    const setResult = (value) => {
+      seconds = Number.isFinite(value) ? Math.round(value) : null;
+      applyBtn.disabled = seconds === null;
+      if (seconds === null) { resultLine.textContent = "–"; resultNote.textContent = ""; return; }
+      resultLine.textContent = `${paramKey} = ${seconds.toLocaleString("en-US").replace(/,/g, " ")} s`;
+      const human = U.fmtDuration(Math.abs(seconds));
+      resultNote.textContent = isPoint
+        ? `= ${human} after refdate → ${U.fmtDate(refdateEpoch + seconds)} UTC`
+        : `= ${human}`;
     };
 
-    // --- from a calendar date (relative to refdate) ---
-    const dateInput = U.el("input", { type: "datetime-local", step: 60 });
-    const dateBtn = U.el("button", { class: "ghost" }, "→ seconds since refdate");
-    dateBtn.addEventListener("click", () => {
+    // --- as a calendar date/time (points in time only) ---
+    const dateInput = U.el("input", { type: "datetime-local", step: 60, class: "grow" });
+    dateInput.addEventListener("input", () => {
       if (!dateInput.value) return;
-      const epoch = Date.parse(dateInput.value + "Z") / 1000;
-      setResult(epoch - refdateEpoch);
+      dateRadio.checked = true;
+      setResult(Date.parse(dateInput.value + "Z") / 1000 - refdateEpoch);
     });
 
-    // --- from a duration ---
-    const amount = U.el("input", { type: "text", value: "1", style: "width:80px" });
+    // --- as a duration ---
+    const amount = U.el("input", { type: "text", value: "", placeholder: "e.g. 30", style: "width:80px" });
     const unit = U.el("select", {},
-      ...[["hours", 3600], ["days", 86400], ["weeks", 7 * 86400],
-        ["months (30 d)", 30 * 86400], ["years (365 d)", 365 * 86400]]
-        .map(([label, s]) => U.el("option", { value: s }, label)));
-    const durBtn = U.el("button", { class: "ghost" }, "→ seconds");
-    durBtn.addEventListener("click", () => {
+      ...[["seconds", 1], ["minutes", 60], ["hours", 3600], ["days", 86400],
+        ["weeks", 7 * 86400], ["months (30 d)", 30 * 86400], ["years (365 d)", 365 * 86400]]
+        .map(([label, s]) => U.el("option", { value: s, selected: s === 86400 ? "" : null }, label)));
+    const durChanged = () => {
       const v = Number(amount.value);
-      if (Number.isFinite(v)) setResult(v * Number(unit.value));
+      if (!Number.isFinite(v) || amount.value.trim() === "") return;
+      durRadio.checked = true;
+      setResult(v * Number(unit.value));
+    };
+    amount.addEventListener("input", durChanged);
+    unit.addEventListener("change", durChanged);
+
+    const dateRadio = U.el("input", { type: "radio", name: "tt-mode", id: "tt-date" });
+    const durRadio = U.el("input", { type: "radio", name: "tt-mode", id: "tt-dur" });
+    (isPoint ? dateRadio : durRadio).checked = true;
+
+    const applyBtn = U.el("button", { class: "primary", disabled: "" }, "Apply");
+    applyBtn.addEventListener("click", () => {
+      if (seconds !== null) { onApply(seconds); popup.close(); }
+    });
+    const cancelBtn = U.el("button", { class: "ghost" }, "Cancel");
+    cancelBtn.addEventListener("click", popup.close);
+
+    popup.body.append(
+      U.el("div", { class: "muted", style: "font-size:12px;margin-bottom:10px" },
+        isPoint
+          ? `Times are in seconds since the refdate (${U.fmtDate(refdateEpoch)} UTC).`
+          : `${paramKey} is a duration in seconds.`),
+      isPoint ? U.el("div", { class: "choice-row" },
+        dateRadio, U.el("label", { for: "tt-date" }, "At date / time"), dateInput) : null,
+      U.el("div", { class: "choice-row" },
+        durRadio, U.el("label", { for: "tt-dur" }, isPoint ? "After refdate" : "Duration"),
+        amount, unit),
+      U.el("div", { style: "border-top:1px solid var(--border);margin:12px 0 8px" }),
+      resultLine, resultNote,
+      U.el("div", { class: "btn-row", style: "justify-content:flex-end;margin-top:12px" },
+        cancelBtn, applyBtn),
+    );
+  }
+
+  return { open };
+})();
+
+
+/* Output variables picker: choose which spatial variables go into the
+ * netCDF output and, per variable, which statistics (instantaneous
+ * snapshot and/or avg/sum/var/min/max — written as var_stat). */
+const OutputVarsPicker = (() => {
+
+  let catalog = null;   // {variables: [{name, dims, desc}], stats: [...]}
+
+  async function open(onDone) {
+    if (!catalog) {
+      try {
+        catalog = await Api.get("/api/schema/output_vars");
+      } catch (err) {
+        U.toast(err.message, "error");
+        return;
+      }
+    }
+    const popup = Popup.open({ title: "Output variables", width: 620 });
+
+    // current selection -> {base: Set("" | stat)}
+    const selection = new Map();
+    for (const raw of (App.state.config.output_vars || [])) {
+      const m = String(raw).match(/^(.*?)(?:[._](avg|sum|var|min|max))?$/);
+      const base = m[1], stat = m[2] || "";
+      if (!selection.has(base)) selection.set(base, new Set());
+      selection.get(base).add(stat);
+    }
+
+    const search = U.el("input", { type: "search", placeholder: "Filter variables…", style: "width:100%;margin-bottom:8px" });
+    const list = U.el("div", {
+      class: "layer-tree", style: "max-height:46vh;overflow-y:auto",
     });
 
-    const applyBtn = U.el("button", { class: "primary" }, `Apply to ${paramKey}`);
+    const renderRow = (v) => {
+      const chosen = selection.get(v.name);
+      const cb = U.el("input", { type: "checkbox" });
+      cb.checked = Boolean(chosen);
+      const statBox = U.el("span", { style: "display:inline-flex;gap:3px;flex:none" });
+      const renderStats = () => {
+        U.clear(statBox);
+        if (!selection.has(v.name)) return;
+        const sel = selection.get(v.name);
+        for (const stat of ["", ...catalog.stats]) {
+          const chip = U.el("button", {
+            class: `year-chip ${sel.has(stat) ? "on" : ""}`,
+            style: "padding:1px 7px;font-size:11px",
+            title: stat === "" ? "instantaneous snapshot" : `${v.name}_${stat}`,
+          }, stat === "" ? "inst" : stat);
+          chip.addEventListener("click", () => {
+            if (sel.has(stat)) { if (sel.size > 1) sel.delete(stat); }
+            else sel.add(stat);
+            renderStats();
+          });
+          statBox.append(chip);
+        }
+      };
+      cb.addEventListener("change", () => {
+        if (cb.checked) selection.set(v.name, new Set([""]));
+        else selection.delete(v.name);
+        renderStats();
+      });
+      renderStats();
+      const row = U.el("div", { class: "lp-row", title: v.desc || v.name },
+        cb,
+        U.el("span", { class: "lp-name", style: "font-family:Consolas,monospace;font-size:12px" }, v.name),
+        U.el("span", { class: "lp-mini", style: "flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" },
+          v.desc || ""),
+        statBox);
+      return row;
+    };
+
+    const renderList = () => {
+      U.clear(list);
+      const term = search.value.trim().toLowerCase();
+      const vars = catalog.variables.filter((v) =>
+        !term || v.name.toLowerCase().includes(term) || (v.desc || "").toLowerCase().includes(term));
+      // selected first, then the rest
+      for (const v of vars.filter((x) => selection.has(x.name))) list.append(renderRow(v));
+      for (const v of vars.filter((x) => !selection.has(x.name))) list.append(renderRow(v));
+      if (!vars.length) list.append(U.el("div", { class: "muted" }, "no matches"));
+    };
+    search.addEventListener("input", U.debounce(renderList, 150));
+    renderList();
+
+    const applyBtn = U.el("button", { class: "primary" }, "Apply");
     applyBtn.addEventListener("click", () => {
-      const v = Number(result.value);
-      if (Number.isFinite(v)) { onApply(v); popup.close(); }
+      const out = [];
+      for (const v of catalog.variables) {
+        const sel = selection.get(v.name);
+        if (!sel) continue;
+        for (const stat of ["", ...catalog.stats]) {
+          if (sel.has(stat)) out.push(stat ? `${v.name}_${stat}` : v.name);
+        }
+      }
+      App.state.config.output_vars = out;
+      popup.close();
+      if (onDone) onDone();
     });
 
     popup.body.append(
-      U.el("div", { class: "muted", style: "margin-bottom:8px" },
-        `refdate: ${U.fmtDate(refdateEpoch)} (UTC) — times are seconds since refdate`),
-      U.el("div", { class: "form-group" },
-        U.el("span", { class: "fg-label" }, "From a date"),
-        U.el("div", { class: "form-row" }, dateInput, dateBtn)),
-      U.el("div", { class: "form-group" },
-        U.el("span", { class: "fg-label" }, "From a duration"),
-        U.el("div", { class: "form-row" }, amount, unit, durBtn)),
-      U.el("div", { class: "form-group" },
-        U.el("span", { class: "fg-label" }, "Result [s]"),
-        U.el("div", { class: "form-row" }, result, applyBtn)),
+      U.el("div", { class: "muted", style: "font-size:12px;margin-bottom:6px" },
+        "Tick a variable, then choose per variable: instantaneous value (inst) ",
+        "and/or a statistic over each output interval (avg, sum, var, min, max)."),
+      search, list,
+      U.el("div", { class: "btn-row", style: "justify-content:flex-end" }, applyBtn),
     );
   }
 

@@ -35,7 +35,10 @@ class TestSchema:
         assert by_key["Ck"]["visible_if"] == {"key": "method_transport", "in": ["kawamura"]}
         assert by_key["veg_file"]["visible_if"]["in"] == ["duran"]
         assert by_key["hveg_file"]["visible_if"]["in"] == ["grass"]
-        assert by_key["nx"]["readonly"] and by_key["ny"]["readonly"]
+        # nx/ny are managed by the Grid tab and hidden from the form
+        assert "nx" not in by_key and "ny" not in by_key
+        # flux factors only shown for 'flux' boundaries
+        assert by_key["offshore_flux"]["visible_if"] == {"key": "boundary_offshore", "in": ["flux"]}
         assert by_key["tstop"]["time_tool"]
         # options verified against model source
         assert "sauermann" in by_key["method_transport"]["options"]
@@ -60,6 +63,41 @@ class TestSchema:
 
     def test_json_serializable(self):
         json.dumps(build_schema())
+
+    def test_section_order_and_disabled_rules(self):
+        schema = build_schema()
+        names = [s["name"] for s in schema["sections"]]
+        assert names[:5] == ["Time settings", "Main domain files (*.grd)",
+                             "Other domain files (*.grd)", "Timeseries",
+                             "Output settings"]
+        assert names[-1] == "Other"
+        by_name = {s["name"]: s for s in schema["sections"]}
+        assert by_name["Avalanching"]["enabled_if"] == {"key": "process_avalanche", "in": [True]}
+        assert "any" in by_name["Moisture and groundwater"]["enabled_if"]
+
+    def test_output_vars_catalog(self):
+        from aeolis.webui.backend.schema_api import list_output_vars
+        catalog = {v["name"]: v for v in list_output_vars()}
+        assert "zb" in catalog and "Ct" in catalog
+        assert catalog["zb"]["dims"][:2] == ["ny", "nx"]
+        assert "Bed level" in catalog["zb"]["desc"]
+
+    def test_output_vars_picker_replaces_output_types(self):
+        schema = build_schema()
+        by_key = {p["key"]: p for s in schema["sections"] for p in s["params"]}
+        assert "output_types" not in by_key
+        assert by_key["output_vars"]["picker"] == "output_vars"
+
+
+class TestDownloadCaching:
+
+    def test_bounds_tag_distinguishes_areas(self):
+        from aeolis.webui.backend.datasources.rws_lidar import bounds_tag
+        a = bounds_tag((70000, 445000, 72000, 447000))
+        b = bounds_tag((80000, 445000, 82000, 447000))
+        assert a != b
+        assert bounds_tag((70000, 445000, 72000, 447000)) == a
+        assert len(a) == 6
 
 
 # ---------------------------------------------------------------------

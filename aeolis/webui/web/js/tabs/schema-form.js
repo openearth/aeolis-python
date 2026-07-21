@@ -22,16 +22,21 @@ const SchemaForm = (() => {
   let onChange = null;
   let schema = null;
   let searchTerm = "";
+  let divider = null;          // "Disabled" divider element
+  let lastDisabledKey = "";    // change detection for DOM reordering
 
   function build(containerEl, schemaObj, values, onChangeCb) {
     container = containerEl;
     schema = schemaObj;
     onChange = onChangeCb;
+    lastDisabledKey = "";
     U.clear(container);
 
     for (const section of schema.sections) {
       container.append(_section(section, values));
     }
+    divider = U.el("div", { class: "disabled-divider", hidden: "" }, "Disabled");
+    container.append(divider);
     applyRules();
   }
 
@@ -43,27 +48,16 @@ const SchemaForm = (() => {
     const head = U.el("header", {},
       U.el("span", { class: "caret" }, "▾"),
       section.name,
-      section.docs ? _docsIcon(section) : null,
       U.el("span", { class: "count" }, String(section.params.length)),
     );
     const wrap = U.el("div", {
       class: "section collapsed",
       dataset: { section: section.name },
     }, head, body);
-    head.addEventListener("click", (ev) => {
-      if (ev.target.closest(".docs-icon")) return;
+    head.addEventListener("click", () => {
       wrap.classList.toggle("collapsed");
     });
     return wrap;
-  }
-
-  function _docsIcon(section) {
-    const icon = U.el("span", { class: "docs-icon", title: "Open documentation" }, "🕮");
-    icon.addEventListener("click", (ev) => {
-      ev.stopPropagation();
-      DocsPopup.open(section.docs, section.name);
-    });
-    return icon;
   }
 
   function _paramRow(param, values) {
@@ -87,6 +81,19 @@ const SchemaForm = (() => {
         `${_displayValue(value) || "not set"} → ${TAB_LABELS[param.link]}`);
       link.addEventListener("click", () => Tabs.activate(param.link));
       row.append(link);
+    } else if (param.picker === "output_vars") {
+      const btn = U.el("button", { class: "filelink", title: "Select output variables and statistics" });
+      const syncLabel = () => {
+        const v = App.state.config ? App.state.config[param.key] : value;
+        const n = Array.isArray(v) ? v.length : 0;
+        btn.textContent = n ? `${n} variable${n === 1 ? "" : "s"} — click to edit` : "select variables…";
+      };
+      syncLabel();
+      btn.addEventListener("click", () => OutputVarsPicker.open(() => {
+        syncLabel();
+        _commit(param, App.state.config[param.key]);
+      }));
+      row.append(btn);
     } else {
       row.append(_inputWrap(param, value));
     }
@@ -222,18 +229,22 @@ const SchemaForm = (() => {
 
   function _ruleSatisfied(rule) {
     if (!rule) return true;
+    if (rule.any) return rule.any.some(_ruleSatisfied);
+    if (rule.all) return rule.all.every(_ruleSatisfied);
     const current = App.state.config ? App.state.config[rule.key] : undefined;
     return (rule.in || []).some((v) => v === current);
   }
 
   function applyRules() {
     if (!container || !schema) return;
+    const disabledNames = [];
     for (const section of schema.sections) {
       const sectionEl = container.querySelector(`[data-section="${CSS.escape(section.name)}"]`);
       if (!sectionEl) continue;
       const sectionVisible = _ruleSatisfied(section.visible_if);
+      const enabled = _ruleSatisfied(section.enabled_if);
       // the parameter controlling a section's visibility must never be
-      // hidden by it (e.g. method_vegetation inside "Vegetation (OLD)")
+      // hidden by it
       const controller = section.visible_if ? section.visible_if.key : null;
       let anyVisible = false;
       for (const param of section.params) {
@@ -247,7 +258,32 @@ const SchemaForm = (() => {
         if (show) anyVisible = true;
       }
       sectionEl.style.display = anyVisible ? "" : "none";
+      sectionEl.classList.toggle("disabled-group", !enabled);
+      if (!enabled) disabledNames.push(section.name);
       if (searchTerm && anyVisible) sectionEl.classList.remove("collapsed");
+    }
+    _parkDisabled(disabledNames);
+  }
+
+  /* Move sections whose process is switched off below the "Disabled"
+   * divider (keeping schema order in both zones). */
+  function _parkDisabled(disabledNames) {
+    if (!divider) return;
+    const key = disabledNames.join("|");
+    if (key === lastDisabledKey) return;
+    lastDisabledKey = key;
+    const disabled = new Set(disabledNames);
+    for (const section of schema.sections) {
+      const el = container.querySelector(`[data-section="${CSS.escape(section.name)}"]`);
+      if (el && !disabled.has(section.name)) container.insertBefore(el, divider);
+    }
+    divider.hidden = disabledNames.length === 0;
+    for (const section of schema.sections) {
+      const el = container.querySelector(`[data-section="${CSS.escape(section.name)}"]`);
+      if (el && disabled.has(section.name)) {
+        el.classList.add("collapsed");
+        container.append(el);
+      }
     }
   }
 
