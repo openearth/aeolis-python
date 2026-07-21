@@ -280,6 +280,23 @@ class TestApi:
         assert np.allclose(Z[0:4, 0:4], 3.0)
         assert np.allclose(Z[5:, 5:], 0.0)
 
+    def test_run_checklist_catches_shape_mismatch(self, server_project):
+        tmp_path, get, post = server_project
+        post("/api/grid/save", {
+            "x0": 0.0, "y0": 0.0, "dx": 1.0, "nx": 10, "ny": 10, "rotation": 0.0,
+        })
+        # wrong-shaped bed file
+        np.savetxt(tmp_path / "zb_bad.grd", np.zeros((3, 4)))
+        cfg = get("/api/config")
+        values = cfg["values"]
+        values["bed_file"] = "zb_bad.grd"
+        post("/api/config/save", {"values": values})
+
+        res = get("/api/run/checklist")
+        assert not res["ready"]
+        errors = [c["text"] for c in res["checks"] if c["level"] == "error"]
+        assert any("does not match" in t for t in errors)
+
     def test_unknown_route_404(self, server_project):
         tmp_path, get, post = server_project
         with pytest.raises(urllib.error.HTTPError) as err:

@@ -29,30 +29,12 @@ def _select_backend(handler, body, tail):
 
 @route("GET", "/api/run/checklist")
 def _checklist(handler, query, tail):
-    current = project.require()
-    values = load_config(current.configfile)
-    checks = []
-
-    def _file_check(key, required):
-        filename = values.get(key)
-        if not filename:
-            checks.append({"key": key, "ok": not required,
-                           "text": f"{key} not set" + (" (required)" if required else " (optional)")})
-        else:
-            exists = (current.root / str(filename)).is_file()
-            checks.append({"key": key, "ok": exists,
-                           "text": f"{key} = {filename}" + ("" if exists else " (file missing!)")})
-
-    for key in ("xgrid_file", "ygrid_file", "bed_file", "wind_file"):
-        _file_check(key, required=True)
-    for key in ("ne_file", "veg_file", "tide_file", "wave_file", "meteo_file"):
-        _file_check(key, required=False)
-
-    duration = (values.get("tstop") or 0) - (values.get("tstart") or 0)
-    checks.append({"key": "time", "ok": duration > 0,
-                   "text": f"simulation duration {duration:g} s"})
-    send_json(handler, {"checks": checks, "ready": all(
-        c["ok"] for c in checks if "(optional)" not in c["text"])})
+    from aeolis.webui.backend.validation import run_checks
+    checks = run_checks(project.require())
+    send_json(handler, {
+        "checks": checks,
+        "ready": all(c["level"] != "error" for c in checks),
+    })
 
 
 @route("POST", "/api/run/start")

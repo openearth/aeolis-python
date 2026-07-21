@@ -87,12 +87,13 @@ const RunTab = (() => {
       U.clear(els.checklist);
       els.checklist.append(U.el("span", { class: "fg-label" }, "Pre-run checks"));
       for (const check of res.checks) {
+        const level = check.level || (check.ok ? "ok" : "error");
+        const icon = level === "ok" ? "✔" : level === "warn" ? "⚠" : "✖";
+        const style = level === "error" ? "color:var(--danger)"
+          : level === "warn" ? "color:#a06a00" : "";
         els.checklist.append(U.el("div", { class: "lp-row" },
-          U.el("span", { class: "eye" }, check.ok ? "✔" : "✖"),
-          U.el("span", {
-            class: "lp-name",
-            style: check.ok ? "" : "color:var(--danger)",
-          }, check.text)));
+          U.el("span", { class: "eye", style }, icon),
+          U.el("span", { class: "lp-name", style, title: check.text }, check.text)));
       }
       els.ready = res.ready;
     } catch (err) {
