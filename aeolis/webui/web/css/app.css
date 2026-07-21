@@ -349,6 +349,37 @@ table.data input { width: 100%; border: none; text-align: right; padding: 1px 2p
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .recent-item.missing { opacity: .5; }
 
+/* ============ In-app file browser ============ */
+
+.fb-backdrop {
+  position: fixed; inset: 0; z-index: 400;
+  background: rgba(15, 22, 32, .45);
+  display: flex; align-items: center; justify-content: center;
+}
+.fb-modal { width: 620px; max-width: 94vw; }
+.fb-toolbar { display: flex; gap: 6px; margin: 8px 0; }
+.fb-toolbar .fb-path { flex: 1; font-size: 12.5px; }
+.fb-drives { width: 70px; }
+.fb-list {
+  height: 320px; overflow-y: auto;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--panel-2);
+  user-select: none;
+}
+.fb-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 10px; cursor: default;
+  font-size: 13px;
+}
+.fb-row:hover { background: #eef1f5; }
+.fb-row.selected { background: var(--accent-soft); }
+.fb-icon { flex: none; }
+.fb-rowname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fb-meta { color: var(--muted); font-size: 11.5px; flex: none; }
+.fb-name-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.fb-name-row label { color: var(--muted); font-size: 12.5px; }
+.fb-name-row .fb-name { flex: 1; }
+
 /* ============ Toasts ============ */
 
 #toasts {

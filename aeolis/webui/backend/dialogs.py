@@ -104,3 +104,72 @@ def _pickfile(handler, body, tail):
 @route("POST", "/api/pickfolder")
 def _pickfolder(handler, body, tail):
     _pick(handler, body, folder=True)
+
+
+# ---------------------------------------------------------------------
+# In-app file browser (the default picker).
+#
+# Native modal dialogs opened from the server thread can appear BEHIND
+# the pywebview window on Windows, leaving the app greyed-out and
+# unclickable. The frontend therefore browses the filesystem through
+# this endpoint and renders its own picker modal.
+# ---------------------------------------------------------------------
+
+import fnmatch
+import os
+from pathlib import Path
+
+
+def _list_drives():
+    if os.name != "nt":
+        return ["/"]
+    drives = []
+    for letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+        if Path(f"{letter}:\\").exists():
+            drives.append(f"{letter}:\\")
+    return drives
+
+
+@route("POST", "/api/browse")
+def _browse(handler, body, tail):
+    raw = body.get("path") or str(Path.home())
+    patterns = body.get("patterns") or ["*"]
+    path = Path(raw).expanduser()
+    if path.is_file():
+        path = path.parent
+    if not path.is_dir():
+        path = Path.home()
+    path = path.resolve()
+
+    dirs = []
+    files = []
+    try:
+        for entry in sorted(path.iterdir(), key=lambda e: e.name.lower()):
+            name = entry.name
+            if name.startswith((".", "$")) or name.lower() in ("system volume information",):
+                continue
+            try:
+                if entry.is_dir():
+                    dirs.append(name)
+                elif any(fnmatch.fnmatch(name.lower(), p.lower()) for p in patterns):
+                    stat = entry.stat()
+                    files.append({
+                        "name": name,
+                        "size": stat.st_size,
+                        "mtime": int(stat.st_mtime),
+                    })
+            except OSError:
+                continue
+    except OSError as exc:
+        send_error_json(handler, f"cannot list {path}: {exc}", 403)
+        return
+
+    parent = str(path.parent) if path.parent != path else None
+    send_json(handler, {
+        "path": str(path),
+        "parent": parent,
+        "sep": os.sep,
+        "dirs": dirs,
+        "files": files,
+        "drives": _list_drives(),
+    })

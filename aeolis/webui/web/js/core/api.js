@@ -50,14 +50,14 @@ const Api = (() => {
     }
   }
 
-  /* Native OS dialogs (served by the backend). Returns path or null. */
+  /* File/folder pickers. The in-app FileBrowser modal is used instead
+   * of native OS dialogs: native modals opened from the server thread
+   * can appear behind the pywebview window and freeze the app. */
   async function pickFile(options = {}) {
-    const res = await post("/api/pickfile", options);
-    return res.path;
+    return FileBrowser.pick(options);
   }
   async function pickFolder(options = {}) {
-    const res = await post("/api/pickfolder", options);
-    return res.path;
+    return FileBrowser.pick({ ...options, mode: "folder" });
   }
 
   return { get, post, binary, waitJob, pickFile, pickFolder };
