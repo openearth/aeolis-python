@@ -115,11 +115,17 @@ def _remember_recent(project):
     recent = [r for r in recent if r.get("configfile") != entry["configfile"]]
     entry["opened"] = time.strftime("%Y-%m-%d %H:%M:%S")
     recent.insert(0, entry)
-    save_json(settings.RECENT_FILE, recent[:15])
+    save_json(settings.RECENT_FILE, recent[:10])
 
 
 def recent_projects():
+    """Recent projects whose config file still exists (pruned)."""
     recent = load_json(settings.RECENT_FILE, default=[])
+    kept = []
     for entry in recent:
-        entry["exists"] = Path(entry.get("configfile", "")).is_file()
-    return recent
+        if Path(entry.get("configfile", "")).is_file():
+            entry["exists"] = True
+            kept.append(entry)
+    if len(kept) != len(recent):
+        save_json(settings.RECENT_FILE, kept)
+    return kept[:10]

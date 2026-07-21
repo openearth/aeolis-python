@@ -101,8 +101,13 @@
     backdrop.hidden = false;
     modal.hidden = false;
 
+    // never trap the user: backdrop click / Escape close the modal
+    backdrop.onclick = (ev) => { if (ev.target === backdrop) _hideProjectModal(); };
+    document.addEventListener("keydown", _escClose);
+
     const list = document.getElementById("recent-list");
     U.clear(list);
+    recent = recent.filter((item) => item.exists).slice(0, 8);
     if (recent.length) {
       list.append(U.el("div", { class: "muted", style: "margin-top:10px" }, "Recent projects"));
       for (const item of recent) {
@@ -127,12 +132,18 @@
       const folder = await Api.pickFolder({ title: "Choose a folder for the new project" })
         .catch((err) => { U.toast(err.message, "error"); return null; });
       if (!folder) return;
+      let info;
       try {
-        const info = await Api.post("/api/project/new", { folder });
-        await _projectOpened(info);
-        _hideProjectModal();
+        info = await Api.post("/api/project/new", { folder });
       } catch (err) {
         U.toast(err.message, "error");
+        return;
+      }
+      _hideProjectModal();
+      try {
+        await _projectOpened(info);
+      } catch (err) {
+        U.toast(`Project created, but loading state failed: ${err.message}`, "error");
       }
     };
 
@@ -142,18 +153,31 @@
     };
   }
 
+  function _escClose(ev) {
+    if (ev.key === "Escape") _hideProjectModal();
+  }
+
   function _hideProjectModal() {
     document.getElementById("modal-backdrop").hidden = true;
     document.getElementById("modal-project").hidden = true;
+    document.removeEventListener("keydown", _escClose);
   }
 
   async function _openPath(path) {
+    let info;
     try {
-      const info = await Api.post("/api/project/open", { path });
-      await _projectOpened(info);
-      _hideProjectModal();
+      info = await Api.post("/api/project/open", { path });
     } catch (err) {
       U.toast(err.message, "error");
+      return;
+    }
+    // hide the modal as soon as the project is open on the backend, so
+    // a hiccup while loading state can never leave the UI blocked
+    _hideProjectModal();
+    try {
+      await _projectOpened(info);
+    } catch (err) {
+      U.toast(`Project opened, but loading state failed: ${err.message}`, "error");
     }
   }
 

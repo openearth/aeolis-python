@@ -165,9 +165,13 @@ class TestRunProgress:
 # ---------------------------------------------------------------------
 
 @pytest.fixture()
-def server_project(tmp_path):
+def server_project(tmp_path, monkeypatch):
     import aeolis.inout
+    from aeolis.webui.backend import settings
     from aeolis.webui.backend.httpd import make_server
+
+    # keep test projects out of the user's real recent-projects list
+    monkeypatch.setattr(settings, "RECENT_FILE", tmp_path / "recent.json")
 
     configfile = tmp_path / "aeolis.txt"
     aeolis.inout.write_configfile(str(configfile), None)
