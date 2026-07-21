@@ -174,6 +174,52 @@ def _field(handler, query, tail):
     send_bytes(handler, payload, extra_headers={"X-Data-Range": f"{vmin},{vmax}"})
 
 
+@route("GET", "/api/output/series")
+def _series(handler, query, tail):
+    """Time series of one variable at a single grid cell (probe)."""
+    path, values = _output_path()
+    if not path.is_file():
+        send_error_json(handler, "no output file", 404)
+        return
+    var = query.get("var")
+    j = int(query.get("j", 0))
+    i = int(query.get("i", 0))
+    extra = [int(v) for v in str(query.get("k", "0")).split(",") if v != ""]
+    refdate = parse_refdate(values)
+
+    with NC_LOCK:
+        ds = _open_nc(path)
+        try:
+            if var not in ds.variables:
+                send_error_json(handler, f"unknown variable '{var}'", 404)
+                return
+            ncvar = ds.variables[var]
+            index = []
+            pos = 0
+            for d in ncvar.dimensions:
+                if d == "time":
+                    index.append(slice(None))
+                elif d == "n":
+                    index.append(min(j, ds.dimensions["n"].size - 1))
+                elif d == "s":
+                    index.append(min(i, ds.dimensions["s"].size - 1))
+                else:
+                    k = extra[pos] if pos < len(extra) else 0
+                    index.append(min(k, ds.dimensions[d].size - 1))
+                    pos += 1
+            data = np.ma.filled(np.ma.masked_invalid(ncvar[tuple(index)]), np.nan)
+            times = np.asarray(ds.variables["time"][:], dtype="float64")
+        finally:
+            ds.close()
+
+    epoch0 = refdate.timestamp()
+    send_json(handler, {
+        "var": var, "j": j, "i": i,
+        "t_epoch": (epoch0 + times).tolist(),
+        "values": [None if not np.isfinite(v) else float(v) for v in np.atleast_1d(data)],
+    })
+
+
 # ---------------------------------------------------------------------
 # static gridfields: domain .grd files and raw rasters
 # ---------------------------------------------------------------------

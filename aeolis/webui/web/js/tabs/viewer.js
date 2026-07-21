@@ -283,6 +283,11 @@ const ViewerTab = (() => {
     });
     panel.append(U.el("div", { class: "form-row" }, U.el("label", {}, "Opacity"), opacity));
 
+    // probe: click a cell -> timeseries graph
+    const probeBtn = U.el("button", { class: "ghost" }, "Probe cell (click map)");
+    probeBtn.addEventListener("click", () => _armProbe(probeBtn));
+    panel.append(U.el("div", { class: "btn-row" }, probeBtn));
+
     // zoom to output
     const zoomBtn = U.el("button", { class: "ghost" }, "Zoom to output");
     zoomBtn.addEventListener("click", () => {
@@ -325,6 +330,49 @@ const ViewerTab = (() => {
       box.append(U.el("div", { class: "form-row" }, U.el("label", {}, dim.name), select));
     }
     extraIdx = selects.map((sel) => sel.value).join(",");
+  }
+
+  /* ================= probe ================= */
+
+  function _armProbe(button) {
+    const map = MapView.instance();
+    map.getCanvas().style.cursor = "crosshair";
+    button.disabled = true;
+    map.once("click", async (ev) => {
+      map.getCanvas().style.cursor = "";
+      button.disabled = false;
+      if (!mesh || !meta) return;
+      const [px, py] = CRS.fromLngLat(ev.lngLat);
+      // nearest grid node
+      let best = 0, bestDist = Infinity;
+      for (let idx = 0; idx < mesh.x.length; idx += 1) {
+        const dx = mesh.x[idx] - px, dy = mesh.y[idx] - py;
+        const d = dx * dx + dy * dy;
+        if (d < bestDist) { bestDist = d; best = idx; }
+      }
+      const j = Math.floor(best / mesh.s);
+      const i = best % mesh.s;
+      try {
+        const res = await Api.get(
+          `/api/output/series?var=${variable}&j=${j}&i=${i}&k=${extraIdx}`);
+        Graphs.add(`probe-${variable}-${j}-${i}`, {
+          title: `${variable} @ cell (${j},${i})`,
+          height: 140,
+          data: [res.t_epoch, res.values],
+          series: [{}, { label: variable, stroke: "#b4423b", width: 1.5 }],
+          timeBased: true,
+          axes: [
+            { values: (u, ticks) => ticks.map((t) => U.fmtDate(t).slice(5, 16)) },
+            { size: 55 },
+          ],
+          scales: { x: { time: false } },
+        });
+        MapView.setLabel(`probe-${j}-${i}`,
+          [mesh.x[best], mesh.y[best]], `(${j},${i})`, "boundary-lateral");
+      } catch (err) {
+        U.toast(err.message, "error");
+      }
+    });
   }
 
   /* ================= domain / raw layers ================= */
