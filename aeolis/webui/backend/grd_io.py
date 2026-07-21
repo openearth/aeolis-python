@@ -51,7 +51,11 @@ def write_grd(path, matrix):
 
 
 def read_grd(path):
-    return np.atleast_2d(np.loadtxt(path))
+    try:
+        return np.atleast_2d(np.loadtxt(path))
+    except ValueError:
+        # mask files may hold complex values (real=multiplier, imag=offset)
+        return np.atleast_2d(np.loadtxt(path, dtype=complex))
 
 
 def derive_params(X, Y):

@@ -25,8 +25,22 @@ TARGETS = {
     "veg": ("veg_file", "veg.grd"),
     "hveg": ("hveg_file", "hveg.grd"),
     "Nt": ("Nt_file", "Nt.grd"),
+    # 2D spatial files / masks (masks may hold complex values;
+    # bedcomp_file is 4D and deliberately not offered here)
+    "threshold": ("threshold_file", "threshold.grd"),
+    "fence": ("fence_file", "fence.grd"),
+    "supply": ("supply_file", "supply.grd"),
+    "wave_mask": ("wave_mask", "wave_mask.grd"),
+    "tide_mask": ("tide_mask", "tide_mask.grd"),
+    "runup_mask": ("runup_mask", "runup_mask.grd"),
+    "threshold_mask": ("threshold_mask", "threshold_mask.grd"),
+    "gw_mask": ("gw_mask", "gw_mask.grd"),
+    "vver_mask": ("vver_mask", "vver_mask.grd"),
 }
 TARGETS = {k: v for k, v in TARGETS.items() if v[0] in DEFAULT_CONFIG}
+
+# targets shown by default (masks appear when configured or on request)
+PRIMARY_TARGETS = ["bed", "ne", "veg", "hveg", "Nt"]
 
 
 # ---------------------------------------------------------------------
@@ -68,24 +82,56 @@ def get_entry(entry_id):
 # routes: overview / availability / download / import
 # ---------------------------------------------------------------------
 
+def grid_signature(values=None):
+    """Cheap fingerprint of the current model grid (for staleness)."""
+    grids, _ = _load_current_grid()
+    if grids is None:
+        return None
+    X, Y = grids
+    return f"{X.shape[0]}x{X.shape[1]}:{float(X[0, 0]):.3f}:{float(Y[0, 0]):.3f}:{float(X[-1, -1]):.3f}"
+
+
 @route("GET", "/api/domain")
 def _overview(handler, query, tail):
     current = project.require()
     values = load_config(current.configfile)
+    state = current.load_state()
+    signatures = state.get("interp_signatures", {})
+    current_sig = grid_signature()
+
     targets = {}
     for name, (key, default_name) in TARGETS.items():
         filename = values.get(key) or default_name
-        targets[name] = {
+        exists = (current.root / str(filename)).is_file()
+        configured = bool(values.get(key))
+        if name not in PRIMARY_TARGETS and not configured and not exists:
+            continue  # hide unused masks to keep the list clean
+        entry = {
             "config_key": key,
             "file": filename,
-            "exists": (current.root / filename).is_file(),
-            "configured": bool(values.get(key)),
+            "exists": exists,
+            "configured": configured,
+            "stale": False,
+            "shape_ok": True,
         }
+        if exists and current_sig:
+            stored = signatures.get(name)
+            entry["stale"] = bool(stored) and stored != current_sig
+            grids, _ = _load_current_grid()
+            if grids is not None:
+                try:
+                    Z = grd_io.read_grd(current.root / str(filename))
+                    entry["shape_ok"] = Z.shape == grids[0].shape
+                except (ValueError, OSError):
+                    entry["shape_ok"] = False
+            entry["stale"] = entry["stale"] or not entry["shape_ok"]
+        targets[name] = entry
+
     send_json(handler, {
         "sources": datasources.INFO,
         "entries": load_manifest()["entries"],
         "targets": targets,
-        "history": current.load_state().get("domain_history", []),
+        "grid_available": current_sig is not None,
     })
 
 
@@ -257,6 +303,10 @@ def _interpolate(handler, body, tail):
         filename = values.get(key) or default_name
         grd_io.write_grd(current.root / filename, result)
         patch_config({key: filename})
+        # remember which grid this interpolation belongs to (staleness)
+        state = current.load_state()
+        state.setdefault("interp_signatures", {})[target] = grid_signature()
+        current.save_state(state)
         _log_history({
             "action": "interpolate", "target": target, "file": filename,
             "layers": layer_ids, "fill": fill,
@@ -394,6 +444,210 @@ def _duplicate(handler, body, tail):
         "offset": offset, "file": filename,
     })
     send_json(handler, {"ok": True, "file": filename, "offset": offset, "from": src_file})
+
+
+# ---------------------------------------------------------------------
+# sample-level operations (modify / duplicate / rename / reorder /
+# convert an interpolated .grd back into a sample layer)
+# ---------------------------------------------------------------------
+
+_OPS = {
+    "set": lambda a, v: np.full_like(a, v),
+    "add": lambda a, v: a + v,
+    "subtract": lambda a, v: a - v,
+    "multiply": lambda a, v: a * v,
+    "min": lambda a, v: np.minimum(a, v),
+    "max": lambda a, v: np.maximum(a, v),
+}
+
+
+def _polygon_mask(xs, ys, polygon_id):
+    polygons = project.require().load_polygons()
+    obj = next((o for o in polygons.get("objects", []) if o.get("id") == polygon_id), None)
+    if obj is None:
+        raise RuntimeError(f"unknown polygon {polygon_id}")
+    from matplotlib.path import Path as MplPath
+    poly = MplPath(np.asarray(obj["coords"], dtype=float))
+    return poly.contains_points(np.column_stack([np.ravel(xs), np.ravel(ys)])).reshape(np.shape(xs))
+
+
+@route("POST", "/api/domain/sample_modify")
+def _sample_modify(handler, body, tail):
+    current = project.require()
+    entry = get_entry(body.get("id", ""))
+    if entry is None:
+        send_error_json(handler, "unknown sample layer", 404)
+        return
+    op = body.get("op")
+    if op not in _OPS:
+        send_error_json(handler, f"unknown op '{op}'")
+        return
+    try:
+        value = float(body.get("value"))
+    except (TypeError, ValueError):
+        send_error_json(handler, "missing numeric 'value'")
+        return
+    scope = body.get("scope") or {"type": "all"}
+    save_as = (body.get("save_as") or "").strip()
+
+    kind, x, y, z = load_raw(entry)
+    z = np.array(z, dtype="float64", copy=True)
+
+    if kind == "raster":
+        X, Y = np.meshgrid(x, y)
+    else:
+        X, Y = x, y
+
+    if scope.get("type") == "polygon":
+        try:
+            mask = _polygon_mask(X, Y, scope.get("polygon"))
+        except RuntimeError as exc:
+            send_error_json(handler, exc, 404)
+            return
+    elif scope.get("type") == "indices":
+        idx = [int(v) for v in (scope.get("indices") or [])]
+        mask = np.zeros(z.shape, dtype=bool)
+        if z.ndim == 2 and len(idx) >= 4:
+            mask[idx[0]:idx[1] + 1, idx[2]:idx[3] + 1] = True
+        elif z.ndim == 1 and len(idx) >= 2:
+            mask[idx[0]:idx[1] + 1] = True
+        else:
+            send_error_json(handler, "invalid indices for this sample layer")
+            return
+    else:
+        mask = np.ones(z.shape, dtype=bool)
+
+    if not mask.any():
+        send_error_json(handler, "selection matches no samples")
+        return
+    valid = mask & np.isfinite(z)
+    z[valid] = _OPS[op](z[valid], value)
+
+    # write result: overwrite or save as a new sample layer
+    src_path = current.root / entry["path"]
+    if save_as:
+        out_name = f"mod_{save_as.replace(' ', '_')}.npz"
+        out_path = current.rawdata_dir / out_name
+    else:
+        out_path = src_path
+        if src_path.suffix == ".tif":
+            # rewrite tif in place needs rasterio; convert to npz instead
+            out_path = src_path.with_suffix(".npz")
+
+    if kind == "raster":
+        np.savez_compressed(out_path, x=np.asarray(x), y=np.asarray(y), z=z.astype("float32"))
+        new_kind = "raster_nc"
+    else:
+        np.savez_compressed(out_path, x=np.asarray(x), y=np.asarray(y), z=z.astype("float32"))
+        new_kind = "points"
+
+    rel = f"gui/rawdata/{out_path.name}"
+    if save_as:
+        new_entry = {**entry, "kind": new_kind, "path": rel,
+                     "label": save_as, "source": entry.get("source", "modified")}
+        new_entry.pop("id", None)
+        add_entries([new_entry])
+    else:
+        manifest = load_manifest()
+        for item in manifest["entries"]:
+            if item.get("id") == entry["id"]:
+                item["kind"] = new_kind
+                item["path"] = rel
+        save_manifest(manifest)
+
+    send_json(handler, {"ok": True, "cells": int(valid.sum()),
+                        "min": float(np.nanmin(z)), "max": float(np.nanmax(z))})
+
+
+@route("POST", "/api/domain/sample_duplicate")
+def _sample_duplicate(handler, body, tail):
+    import shutil
+    current = project.require()
+    entry = get_entry(body.get("id", ""))
+    if entry is None:
+        send_error_json(handler, "unknown sample layer", 404)
+        return
+    src = current.root / entry["path"]
+    stem = src.stem
+    n = 2
+    while (current.rawdata_dir / f"{stem}_copy{n}{src.suffix}").exists():
+        n += 1
+    dst = current.rawdata_dir / f"{stem}_copy{n}{src.suffix}"
+    shutil.copy2(src, dst)
+    new_entry = {**entry, "path": f"gui/rawdata/{dst.name}",
+                 "label": f"{entry.get('label', stem)} (copy)"}
+    new_entry.pop("id", None)
+    add_entries([new_entry])
+    send_json(handler, {"ok": True})
+
+
+@route("POST", "/api/domain/sample_rename")
+def _sample_rename(handler, body, tail):
+    name = (body.get("name") or "").strip()
+    if not name:
+        send_error_json(handler, "missing 'name'")
+        return
+    manifest = load_manifest()
+    for item in manifest["entries"]:
+        if item.get("id") == body.get("id"):
+            item["label"] = name
+    save_manifest(manifest)
+    send_json(handler, {"ok": True})
+
+
+@route("POST", "/api/domain/sample_order")
+def _sample_order(handler, body, tail):
+    order = body.get("ids") or []
+    manifest = load_manifest()
+    by_id = {e.get("id"): e for e in manifest["entries"]}
+    reordered = [by_id[i] for i in order if i in by_id]
+    reordered += [e for e in manifest["entries"] if e.get("id") not in order]
+    manifest["entries"] = reordered
+    save_manifest(manifest)
+    send_json(handler, {"ok": True})
+
+
+@route("POST", "/api/domain/to_sample")
+def _to_sample(handler, body, tail):
+    """Convert an interpolated .grd into a (point) sample layer so it
+    can be modified like any other sample data."""
+    current = project.require()
+    target = body.get("target")
+    if target not in TARGETS:
+        send_error_json(handler, f"unknown target '{target}'")
+        return
+    grids, values = _load_current_grid()
+    if grids is None:
+        send_error_json(handler, "no model grid", 404)
+        return
+    X, Y = grids
+    key, default_name = TARGETS[target]
+    filename = values.get(key) or default_name
+    path = current.root / str(filename)
+    if not path.is_file():
+        send_error_json(handler, f"{filename} does not exist", 404)
+        return
+    Z = grd_io.read_grd(path)
+    if np.iscomplexobj(Z):
+        send_error_json(handler, "complex-valued masks cannot be converted to samples")
+        return
+    if Z.shape != X.shape:
+        send_error_json(handler, f"{filename} does not match the current grid", 409)
+        return
+    out_name = f"from_{target}.npz"
+    np.savez_compressed(current.rawdata_dir / out_name,
+                        x=X.ravel(), y=Y.ravel(), z=Z.ravel().astype("float32"))
+    add_entries([{
+        "source": "converted",
+        "kind": "points",
+        "path": f"gui/rawdata/{out_name}",
+        "crs": None,
+        "res": None,
+        "bounds": [float(X.min()), float(Y.min()), float(X.max()), float(Y.max())],
+        "label": f"{target} ({filename}) → samples",
+        "downloaded": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M"),
+    }])
+    send_json(handler, {"ok": True})
 
 
 def _log_history(record):

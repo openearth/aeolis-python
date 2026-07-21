@@ -179,6 +179,7 @@ input:focus, select:focus, textarea:focus {
 }
 .lp-btn { cursor: pointer; padding: 0 2px; }
 .lp-btn:hover { color: var(--accent); }
+.stale-badge { color: var(--danger); font-weight: 700; }
 
 #map-status {
   position: absolute; left: 8px; bottom: 8px; z-index: 20;

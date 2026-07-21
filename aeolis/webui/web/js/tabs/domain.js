@@ -1,23 +1,27 @@
-/* Domain tab: fill the model grid with bathymetry, vegetation and
- * non-erodible layer data.
+/* Domain tab: bathymetry / vegetation / ne-layer data.
  *
- * Workflow: pick an area -> check availability -> download raw data
- * (LiDAR / JarKus / Vaklodingen / custom xyz) -> modify with polygons
- * or cell indices -> interpolate onto the grid (writes the .grd file
- * and updates the config). Raw data remains available as layers.
+ * Two sections:
+ *  - Sample data: downloaded/imported datasets with visibility, rename,
+ *    reorder, duplicate, remove and a Modify… popup (scope: all /
+ *    polygon / indices; op: set/add/subtract/multiply/min/max; save or
+ *    save-as-new-layer).
+ *  - Interpolated data: the model .grd files with visibility, an
+ *    Interpolate… popup (sample priority + fill value) and a
+ *    convert-to-samples action. Staleness vs the current grid is
+ *    badged.
+ * Downloading happens in a popup wizard: pick area (grid extent +
+ * buffer, or draw), check availability, multi-select years across
+ * sources (click / Shift+click / drag), download all at once.
  */
 "use strict";
 
 const DomainTab = (() => {
 
-  let overview = null;         // /api/domain payload
-  let bounds = null;           // [minx,miny,maxx,maxy] model CRS
-  let availability = null;     // check results per source
-  let els = {};
+  let overview = null;
 
   function init() {
     Tabs.register("domain", { enter: _refresh });
-    App.on("project", () => { availability = null; bounds = null; _refresh(); });
+    App.on("project", _refresh);
   }
 
   async function _refresh() {
@@ -28,11 +32,11 @@ const DomainTab = (() => {
       U.toast(err.message, "error");
       return;
     }
+    _registerLayers();
     _build();
-    _registerRawLayers();
   }
 
-  function _registerRawLayers() {
+  function _registerLayers() {
     for (const entry of overview.entries) {
       const existing = Layers.get(`raw-${entry.id}`);
       Layers.register({
@@ -53,67 +57,252 @@ const DomainTab = (() => {
     }
   }
 
-  /* ================= UI ================= */
+  /* ================= panel ================= */
 
   function _build() {
     const panel = document.getElementById("domain-panel");
     U.clear(panel);
-    els = {};
 
-    panel.append(_sectionRawData());
-    panel.append(_sectionModify());
-    panel.append(_sectionInterpolate());
-    panel.append(_sectionQuickFlows());
-    panel.append(_sectionHistory());
+    // --- sample data ---
+    const dlBtn = U.el("button", { class: "primary" }, "Download data…");
+    dlBtn.addEventListener("click", _downloadWizard);
+    const importBtn = U.el("button", { class: "ghost" }, "Import *.xyz…");
+    importBtn.addEventListener("click", _importXyz);
+
+    panel.append(
+      U.el("span", { class: "fg-label" }, "Sample data"),
+      U.el("div", { class: "btn-row" }, dlBtn, importBtn),
+      _sampleList(),
+    );
+
+    // --- interpolated data ---
+    panel.append(
+      U.el("span", { class: "fg-label", style: "margin-top:14px" }, "Interpolated data (.grd)"),
+      _targetList(),
+    );
+
+    if (!overview.grid_available) {
+      panel.append(U.el("div", { class: "muted", style: "margin-top:8px" },
+        "⚠ No model grid yet — create one in the Grid tab before interpolating."));
+    }
   }
 
-  function _section(title, ...children) {
-    const body = U.el("div", { class: "section-body" }, ...children);
-    const head = U.el("header", {}, U.el("span", { class: "caret" }, "▾"), title);
-    const wrap = U.el("div", { class: "section" }, head, body);
-    head.addEventListener("click", () => wrap.classList.toggle("collapsed"));
-    return wrap;
-  }
+  /* ---- sample list ---- */
 
-  /* ---- 1. raw data ---- */
+  function _sampleList() {
+    const list = U.el("div", { class: "layer-tree" });
+    if (!overview.entries.length) {
+      list.append(U.el("div", { class: "muted" }, "Nothing downloaded or imported yet."));
+      return list;
+    }
+    overview.entries.forEach((entry, idx) => {
+      const layerId = `raw-${entry.id}`;
+      const layer = Layers.get(layerId) || { visible: false };
 
-  function _sectionRawData() {
-    const boundsLabel = U.el("div", { class: "muted" }, _boundsText());
-    els.boundsLabel = boundsLabel;
+      const eye = U.el("span", { class: `eye ${layer.visible ? "" : "off"}`, title: "Show/hide" }, "👁");
+      eye.addEventListener("click", () => {
+        layer.visible = !layer.visible;
+        App.emit("layer-visibility", layer);
+        _build();
+      });
 
-    const useGrid = U.el("button", { class: "ghost" }, "Use grid extent");
-    useGrid.addEventListener("click", () => {
-      const p = GridTab.params();
-      if (!p) { U.toast("No grid yet - create one in the Grid tab", "error"); return; }
-      const margin = (p.nx * p.dx + p.ny * p.dx) / 2 * 0.1;
-      // grid corners (rotation-aware) via its outline
-      const ring = _gridRing(p);
-      const xs = ring.map((c) => c[0]), ys = ring.map((c) => c[1]);
-      bounds = [Math.min(...xs) - margin, Math.min(...ys) - margin,
-        Math.max(...xs) + margin, Math.max(...ys) + margin];
-      boundsLabel.textContent = _boundsText();
+      const name = U.el("span", { class: "lp-name", title: "Double-click to rename" },
+        entry.label || entry.path);
+      name.addEventListener("dblclick", () => _renameSample(entry, name));
+
+      const row = U.el("div", { class: "lp-row" }, eye, name,
+        U.el("span", { class: "lp-mini" }, entry.source));
+
+      if (idx > 0) {
+        const up = U.el("span", { class: "lp-mini lp-btn", title: "Raise" }, "↑");
+        up.addEventListener("click", () => _reorderSample(idx, idx - 1));
+        row.append(up);
+      }
+      if (idx < overview.entries.length - 1) {
+        const down = U.el("span", { class: "lp-mini lp-btn", title: "Lower" }, "↓");
+        down.addEventListener("click", () => _reorderSample(idx, idx + 1));
+        row.append(down);
+      }
+
+      const dup = U.el("span", { class: "lp-mini lp-btn", title: "Duplicate" }, "⧉");
+      dup.addEventListener("click", async () => {
+        await Api.post("/api/domain/sample_duplicate", { id: entry.id });
+        _refresh();
+      });
+      const mod = U.el("span", { class: "lp-mini lp-btn", title: "Modify…" }, "✎");
+      mod.addEventListener("click", () => _modifyWizard(entry));
+      const del = U.el("span", { class: "lp-mini lp-btn", title: "Remove" }, "✕");
+      del.addEventListener("click", async () => {
+        if (!window.confirm(`Remove ${entry.label}? (file stays on disk)`)) return;
+        await Api.post("/api/domain/forget", { id: entry.id });
+        Layers.unregister(layerId);
+        _refresh();
+      });
+      row.append(dup, mod, del);
+      list.append(row);
     });
+    return list;
+  }
 
-    const drawArea = U.el("button", { class: "ghost" }, "Draw area");
-    drawArea.addEventListener("click", async () => {
+  async function _reorderSample(from, to) {
+    const ids = overview.entries.map((e) => e.id);
+    [ids[from], ids[to]] = [ids[to], ids[from]];
+    await Api.post("/api/domain/sample_order", { ids });
+    // mirror the order in the layer registry
+    await _refresh();
+    App.emit("layer-order");
+  }
+
+  function _renameSample(entry, nameNode) {
+    const input = U.el("input", { type: "text", value: entry.label || "", style: "flex:1;font-size:12px" });
+    nameNode.replaceWith(input);
+    input.focus(); input.select();
+    const commit = async () => {
+      const name = input.value.trim();
+      if (name && name !== entry.label) {
+        await Api.post("/api/domain/sample_rename", { id: entry.id, name });
+      }
+      _refresh();
+    };
+    input.addEventListener("blur", commit);
+    input.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") input.blur();
+      if (ev.key === "Escape") { input.value = entry.label; input.blur(); }
+    });
+  }
+
+  async function _importXyz() {
+    const path = await Api.pickFile({
+      title: "Import sample file",
+      patterns: [["Sample files", "*.xyz;*.txt;*.csv"], ["All files", "*.*"]],
+    }).catch(() => null);
+    if (!path) return;
+    try {
+      await Api.post("/api/domain/import_xyz", { path });
+      U.toast("Samples imported", "ok");
+      _refresh();
+    } catch (err) {
+      U.toast(err.message, "error");
+    }
+  }
+
+  /* ---- interpolated targets ---- */
+
+  function _targetList() {
+    const list = U.el("div", { class: "layer-tree" });
+    for (const [name, info] of Object.entries(overview.targets)) {
+      const layerId = `domain-${name}`;
+      const layer = Layers.get(layerId) || { visible: false, id: layerId };
+
+      const eye = U.el("span", {
+        class: `eye ${layer.visible ? "" : "off"}`,
+        title: info.exists ? "Show/hide" : "File does not exist yet",
+      }, "👁");
+      if (info.exists) {
+        eye.addEventListener("click", () => {
+          layer.visible = !layer.visible;
+          App.emit("layer-visibility", layer);
+          _build();
+        });
+      } else {
+        eye.style.opacity = "0.25";
+      }
+
+      const row = U.el("div", { class: "lp-row" }, eye,
+        U.el("span", { class: "lp-name" }, `${name} — ${info.file}`));
+
+      if (!info.exists) {
+        row.append(U.el("span", { class: "lp-mini" }, "missing"));
+      } else if (info.stale) {
+        row.append(U.el("span", {
+          class: "lp-mini stale-badge",
+          title: info.shape_ok
+            ? "The grid changed after this file was interpolated"
+            : "Shape does not match the current grid - re-interpolate",
+        }, "⚠ grid changed"));
+      }
+
+      const interp = U.el("span", { class: "lp-mini lp-btn", title: "Interpolate…" }, "⇣");
+      interp.addEventListener("click", () => _interpolateWizard(name, info));
+      row.append(interp);
+
+      if (info.exists && !name.endsWith("_mask")) {
+        const conv = U.el("span", { class: "lp-mini lp-btn", title: "Convert to sample data (for modification)" }, "→⛁");
+        conv.addEventListener("click", async () => {
+          try {
+            await Api.post("/api/domain/to_sample", { target: name });
+            U.toast(`${name} converted to a sample layer`, "ok");
+            _refresh();
+          } catch (err) {
+            U.toast(err.message, "error");
+          }
+        });
+        row.append(conv);
+      }
+      list.append(row);
+    }
+    return list;
+  }
+
+  /* ================= download wizard ================= */
+
+  function _downloadWizard() {
+    const popup = Popup.open({ title: "Download data", width: 620 });
+    let bounds = null;
+    let availability = null;
+    const selections = new Map();   // source -> Set(years)
+
+    // --- area choice ---
+    const useGrid = U.el("input", { type: "radio", name: "dl-area", id: "dl-grid", checked: "" });
+    const useDraw = U.el("input", { type: "radio", name: "dl-area", id: "dl-draw" });
+    const buffer = U.el("input", { type: "text", value: "500", style: "width:70px" });
+    const drawBtn = U.el("button", { class: "ghost" }, "Draw area on map");
+    const areaNote = U.el("div", { class: "muted", style: "font-size:12px" });
+
+    const computeBounds = () => {
+      if (useGrid.checked) {
+        const p = GridTab.params();
+        if (!p) { areaNote.textContent = "⚠ no grid yet — draw an area instead"; return null; }
+        const t = p.rotation * Math.PI / 180;
+        const ex = [Math.cos(t), Math.sin(t)], ey = [-Math.sin(t), Math.cos(t)];
+        const c = (i, j) => [p.x0 + ex[0] * i * p.dx + ey[0] * j * p.dx,
+          p.y0 + ex[1] * i * p.dx + ey[1] * j * p.dx];
+        const ring = [c(0, 0), c(p.nx, 0), c(p.nx, p.ny), c(0, p.ny)];
+        const xs = ring.map((q) => q[0]), ys = ring.map((q) => q[1]);
+        const b = Number(buffer.value) || 0;
+        return [Math.min(...xs) - b, Math.min(...ys) - b, Math.max(...xs) + b, Math.max(...ys) + b];
+      }
+      return bounds;
+    };
+
+    drawBtn.addEventListener("click", async () => {
+      useDraw.checked = true;
+      popup.hide();
       try {
-        const obj = await Draw.polygon({ name: "data area" });
+        const obj = await Draw.polygon({ name: "download area" });
         const xs = obj.coords.map((c) => c[0]), ys = obj.coords.map((c) => c[1]);
         bounds = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
-        boundsLabel.textContent = _boundsText();
+        areaNote.textContent = `drawn area: ${U.fmtNum(bounds[2] - bounds[0], 5)} × ${U.fmtNum(bounds[3] - bounds[1], 5)} m`;
       } catch { /* cancelled */ }
+      popup.show();
     });
 
+    // --- availability ---
     const checkBtn = U.el("button", { class: "primary" }, "Check availability");
-    const progress = _progressBar();
+    const progress = U.el("div", { class: "muted", style: "font-size:12px" });
+    const results = U.el("div");
+    const dlAllBtn = U.el("button", { class: "primary", disabled: "" }, "Download selected");
+    const estNote = U.el("span", { class: "muted", style: "margin-left:8px" });
+
     checkBtn.addEventListener("click", async () => {
-      if (!bounds) { U.toast("Set an area first", "error"); return; }
+      const area = computeBounds();
+      if (!area) { U.toast("Define an area first", "error"); return; }
+      checkBtn.disabled = true;
       try {
-        checkBtn.disabled = true;
-        const res = await Api.post("/api/domain/check", { bounds });
-        availability = await Api.waitJob(res.job, progress.update);
-        progress.done();
-        _renderAvailability();
+        const res = await Api.post("/api/domain/check", { bounds: area });
+        availability = await Api.waitJob(res.job, (j) => { progress.textContent = j.message || ""; });
+        progress.textContent = "";
+        _renderAvailability(area);
       } catch (err) {
         U.toast(err.message, "error");
       } finally {
@@ -121,357 +310,305 @@ const DomainTab = (() => {
       }
     });
 
-    const importXyz = U.el("button", { class: "ghost" }, "Import *.xyz…");
-    importXyz.addEventListener("click", async () => {
-      const path = await Api.pickFile({
-        title: "Import sample file",
-        patterns: [["Sample files", "*.xyz;*.txt;*.csv"], ["All files", "*.*"]],
-      }).catch(() => null);
-      if (!path) return;
+    function _updateEstimate() {
+      let bytes = 0, count = 0;
+      for (const [source, years] of selections) {
+        const res = availability[source];
+        for (const info of (res && res.years) || []) {
+          if (years.has(info.year)) { bytes += info.est_bytes || 0; count += 1; }
+        }
+      }
+      dlAllBtn.disabled = count === 0;
+      estNote.textContent = count ? `${count} dataset(s), ~${U.fmtBytes(bytes)}` : "";
+    }
+
+    function _renderAvailability(area) {
+      U.clear(results);
+      selections.clear();
+      for (const source of overview.sources) {
+        if (source.id === "xyz") continue;
+        const res = availability[source.id];
+        if (!res) continue;
+        results.append(U.el("div", { class: "fg-label", style: "margin-top:8px" }, source.title));
+        if (res.error) {
+          results.append(U.el("div", { class: "muted" }, `⚠ ${res.error}`));
+          continue;
+        }
+        if (!res.available) {
+          results.append(U.el("div", { class: "muted" }, res.notes || "not available here"));
+          continue;
+        }
+        const selected = new Set();
+        selections.set(source.id, selected);
+        results.append(_yearChips(res.years, selected, _updateEstimate));
+        if (res.notes) {
+          results.append(U.el("div", { class: "muted", style: "font-size:11px" }, res.notes));
+        }
+      }
+      results.append(U.el("div", { class: "muted", style: "font-size:11.5px;margin-top:6px" },
+        "Select years by clicking, Shift+click for a range, or drag across chips."));
+      dlAllBtn.onclick = () => _downloadAll(area);
+    }
+
+    async function _downloadAll(area) {
+      dlAllBtn.disabled = true;
       try {
-        await Api.post("/api/domain/import_xyz", { path });
-        U.toast("Samples imported", "ok");
+        let total = 0;
+        for (const [source, years] of selections) {
+          if (!years.size) continue;
+          progress.textContent = `downloading ${source}…`;
+          const res = await Api.post("/api/domain/download", {
+            source, bounds: area, years: [...years],
+          });
+          const out = await Api.waitJob(res.job, (j) => {
+            progress.textContent = `${source}: ${j.message || ""}`;
+          });
+          total += out.entries.length;
+        }
+        progress.textContent = "";
+        U.toast(`Downloaded ${total} dataset(s)`, "ok");
+        popup.close();
         _refresh();
       } catch (err) {
         U.toast(err.message, "error");
+        dlAllBtn.disabled = false;
       }
-    });
+    }
 
-    els.availability = U.el("div");
-    els.rawList = U.el("div");
-    _renderRawList();
-
-    return _section("Raw data",
-      U.el("div", { class: "btn-row" }, useGrid, drawArea),
-      boundsLabel,
-      U.el("div", { class: "btn-row" }, checkBtn, importXyz),
-      progress.el,
-      els.availability,
-      U.el("span", { class: "fg-label", style: "margin-top:8px" }, "Downloaded layers"),
-      els.rawList,
+    popup.body.append(
+      U.el("div", { class: "form-row" }, useGrid,
+        U.el("label", { for: "dl-grid" }, "Grid extent + buffer"), buffer,
+        U.el("span", { class: "muted" }, "m")),
+      U.el("div", { class: "form-row" }, useDraw,
+        U.el("label", { for: "dl-draw" }, "Drawn area"), drawBtn),
+      areaNote,
+      U.el("div", { class: "btn-row" }, checkBtn),
+      progress,
+      results,
+      U.el("div", { class: "btn-row", style: "margin-top:10px" }, dlAllBtn, estNote),
     );
   }
 
-  function _gridRing(p) {
-    const t = p.rotation * Math.PI / 180;
-    const ex = [Math.cos(t), Math.sin(t)], ey = [-Math.sin(t), Math.cos(t)];
-    const c = (i, j) => [p.x0 + ex[0] * i * p.dx + ey[0] * j * p.dx,
-      p.y0 + ex[1] * i * p.dx + ey[1] * j * p.dx];
-    return [c(0, 0), c(p.nx, 0), c(p.nx, p.ny), c(0, p.ny)];
-  }
+  /* year chips with click / shift+click / drag selection */
+  function _yearChips(years, selected, onChange) {
+    const wrap = U.el("div", { class: "year-chips" });
+    const chips = [];
+    let lastIndex = null;
+    let dragging = false;
+    let dragMode = true;   // select or deselect during drag
 
-  function _boundsText() {
-    if (!bounds) return "No area selected yet.";
-    return `area: x ${U.fmtNum(bounds[0], 6)} … ${U.fmtNum(bounds[2], 6)}, ` +
-      `y ${U.fmtNum(bounds[1], 6)} … ${U.fmtNum(bounds[3], 6)}`;
-  }
+    const sync = () => {
+      chips.forEach((chip, i) => chip.classList.toggle("on", selected.has(years[i].year)));
+      onChange();
+    };
+    const setSel = (i, on) => {
+      if (on) selected.add(years[i].year);
+      else selected.delete(years[i].year);
+    };
 
-  function _renderAvailability() {
-    const box = els.availability;
-    U.clear(box);
-    if (!availability) return;
-    for (const source of overview.sources) {
-      if (source.id === "xyz") continue;
-      const res = availability[source.id];
-      if (!res) continue;
-      const title = U.el("div", { class: "fg-label" }, source.title);
-      box.append(title);
-      if (res.error) {
-        box.append(U.el("div", { class: "muted" }, `⚠ ${res.error}`));
-        continue;
-      }
-      if (!res.available) {
-        box.append(U.el("div", { class: "muted" }, res.notes || "not available here"));
-        continue;
-      }
-      const selected = new Set();
-      const chips = U.el("div", { class: "year-chips" });
-      let estNode;
-      for (const info of res.years) {
-        const chip = U.el("button", { class: "year-chip", title: U.fmtBytes(info.est_bytes) },
-          String(info.year));
-        chip.addEventListener("click", () => {
-          if (selected.has(info.year)) { selected.delete(info.year); chip.classList.remove("on"); }
-          else { selected.add(info.year); chip.classList.add("on"); }
-          const est = res.years.filter((y) => selected.has(y.year))
-            .reduce((sum, y) => sum + (y.est_bytes || 0), 0);
-          estNode.textContent = selected.size
-            ? `${selected.size} year(s), ~${U.fmtBytes(est)}` : "";
-        });
-        chips.append(chip);
-      }
-      estNode = U.el("span", { class: "muted", style: "margin-left:8px" });
-      const dlBtn = U.el("button", { class: "primary" }, "Download");
-      const progress = _progressBar();
-      dlBtn.addEventListener("click", async () => {
-        if (!selected.size) { U.toast("Select years first", "error"); return; }
-        try {
-          dlBtn.disabled = true;
-          const res2 = await Api.post("/api/domain/download", {
-            source: source.id, bounds, years: [...selected],
-          });
-          const out = await Api.waitJob(res2.job, progress.update);
-          progress.done();
-          U.toast(`Downloaded ${out.entries.length} dataset(s)`, "ok");
-          await _refreshEntries();
-        } catch (err) {
-          U.toast(err.message, "error");
-        } finally {
-          dlBtn.disabled = false;
+    years.forEach((info, i) => {
+      const chip = U.el("button", {
+        class: "year-chip",
+        title: info.est_bytes ? U.fmtBytes(info.est_bytes) : "",
+      }, String(info.year));
+      chip.addEventListener("click", (ev) => {
+        if (ev.shiftKey && lastIndex !== null) {
+          const [a, b] = [Math.min(lastIndex, i), Math.max(lastIndex, i)];
+          for (let k = a; k <= b; k += 1) setSel(k, true);
+        } else {
+          setSel(i, !selected.has(info.year));
         }
+        lastIndex = i;
+        sync();
       });
-      box.append(chips, U.el("div", { class: "btn-row" }, dlBtn, estNode), progress.el);
-      if (res.notes) box.append(U.el("div", { class: "muted", style: "font-size:11.5px" }, res.notes));
-    }
-  }
-
-  async function _refreshEntries() {
-    overview = await Api.get("/api/domain");
-    _renderRawList();
-    _registerRawLayers();
-    _renderInterpolateLayers();
-  }
-
-  function _renderRawList() {
-    const list = els.rawList;
-    if (!list) return;
-    U.clear(list);
-    if (!overview.entries.length) {
-      list.append(U.el("div", { class: "muted" }, "Nothing downloaded yet."));
-      return;
-    }
-    for (const entry of overview.entries) {
-      const del = U.el("span", { class: "lp-mini", style: "cursor:pointer", title: "Remove" }, "✕");
-      del.addEventListener("click", async () => {
-        if (!window.confirm(`Remove ${entry.label}? (file stays on disk)`)) return;
-        await Api.post("/api/domain/forget", { id: entry.id });
-        Layers.unregister(`raw-${entry.id}`);
-        _refreshEntries();
+      chip.addEventListener("mousedown", (ev) => {
+        if (ev.shiftKey) return;
+        dragging = true;
+        dragMode = !selected.has(info.year);
       });
-      list.append(U.el("div", { class: "lp-row" },
-        U.el("span", { class: "lp-name" }, entry.label || entry.path),
-        U.el("span", { class: "lp-mini" }, entry.source),
-        del));
-    }
+      chip.addEventListener("mouseenter", () => {
+        if (!dragging) return;
+        setSel(i, dragMode);
+        sync();
+      });
+      chips.push(chip);
+      wrap.append(chip);
+    });
+    window.addEventListener("mouseup", () => { dragging = false; });
+    return wrap;
   }
 
-  /* ---- 2. modify ---- */
+  /* ================= modify wizard (samples) ================= */
 
-  function _sectionModify() {
-    const target = _targetSelect();
-    const op = U.el("select", {},
-      ...["set", "add", "subtract", "multiply", "min", "max"].map((o) =>
-        U.el("option", { value: o }, o)));
-    const value = U.el("input", { type: "text", placeholder: "value" });
-    const init = U.el("input", { type: "text", placeholder: "0 (if file missing)" });
+  function _modifyWizard(entry) {
+    const popup = Popup.open({ title: `Modify — ${entry.label}`, width: 520 });
+
+    const scopeAll = U.el("input", { type: "radio", name: "mod-scope", id: "ms-all", checked: "" });
+    const scopePoly = U.el("input", { type: "radio", name: "mod-scope", id: "ms-poly" });
+    const scopeIdx = U.el("input", { type: "radio", name: "mod-scope", id: "ms-idx" });
 
     const polySelect = U.el("select", {});
     const refreshPolys = () => {
       U.clear(polySelect);
-      polySelect.append(U.el("option", { value: "" }, "— whole grid —"));
       for (const obj of Objects.byKind("polygon")) {
         polySelect.append(U.el("option", { value: obj.id }, obj.name));
       }
+      if (!polySelect.children.length) {
+        polySelect.append(U.el("option", { value: "" }, "— none drawn yet —"));
+      }
     };
     refreshPolys();
-    App.on("objects", refreshPolys);
-
-    const drawBtn = U.el("button", { class: "ghost" }, "Draw new polygon");
+    const drawBtn = U.el("button", { class: "ghost" }, "Draw new");
     drawBtn.addEventListener("click", async () => {
+      scopePoly.checked = true;
+      popup.hide();
       try {
-        const obj = await Draw.polygon({ name: "modification area" });
+        const obj = await Draw.polygon({ name: "modify area" });
         refreshPolys();
         polySelect.value = obj.id;
       } catch { /* cancelled */ }
+      popup.show();
     });
 
-    const idx = ["j0", "j1", "i0", "i1"].map((ph) =>
+    const idxInputs = ["j0", "j1", "i0", "i1"].map((ph) =>
       U.el("input", { type: "text", placeholder: ph, style: "width:52px" }));
 
-    const apply = U.el("button", { class: "primary" }, "Apply modification");
-    apply.addEventListener("click", async () => {
-      const body = {
-        target: target.value, op: op.value, value: value.value,
-      };
-      if (init.value.trim() !== "") body.init = Number(init.value);
-      if (polySelect.value) body.polygon = polySelect.value;
-      const idxVals = idx.map((n) => n.value.trim());
-      if (idxVals.every((v) => v !== "")) body.indices = idxVals.map(Number);
+    const op = U.el("select", {},
+      ...["set", "add", "subtract", "multiply", "min", "max"].map((o) =>
+        U.el("option", { value: o }, o)));
+    const value = U.el("input", { type: "text", placeholder: "value", style: "width:90px" });
+
+    const saveOver = U.el("input", { type: "radio", name: "mod-save", id: "msv-over", checked: "" });
+    const saveNew = U.el("input", { type: "radio", name: "mod-save", id: "msv-new" });
+    const newName = U.el("input", { type: "text", placeholder: "new layer name" });
+    newName.addEventListener("input", () => { if (newName.value) saveNew.checked = true; });
+
+    const applyBtn = U.el("button", { class: "primary" }, "Apply");
+    applyBtn.addEventListener("click", async () => {
+      const body = { id: entry.id, op: op.value, value: value.value };
+      if (scopePoly.checked) {
+        if (!polySelect.value) { U.toast("Select or draw a polygon", "error"); return; }
+        body.scope = { type: "polygon", polygon: polySelect.value };
+      } else if (scopeIdx.checked) {
+        body.scope = { type: "indices", indices: idxInputs.map((n) => Number(n.value || 0)) };
+      } else {
+        body.scope = { type: "all" };
+      }
+      if (saveNew.checked) {
+        if (!newName.value.trim()) { U.toast("Enter a name for the new layer", "error"); return; }
+        body.save_as = newName.value.trim();
+      }
       try {
-        const res = await Api.post("/api/domain/modify", body);
-        U.toast(`Modified ${res.cells} cells in ${res.file} ` +
-          `(range ${U.fmtNum(res.min)} … ${U.fmtNum(res.max)})`, "ok");
+        applyBtn.disabled = true;
+        const res = await Api.post("/api/domain/sample_modify", body);
+        U.toast(`Modified ${res.cells} samples (${U.fmtNum(res.min)} … ${U.fmtNum(res.max)})`, "ok");
+        popup.close();
         _refresh();
       } catch (err) {
         U.toast(err.message, "error");
+        applyBtn.disabled = false;
       }
     });
 
-    return _section("Modify",
-      U.el("div", { class: "form-row" }, U.el("label", {}, "Target"), target),
-      U.el("div", { class: "form-row" }, U.el("label", {}, "Operation"), op, value),
-      U.el("div", { class: "form-row" }, U.el("label", {}, "Polygon"), polySelect),
-      U.el("div", { class: "btn-row" }, drawBtn),
-      U.el("div", { class: "form-row" }, U.el("label", {}, "…or cell indices"), ...idx),
-      U.el("div", { class: "form-row" }, U.el("label", {}, "Init value"), init),
-      U.el("div", { class: "btn-row" }, apply),
+    popup.body.append(
+      U.el("span", { class: "fg-label" }, "Which samples"),
+      U.el("div", { class: "form-row" }, scopeAll, U.el("label", { for: "ms-all" }, "All")),
+      U.el("div", { class: "form-row" }, scopePoly, U.el("label", { for: "ms-poly" }, "Inside polygon"),
+        polySelect, drawBtn),
+      U.el("div", { class: "form-row" }, scopeIdx, U.el("label", { for: "ms-idx" }, "Index range"),
+        ...idxInputs),
+      U.el("span", { class: "fg-label", style: "margin-top:8px" }, "Operation"),
+      U.el("div", { class: "form-row" }, op, value),
+      U.el("span", { class: "fg-label", style: "margin-top:8px" }, "Save"),
+      U.el("div", { class: "form-row" }, saveOver, U.el("label", { for: "msv-over" }, "Overwrite this layer")),
+      U.el("div", { class: "form-row" }, saveNew, U.el("label", { for: "msv-new" }, "Save as new layer"), newName),
+      U.el("div", { class: "btn-row" }, applyBtn),
     );
   }
 
-  function _targetSelect() {
-    const select = U.el("select", {});
-    for (const [name, info] of Object.entries(overview.targets)) {
-      select.append(U.el("option", { value: name },
-        `${name} (${info.file}${info.exists ? "" : " — missing"})`));
-    }
-    return select;
-  }
+  /* ================= interpolate wizard ================= */
 
-  /* ---- 3. interpolate ---- */
-
-  function _sectionInterpolate() {
-    const target = _targetSelect();
-    els.interpTarget = target;
-    els.interpLayers = U.el("div");
-    const fill = U.el("input", { type: "text", placeholder: "e.g. -20 (optional)" });
-    const progress = _progressBar();
-
-    const run = U.el("button", { class: "primary" }, "Interpolate → save .grd");
-    run.addEventListener("click", async () => {
-      const layers = [...els.interpLayers.querySelectorAll("input:checked")]
-        .map((cb) => cb.dataset.entry);
-      if (!layers.length) { U.toast("Select at least one source layer", "error"); return; }
-      const body = { target: target.value, layers };
-      if (fill.value.trim() !== "") body.fill = Number(fill.value);
-      try {
-        run.disabled = true;
-        const res = await Api.post("/api/domain/interpolate", body);
-        const out = await Api.waitJob(res.job, progress.update);
-        progress.done();
-        U.toast(`Wrote ${out.file} (${U.fmtNum(out.min)} … ${U.fmtNum(out.max)} m)`, "ok");
-        const cfg = await Api.get("/api/config");
-        App.state.config = cfg.values;
-        App.emit("config-changed", overview.targets[target.value].config_key);
-        _refresh();
-      } catch (err) {
-        U.toast(err.message, "error");
-      } finally {
-        run.disabled = false;
-      }
-    });
-
-    const section = _section("Interpolate to grid",
-      U.el("div", { class: "form-row" }, U.el("label", {}, "Target"), target),
-      U.el("span", { class: "fg-label" }, "Source layers (priority order = list order)"),
-      els.interpLayers,
-      U.el("div", { class: "form-row" }, U.el("label", {}, "Fill remaining"), fill),
-      U.el("div", { class: "btn-row" }, run),
-      progress.el,
-    );
-    _renderInterpolateLayers();
-    return section;
-  }
-
-  function _renderInterpolateLayers() {
-    const box = els.interpLayers;
-    if (!box) return;
-    U.clear(box);
-    if (!overview.entries.length) {
-      box.append(U.el("div", { class: "muted" }, "Download raw data first."));
+  function _interpolateWizard(target, info) {
+    if (!overview.grid_available) {
+      U.toast("Create a model grid first (Grid tab)", "error");
       return;
     }
-    for (const entry of overview.entries) {
-      const cb = U.el("input", { type: "checkbox", dataset: { entry: entry.id } });
-      box.append(U.el("div", { class: "lp-row" }, cb,
-        U.el("span", { class: "lp-name" }, entry.label || entry.path),
-        U.el("span", { class: "lp-mini" }, entry.kind)));
-    }
-  }
+    const popup = Popup.open({ title: `Interpolate → ${target} (${info.file})`, width: 540 });
 
-  /* ---- 4. quick flows ---- */
+    let order = overview.entries.map((e) => e.id);
+    const checked = new Set();
+    const listEl = U.el("div", { class: "layer-tree" });
 
-  function _sectionQuickFlows() {
-    // duplicate bed -> ne with offset
-    const offset = U.el("input", { type: "text", value: "-0.5", style: "width:70px" });
-    const dupBtn = U.el("button", { class: "ghost" }, "bed → ne-layer");
-    dupBtn.addEventListener("click", async () => {
-      try {
-        const res = await Api.post("/api/domain/duplicate", {
-          from: "bed", to: "ne", offset: Number(offset.value) || 0,
+    const renderList = () => {
+      U.clear(listEl);
+      if (!order.length) {
+        listEl.append(U.el("div", { class: "muted" }, "No sample data yet — download or import first."));
+        return;
+      }
+      order.forEach((id, idx) => {
+        const entry = overview.entries.find((e) => e.id === id);
+        if (!entry) return;
+        const cb = U.el("input", { type: "checkbox" });
+        cb.checked = checked.has(id);
+        cb.addEventListener("change", () => {
+          if (cb.checked) checked.add(id); else checked.delete(id);
         });
-        U.toast(`Wrote ${res.file} (bed ${res.offset >= 0 ? "+" : ""}${res.offset} m)`, "ok");
+        const row = U.el("div", { class: "lp-row" }, cb,
+          U.el("span", { class: "lp-name" }, entry.label || entry.path),
+          U.el("span", { class: "lp-mini" }, entry.kind));
+        if (idx > 0) {
+          const up = U.el("span", { class: "lp-mini lp-btn" }, "↑");
+          up.addEventListener("click", () => {
+            [order[idx - 1], order[idx]] = [order[idx], order[idx - 1]];
+            renderList();
+          });
+          row.append(up);
+        }
+        if (idx < order.length - 1) {
+          const down = U.el("span", { class: "lp-mini lp-btn" }, "↓");
+          down.addEventListener("click", () => {
+            [order[idx + 1], order[idx]] = [order[idx], order[idx + 1]];
+            renderList();
+          });
+          row.append(down);
+        }
+        listEl.append(row);
+      });
+    };
+    renderList();
+
+    const fill = U.el("input", { type: "text", placeholder: "e.g. -20 (optional)", style: "width:120px" });
+    const progress = U.el("div", { class: "muted", style: "font-size:12px" });
+    const runBtn = U.el("button", { class: "primary" }, "Interpolate & save");
+    runBtn.addEventListener("click", async () => {
+      const layers = order.filter((id) => checked.has(id));
+      if (!layers.length) { U.toast("Select at least one sample layer", "error"); return; }
+      const body = { target, layers };
+      if (fill.value.trim() !== "") body.fill = Number(fill.value);
+      try {
+        runBtn.disabled = true;
+        const res = await Api.post("/api/domain/interpolate", body);
+        const out = await Api.waitJob(res.job, (j) => { progress.textContent = j.message || ""; });
+        U.toast(`Wrote ${out.file} (${U.fmtNum(out.min)} … ${U.fmtNum(out.max)})`, "ok");
+        const cfg = await Api.get("/api/config");
+        App.state.config = cfg.values;
+        App.emit("config-changed", overview.targets[target].config_key);
+        popup.close();
         _refresh();
       } catch (err) {
         U.toast(err.message, "error");
+        runBtn.disabled = false;
       }
     });
 
-    // vegetation polygon fill
-    const vegTarget = U.el("select", {},
-      ...Object.keys(overview.targets).filter((t) => ["veg", "hveg", "Nt"].includes(t))
-        .map((t) => U.el("option", { value: t }, t)));
-    const vegValue = U.el("input", { type: "text", placeholder: "density / height", style: "width:90px" });
-    const vegBtn = U.el("button", { class: "ghost" }, "Draw & fill polygon");
-    vegBtn.addEventListener("click", async () => {
-      const value = Number(vegValue.value);
-      if (!Number.isFinite(value)) { U.toast("Enter a fill value first", "error"); return; }
-      try {
-        const obj = await Draw.polygon({ name: "vegetation" });
-        const res = await Api.post("/api/domain/modify", {
-          target: vegTarget.value, op: "set", value, polygon: obj.id, init: 0,
-        });
-        U.toast(`Vegetation set on ${res.cells} cells of ${res.file}`, "ok");
-        _refresh();
-      } catch (err) {
-        if (err.message !== "draw cancelled") U.toast(err.message, "error");
-      }
-    });
-
-    return _section("Quick flows",
-      U.el("div", { class: "form-row" },
-        U.el("label", {}, "Duplicate with offset [m]"), offset, dupBtn),
-      U.el("div", { class: "form-row" },
-        U.el("label", {}, "Vegetation fill"), vegTarget, vegValue),
-      U.el("div", { class: "btn-row" }, vegBtn),
+    popup.body.append(
+      U.el("span", { class: "fg-label" }, "Sample layers (top = highest priority)"),
+      listEl,
+      U.el("div", { class: "form-row", style: "margin-top:8px" },
+        U.el("label", {}, "Fill remaining cells"), fill),
+      U.el("div", { class: "btn-row" }, runBtn),
+      progress,
     );
-  }
-
-  /* ---- 5. history ---- */
-
-  function _sectionHistory() {
-    const rows = (overview.history || []).slice(-12).reverse().map((h) =>
-      U.el("div", { class: "lp-row" },
-        U.el("span", { class: "lp-name" },
-          h.action === "interpolate" ? `interpolate → ${h.file}` :
-            h.action === "duplicate" ? `${h.from} → ${h.to} (${h.offset} m)` :
-              `${h.op} ${h.value} on ${h.target} (${h.cells} cells)`),
-        U.el("span", { class: "lp-mini" }, h.time || "")));
-    const section = _section("History",
-      rows.length ? U.el("div", {}, ...rows)
-        : U.el("div", { class: "muted" }, "No operations yet."));
-    section.classList.add("collapsed");
-    return section;
-  }
-
-  /* ---- helpers ---- */
-
-  function _progressBar() {
-    const bar = U.el("div");
-    const wrap = U.el("div", { class: "progress", style: "display:none" }, bar);
-    const msg = U.el("div", { class: "muted", style: "font-size:11.5px" });
-    const el = U.el("div", {}, wrap, msg);
-    return {
-      el,
-      update: (job) => {
-        wrap.style.display = "";
-        bar.style.width = `${Math.round(Math.max(0, job.progress) * 100)}%`;
-        msg.textContent = job.message || "";
-      },
-      done: () => {
-        wrap.style.display = "none";
-        msg.textContent = "";
-      },
-    };
   }
 
   return { init };
