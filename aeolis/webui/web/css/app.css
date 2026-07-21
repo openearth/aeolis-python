@@ -24,6 +24,11 @@
 
 * { box-sizing: border-box; }
 
+/* The hidden attribute must always win, even over author display rules
+ * (e.g. #modal-backdrop { display: flex } would otherwise keep the
+ * overlay visible and block all clicks). */
+[hidden] { display: none !important; }
+
 html, body {
   margin: 0; padding: 0; height: 100%;
   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
