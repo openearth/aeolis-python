@@ -31,6 +31,10 @@ QUANTITIES = {
 _catalog_cache = None
 
 
+class LimitExceeded(RuntimeError):
+    """The API's max-observations-per-request cap was hit (263 088)."""
+
+
 def _post(url, payload, timeout=60):
     request = urllib.request.Request(
         url,
@@ -42,11 +46,27 @@ def _post(url, payload, timeout=60):
     )
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
-            return json.loads(response.read().decode("utf-8"))
+            body = response.read().decode("utf-8", "replace")
     except urllib.error.HTTPError as exc:
-        raise RuntimeError(f"waterinfo: HTTP {exc.code} from {url}") from exc
+        body = exc.read().decode("utf-8", "replace")
+        try:
+            data = json.loads(body)
+        except json.JSONDecodeError:
+            raise RuntimeError(
+                f"waterinfo: HTTP {exc.code} from {url}: {body[:160]}"
+            ) from exc
+        message = data.get("Foutmelding", "")
+        if "overschreden" in message:
+            raise LimitExceeded(message)
+        raise RuntimeError(f"waterinfo: HTTP {exc.code}: {message or body[:160]}") from exc
     except OSError as exc:
         raise RuntimeError(f"waterinfo unreachable: {exc}") from exc
+    try:
+        return json.loads(body)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(
+            f"waterinfo: unexpected non-JSON response ({body[:120]}...)"
+        ) from exc
 
 
 def catalog():
@@ -107,49 +127,135 @@ def _haversine(lon1, lat1, lon2, lat2):
     return float(2 * r * np.arcsin(np.sqrt(a)))
 
 
+def _fetch_window(station, code, scale, date0, date1):
+    """One raw request -> (epoch array, values array); may raise
+    LimitExceeded when the window holds too many observations."""
+    payload = {
+        "Locatie": {"Code": station},
+        "AquoPlusWaarnemingMetadata": {
+            "AquoMetadata": {"Grootheid": {"Code": code}},
+        },
+        "Periode": {
+            "Begindatumtijd": date0.strftime("%Y-%m-%dT%H:%M:%S.000+00:00"),
+            "Einddatumtijd": date1.strftime("%Y-%m-%dT%H:%M:%S.000+00:00"),
+        },
+    }
+    data = _post(DATA_URL, payload, timeout=180)
+    if not data.get("Succesvol", False):
+        message = data.get("Foutmelding", "request failed")
+        if "overschreden" in message:
+            raise LimitExceeded(message)
+        # "no data" style failures return unsuccessful too
+        return np.array([]), np.array([])
+    times, values = [], []
+    for block in data.get("WaarnemingenLijst", []):
+        for m in block.get("MetingenLijst", []):
+            meetwaarde = m.get("Meetwaarde") or {}
+            val = meetwaarde.get("Waarde_Numeriek")
+            if val is None or val > 9e8:
+                continue
+            stamp = m.get("Tijdstip")
+            if not stamp:
+                continue
+            dt = datetime.fromisoformat(stamp)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            times.append(dt.astimezone(timezone.utc).timestamp())
+            values.append(float(val) * scale)
+    if not times:
+        return np.array([]), np.array([])
+    order = np.argsort(times)
+    return np.asarray(times)[order], np.asarray(values)[order]
+
+
 def fetch_series(station, kind, date0, date1, job=None):
-    """Measured series per quantity code -> [(epoch_seconds, values), ...]."""
+    """Measured series per quantity code -> [(epoch_seconds, values), ...].
+
+    The DD-API caps a single request at 263 088 observations, so long
+    periods are fetched in adaptive chunks (start ~6 months, halve on a
+    limit error) and concatenated.
+    """
+    from datetime import timedelta
+
     if kind not in QUANTITIES:
         raise ValueError(f"unknown quantity kind '{kind}'")
     spec = QUANTITIES[kind]
     results = []
+    total_seconds = max(1.0, (date1 - date0).total_seconds())
+
     for code, scale in zip(spec["codes"], spec["scale"]):
-        if job:
-            job.update(message=f"waterinfo {station} {code}")
-        payload = {
-            "Locatie": {"Code": station},
-            "AquoPlusWaarnemingMetadata": {
-                "AquoMetadata": {"Grootheid": {"Code": code}},
-            },
-            "Periode": {
-                "Begindatumtijd": date0.strftime("%Y-%m-%dT%H:%M:%S.000+00:00"),
-                "Einddatumtijd": date1.strftime("%Y-%m-%dT%H:%M:%S.000+00:00"),
-            },
-        }
-        data = _post(DATA_URL, payload, timeout=180)
-        if not data.get("Succesvol", False):
-            raise RuntimeError(
-                f"waterinfo: {data.get('Foutmelding', 'request failed')} "
-                f"(station {station}, {code})"
-            )
-        times, values = [], []
-        for block in data.get("WaarnemingenLijst", []):
-            for m in block.get("MetingenLijst", []):
-                meetwaarde = m.get("Meetwaarde") or {}
-                val = meetwaarde.get("Waarde_Numeriek")
-                if val is None or val > 9e8:
-                    continue
-                stamp = m.get("Tijdstip")
-                if not stamp:
-                    continue
-                dt = datetime.fromisoformat(stamp)
-                if dt.tzinfo is None:
-                    dt = dt.replace(tzinfo=timezone.utc)
-                times.append(dt.astimezone(timezone.utc))
-                values.append(float(val) * scale)
-        if not times:
+        chunk = timedelta(days=180)
+        epochs, values = [], []
+        cursor = date0
+        while cursor < date1:
+            if job:
+                frac = (cursor - date0).total_seconds() / total_seconds
+                job.update(progress=frac,
+                           message=f"waterinfo {station} {code} "
+                                   f"({cursor:%Y-%m}, chunk {chunk.days} d)")
+                if job.cancel_requested:
+                    break
+            end = min(cursor + chunk, date1)
+            try:
+                e, v = _fetch_window(station, code, scale, cursor, end)
+            except LimitExceeded:
+                if chunk.days <= 7:
+                    raise RuntimeError(
+                        "waterinfo: observation limit hit even for a 7-day "
+                        f"window ({station}/{code})"
+                    )
+                chunk = timedelta(days=max(7, chunk.days // 2))
+                continue
+            epochs.append(e)
+            values.append(v)
+            cursor = end
+        epoch = np.concatenate(epochs) if epochs else np.array([])
+        vals = np.concatenate(values) if values else np.array([])
+        if epoch.size == 0:
             raise RuntimeError(f"waterinfo: no data for {station}/{code} in this period")
-        order = np.argsort(np.array([t.timestamp() for t in times]))
-        epoch = np.array([t.timestamp() for t in times])[order]
-        results.append((epoch, np.asarray(values)[order]))
+        results.append((epoch, vals))
     return results
+
+
+def probe_period(station, kind, job=None):
+    """Best-effort estimate of the available data period for a station:
+    coarse 5-year probes with 30-day windows, refined to the year."""
+    from datetime import timedelta
+
+    code = QUANTITIES[kind]["codes"][0]
+    scale = QUANTITIES[kind]["scale"][0]
+    now = datetime.now(timezone.utc)
+
+    def has_data(year):
+        d0 = datetime(year, 6, 1, tzinfo=timezone.utc)
+        if d0 > now:
+            d0 = now - timedelta(days=30)
+        try:
+            e, _ = _fetch_window(station, code, scale, d0, d0 + timedelta(days=30))
+        except (LimitExceeded, RuntimeError):
+            return False
+        return e.size > 0
+
+    # find the earliest 5-year block with data
+    earliest = None
+    for year in range(1950, now.year + 1, 5):
+        if job:
+            job.update(message=f"probing {year}")
+            if job.cancel_requested:
+                break
+        if has_data(year):
+            earliest = year
+            break
+    if earliest is None:
+        return None
+    # refine within the block
+    for year in range(max(1950, earliest - 4), earliest + 1):
+        if has_data(year):
+            earliest = year
+            break
+    has_recent = has_data(now.year) or has_data(now.year - 1)
+    return {
+        "from": earliest,
+        "to": now.year if has_recent else None,
+        "note": "estimated from coarse probes; gaps possible",
+    }

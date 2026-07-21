@@ -86,6 +86,36 @@ def _overview(handler, query, tail):
     send_json(handler, out)
 
 
+def _generate_synthetic(kind, body, values):
+    tstart = float(body.get("tstart", values.get("tstart") or 0.0))
+    tstop = float(body.get("tstop", values.get("tstop") or 3600.0))
+    dt = float(body.get("dt", 3600.0))
+    if kind == "wind":
+        return synthetic.wind(tstart, tstop, dt, body.get("speed", {}), body.get("direction", {}))
+    if kind == "tide":
+        return synthetic.tide(tstart, tstop, dt, body.get("level", {}))
+    return synthetic.waves(tstart, tstop, dt, body.get("hs", {}), body.get("tp", {}))
+
+
+@route("POST", "/api/conditions/preview")
+def _preview(handler, body, tail):
+    """Synthetic series preview - computed only, nothing written."""
+    current = project.require()
+    kind = body.get("kind")
+    if kind not in KINDS:
+        send_error_json(handler, f"unknown kind '{kind}'")
+        return
+    values = load_config(current.configfile)
+    refdate = parse_refdate(values)
+    try:
+        data = _generate_synthetic(kind, body, values)
+    except ValueError as exc:
+        send_error_json(handler, exc)
+        return
+    send_json(handler, {"series": _series_payload(data, refdate),
+                        "labels": KINDS[kind]["cols"]})
+
+
 @route("POST", "/api/conditions/synthetic")
 def _synthetic(handler, body, tail):
     current = project.require()
@@ -95,17 +125,9 @@ def _synthetic(handler, body, tail):
         return
     values = load_config(current.configfile)
     refdate = parse_refdate(values)
-    tstart = float(body.get("tstart", values.get("tstart") or 0.0))
-    tstop = float(body.get("tstop", values.get("tstop") or 3600.0))
-    dt = float(body.get("dt", 3600.0))
 
     try:
-        if kind == "wind":
-            data = synthetic.wind(tstart, tstop, dt, body.get("speed", {}), body.get("direction", {}))
-        elif kind == "tide":
-            data = synthetic.tide(tstart, tstop, dt, body.get("level", {}))
-        else:
-            data = synthetic.waves(tstart, tstop, dt, body.get("hs", {}), body.get("tp", {}))
+        data = _generate_synthetic(kind, body, values)
     except ValueError as exc:
         send_error_json(handler, exc)
         return
@@ -194,6 +216,71 @@ def _stations(handler, query, tail):
     send_json(handler, {"job": jobs.start("waterinfo stations", _run)})
 
 
+def _resample(seconds, cols, kind, interval):
+    """Bin-average a series to hourly/daily values. Wind direction is
+    averaged circularly via unit-vector components."""
+    if interval not in ("hour", "day") or seconds.size == 0:
+        return seconds, cols
+    width = 3600.0 if interval == "hour" else 86400.0
+    bins = np.floor((seconds - seconds[0]) / width).astype(int)
+    unique_bins, inverse = np.unique(bins, return_inverse=True)
+    counts = np.bincount(inverse)
+    t_out = seconds[0] + (unique_bins + 0.5) * width
+
+    if kind == "wind" and len(cols) >= 2:
+        speed, direction = cols[0], cols[1]
+        rad = np.deg2rad(direction)
+        u = np.bincount(inverse, weights=speed * np.sin(rad)) / counts
+        v = np.bincount(inverse, weights=speed * np.cos(rad)) / counts
+        mean_speed = np.bincount(inverse, weights=speed) / counts
+        mean_dir = np.mod(np.rad2deg(np.arctan2(u, v)), 360.0)
+        out_cols = [mean_speed, mean_dir] + [
+            np.bincount(inverse, weights=c) / counts for c in cols[2:]
+        ]
+    else:
+        out_cols = [np.bincount(inverse, weights=c) / counts for c in cols]
+    return t_out, out_cols
+
+
+@route("POST", "/api/conditions/station_period")
+def _station_period(handler, body, tail):
+    station = body.get("station")
+    kind = body.get("kind")
+    if not station or kind not in KINDS:
+        send_error_json(handler, "missing 'station'/'kind'")
+        return
+
+    def _run(job):
+        return waterinfo.probe_period(station, kind, job)
+
+    send_json(handler, {"job": jobs.start("probe data period", _run)})
+
+
+# ---------------------------------------------------------------------
+# CDS (ERA5) API key management - the key is personal and stored
+# locally in ~/.cdsapirc, never in the project or repository.
+# ---------------------------------------------------------------------
+
+@route("GET", "/api/conditions/cds")
+def _cds_status(handler, query, tail):
+    ok, reason = era5.configured()
+    send_json(handler, {"configured": ok, "reason": reason})
+
+
+@route("POST", "/api/conditions/cds_key")
+def _cds_key(handler, body, tail):
+    from pathlib import Path
+    key = (body.get("key") or "").strip()
+    if not key or len(key) < 10:
+        send_error_json(handler, "paste the full API token from your CDS profile page")
+        return
+    url = (body.get("url") or "https://cds.climate.copernicus.eu/api").strip()
+    rc = Path.home() / ".cdsapirc"
+    rc.write_text(f"url: {url}\nkey: {key}\n", encoding="utf-8")
+    ok, reason = era5.configured()
+    send_json(handler, {"ok": ok, "reason": reason, "path": str(rc)})
+
+
 @route("POST", "/api/conditions/fetch")
 def _fetch(handler, body, tail):
     current = project.require()
@@ -233,13 +320,17 @@ def _fetch(handler, body, tail):
             station = body.get("station")
             series = waterinfo.fetch_series(station, kind, date0, date1, job)
             epoch0, base = series[0]
-            seconds = epoch0 - refdate.timestamp()
             cols = [base]
             for epoch_i, values_i in series[1:]:
                 # nearest-neighbour align extra quantities on the first one
                 idx = np.searchsorted(epoch_i, epoch0).clip(0, len(values_i) - 1)
                 cols.append(values_i[idx])
-            data = np.column_stack([seconds] + cols)
+            resample = body.get("resample")
+            if resample:
+                job.update(message=f"resampling to {resample}ly means")
+                epoch0, cols = _resample(epoch0, cols, kind, resample)
+            seconds = epoch0 - refdate.timestamp()
+            data = np.column_stack([seconds] + list(cols))
         else:
             raise RuntimeError(f"unknown source '{source}'")
 

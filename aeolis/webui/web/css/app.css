@@ -413,6 +413,27 @@ input.readonly { background: var(--panel-2); color: var(--muted); }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .recent-item.missing { opacity: .5; }
 
+/* station markers (dots with name on hover) */
+.station-dot {
+  width: 11px; height: 11px; border-radius: 50%;
+  background: #b4423b; border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,.45);
+  cursor: pointer; position: relative;
+}
+.station-dot.selected { background: var(--accent); width: 14px; height: 14px; }
+.station-dot .station-tip {
+  display: none;
+  position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
+  background: rgba(255,255,255,.95); border: 1px solid var(--border);
+  border-radius: 4px; padding: 1px 7px;
+  font-size: 11.5px; font-weight: 700; white-space: nowrap;
+}
+.station-dot:hover .station-tip,
+.station-dot.selected .station-tip { display: block; }
+
+/* wizard preview chart */
+.wizard-preview { min-height: 160px; }
+
 /* ============ In-app file browser ============ */
 
 .fb-backdrop {
