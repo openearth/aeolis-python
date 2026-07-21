@@ -82,34 +82,53 @@ const ViewerTab = (() => {
     }
   }
 
+  const loadingLayers = new Set();
+
   function _layerRow(layer, idx, count) {
-    const eye = U.el("span", { class: `eye ${layer.visible ? "" : "off"}`, title: "Show/hide" }, "👁");
-    eye.addEventListener("click", () => {
-      layer.visible = !layer.visible;
-      App.emit("layer-visibility", layer);
-      _renderTree();
-    });
+    const loading = loadingLayers.has(layer.id);
+    const eye = loading
+      ? U.el("span", { class: "spin", title: "Loading…" })
+      : U.el("span", { class: `eye ${layer.visible ? "" : "off"}`, title: "Show/hide" }, "👁");
+    if (!loading) {
+      eye.addEventListener("click", () => {
+        layer.visible = !layer.visible;
+        App.emit("layer-visibility", layer);
+        _renderTree();
+      });
+    }
 
     const row = U.el("div", { class: "lp-row" }, eye,
       U.el("span", { class: "lp-name", title: layer.title }, layer.title),
       layer.subtitle ? U.el("span", { class: "lp-mini" }, layer.subtitle) : null);
 
+    // species selector for stacked vegetation grids (hveg/Nt)
+    if (layer.species > 1) {
+      const k = layer.speciesIdx || 0;
+      const spBtn = U.el("button", {
+        class: "mini-btn", style: "width:auto;padding:0 6px;font-size:11px",
+        title: `Showing species ${k + 1} of ${layer.species} — click for next`,
+      }, `${k + 1}/${layer.species}`);
+      spBtn.addEventListener("click", async () => {
+        layer.speciesIdx = (k + 1) % layer.species;
+        if (layer.visible) await _toggleDomainLayer(layer);
+        _renderTree();
+      });
+      row.append(spBtn);
+    }
+
     // ordering within group (top row = drawn on top)
     if (count > 1) {
-      const up = U.el("span", { class: "lp-mini lp-btn", title: "Raise" }, "↑");
-      const down = U.el("span", { class: "lp-mini lp-btn", title: "Lower" }, "↓");
-      up.addEventListener("click", () => Layers.move(layer.id, -1));
-      down.addEventListener("click", () => Layers.move(layer.id, +1));
-      if (idx > 0) row.append(up);
-      if (idx < count - 1) row.append(down);
+      const up = U.miniBtn("up", "Raise (drawn on top)", () => Layers.move(layer.id, -1));
+      const down = U.miniBtn("down", "Lower", () => Layers.move(layer.id, +1));
+      up.disabled = idx === 0;
+      down.disabled = idx === count - 1;
+      row.append(up, down);
     }
 
     // styling for field layers
     const fieldId = _fieldIdFor(layer);
     if (fieldId && FieldLayer.get(fieldId)) {
-      const style = U.el("span", { class: "lp-mini lp-btn", title: "Style…" }, "🎨");
-      style.addEventListener("click", () => _styleEditor(fieldId, layer.title));
-      row.append(style);
+      row.append(U.miniBtn("gear", "Style…", () => _styleEditor(fieldId, layer.title)));
     }
     return row;
   }
@@ -127,7 +146,9 @@ const ViewerTab = (() => {
       const eye = U.el("span", { class: `eye ${obj.visible ? "" : "off"}` }, "👁");
       eye.addEventListener("click", () => Objects.update(obj.id, { visible: !obj.visible }));
 
-      const swatch = U.el("span", { class: "lp-mini lp-btn", style: `color:${obj.color}`, title: "Change colour" }, "■");
+      const swatch = U.el("button", {
+        class: "mini-btn", style: `color:${obj.color}`, title: "Change colour",
+      }, "■");
       swatch.addEventListener("click", () => {
         const palette = ["#e6552f", "#2f7fe6", "#27a355", "#a034c6", "#e0a020", "#12a5b5", "#d1387f"];
         const next = palette[(palette.indexOf(obj.color) + 1) % palette.length];
@@ -147,16 +168,15 @@ const ViewerTab = (() => {
         });
       });
 
-      const zoom = U.el("span", { class: "lp-mini lp-btn", title: "Zoom to" }, "⌖");
-      zoom.addEventListener("click", () => {
+      const zoom = U.miniBtn("eye", "Zoom to", () => {
         const xs = obj.coords.map((c) => c[0]), ys = obj.coords.map((c) => c[1]);
         MapView.fitModelBounds(Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys));
       });
 
-      const del = U.el("span", { class: "lp-mini lp-btn", title: "Delete" }, "✕");
-      del.addEventListener("click", () => {
+      const del = U.miniBtn("trash", "Delete", () => {
         if (window.confirm(`Delete ${obj.name}?`)) Objects.remove(obj.id);
       });
+      del.classList.add("danger-hover");
 
       tree.append(U.el("div", { class: "lp-row" }, eye, swatch, name,
         U.el("span", { class: "lp-mini" }, obj.kind), zoom, del));
@@ -384,7 +404,7 @@ const ViewerTab = (() => {
   /* ================= panel ================= */
 
   function _buildPanel() {
-    const panel = document.getElementById("viewer-panel");
+    let panel = document.getElementById("viewer-panel");
     if (!panel) return;
     U.clear(panel);
     els = {};
@@ -395,9 +415,10 @@ const ViewerTab = (() => {
     }
 
     // --- layer tree ---
-    panel.append(U.el("span", { class: "fg-label" }, "Layers"));
+    const layersSection = U.section("Layers");
     els.tree = U.el("div", { class: "layer-tree" });
-    panel.append(els.tree);
+    layersSection.body.append(els.tree);
+    panel.append(layersSection.wrap);
     _renderTree();
 
     // --- output controls ---
@@ -407,7 +428,10 @@ const ViewerTab = (() => {
       return;
     }
 
-    panel.append(U.el("span", { class: "fg-label", style: "margin-top:12px" }, "Output display"));
+    const outputSection = U.section("Output display");
+    panel.append(outputSection.wrap);
+    // the remaining controls all land inside the section body
+    panel = outputSection.body;
 
     const varSel = U.el("select", {});
     for (const v of meta.variables) {
@@ -589,6 +613,8 @@ const ViewerTab = (() => {
       MapView.removeLayerAndSource(`pts-${layerInfo.id}`);
       return;
     }
+    loadingLayers.add(layerInfo.id);
+    _renderTree();
     try {
       const entry = layerInfo.entry;
       if (entry.kind === "points") {
@@ -617,9 +643,12 @@ const ViewerTab = (() => {
         });
         layer.setFrames(parsed.values);
       }
-      _renderTree();
     } catch (err) {
       U.toast(`Layer failed: ${err.message}`, "error");
+      layerInfo.visible = false;
+    } finally {
+      loadingLayers.delete(layerInfo.id);
+      _renderTree();
     }
   }
 
@@ -630,19 +659,26 @@ const ViewerTab = (() => {
       FieldLayer.remove(id);
       return;
     }
+    loadingLayers.add(layerInfo.id);
+    _renderTree();
     try {
-      const { buffer, headers } = await Api.binary(`/api/domain/gridfield?target=${target}`);
+      const k = layerInfo.speciesIdx || 0;
+      const { buffer, headers } = await Api.binary(`/api/domain/gridfield?target=${target}&k=${k}`);
+      const nSpecies = Number(headers.get("X-Species") || 1);
+      Layers.register({ id: layerInfo.id, group: layerInfo.group, title: layerInfo.title,
+        species: nSpecies, speciesIdx: k });
       const parsed = FieldLayer.parseGridfield(buffer, headers);
       const layer = FieldLayer.create(id, parsed.mesh, {
         cmap: target === "bed" || target === "ne" ? "topo_dutch" : "viridis",
         min: parsed.range[0], max: parsed.range[1], opacity: 0.9,
       });
       layer.setFrames(parsed.values);
-      _renderTree();
     } catch (err) {
       U.toast(`Layer failed: ${err.message}`, "error");
       // roll the eye back so the tree reflects reality
       layerInfo.visible = false;
+    } finally {
+      loadingLayers.delete(layerInfo.id);
       _renderTree();
     }
   }
