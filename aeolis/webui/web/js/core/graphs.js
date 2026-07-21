@@ -73,28 +73,58 @@ const Graphs = (() => {
     });
   }
 
+  /* Zoom the shared window by a factor around its center. */
+  function _zoomBy(factor, entry) {
+    const full = _fullRange(entry) || timeWindow;
+    if (!full) return;
+    const win = timeWindow || full;
+    const mid = (win[0] + win[1]) / 2;
+    let half = (win[1] - win[0]) / 2 * factor;
+    half = Math.max(30, half);
+    let lo = mid - half, hi = mid + half;
+    if (hi - lo >= full[1] - full[0]) { setTimeWindow(null); return; }
+    if (lo < full[0]) { hi += full[0] - lo; lo = full[0]; }
+    if (hi > full[1]) { lo -= hi - full[1]; hi = full[1]; }
+    setTimeWindow([lo, hi]);
+  }
+
   /* Add (or replace) a chart.
    * spec: {title, timeBased?, data, series, axes?, scales?} */
   function add(id, spec) {
     remove(id);
     const timeBased = spec.timeBased !== false;
-    const resetBtn = U.el("button", {
-      class: "ghost graph-close", title: "Reset zoom", onclick: () => setTimeWindow(null),
-    }, "⤢");
+    const headBtns = U.el("span", { class: "graph-btns" });
+    if (timeBased) {
+      headBtns.append(
+        U.el("button", { class: "ghost graph-close", title: "Zoom in (or drag a range in the chart)",
+          onclick: () => _zoomBy(0.5, charts.get(id)) }, "＋"),
+        U.el("button", { class: "ghost graph-close", title: "Zoom out",
+          onclick: () => _zoomBy(2, charts.get(id)) }, "－"),
+        U.el("button", { class: "ghost graph-close", title: "Reset zoom (or double-click the chart)",
+          onclick: () => setTimeWindow(null) }, "⤢"),
+      );
+    }
+    headBtns.append(
+      U.el("button", { class: "ghost graph-close", title: "Close", onclick: () => remove(id) }, "✕"));
     const wrap = U.el("div", { class: "graph-card", dataset: { graph: id } });
     const head = U.el("div", { class: "graph-head" },
       U.el("span", { class: "graph-title" }, spec.title || id),
-      U.el("span", {},
-        timeBased ? resetBtn : null,
-        U.el("button", { class: "ghost graph-close", title: "Close", onclick: () => remove(id) }, "✕")),
+      U.el("span", { class: "graph-hint muted" },
+        timeBased ? "drag = zoom · dblclick = reset" : ""),
+      headBtns,
     );
     const plotEl = U.el("div");
     wrap.append(head, plotEl);
     wrap.style.minHeight = `${_cardHeight()}px`;
     _container().append(wrap);
 
+    // hide the legend when there is only one series (the title says it
+    // all); keep it for multi-series charts
+    const nSeries = (spec.series || []).length - 1;
+    const showLegend = spec.legend !== false && nSeries > 1;
+
     const width = _container().clientWidth - 24;
-    const height = _cardHeight() - 58;
+    const height = _cardHeight() - (showLegend ? 58 : 34);
 
     const axes = spec.axes ? [...spec.axes] : [{}, { size: Y_AXIS_SIZE }];
     if (timeBased) {
@@ -102,6 +132,10 @@ const Graphs = (() => {
     }
     for (let i = 1; i < axes.length; i += 1) {
       if (axes[i] && axes[i].side !== 1) axes[i] = { size: Y_AXIS_SIZE, ...axes[i] };
+    }
+    // single series: label the y-axis with the series label
+    if (!showLegend && nSeries === 1 && spec.series[1].label && axes[1]) {
+      axes[1] = { label: spec.series[1].label, labelSize: 14, ...axes[1] };
     }
 
     const opts = {
@@ -111,7 +145,7 @@ const Graphs = (() => {
       scales: spec.scales || {},
       series: spec.series,
       axes,
-      legend: { show: spec.legend !== false },
+      legend: { show: showLegend },
       cursor: { drag: { x: true, y: false } },
       hooks: {
         draw: [(u) => _drawTimeCursor(u, id)],
@@ -125,7 +159,7 @@ const Graphs = (() => {
     };
     const plot = new uPlot(opts, spec.data, plotEl);
     plotEl.addEventListener("dblclick", () => setTimeWindow(null));
-    charts.set(id, { plot, wrap, timeBased });
+    charts.set(id, { plot, wrap, timeBased, showLegend });
     if (timeBased && timeWindow) {
       syncing = true;
       plot.setScale("x", { min: timeWindow[0], max: timeWindow[1] });
@@ -226,10 +260,10 @@ const Graphs = (() => {
     const container = _container();
     if (!container) return;
     const cardHeight = _cardHeight();
-    const height = Math.max(110, cardHeight - 58);
     for (const entry of charts.values()) {
       entry.wrap.style.minHeight = `${cardHeight}px`;
       const width = container.clientWidth - 24;
+      const height = Math.max(110, cardHeight - (entry.showLegend ? 58 : 34));
       if (width > 50) entry.plot.setSize({ width, height });
     }
     if (availBox) availBox.style.minHeight = `${cardHeight}px`;
@@ -422,5 +456,7 @@ const Graphs = (() => {
   }
 
   return { init, add, setData, remove, clearAll, has, redrawCursors, resizeAll,
-    refreshAvailability, setTimeWindow, timeWindow: () => timeWindow };
+    refreshAvailability, setTimeWindow, timeWindow: () => timeWindow,
+    // calendar-aligned axis helpers, shared with wizard previews
+    timeAxis: () => ({ splits: _timeSplits, values: _timeValues }) };
 })();

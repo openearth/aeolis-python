@@ -97,12 +97,16 @@ const ConditionsTab = (() => {
         ? U.el("div", { class: "muted" },
           `✔ ${info.file} (${info.series ? info.series.n + " rows" : "unreadable"})`)
         : U.el("div", { class: "muted" }, "not configured yet");
-      const genBtn = U.el("button", { class: "primary" }, "Generate…");
-      genBtn.addEventListener("click", () => _wizard(kind));
-      panel.append(U.el("div", { class: "form-group" },
-        U.el("span", { class: "fg-label" }, KIND_TITLES[kind]),
+      const section = U.section(KIND_TITLES[kind]);
+      section.body.append(
         status,
-        U.el("div", { class: "btn-row" }, genBtn)));
+        U.el("div", { class: "tbtn-row" },
+          U.tbtn("wand", "Generate", {
+            primary: !info.exists,
+            title: `Generate ${KIND_TITLES[kind].toLowerCase()} (synthetic or measured)`,
+            onclick: () => _wizard(kind),
+          })));
+      panel.append(section.wrap);
     }
   }
 
@@ -160,24 +164,24 @@ const ConditionsTab = (() => {
   }
 
   function _wizard(kind) {
-    const popup = Popup.open({ title: `Generate ${KIND_TITLES[kind].toLowerCase()}`, width: 640,
+    const popup = Popup.open({ title: `Generate ${KIND_TITLES[kind].toLowerCase()}`, width: 680,
       onClose: _clearStations });
 
-    const typeSyn = U.el("input", { type: "radio", name: "cw-type", id: "cw-syn", checked: "" });
-    const typeMeas = U.el("input", { type: "radio", name: "cw-type", id: "cw-meas" });
     const synBox = U.el("div");
     const measBox = U.el("div", { style: "display:none" });
-    const syncType = () => {
-      synBox.style.display = typeSyn.checked ? "" : "none";
-      measBox.style.display = typeMeas.checked ? "" : "none";
+    const segSyn = U.el("button", { class: "active" }, "Synthetic");
+    const segMeas = U.el("button", {}, "Measured / modelled");
+    const pick = (syn) => {
+      segSyn.classList.toggle("active", syn);
+      segMeas.classList.toggle("active", !syn);
+      synBox.style.display = syn ? "" : "none";
+      measBox.style.display = syn ? "none" : "";
     };
-    typeSyn.addEventListener("change", syncType);
-    typeMeas.addEventListener("change", syncType);
+    segSyn.addEventListener("click", () => pick(true));
+    segMeas.addEventListener("click", () => pick(false));
 
     popup.body.append(
-      U.el("div", { class: "form-row" },
-        typeSyn, U.el("label", { for: "cw-syn" }, "Synthetic"),
-        typeMeas, U.el("label", { for: "cw-meas" }, "Measured / modelled")),
+      U.el("div", { class: "seg" }, segSyn, segMeas),
       synBox, measBox,
     );
 
@@ -189,27 +193,38 @@ const ConditionsTab = (() => {
 
   function _buildSynthetic(kind, box, popup) {
     const forms = {};
-    let previewPlot = null;
+    const previewPlots = [];
+
+    // one small chart per column (speed and direction never share one
+    // plot), calendar-aligned time axis, y-axis labelled with the unit,
+    // drag = zoom / double-click = reset (uPlot built-ins)
+    const renderPreview = (res) => {
+      for (const p of previewPlots.splice(0)) p.destroy();
+      U.clear(previewEl);
+      const s = res.series;
+      const { splits, values } = Graphs.timeAxis();
+      res.labels.forEach((label, i) => {
+        const el = U.el("div");
+        previewEl.append(el);
+        previewPlots.push(new uPlot({
+          width: 600, height: res.labels.length > 1 ? 128 : 170,
+          series: [{}, { label, stroke: SERIES_COLORS[i % SERIES_COLORS.length], width: 1.4 }],
+          axes: [
+            { splits, values },
+            { size: 56, label, labelSize: 14 },
+          ],
+          scales: { x: { time: false } },
+          legend: { show: false },
+          cursor: { drag: { x: true, y: false } },
+        }, [s.t_epoch, s.columns[i]], el));
+      });
+    };
 
     const updatePreview = U.debounce(async () => {
       const body = { kind, dt: Number(dtInput.value) * 3600 || 3600 };
       for (const [name, form] of Object.entries(forms)) body[name] = form.spec();
       try {
-        const res = await Api.post("/api/conditions/preview", body);
-        const s = res.series;
-        const data = [s.t_epoch, ...s.columns];
-        if (previewPlot) previewPlot.destroy();
-        previewPlot = new uPlot({
-          width: 560, height: 150,
-          series: [{}, ...res.labels.map((label, i) => ({
-            label, stroke: SERIES_COLORS[i % SERIES_COLORS.length], width: 1.4,
-            scale: i === 0 ? "y" : "y2",
-          }))],
-          axes: [{ values: (u, t) => t.map((v) => U.fmtDate(v).slice(5, 16)) },
-            { size: 50, scale: "y" }, { size: 50, scale: "y2", side: 1, grid: { show: false } }],
-          scales: { x: { time: false }, y: {}, y2: {} },
-          legend: { show: true },
-        }, data, previewEl);
+        renderPreview(await Api.post("/api/conditions/preview", body));
       } catch (err) {
         console.warn("preview failed", err.message);
       }
