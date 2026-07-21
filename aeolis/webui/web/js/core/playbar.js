@@ -115,6 +115,26 @@ const Playbar = (() => {
     els.label.textContent = U.fmtDate(clock.t);
   }
 
+  /* Highlight the graphs' current zoom window on the timeline. */
+  function setViewWindow(window) {
+    const clock = _clock();
+    let band = document.getElementById("timeline-window");
+    if (!band) {
+      const wrap = U.el("span", { id: "timeline-wrap" });
+      els.timeline.replaceWith(wrap);
+      wrap.append(U.el("span", { id: "timeline-window" }), els.timeline);
+      band = document.getElementById("timeline-window");
+    }
+    if (!window || !Number.isFinite(clock.t0) || clock.t1 <= clock.t0) {
+      band.style.display = "none";
+      return;
+    }
+    const frac = (t) => U.clamp((t - clock.t0) / (clock.t1 - clock.t0), 0, 1);
+    band.style.display = "";
+    band.style.left = `${(frac(window[0]) * 100).toFixed(2)}%`;
+    band.style.width = `${((frac(window[1]) - frac(window[0])) * 100).toFixed(2)}%`;
+  }
+
   function init() {
     els.play = document.getElementById("btn-play");
     els.back = document.getElementById("btn-step-back");
@@ -145,5 +165,5 @@ const Playbar = (() => {
     _updateUI();
   }
 
-  return { init, setSource, removeSource, setTime, togglePlay };
+  return { init, setSource, removeSource, setTime, togglePlay, setViewWindow };
 })();

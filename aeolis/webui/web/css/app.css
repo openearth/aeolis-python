@@ -500,12 +500,14 @@ input.readonly { background: var(--panel-2); color: var(--muted); }
 .map-label.boundary-lateral { color: #5c6a7c; border-color: #5c6a7c; }
 
 /* availability chart */
-.avail-body { display: flex; gap: 8px; padding: 4px 0 6px; }
-.avail-labels { flex: 0 0 120px; display: flex; flex-direction: column; }
+.avail-body { display: flex; gap: 4px; padding: 4px 0 6px; }
+/* label column width matches the uPlot y-axis size so the time axes of
+ * all graph slides align horizontally */
+.avail-labels { flex: 0 0 56px; display: flex; flex-direction: column; }
 .avail-label {
   height: 22px; display: flex; align-items: center; justify-content: flex-end;
-  font-size: 11.5px; color: var(--muted);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 10px; color: var(--muted);
+  overflow: hidden; white-space: nowrap;
 }
 .avail-tracks { position: relative; flex: 1; display: flex; flex-direction: column; }
 .avail-track {
@@ -589,7 +591,11 @@ button.toggle.active {
 .lp-row .lp-mini { color: var(--muted); font-size: 11px; flex: none; }
 .lp-row.selected { background: var(--accent-soft); }
 
-/* graphs panel */
+/* graphs panel: full-height slides with scroll snapping */
+#graphs-wrap {
+  scroll-snap-type: y mandatory;
+  position: relative;
+}
 #graphs { padding: 6px 10px; }
 .graph-card {
   border: 1px solid var(--border);
@@ -597,6 +603,9 @@ button.toggle.active {
   background: var(--panel);
   margin-bottom: 8px;
   padding: 4px 8px 6px;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  box-sizing: border-box;
 }
 .graph-head {
   display: flex; align-items: center; justify-content: space-between;
@@ -605,6 +614,31 @@ button.toggle.active {
 .graph-title { font-weight: 700; font-size: 12.5px; }
 .graph-close { border: none; padding: 0 4px; font-size: 11px; color: var(--muted); }
 .graph-close:hover { color: var(--danger); background: none; }
+
+/* slide dot navigator */
+#graph-dots {
+  position: sticky; float: right;
+  top: 40%; right: 6px;
+  display: flex; flex-direction: column; gap: 6px;
+  z-index: 30; width: 12px; margin-right: 2px;
+}
+.graph-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--border); cursor: pointer;
+  border: 1px solid var(--muted);
+}
+.graph-dot.on { background: var(--accent); border-color: var(--accent); }
+
+/* timeline zoom-window highlight */
+#timeline-wrap { flex: 1; position: relative; display: flex; align-items: center; }
+#timeline-wrap #timeline { flex: 1; position: relative; z-index: 2; }
+#timeline-window {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  height: 14px; border-radius: 4px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  z-index: 1; pointer-events: none;
+}
 
 /* run tab log */
 #run-log {
