@@ -34,10 +34,21 @@ const DomainTab = (() => {
 
   function _registerRawLayers() {
     for (const entry of overview.entries) {
+      const existing = Layers.get(`raw-${entry.id}`);
       Layers.register({
         id: `raw-${entry.id}`, group: "rawdata",
         title: entry.label || entry.path,
         subtitle: entry.source, entry,
+        visible: existing ? existing.visible : false,
+      });
+    }
+    for (const [name, info] of Object.entries(overview.targets)) {
+      if (!info.exists) continue;
+      const existing = Layers.get(`domain-${name}`);
+      Layers.register({
+        id: `domain-${name}`, group: "domain",
+        title: `${name} (${info.file})`,
+        visible: existing ? existing.visible : false,
       });
     }
   }

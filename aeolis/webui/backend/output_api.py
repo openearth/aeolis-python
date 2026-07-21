@@ -1,1 +1,246 @@
-"""netCDF output streaming API (Viewer tab). Implemented in Phase 7."""
+"""Field-data streaming API for the map viewer.
+
+Serves three kinds of fields, all rendered by the same WebGL layer:
+
+- model output (netCDF, per-timestep float32 slabs with an LRU cache so
+  scrubbing the time slider is instantaneous),
+- domain .grd files (static),
+- downloaded raw rasters (decimated to a display resolution).
+
+Binary layout of a "gridfield" payload (application/octet-stream)::
+
+    uint32 n, uint32 s                  # rows, cols
+    float32 x[n*s], float32 y[n*s]      # model CRS coordinates
+    float32 v[n*s]                      # values (NaN -> -1e30 sentinel)
+
+Per-timestep "field" payloads are only ``float32 v[n*s]`` with the value
+range in the ``X-Data-Range`` response header.
+"""
+
+import struct
+from collections import OrderedDict
+
+import numpy as np
+
+from aeolis.webui.backend import grd_io, project
+from aeolis.webui.backend.config_api import load_config
+from aeolis.webui.backend.conditions_api import parse_refdate
+from aeolis.webui.backend.domain_api import TARGETS, get_entry, load_raw
+from aeolis.webui.backend.grid_api import _load_current_grid
+from aeolis.webui.backend.httpd import route
+from aeolis.webui.backend.util import NC_LOCK, send_bytes, send_error_json, send_json
+
+SENTINEL = -1.0e30
+_slab_cache = OrderedDict()   # (path, var, t, extra) -> (bytes, vmin, vmax)
+SLAB_CACHE_MAX = 80
+_meta_cache = {}              # path -> (mtime, meta)
+
+
+def _output_path():
+    current = project.require()
+    values = load_config(current.configfile)
+    name = values.get("output_file") or (current.configfile.stem + ".nc")
+    return current.root / str(name), values
+
+
+def _open_nc(path):
+    import netCDF4
+    return netCDF4.Dataset(str(path), mode="r")
+
+
+@route("GET", "/api/output/meta")
+def _meta(handler, query, tail):
+    path, values = _output_path()
+    if not path.is_file():
+        send_json(handler, {"exists": False, "file": str(path.name)})
+        return
+
+    mtime = path.stat().st_mtime
+    cached = _meta_cache.get(str(path))
+    if cached and cached[0] == mtime:
+        send_json(handler, cached[1])
+        return
+
+    refdate = parse_refdate(values)
+    with NC_LOCK:
+        ds = _open_nc(path)
+        try:
+            n = ds.dimensions["n"].size
+            s = ds.dimensions["s"].size
+            tvar = ds.variables["time"]
+            times = np.asarray(tvar[:], dtype="float64")
+            variables = []
+            for name, var in ds.variables.items():
+                dims = var.dimensions
+                if "time" not in dims or name == "time":
+                    continue
+                if "n" not in dims or "s" not in dims:
+                    continue
+                extra = [d for d in dims if d not in ("time", "n", "s")]
+                variables.append({
+                    "name": name,
+                    "units": getattr(var, "units", ""),
+                    "long_name": getattr(var, "long_name", name),
+                    "extra_dims": [
+                        {"name": d, "size": ds.dimensions[d].size} for d in extra
+                    ],
+                })
+        finally:
+            ds.close()
+
+    epoch0 = refdate.timestamp()
+    meta = {
+        "exists": True,
+        "file": path.name,
+        "shape": [int(n), int(s)],
+        "times": times.tolist(),
+        "times_epoch": (epoch0 + times).tolist(),
+        "variables": variables,
+    }
+    _meta_cache[str(path)] = (mtime, meta)
+    send_json(handler, meta)
+
+
+@route("GET", "/api/output/mesh")
+def _mesh(handler, query, tail):
+    path, values = _output_path()
+    if not path.is_file():
+        send_error_json(handler, "no output file", 404)
+        return
+    with NC_LOCK:
+        ds = _open_nc(path)
+        try:
+            x = np.asarray(ds.variables["x"][:], dtype="float32")
+            y = np.asarray(ds.variables["y"][:], dtype="float32")
+        finally:
+            ds.close()
+    n, s = x.shape
+    payload = struct.pack("<II", n, s) + x.tobytes() + y.tobytes()
+    send_bytes(handler, payload)
+
+
+@route("GET", "/api/output/field")
+def _field(handler, query, tail):
+    path, values = _output_path()
+    if not path.is_file():
+        send_error_json(handler, "no output file", 404)
+        return
+    var = query.get("var")
+    t = int(query.get("t", 0))
+    extra = query.get("k", "0")   # comma-separated indices for extra dims
+    if not var:
+        send_error_json(handler, "missing 'var'")
+        return
+
+    key = (str(path), path.stat().st_mtime, var, t, extra)
+    cached = _slab_cache.get(key)
+    if cached is None:
+        with NC_LOCK:
+            ds = _open_nc(path)
+            try:
+                if var not in ds.variables:
+                    send_error_json(handler, f"unknown variable '{var}'", 404)
+                    return
+                ncvar = ds.variables[var]
+                dims = ncvar.dimensions
+                index = []
+                extra_idx = [int(v) for v in str(extra).split(",") if v != ""]
+                pos = 0
+                for d in dims:
+                    if d == "time":
+                        index.append(min(t, ncvar.shape[0] - 1))
+                    elif d in ("n", "s"):
+                        index.append(slice(None))
+                    else:
+                        k = extra_idx[pos] if pos < len(extra_idx) else 0
+                        index.append(min(k, ds.dimensions[d].size - 1))
+                        pos += 1
+                data = ncvar[tuple(index)]
+            finally:
+                ds.close()
+        arr = np.ma.filled(np.ma.masked_invalid(data), np.nan).astype("float32")
+        finite = np.isfinite(arr)
+        vmin = float(np.nanmin(arr)) if finite.any() else 0.0
+        vmax = float(np.nanmax(arr)) if finite.any() else 1.0
+        arr[~finite] = SENTINEL
+        cached = (arr.tobytes(), vmin, vmax)
+        _slab_cache[key] = cached
+        while len(_slab_cache) > SLAB_CACHE_MAX:
+            _slab_cache.popitem(last=False)
+    else:
+        _slab_cache.move_to_end(key)
+
+    payload, vmin, vmax = cached
+    send_bytes(handler, payload, extra_headers={"X-Data-Range": f"{vmin},{vmax}"})
+
+
+# ---------------------------------------------------------------------
+# static gridfields: domain .grd files and raw rasters
+# ---------------------------------------------------------------------
+
+def _pack_gridfield(X, Y, V):
+    V = np.asarray(V, dtype="float32").copy()
+    finite = np.isfinite(V)
+    vmin = float(V[finite].min()) if finite.any() else 0.0
+    vmax = float(V[finite].max()) if finite.any() else 1.0
+    V[~finite] = SENTINEL
+    n, s = X.shape
+    payload = (struct.pack("<II", n, s)
+               + np.asarray(X, dtype="float32").tobytes()
+               + np.asarray(Y, dtype="float32").tobytes()
+               + V.tobytes())
+    return payload, vmin, vmax
+
+
+@route("GET", "/api/domain/gridfield")
+def _gridfield(handler, query, tail):
+    target = query.get("target")
+    if target not in TARGETS:
+        send_error_json(handler, f"unknown target '{target}'")
+        return
+    grids, values = _load_current_grid()
+    if grids is None:
+        send_error_json(handler, "no model grid", 404)
+        return
+    X, Y = grids
+    key, default_name = TARGETS[target]
+    filename = values.get(key) or default_name
+    path = project.require().root / str(filename)
+    if not path.is_file():
+        send_error_json(handler, f"{filename} does not exist", 404)
+        return
+    V = grd_io.read_grd(path)
+    if V.shape != X.shape:
+        send_error_json(handler, f"{filename} shape mismatch", 409)
+        return
+    payload, vmin, vmax = _pack_gridfield(X, Y, V)
+    send_bytes(handler, payload, extra_headers={"X-Data-Range": f"{vmin},{vmax}"})
+
+
+@route("GET", "/api/domain/rawfield")
+def _rawfield(handler, query, tail):
+    entry = get_entry(query.get("id", ""))
+    if entry is None:
+        send_error_json(handler, "unknown raw layer", 404)
+        return
+    kind, x, y, z = load_raw(entry)
+    if kind == "points":
+        # decimated point cloud as JSON (rendered as circles)
+        stride = max(1, x.size // 20000)
+        send_json(handler, {
+            "kind": "points",
+            "x": x[::stride].astype(float).tolist(),
+            "y": y[::stride].astype(float).tolist(),
+            "z": z[::stride].astype(float).tolist(),
+        })
+        return
+    # raster: decimate to display resolution and pack as gridfield
+    max_cells = 700
+    sy = max(1, z.shape[0] // max_cells)
+    sx = max(1, z.shape[1] // max_cells)
+    z2 = z[::sy, ::sx]
+    x2 = x[::sx]
+    y2 = y[::sy]
+    X, Y = np.meshgrid(x2, y2)
+    payload, vmin, vmax = _pack_gridfield(X, Y, z2)
+    send_bytes(handler, payload, extra_headers={"X-Data-Range": f"{vmin},{vmax}"})
