@@ -55,7 +55,12 @@ const SettingsTab = (() => {
   }
 
   function _updateButtons() {
-    document.getElementById("btn-cfg-save").disabled = !loaded || !App.state.configDirty;
+    const saveBtn = document.getElementById("btn-cfg-save");
+    saveBtn.disabled = !loaded || !App.state.configDirty;
+    // unsaved-changes dot on the save button
+    saveBtn.classList.toggle("dirty", loaded && Boolean(App.state.configDirty));
+    saveBtn.title = App.state.configDirty
+      ? "Save configuration (unsaved changes)" : "Save configuration";
     document.getElementById("btn-cfg-saveas").disabled = !loaded;
   }
 
@@ -71,9 +76,10 @@ const SettingsTab = (() => {
       if (path) {
         const info = await Api.get("/api/project");
         App.state.project = info;
-        const chip = document.getElementById("project-chip");
-        chip.textContent = info.name;
-        chip.title = info.configfile;
+        const pathEl = document.getElementById("topbar-path");
+        U.clear(pathEl);
+        pathEl.append(U.el("bdi", {}, info.configfile));
+        pathEl.title = info.configfile;
       }
     } catch (err) {
       U.toast(`Save failed: ${err.message}`, "error");

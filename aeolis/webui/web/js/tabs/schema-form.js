@@ -43,11 +43,23 @@ const SchemaForm = (() => {
   function _section(section, values) {
     const body = U.el("div", { class: "section-body" });
     for (const param of section.params) {
-      body.append(_paramRow(param, values));
+      body.append(_paramRow(param, values, section));
+    }
+    // sections whose files come from a dedicated tab link there from
+    // the header (the rows themselves just show the configured path)
+    let tabLink = null;
+    if (section.tab) {
+      tabLink = U.el("button", { class: "section-tablink", title: `Open the ${TAB_LABELS[section.tab]}` },
+        `${TAB_LABELS[section.tab]} →`);
+      tabLink.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        Tabs.activate(section.tab);
+      });
     }
     const head = U.el("header", {},
       U.el("span", { class: "caret" }, "▾"),
       section.name,
+      tabLink,
       U.el("span", { class: "count" }, String(section.params.length)),
     );
     const wrap = U.el("div", {
@@ -60,7 +72,7 @@ const SchemaForm = (() => {
     return wrap;
   }
 
-  function _paramRow(param, values) {
+  function _paramRow(param, values, section = null) {
     const value = values[param.key];
     const row = U.el("div", { class: "param-row", dataset: { param: param.key } });
 
@@ -76,7 +88,17 @@ const SchemaForm = (() => {
     const label = U.el("label", { for: `param-${param.key}` }, info, param.key);
     row.append(label);
 
-    if (param.link) {
+    if (param.link && section && section.tab) {
+      // the section header links to the tab; the row just shows the
+      // configured path, read-only
+      const pathBox = U.el("input", {
+        type: "text", class: "readonly filepath", disabled: "",
+        value: _displayValue(value) || "",
+        placeholder: "not set",
+        title: `Set in the ${TAB_LABELS[param.link]}`,
+      });
+      row.append(pathBox);
+    } else if (param.link) {
       const link = U.el("button", { class: "filelink", title: `Configured in the ${TAB_LABELS[param.link]}` },
         `${_displayValue(value) || "not set"} → ${TAB_LABELS[param.link]}`);
       link.addEventListener("click", () => Tabs.activate(param.link));
@@ -102,10 +124,36 @@ const SchemaForm = (() => {
     return row;
   }
 
+  /* Human word for the entries of a list parameter. */
+  function _listNoun(key) {
+    if (/^grain_/.test(key)) return "fraction";
+    if (/species|veg|tiller|Hveg|Nt/i.test(key)) return "species";
+    return "value";
+  }
+
+  /* Small gray badge showing how many entries a list value holds. */
+  function _listBadge(param) {
+    const badge = U.el("span", {
+      class: "list-badge", dataset: { listBadge: param.key },
+      title: "This parameter accepts multiple space-separated values",
+    });
+    _syncListBadge(badge, param);
+    return badge;
+  }
+
+  function _syncListBadge(badge, param) {
+    const v = App.state.config ? App.state.config[param.key] : param.default;
+    const n = Array.isArray(v) ? v.length : (v === null || v === undefined ? 0 : 1);
+    const noun = _listNoun(param.key);
+    badge.textContent = n > 1 ? `${n} ${noun}s` : (n === 1 ? `1 ${noun}` : "");
+    badge.style.display = badge.textContent ? "" : "none";
+  }
+
   function _inputWrap(param, value) {
     const input = _input(param, value);
     const showUnit = param.unit && param.unit !== "-" && param.type !== "bool";
     const extras = [];
+    if (param.type === "list") extras.push(_listBadge(param));
     if (showUnit) extras.push(U.el("span", { class: "unit-suffix" }, param.unit));
     if (param.time_tool) {
       const clock = U.el("button", { class: "ghost time-tool-btn", title: "Compute from date/duration" }, "🕒");
@@ -177,14 +225,25 @@ const SchemaForm = (() => {
   function _commit(param, value) {
     App.state.config[param.key] = value;
     const row = container.querySelector(`[data-param="${param.key}"]`);
-    if (row) _markChanged(row, param, value);
+    if (row) {
+      _markChanged(row, param, value);
+      const badge = row.querySelector(`[data-list-badge="${CSS.escape(param.key)}"]`);
+      if (badge) _syncListBadge(badge, param);
+    }
     applyRules();
     if (onChange) onChange(param.key, value);
     App.emit("config-changed", param.key);
   }
 
   function _markChanged(row, param, value) {
-    row.classList.toggle("changed", !_equals(value, param.default));
+    const changed = !_equals(value, param.default);
+    row.classList.toggle("changed", changed);
+    // explain the teal dot rendered by .param-row.changed::before
+    if (changed) {
+      row.title = `differs from the default (${_displayValue(param.default) || "none"})`;
+    } else {
+      row.removeAttribute("title");
+    }
   }
 
   function _equals(a, b) {
@@ -247,6 +306,7 @@ const SchemaForm = (() => {
       // hidden by it
       const controller = section.visible_if ? section.visible_if.key : null;
       let anyVisible = false;
+      let visibleCount = 0;
       for (const param of section.params) {
         const row = sectionEl.querySelector(`[data-param="${param.key}"]`);
         if (!row) continue;
@@ -255,8 +315,12 @@ const SchemaForm = (() => {
         const searchOk = !searchTerm || param.key.toLowerCase().includes(searchTerm);
         const show = ruleOk && searchOk;
         row.style.display = show ? "" : "none";
-        if (show) anyVisible = true;
+        if (show) { anyVisible = true; visibleCount += 1; }
       }
+      // the header count follows the currently applicable parameters
+      // (e.g. switching vegetation method changes it)
+      const countEl = sectionEl.querySelector(":scope > header .count");
+      if (countEl) countEl.textContent = String(visibleCount);
       sectionEl.style.display = anyVisible ? "" : "none";
       sectionEl.classList.toggle("disabled-group", !enabled);
       if (!enabled) disabledNames.push(section.name);
@@ -311,10 +375,14 @@ const SchemaForm = (() => {
     if (param && param.link) {
       const link = row.querySelector(".filelink");
       if (link) link.textContent = `${_displayValue(value) || "not set"} → ${TAB_LABELS[param.link]}`;
+      const pathBox = row.querySelector("input.filepath");
+      if (pathBox) pathBox.value = _displayValue(value) || "";
     } else {
       const input = row.querySelector("input, select");
       if (input && input.type !== "checkbox") input.value = _displayValue(value);
       else if (input) input.checked = Boolean(value);
+      const badge = row.querySelector(`[data-list-badge="${CSS.escape(key)}"]`);
+      if (badge && param) _syncListBadge(badge, param);
     }
     if (param) _markChanged(row, param, value);
     applyRules();

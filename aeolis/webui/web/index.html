@@ -13,10 +13,11 @@
 
   <!-- ============ Top bar ============ -->
   <header id="topbar">
-    <div id="brand">
-      <img src="img/favicon.svg" alt="" width="22" height="22">
-      <span>AeoLiS</span>
+    <div id="brand" title="AeoLiS">
+      <img src="img/favicon.svg" alt="AeoLiS" width="22" height="22">
+      <span id="brand-name">AeoLiS</span>
     </div>
+    <span class="topbar-sep"></span>
     <nav id="tabbar">
       <button class="tab-btn active" data-tab="settings">Settings</button>
       <button class="tab-btn" data-tab="grid">Grid</button>
@@ -25,8 +26,8 @@
       <button class="tab-btn" data-tab="run">Run</button>
       <button class="tab-btn" data-tab="viewer">Viewer</button>
     </nav>
-    <div id="topbar-right">
-      <span id="project-chip" class="chip" title="No project open">No project</span>
+    <span class="topbar-sep"></span>
+    <div class="topbar-group">
       <button id="btn-project" class="iconbtn" title="Open project…">
         <svg viewBox="0 0 24 24" width="17" height="17"><path fill="currentColor" d="M4 4h6l2 2h8a1 1 0 0 1 1 1v2H3V5a1 1 0 0 1 1-1zm-1 6h19l-2.2 9.2a1 1 0 0 1-1 .8H5.2a1 1 0 0 1-1-.8L3 10z"/></svg>
       </button>
@@ -36,8 +37,25 @@
       <button id="btn-cfg-saveas" class="iconbtn" title="Save configuration as…" disabled>
         <svg viewBox="0 0 24 24" width="17" height="17"><path fill="currentColor" d="M5 3h11l5 5v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm2 2v5h9V5H7zm3 9h4v2h2v2h-2v2h-4v-2H8v-2h2v-2z"/></svg>
       </button>
-      <button id="btn-docs" class="iconbtn" title="Open documentation (readthedocs)">
-        <svg viewBox="0 0 24 24" width="17" height="17"><path fill="currentColor" d="M6 2h13a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3zm0 16a1 1 0 0 0 0 2h12v-2H6zm0-2h12V4H6a1 1 0 0 0-1 1v11.2A3 3 0 0 1 6 16zm2-9h8v2H8V7z"/></svg>
+      <span id="topbar-path" class="muted" title="No project open">no project</span>
+    </div>
+    <span class="topbar-sep"></span>
+    <div class="topbar-group">
+      <button id="btn-cfg-view" class="iconbtn" title="View aeolis.txt…" disabled>
+        <svg viewBox="0 0 24 24" width="17" height="17"><path fill="currentColor" d="M6 2h9l5 5v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm8 1.5V8h4.5L14 3.5zM8 11h8v1.6H8V11zm0 3.4h8V16H8v-1.6zm0 3.4h5.5v1.6H8v-1.6z"/></svg>
+      </button>
+      <button id="btn-cfg-reveal" class="iconbtn" title="Show config file in Explorer" disabled>
+        <svg viewBox="0 0 24 24" width="17" height="17"><path fill="currentColor" d="M4 4h6l2 2h8a1 1 0 0 1 1 1v2H3V5a1 1 0 0 1 1-1zm-1 6h19l-2.2 9.2a1 1 0 0 1-1 .8H5.2a1 1 0 0 1-1-.8L3 10zm9 2.2-3.5 3.6h2.3v2.6h2.4v-2.6h2.3L12 12.2z"/></svg>
+      </button>
+    </div>
+    <span class="topbar-sep"></span>
+    <button id="btn-docs" class="iconbtn" title="Open the AeoLiS guide (readthedocs)">
+      <svg viewBox="0 0 24 24" width="17" height="17"><path fill="currentColor" d="M6 2h13a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3zm0 16a1 1 0 0 0 0 2h12v-2H6zm0-2h12V4H6a1 1 0 0 0-1 1v11.2A3 3 0 0 1 6 16zm2-9h8v2H8V7z"/></svg>
+    </button>
+    <span class="topbar-sep topbar-sep-end"></span>
+    <div id="theme-picker" class="topbar-group">
+      <button id="btn-theme" class="iconbtn" title="Theme — pick an album-cover style">
+        <svg viewBox="0 0 24 24" width="17" height="17"><path fill="currentColor" d="M12 3a9 9 0 1 0 0 18c1.7 0 3-1.3 3-3 0-.8-.3-1.5-.8-2-.5-.5-.7-1-.7-1.6 0-1 .8-1.9 1.9-1.9H17a4 4 0 0 0 4-4c0-3.6-4-6.5-9-6.5zm-5.5 9a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3-4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></svg>
       </button>
     </div>
   </header>
@@ -100,21 +118,21 @@
           output time series and data availability.</div>
         <div id="graphs"></div>
       </div>
+
+      <!-- Playbar: the shared time slider, integrated as the bottom row
+           of the graphs unit (starts right of the sidebar, so the whole
+           left column belongs to the sidebar — no dead corner). -->
+      <footer id="playbar">
+        <button id="btn-play" title="Play / pause (space)">▶</button>
+        <input id="timeline" type="range" min="0" max="1000" value="0" step="1">
+        <span id="time-label">–</span>
+        <label id="speed-wrap" title="Animation speed">
+          <span>speed</span>
+          <input id="rng-speed" type="range" min="0" max="4" value="2" step="0.1">
+        </label>
+      </footer>
     </div>
   </div>
-
-  <!-- ============ Playbar ============ -->
-  <footer id="playbar">
-    <button id="btn-play" title="Play / pause (space)">▶</button>
-    <button id="btn-step-back" title="Step back">⏮</button>
-    <button id="btn-step-fwd" title="Step forward">⏭</button>
-    <input id="timeline" type="range" min="0" max="1000" value="0" step="1">
-    <span id="time-label">–</span>
-    <label id="speed-wrap" title="Animation speed">
-      <span>speed</span>
-      <input id="rng-speed" type="range" min="0" max="4" value="2" step="0.1">
-    </label>
-  </footer>
 
   <!-- ============ Modals ============ -->
   <div id="modal-backdrop" hidden>
@@ -145,7 +163,9 @@
   <script src="vendor/proj4.js"></script>
 
   <script src="js/core/util.js"></script>
+  <script src="js/core/theme.js"></script>
   <script src="js/core/popups.js"></script>
+  <script src="js/core/windrose.js"></script>
   <script src="js/core/filebrowser.js"></script>
   <script src="js/core/api.js"></script>
   <script src="js/core/state.js"></script>
@@ -157,8 +177,10 @@
   <script src="js/core/objects.js"></script>
   <script src="js/core/draw.js"></script>
   <script src="js/core/layers-panel.js"></script>
+  <script src="js/core/tsplot.js"></script>
   <script src="js/core/graphs.js"></script>
   <script src="js/core/playbar.js"></script>
+  <script src="js/core/condhud.js"></script>
 
   <script src="js/tabs/schema-form.js"></script>
   <script src="js/tabs/settings.js"></script>

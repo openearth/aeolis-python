@@ -29,6 +29,11 @@ const Playbar = (() => {
     _recomputeRange();
   }
 
+  function clearSources() {
+    sources.clear();
+    _recomputeRange();
+  }
+
   function _recomputeRange() {
     const clock = _clock();
     if (!sources.size) {
@@ -102,8 +107,6 @@ const Playbar = (() => {
     const hasRange = Number.isFinite(clock.t0) && clock.t1 > clock.t0;
     els.timeline.disabled = !hasRange;
     els.play.disabled = !hasRange;
-    els.back.disabled = !hasRange;
-    els.fwd.disabled = !hasRange;
     if (!hasRange) {
       els.label.textContent = "–";
       return;
@@ -137,15 +140,11 @@ const Playbar = (() => {
 
   function init() {
     els.play = document.getElementById("btn-play");
-    els.back = document.getElementById("btn-step-back");
-    els.fwd = document.getElementById("btn-step-fwd");
     els.timeline = document.getElementById("timeline");
     els.label = document.getElementById("time-label");
     els.speed = document.getElementById("rng-speed");
 
     els.play.addEventListener("click", () => togglePlay());
-    els.back.addEventListener("click", () => step(-1));
-    els.fwd.addEventListener("click", () => step(1));
     els.timeline.addEventListener("input", () => {
       const clock = _clock();
       if (!Number.isFinite(clock.t0)) return;
@@ -165,5 +164,5 @@ const Playbar = (() => {
     _updateUI();
   }
 
-  return { init, setSource, removeSource, setTime, togglePlay, setViewWindow };
+  return { init, setSource, removeSource, clearSources, setTime, togglePlay, setViewWindow };
 })();

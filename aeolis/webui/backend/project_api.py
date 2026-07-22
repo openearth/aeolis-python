@@ -40,6 +40,24 @@ def _new(handler, body, tail):
     send_json(handler, created.info())
 
 
+@route("POST", "/api/project/reveal")
+def _reveal(handler, body, tail):
+    """Open the OS file explorer at the config file location."""
+    import subprocess
+    import sys
+
+    current = project.require()
+    target = current.configfile if current.configfile.is_file() else current.root
+    if sys.platform == "win32":
+        # explorer /select highlights the file inside its folder
+        subprocess.Popen(["explorer", "/select,", str(target)])
+    elif sys.platform == "darwin":
+        subprocess.Popen(["open", "-R", str(target)])
+    else:
+        subprocess.Popen(["xdg-open", str(target.parent)])
+    send_json(handler, {"ok": True})
+
+
 @route("GET", "/api/project/state")
 def _load_state(handler, query, tail):
     send_json(handler, project.require().load_state())

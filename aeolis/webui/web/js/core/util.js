@@ -112,6 +112,15 @@ const U = (() => {
     interp: "M3 3h4.5v4.5H3V3zm13.5 0H21v4.5h-4.5V3zM3 16.5h4.5V21H3v-4.5zm13.5 0H21V21h-4.5v-4.5zM9.8 9.8h4.4v4.4H9.8V9.8z",
     clock: "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16zm1 3h-2v6l4.5 2.7 1-1.6-3.5-2.1V7z",
     open: "M4 4h6l2 2h8a1 1 0 0 1 1 1v2H3V5a1 1 0 0 1 1-1zm-1 6h19l-2.2 9.2a1 1 0 0 1-1 .8H5.2a1 1 0 0 1-1-.8L3 10z",
+    search: "M10 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16zm0 2.4a5.6 5.6 0 1 0 0 11.2 5.6 5.6 0 0 0 0-11.2zm6.8 10.7 5 5-1.7 1.7-5-5 1.7-1.7z",
+    chart: "M3 3h2v16h16v2H3V3zm4 12 4-5 3 3 5-7 1.6 1.2-6.4 8.8-3-3-3.2 4-1.6-2z",
+    key: "M14.5 2a7.5 7.5 0 0 0-7.2 9.6L2 16.9V22h5.1l1.4-1.4v-2.2h2.2l1.7-1.7a7.5 7.5 0 1 0 2.1-14.7zm2.5 4a2 2 0 1 1 0 4 2 2 0 0 1 0-4z",
+    rows: "M3 4h18v4H3V4zm0 6h18v4H3v-4zm0 6h18v4H3v-4z",
+    compass: "M12 1.6a10.4 10.4 0 1 0 0 20.8 10.4 10.4 0 0 0 0-20.8zm0 3.9 1.9 4.6 4.6 1.9-4.6 1.9L12 18.5l-1.9-4.6L5.5 12l4.6-1.9L12 5.5z",
+    home: "M12 3.1 2.6 11.4l1.3 1.5L5 11.9V21h5v-5.5h4V21h5v-9.1l1.1 1 1.3-1.5L12 3.1z",
+    palette: "M12 3a9 9 0 0 0 0 18c1.7 0 3-1.3 3-3 0-.8-.3-1.4-.8-2-.5-.5-.7-1-.7-1.6 0-1 .8-1.9 1.9-1.9H17a4 4 0 0 0 4-4c0-3.6-4-6.5-9-6.5zM6.5 12A1.5 1.5 0 1 1 6.5 9a1.5 1.5 0 0 1 0 3zm3-4A1.5 1.5 0 1 1 9.5 5a1.5 1.5 0 0 1 0 3zm5 0A1.5 1.5 0 1 1 14.5 5a1.5 1.5 0 0 1 0 3z",
+    flag: "M6 2v20H4V2h2zm2 1h11l-2.5 4L19 11H8V3z",
+    target: "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 3a7 7 0 1 1 0 14 7 7 0 0 1 0-14zm0 3.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z",
   };
 
   function icon(name, size = 17) {
@@ -156,6 +165,86 @@ const U = (() => {
     return { wrap, body, head };
   }
 
+  /* Progress bar + message line for background jobs.
+   * Usage: const p = U.progressBar(); box.append(p.el);
+   *        p.start("text"); p.update(job); p.done(); */
+  function progressBar() {
+    const fill = el("div");
+    const bar = el("div", { class: "progress", style: "display:none" }, fill);
+    const msg = el("div", { class: "muted progress-msg" });
+    const wrap = el("div", { class: "progress-wrap" }, bar, msg);
+    return {
+      el: wrap,
+      start(text = "") {
+        bar.style.display = "";
+        bar.classList.add("indet");
+        msg.textContent = text;
+      },
+      update(job) {
+        bar.style.display = "";
+        const p = job && Number.isFinite(job.progress) ? job.progress : -1;
+        if (p >= 0) {
+          bar.classList.remove("indet");
+          fill.style.width = `${Math.round(clamp(p, 0, 1) * 100)}%`;
+        } else {
+          bar.classList.add("indet");
+        }
+        if (job && job.message) msg.textContent = job.message;
+      },
+      done() {
+        bar.style.display = "none";
+        bar.classList.remove("indet");
+        fill.style.width = "0%";
+        msg.textContent = "";
+      },
+    };
+  }
+
+  /* Show the full text of ellipsis-truncated elements as a native
+   * tooltip on hover. Any pre-existing title is kept (appended). */
+  const TRUNC_SELECTOR = [
+    ".lp-name", ".ts-title", ".avail-label", "#topbar-path", ".ov-desc",
+    ".ov-unit", ".ri-path", ".fb-rowname", ".gp-label", ".param-row label",
+    ".gs-label", ".colorbar-title",
+  ].join(", ");
+
+  function initTruncationTips() {
+    document.addEventListener("mouseover", (ev) => {
+      const target = ev.target;
+      if (!target || !target.closest) return;
+      const el = target.closest(TRUNC_SELECTOR);
+      if (!el) return;
+      const truncated = el.scrollWidth > el.clientWidth + 1;
+      const text = (el.textContent || "").trim();
+      if (truncated && text) {
+        if (el.dataset.baseTitle === undefined) {
+          el.dataset.baseTitle = el.title || "";
+        }
+        const base = el.dataset.baseTitle;
+        el.title = base && base !== text ? `${text} — ${base}` : text;
+      } else if (el.dataset.baseTitle !== undefined) {
+        el.title = el.dataset.baseTitle;
+        delete el.dataset.baseTitle;
+      }
+    });
+  }
+
+  /* Clear a transient multi-selection when the user clicks anywhere that
+   * isn't a selectable card or a control acting on the selection. Cheap:
+   * the handler no-ops unless something is currently selected.
+   *   size()  -> current selection count
+   *   clear() -> drop the selection and re-render */
+  function deselectOnOutside(size, clear) {
+    document.addEventListener("mousedown", (ev) => {
+      if (!size()) return;
+      const t = ev.target;
+      if (t.closest && (t.closest(".obj-card") || t.closest(".tbtn-row")
+        || t.closest("button") || t.closest("select") || t.closest("input")
+        || t.closest(".popup") || t.closest(".modal"))) return;
+      clear();
+    }, true);
+  }
+
   /* Buffered numeric input: commits on Enter/blur only. */
   function numField(value, onCommit, attrs = {}) {
     const input = el("input", { type: "text", value: value ?? "", ...attrs });
@@ -173,5 +262,6 @@ const U = (() => {
   }
 
   return { el, clear, toast, showTip, hideTip, fmtNum, fmtBytes, fmtDuration, fmtDate,
-    debounce, clamp, numField, icon, tbtn, miniBtn, section };
+    debounce, clamp, numField, icon, tbtn, miniBtn, section, progressBar,
+    initTruncationTips, deselectOnOutside };
 })();

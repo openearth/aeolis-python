@@ -13,6 +13,16 @@ scalar signals (wind speed, water level, Hs, Tp):
     linear    {start, end}
 wind direction adds:
     rotational {start, rate}      # deg, deg per hour (full rotations)
+piecewise:
+    segments  {segments: [{type, duration, ...params}, ...]}
+        Each segment covers *duration* seconds; a segment without a
+        duration runs to the end of the series. Segment types are
+        constant / linear / harmonic; a linear segment without an
+        explicit start continues from the previous segment's end value.
+        When every segment has a duration the series is generated only
+        over the summed duration: AeoLiS repeats a boundary-condition
+        file cyclically when it is shorter than the simulation
+        (interp_circular / interp_circular_nearest).
 """
 
 import numpy as np
@@ -65,7 +75,88 @@ def profile(t, spec):
         rate = float(p.get("rate", 10.0))     # deg/hour
         return np.mod(start + rate * (t - t[0]) / 3600.0, 360.0)
 
+    if kind == "segments":
+        return _segments(t, p.get("segments") or [])
+
     raise ValueError(f"unknown profile type '{kind}'")
+
+
+def _segments(t, segments):
+    """Piecewise series: consecutive constant/linear/harmonic segments."""
+    if not segments:
+        raise ValueError("no segments defined")
+    out = np.full(t.shape, np.nan, dtype=float)
+    start = float(t[0])
+    prev_val = None
+    for i, seg in enumerate(segments):
+        duration = seg.get("duration")
+        # a segment without a duration runs to the end of the series
+        if duration in (None, "", 0):
+            end = float(t[-1])
+            mask = t >= start
+        else:
+            end = start + float(duration)
+            mask = (t >= start) & (t < end)
+        if mask.any():
+            ts = t[mask]
+            kind = seg.get("type", "constant")
+            if kind == "constant":
+                vals = np.full(ts.shape, float(seg.get("value", 0.0)))
+            elif kind == "linear":
+                v0 = seg.get("start")
+                v0 = float(v0) if v0 not in (None, "") else \
+                    (prev_val if prev_val is not None else 0.0)
+                v1 = float(seg.get("end", v0))
+                frac = (ts - start) / max(end - start, 1e-12)
+                vals = v0 + (v1 - v0) * np.clip(frac, 0.0, 1.0)
+            elif kind == "harmonic":
+                mean = float(seg.get("mean", 0.0))
+                amplitude = float(seg.get("amplitude", 1.0))
+                period = float(seg.get("period", 12.42 * 3600))
+                phase = float(seg.get("phase", 0.0))
+                if period <= 0:
+                    raise ValueError("period must be positive")
+                vals = mean + amplitude * np.sin(
+                    2 * np.pi * (ts - start) / period + np.deg2rad(phase))
+            else:
+                vals = profile(ts, seg)
+            out[mask] = vals
+            prev_val = float(vals[-1])
+        start = end
+        if start >= t[-1]:
+            break
+    # samples beyond the covered duration: when every segment has a
+    # duration the pattern is cyclic (AeoLiS repeats the file), so wrap
+    # to the start of the cycle; otherwise hold the last value
+    nan = np.isnan(out)
+    if nan.any():
+        good = ~nan
+        total = segments_duration({"type": "segments", "segments": segments})
+        if total and total > 0 and good.any():
+            wrapped = t[0] + np.mod(t[nan] - t[0], total)
+            idx = np.searchsorted(t[good], wrapped, side="right") - 1
+            out[nan] = out[good][np.clip(idx, 0, int(good.sum()) - 1)]
+        else:
+            idx = np.where(good)[0]
+            out[nan] = out[idx[-1]] if idx.size else 0.0
+    return out
+
+
+def segments_duration(spec):
+    """Total covered time of a piecewise 'segments' spec in seconds, or
+    ``None`` when any segment has no duration (i.e. runs to the end)."""
+    if not isinstance(spec, dict) or spec.get("type") != "segments":
+        return None
+    segments = spec.get("segments") or []
+    if not segments:
+        return None
+    total = 0.0
+    for seg in segments:
+        duration = seg.get("duration")
+        if duration in (None, "", 0):
+            return None
+        total += float(duration)
+    return total
 
 
 def wind(tstart, tstop, dt, speed_spec, direction_spec):

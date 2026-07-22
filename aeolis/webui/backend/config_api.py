@@ -58,6 +58,17 @@ def _get(handler, query, tail):
     })
 
 
+@route("GET", "/api/config/raw")
+def _raw(handler, query, tail):
+    """The aeolis.txt file text as-is (for the config viewer popup)."""
+    current = project.require()
+    if not current.configfile.is_file():
+        send_error_json(handler, f"config not found: {current.configfile}", 404)
+        return
+    text = current.configfile.read_text(encoding="utf-8", errors="replace")
+    send_json(handler, {"path": str(current.configfile), "text": text})
+
+
 def _prepare_values(values):
     """JSON payload -> config dict suitable for write_configfile."""
     prepared = {}

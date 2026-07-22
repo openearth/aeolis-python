@@ -265,7 +265,12 @@ def _gridfield(handler, query, tail):
             k = max(0, min(n_species - 1, int(query.get("k", 0) or 0)))
             V = V.reshape(X.shape[0], X.shape[1], n_species)[:, :, k]
         else:
-            send_error_json(handler, f"{filename} shape mismatch", 409)
+            send_error_json(
+                handler,
+                f"{filename} was made for a different grid "
+                f"({V.shape[0]}x{V.shape[1] if V.ndim > 1 else 1} vs "
+                f"{X.shape[0]}x{X.shape[1]}) - re-interpolate it in the Domain tab",
+                409)
             return
     payload, vmin, vmax = _pack_gridfield(X, Y, V)
     send_bytes(handler, payload, extra_headers={
@@ -282,13 +287,41 @@ def _rawfield(handler, query, tail):
         return
     kind, x, y, z = load_raw(entry)
     if kind == "points":
-        # decimated point cloud as JSON (rendered as circles)
-        stride = max(1, x.size // 20000)
+        # decimated point cloud as JSON (rendered as circles). Points
+        # that originate from a 2D grid (e.g. a .grd duplicated to
+        # samples) are decimated per row/column so the display keeps a
+        # regular pattern - a flat stride on the raveled array would
+        # produce a staggered checkerboard. The per-axis steps are chosen
+        # so the *physical* spacing is roughly equal in both directions,
+        # so a grid with dx != dy (or a rotated grid) still shows an
+        # even, square-looking dot lattice.
+        shape = entry.get("shape")
+        if shape and int(shape[0]) * int(shape[1]) == x.size:
+            ny, nx = int(shape[0]), int(shape[1])
+            Xg = x.reshape(ny, nx)
+            Yg = y.reshape(ny, nx)
+            drow = float(np.nanmean(np.hypot(np.diff(Xg, axis=0),
+                                             np.diff(Yg, axis=0)))) or 1.0
+            dcol = float(np.nanmean(np.hypot(np.diff(Xg, axis=1),
+                                             np.diff(Yg, axis=1)))) or 1.0
+            drow, dcol = abs(drow) or 1.0, abs(dcol) or 1.0
+            target = 60000.0
+            # equal-physical-spacing S with total points ~ target
+            s_phys = np.sqrt(max(ny * nx * drow * dcol / target, 1e-9))
+            step_r = max(1, int(round(s_phys / drow)))
+            step_c = max(1, int(round(s_phys / dcol)))
+            idx = (np.arange(0, ny, step_r)[:, None] * nx
+                   + np.arange(0, nx, step_c)[None, :]).ravel()
+            x, y, z = x[idx], y[idx], z[idx]
+        else:
+            stride = max(1, x.size // 20000)
+            x, y, z = x[::stride], y[::stride], z[::stride]
         send_json(handler, {
             "kind": "points",
-            "x": x[::stride].astype(float).tolist(),
-            "y": y[::stride].astype(float).tolist(),
-            "z": z[::stride].astype(float).tolist(),
+            "x": x.astype(float).tolist(),
+            "y": y.astype(float).tolist(),
+            # bare NaN is invalid JSON for the browser's JSON.parse
+            "z": [float(v) if np.isfinite(v) else None for v in z],
         })
         return
     # raster: decimate to display resolution and pack as gridfield

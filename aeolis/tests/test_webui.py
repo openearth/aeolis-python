@@ -67,8 +67,8 @@ class TestSchema:
     def test_section_order_and_disabled_rules(self):
         schema = build_schema()
         names = [s["name"] for s in schema["sections"]]
-        assert names[:5] == ["Time settings", "Main domain files (*.grd)",
-                             "Other domain files (*.grd)", "Timeseries",
+        assert names[:5] == ["Time settings", "Grid files (*.grd)",
+                             "Domain files (*.grd)", "Timeseries",
                              "Output settings"]
         assert names[-1] == "Other"
         by_name = {s["name"]: s for s in schema["sections"]}

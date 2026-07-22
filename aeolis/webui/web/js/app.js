@@ -4,9 +4,11 @@
 
 (async function main() {
 
+  Theme.init();
   Tabs.init();
   Playbar.init();
   Graphs.init();
+  CondHud.init();
 
   await MapView.init("map");
 
@@ -38,13 +40,21 @@
    * ================================================================= */
 
   function _wireChrome() {
-    // sidebar resize
+    U.initTruncationTips();
+
+    // sidebar resize (the playbar starts right of the sidebar, so keep
+    // its inset in sync via a CSS variable)
     const sidebar = document.getElementById("sidebar");
+    const syncSidebarWidth = (width) => {
+      sidebar.style.width = `${width}px`;
+      document.documentElement.style.setProperty("--sidebar-live-w", `${width}px`);
+    };
     _dragResize(document.getElementById("sidebar-grip"), (ev) => {
       const width = U.clamp(ev.clientX, 260, 640);
-      sidebar.style.width = `${width}px`;
+      syncSidebarWidth(width);
       App.state.ui.sidebarWidth = width;
     }, () => App.touchUi());
+    syncSidebarWidth(sidebar.getBoundingClientRect().width || 340);
 
     // graphs resize
     const graphs = document.getElementById("graphs-wrap");
@@ -69,6 +79,36 @@
     // documentation (one entry point; pages are browsable inside the popup)
     document.getElementById("btn-docs").addEventListener("click", () => {
       DocsPopup.open("https://aeolis.readthedocs.io/en/update_documentation/", "AeoLiS documentation");
+    });
+
+    // config file viewer + reveal-in-explorer
+    document.getElementById("btn-cfg-view").addEventListener("click", async () => {
+      try {
+        const res = await Api.get("/api/config/raw");
+        const popup = Popup.open({ title: res.path, width: 720 });
+        const pre = U.el("pre", { class: "cfg-view" }, res.text);
+        const revealBtn = U.el("button", { class: "ghost" },
+          U.icon("open", 14), " Show in Explorer");
+        revealBtn.addEventListener("click", () => Api.post("/api/project/reveal"));
+        const copyBtn = U.el("button", { class: "ghost" }, U.icon("copy", 14), " Copy");
+        copyBtn.addEventListener("click", () => {
+          navigator.clipboard.writeText(res.text)
+            .then(() => U.toast("Copied to clipboard", "ok"))
+            .catch(() => U.toast("Copy failed", "error"));
+        });
+        popup.body.append(pre,
+          U.el("div", { class: "btn-row", style: "justify-content:flex-end" },
+            copyBtn, revealBtn));
+      } catch (err) {
+        U.toast(err.message, "error");
+      }
+    });
+    document.getElementById("btn-cfg-reveal").addEventListener("click", () => {
+      Api.post("/api/project/reveal").catch((err) => U.toast(err.message, "error"));
+    });
+    App.on("project", () => {
+      document.getElementById("btn-cfg-view").disabled = false;
+      document.getElementById("btn-cfg-reveal").disabled = false;
     });
   }
 
@@ -178,10 +218,22 @@
   }
 
   async function _projectOpened(info) {
+    // a project switch must not leak the previous project's layers,
+    // charts or playbar sources into the new one
+    for (const layer of App.state.layers) {
+      FieldLayer.remove(`field-${layer.id}`);
+      MapView.removeLayerAndSource(`pts-${layer.id}`);
+    }
+    App.state.layers.length = 0;
+    Graphs.clearAll();
+    Playbar.clearSources();
+
     App.state.project = info;
-    const chip = document.getElementById("project-chip");
-    chip.textContent = info.name;
-    chip.title = info.configfile;
+    const pathEl = document.getElementById("topbar-path");
+    U.clear(pathEl);
+    // <bdi> keeps the rtl-ellipsis trick from mirroring the text
+    pathEl.append(U.el("bdi", {}, info.configfile));
+    pathEl.title = info.configfile;
 
     // restore persisted UI state
     App.state.crsFromState = false;
@@ -198,8 +250,10 @@
     App.state.ui.sidebarWidth = sbw;
     App.state.ui.graphsHeight = grh;
     document.getElementById("sidebar").style.width = `${sbw}px`;
+    document.documentElement.style.setProperty("--sidebar-live-w", `${sbw}px`);
     document.getElementById("graphs-wrap").style.height = `${grh}px`;
     MapView.setBasemap(App.state.ui.basemap);
+    Theme.restoreFromProject();
     App.emit("crs", App.state.crs);
 
     await Objects.load();

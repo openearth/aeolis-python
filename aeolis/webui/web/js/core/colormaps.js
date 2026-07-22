@@ -52,5 +52,7 @@ const Colormaps = (() => {
     return `linear-gradient(${direction}, ${parts.join(", ")})`;
   }
 
-  return { names, sample, ramp, cssGradient };
+  function stops(name) { return STOPS[name] || STOPS.viridis; }
+
+  return { names, sample, ramp, cssGradient, stops };
 })();

@@ -11,8 +11,10 @@ const Layers = (() => {
 
   function register(layer) {
     // layer: {id, group, title, subtitle?, visible?, entry?, fieldId?}
-    const existing = App.state.layers.findIndex((l) => l.id === layer.id);
-    if (existing >= 0) App.state.layers[existing] = { ...App.state.layers[existing], ...layer };
+    // update in place so in-flight references (e.g. a layer that is
+    // still loading) keep seeing the current state
+    const existing = App.state.layers.find((l) => l.id === layer.id);
+    if (existing) Object.assign(existing, layer);
     else App.state.layers.push({ visible: true, ...layer });
     App.emit("layers", layer.id);
   }
@@ -42,5 +44,22 @@ const Layers = (() => {
     App.emit("layer-order");
   }
 
-  return { register, unregister, get, byGroup, move };
+  /* Replace the order of one group's layers (drag & drop reorder). */
+  function reorderGroup(group, orderedIds) {
+    const list = App.state.layers;
+    const entries = list.filter((l) => l.group === group);
+    const byId = new Map(entries.map((l) => [l.id, l]));
+    const reordered = orderedIds.map((id) => byId.get(id)).filter(Boolean);
+    for (const entry of entries) {
+      if (!reordered.includes(entry)) reordered.push(entry);
+    }
+    let k = 0;
+    for (let i = 0; i < list.length; i += 1) {
+      if (list[i].group === group) list[i] = reordered[k++];
+    }
+    App.emit("layers", group);
+    App.emit("layer-order");
+  }
+
+  return { register, unregister, get, byGroup, move, reorderGroup };
 })();

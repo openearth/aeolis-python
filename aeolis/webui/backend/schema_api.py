@@ -176,7 +176,24 @@ SECTION_ENABLED_IF = {
 DOCS_LINKS = {}
 
 # time-like parameters that get the date/duration helper tool
-TIME_PARAMS = {"tstart", "tstop", "dt", "restart", "output_times", "dzb_interval"}
+# (points in time only; plain durations like dt/restart don't need it)
+TIME_PARAMS = {"tstart", "tstop"}
+
+# sections whose files are produced by a dedicated tab: the link moves
+# to the section header and the file parameters render read-only
+SECTION_TABS = {
+    "Grid files (*.grd)": "grid",
+    "Domain files (*.grd)": "domain",
+    "Timeseries": "conditions",
+}
+
+# rearrange the two domain-file sections from constants.py into a pure
+# grid-file section and one section with all other domain files
+SECTION_RENAMES = {
+    "Main domain files (*.grd)": "Grid files (*.grd)",
+    "Other domain files (*.grd)": "Domain files (*.grd)",
+}
+GRID_FILE_PARAMS = {"xgrid_file", "ygrid_file"}
 
 _UNIT_RE = re.compile(r"^\[([^\]]*)\]\s*")
 _PARAM_RE = re.compile(r"^\s*'([^']+)'\s*:")
@@ -247,6 +264,17 @@ def build_schema():
         for key in missing:
             meta[key] = _parse_comment("")
 
+    # split "Main/Other domain files" into "Grid files" (x/y grids only)
+    # and "Domain files" (everything else, incl. bed_file)
+    for section in sections:
+        section["name"] = SECTION_RENAMES.get(section["name"], section["name"])
+    grid_sec = next((s for s in sections if s["name"] == "Grid files (*.grd)"), None)
+    domain_sec = next((s for s in sections if s["name"] == "Domain files (*.grd)"), None)
+    if grid_sec and domain_sec:
+        spill = [k for k in grid_sec["params"] if k not in GRID_FILE_PARAMS]
+        grid_sec["params"] = [k for k in grid_sec["params"] if k in GRID_FILE_PARAMS]
+        domain_sec["params"] = spill + domain_sec["params"]
+
     out_sections = []
     for section in sections:
         params = []
@@ -275,6 +303,7 @@ def build_schema():
                 "docs": DOCS_LINKS.get(section["name"]),
                 "visible_if": SECTION_VISIBLE_IF.get(section["name"]),
                 "enabled_if": SECTION_ENABLED_IF.get(section["name"]),
+                "tab": SECTION_TABS.get(section["name"]),
             })
 
     _cache = {"sections": out_sections}

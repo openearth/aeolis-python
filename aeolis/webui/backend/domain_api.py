@@ -99,18 +99,40 @@ def _overview(handler, query, tail):
     signatures = state.get("interp_signatures", {})
     current_sig = grid_signature()
 
+    # which domain files are actually needed given the current config
+    method = str(values.get("method_vegetation", "duran") or "duran")
+    proc_veg = bool(values.get("process_vegetation", False))
+    VEG = {"veg", "hveg", "Nt"}
+    ALWAYS = {"bed", "ne"}
+
     targets = {}
     for name, (key, default_name) in TARGETS.items():
         filename = values.get(key) or default_name
         exists = (current.root / str(filename)).is_file()
         configured = bool(values.get(key))
-        if name not in PRIMARY_TARGETS and not configured and not exists:
-            continue  # hide unused masks to keep the list clean
+        # optional = not a base file and not a vegetation file
+        optional = name not in ALWAYS and name not in VEG
+        needed, note = True, None
+        if name in VEG:
+            if not proc_veg:
+                needed, note = False, "vegetation process is off"
+            elif name == "veg" and method != "duran":
+                needed, note = False, f"method_vegetation = {method} (veg not used)"
+            elif name in ("hveg", "Nt") and method != "grass":
+                needed, note = False, f"method_vegetation = {method} (grass files not used)"
+        elif optional:
+            needed = False  # masks / threshold / fence / supply are opt-in
+        # optional files with no data yet stay hidden until the user adds them
+        hidden = optional and not configured and not exists
         entry = {
             "config_key": key,
             "file": filename,
             "exists": exists,
             "configured": configured,
+            "optional": optional,
+            "needed": needed,
+            "note": note,
+            "hidden": hidden,
             "stale": False,
             "shape_ok": True,
         }
@@ -238,6 +260,35 @@ def load_raw(entry):
     raise ValueError(f"unknown raw data kind '{kind}'")
 
 
+def _fill_edge_holes(result, iterations=2):
+    """Fill lone NaN cells from their neighbours' mean.
+
+    Linear interpolation (qhull) can leave isolated NaN cells exactly on
+    the convex-hull edge of the samples - e.g. when a grid is converted
+    to samples and interpolated back onto itself. Two dilation passes
+    fill holes at most two cells from valid data; real data gaps stay
+    NaN and are still reported. Returns the number of filled cells."""
+    import warnings
+    filled = 0
+    for _ in range(iterations):
+        hole = ~np.isfinite(result)
+        if not hole.any():
+            break
+        padded = np.pad(result, 1, mode="constant", constant_values=np.nan)
+        shifts = [padded[1 + dj:padded.shape[0] - 1 + dj,
+                         1 + di:padded.shape[1] - 1 + di]
+                  for dj in (-1, 0, 1) for di in (-1, 0, 1) if (dj, di) != (0, 0)]
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            neighbour_mean = np.nanmean(np.stack(shifts), axis=0)
+        fillable = hole & np.isfinite(neighbour_mean)
+        if not fillable.any():
+            break
+        result[fillable] = neighbour_mean[fillable]
+        filled += int(fillable.sum())
+    return filled
+
+
 def _sample_raster(x, y, Z, XI, YI):
     """Bilinear sample of a raster (x ascending; y any order) at XI/YI."""
     from scipy.interpolate import RegularGridInterpolator
@@ -260,6 +311,7 @@ def _interpolate(handler, body, tail):
     target = body.get("target")
     layer_ids = body.get("layers") or []
     fill = body.get("fill")
+    extrapolate = bool(body.get("extrapolate"))
     if target not in TARGETS:
         send_error_json(handler, f"unknown target '{target}'")
         return
@@ -294,6 +346,22 @@ def _interpolate(handler, body, tail):
                 result[hole] = sampled
 
         missing = int(np.sum(~np.isfinite(result)))
+        if missing:
+            edge_filled = _fill_edge_holes(result)
+            if edge_filled:
+                job.update(message=f"filled {edge_filled} edge cells from neighbours")
+            missing = int(np.sum(~np.isfinite(result)))
+        # extrapolate: fill every remaining hole with its nearest valid cell
+        if missing and extrapolate:
+            valid = np.isfinite(result)
+            if valid.any():
+                from scipy.interpolate import griddata
+                job.update(message=f"extrapolating {missing} cells to nearest neighbour")
+                nn = griddata(
+                    np.column_stack([X[valid], Y[valid]]), result[valid],
+                    (X[~valid], Y[~valid]), method="nearest")
+                result[~valid] = nn
+                missing = int(np.sum(~np.isfinite(result)))
         if missing and fill is not None:
             result[~np.isfinite(result)] = float(fill)
             missing = 0
@@ -314,7 +382,7 @@ def _interpolate(handler, body, tail):
         current.save_state(state)
         _log_history({
             "action": "interpolate", "target": target, "file": filename,
-            "layers": layer_ids, "fill": fill,
+            "layers": layer_ids, "fill": fill, "extrapolate": extrapolate,
         })
         return {"target": target, "file": filename,
                 "min": float(np.nanmin(result)), "max": float(np.nanmax(result))}
@@ -352,7 +420,7 @@ def _modify(handler, body, tail):
     if target not in TARGETS:
         send_error_json(handler, f"unknown target '{target}'")
         return
-    if op not in ("set", "add", "subtract", "multiply", "min", "max"):
+    if op not in _OPS:
         send_error_json(handler, f"unknown op '{op}'")
         return
     try:
@@ -397,15 +465,7 @@ def _modify(handler, body, tail):
         send_error_json(handler, "selection covers no grid cells")
         return
 
-    ops = {
-        "set": lambda a: np.full_like(a, value),
-        "add": lambda a: a + value,
-        "subtract": lambda a: a - value,
-        "multiply": lambda a: a * value,
-        "min": lambda a: np.minimum(a, value),
-        "max": lambda a: np.maximum(a, value),
-    }
-    Z[mask] = ops[op](Z[mask])
+    Z[mask] = _OPS[op](Z[mask], value)
     grd_io.write_grd(path, Z)
     if not values.get(key):
         patch_config({key: filename})
@@ -461,6 +521,10 @@ _OPS = {
     "add": lambda a, v: a + v,
     "subtract": lambda a, v: a - v,
     "multiply": lambda a, v: a * v,
+    # clip_max caps values ABOVE v down to v; clip_min raises values
+    # BELOW v up to v ("min"/"max" kept as legacy aliases)
+    "clip_max": lambda a, v: np.minimum(a, v),
+    "clip_min": lambda a, v: np.maximum(a, v),
     "min": lambda a, v: np.minimum(a, v),
     "max": lambda a, v: np.maximum(a, v),
 }
@@ -639,7 +703,19 @@ def _to_sample(handler, body, tail):
     if Z.shape != X.shape:
         send_error_json(handler, f"{filename} does not match the current grid", 409)
         return
+    # never overwrite an earlier conversion: bump a version suffix so the
+    # user gets a fresh "(2)", "(3)", … layer each time (both the file on
+    # disk and the manifest entry are keyed by the same unique path)
+    known_paths = {e.get("path") for e in load_manifest()["entries"]}
+    version = 1
     out_name = f"from_{target}.npz"
+    while (f"gui/rawdata/{out_name}" in known_paths
+           or (current.rawdata_dir / out_name).exists()):
+        version += 1
+        out_name = f"from_{target}_{version}.npz"
+    label = f"{target} ({filename}) → samples"
+    if version > 1:
+        label += f" ({version})"
     np.savez_compressed(current.rawdata_dir / out_name,
                         x=X.ravel(), y=Y.ravel(), z=Z.ravel().astype("float32"))
     add_entries([{
@@ -649,10 +725,13 @@ def _to_sample(handler, body, tail):
         "crs": None,
         "res": None,
         "bounds": [float(X.min()), float(Y.min()), float(X.max()), float(Y.max())],
-        "label": f"{target} ({filename}) → samples",
+        # remember the grid shape so the viewer can decimate the point
+        # display per row/column (keeps a regular dot pattern)
+        "shape": [int(X.shape[0]), int(X.shape[1])],
+        "label": label,
         "downloaded": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M"),
     }])
-    send_json(handler, {"ok": True})
+    send_json(handler, {"ok": True, "label": label})
 
 
 def _log_history(record):

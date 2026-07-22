@@ -34,6 +34,9 @@ const Popup = (() => {
     };
 
     const onKey = (ev) => {
+      // while the popup steps aside (map draw / station pick) Escape
+      // belongs to that interaction, not to the hidden popup
+      if (backdrop.style.display === "none") return;
       if (ev.key === "Escape" && closable) { ev.stopPropagation(); api.close(); }
     };
     if (closeBtn) closeBtn.addEventListener("click", api.close);
@@ -202,7 +205,7 @@ const OutputVarsPicker = (() => {
       const chosen = selection.get(v.name);
       const cb = U.el("input", { type: "checkbox" });
       cb.checked = Boolean(chosen);
-      const statBox = U.el("span", { style: "display:inline-flex;gap:3px;flex:none" });
+      const statBox = U.el("span", { class: "ov-stats" });
       const renderStats = () => {
         U.clear(statBox);
         if (!selection.has(v.name)) return;
@@ -227,11 +230,15 @@ const OutputVarsPicker = (() => {
         renderStats();
       });
       renderStats();
-      const row = U.el("div", { class: "lp-row", title: v.desc || v.name },
+      // fixed grid columns keep names, units/descriptions and the
+      // statistic chips vertically aligned across all rows
+      const unit = (v.desc || "").match(/^\[[^\]]*\]/);
+      const desc = unit ? (v.desc || "").slice(unit[0].length).trim() : (v.desc || "");
+      const row = U.el("div", { class: "ov-row", title: v.desc || v.name },
         cb,
-        U.el("span", { class: "lp-name", style: "font-family:Consolas,monospace;font-size:12px" }, v.name),
-        U.el("span", { class: "lp-mini", style: "flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" },
-          v.desc || ""),
+        U.el("span", { class: "ov-name" }, v.name),
+        U.el("span", { class: "ov-unit" }, unit ? unit[0] : ""),
+        U.el("span", { class: "ov-desc" }, desc),
         statBox);
       return row;
     };

@@ -171,6 +171,22 @@ const GridTab = (() => {
       subtitle: "boundaries & corners",
       visible: existing ? existing.visible : true,
     });
+    _registerShearLayer();
+  }
+
+  /* The shear-grid preview appears in the Viewer layer tree too. */
+  function _registerShearLayer() {
+    const cfg = App.state.config || {};
+    if (!cfg.process_shear || !committed) {
+      Layers.unregister("grid-shear");
+      return;
+    }
+    const existing = Layers.get("grid-shear");
+    Layers.register({
+      id: "grid-shear", group: "grid", title: "Computational (shear) grid",
+      subtitle: "preview",
+      visible: existing ? existing.visible : shearVisible,
+    });
   }
 
   function _renderBoundaryLabels(visible) {
@@ -179,19 +195,24 @@ const GridTab = (() => {
     const cfg = App.state.config || {};
     const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
     const p = draft;
+    // boundary labels: the LOCATION (Offshore/Onshore/Lateral) and the
+    // boundary TYPE (flux/constant/circular/…) get distinct type styles
+    const bl = (loc, type) => U.el("span", { class: "bl" },
+      U.el("span", { class: "bl-loc" }, loc),
+      U.el("span", { class: "bl-type" }, type || "?"));
     const labels = [
       ["grid-b-offshore", mid(corner(p, 0, 0), corner(p, 0, p.ny)),
-        `Offshore: ${cfg.boundary_offshore || "?"}`, "boundary-offshore"],
+        bl("Offshore", cfg.boundary_offshore), "boundary-offshore"],
       ["grid-b-onshore", mid(corner(p, p.nx, 0), corner(p, p.nx, p.ny)),
-        `Onshore: ${cfg.boundary_onshore || "?"}`, "boundary-onshore"],
+        bl("Onshore", cfg.boundary_onshore), "boundary-onshore"],
       ["grid-b-lat-a", mid(corner(p, 0, 0), corner(p, p.nx, 0)),
-        `Lateral: ${cfg.boundary_lateral || "?"}`, "boundary-lateral"],
+        bl("Lateral", cfg.boundary_lateral), "boundary-lateral"],
       ["grid-b-lat-b", mid(corner(p, 0, p.ny), corner(p, p.nx, p.ny)),
-        `Lateral: ${cfg.boundary_lateral || "?"}`, "boundary-lateral"],
-      ["grid-c-00", corner(p, 0, 0), "(0,0)", ""],
-      ["grid-c-n0", corner(p, p.nx, 0), `(0,${p.nx})`, ""],
-      ["grid-c-0m", corner(p, 0, p.ny), `(${p.ny},0)`, ""],
-      ["grid-c-nm", corner(p, p.nx, p.ny), `(${p.ny},${p.nx})`, ""],
+        bl("Lateral", cfg.boundary_lateral), "boundary-lateral"],
+      ["grid-c-00", corner(p, 0, 0), "(0,0)", "corner"],
+      ["grid-c-n0", corner(p, p.nx, 0), `(0,${p.nx})`, "corner"],
+      ["grid-c-0m", corner(p, 0, p.ny), `(${p.ny},0)`, "corner"],
+      ["grid-c-nm", corner(p, p.nx, p.ny), `(${p.ny},${p.nx})`, "corner"],
     ];
     for (const [id, xy, text, cls] of labels) MapView.setLabel(id, xy, text, cls);
   }
@@ -203,43 +224,74 @@ const GridTab = (() => {
     handles = [];
   }
 
-  function _handlePositions() {
-    const { ex } = axes(draft.rotation);
-    const midOn = [(corner(draft, draft.nx, 0)[0] + corner(draft, draft.nx, draft.ny)[0]) / 2,
-      (corner(draft, draft.nx, 0)[1] + corner(draft, draft.nx, draft.ny)[1]) / 2];
-    const offset = Math.max(draft.dx * 2, draft.nx * draft.dx * 0.12);
-    return {
-      corner: corner(draft, draft.nx, draft.ny),
-      origin: corner(draft, 0, 0),
-      rotate: [midOn[0] + ex[0] * offset, midOn[1] + ex[1] * offset],
-    };
+  // index (i,j) of each corner handle, and its OPPOSITE (pinned) corner
+  const CORNER_KINDS = {
+    "c-00": { at: (p) => [0, 0], opp: (p) => [p.nx, p.ny] },
+    "c-n0": { at: (p) => [p.nx, 0], opp: (p) => [0, p.ny] },
+    "c-0m": { at: (p) => [0, p.ny], opp: (p) => [p.nx, 0] },
+    "c-nm": { at: (p) => [p.nx, p.ny], opp: (p) => [0, 0] },
+  };
+
+  function _handlePos(kind) {
+    const p = draft;
+    if (CORNER_KINDS[kind]) { const [i, j] = CORNER_KINDS[kind].at(p); return corner(p, i, j); }
+    if (kind === "center") return center(p);
+    if (kind === "rotate") {
+      const { ex } = axes(p.rotation);
+      const midOn = [(corner(p, p.nx, 0)[0] + corner(p, p.nx, p.ny)[0]) / 2,
+        (corner(p, p.nx, 0)[1] + corner(p, p.nx, p.ny)[1]) / 2];
+      const offset = Math.max(p.dx * 2, p.nx * p.dx * 0.12);
+      return [midOn[0] + ex[0] * offset, midOn[1] + ex[1] * offset];
+    }
+    return center(p);
   }
 
   function _renderHandles() {
     _clearHandles();
     if (!draft || !editing) return;
     const map = MapView.instance();
-    const pos = _handlePositions();
 
-    handles.push(_handle("corner", pos.corner, "grid-handle corner", (xy) => {
-      const { ex, ey } = axes(draft.rotation);
-      const vx = xy[0] - draft.x0, vy = xy[1] - draft.y0;
-      draft.nx = Math.max(1, Math.round((vx * ex[0] + vy * ex[1]) / draft.dx));
-      draft.ny = Math.max(1, Math.round((vx * ey[0] + vy * ey[1]) / draft.dx));
-    }));
+    // four corner handles: scale the grid, keeping the OPPOSITE corner
+    // pinned (captured at dragstart so it can't drift mid-drag)
+    for (const kind of Object.keys(CORNER_KINDS)) {
+      handles.push(_handle(kind, "grid-handle corner",
+        (xy, fixed) => _scaleFromCorner(kind, xy, fixed),
+        () => { const [oi, oj] = CORNER_KINDS[kind].opp(draft); return corner(draft, oi, oj); }));
+    }
 
-    handles.push(_handle("origin", pos.origin, "grid-handle origin", (xy) => {
-      draft.x0 = xy[0];
-      draft.y0 = xy[1];
-    }));
+    // centre handle: move the whole grid
+    handles.push(_handle("center", "grid-handle origin", (xy) => _moveCenter(xy), null, "✛"));
 
-    handles.push(_handle("rotate", pos.rotate, "grid-handle rotate", (xy) => {
+    // rotate handle: separate rotation about the centre
+    handles.push(_handle("rotate", "grid-handle rotate", (xy) => {
       const c = center(draft);
       const angle = Math.atan2(xy[1] - c[1], xy[0] - c[0]) * 180 / Math.PI;
       _rotateAbout(c, angle);
-    }, "↻"));
+    }, null, "↻"));
 
     for (const marker of handles) marker.addTo(map);
+  }
+
+  /* Scale by dragging one corner to *xy*; the opposite corner stays at
+   * *fixed* (its world position captured when the drag began). */
+  function _scaleFromCorner(kind, xy, fixed) {
+    const p = draft;
+    const { ex, ey } = axes(p.rotation);
+    const vx = xy[0] - fixed[0], vy = xy[1] - fixed[1];
+    p.nx = Math.max(1, Math.round(Math.abs(vx * ex[0] + vy * ex[1]) / p.dx));
+    p.ny = Math.max(1, Math.round(Math.abs(vx * ey[0] + vy * ey[1]) / p.dx));
+    // origin so the pinned opposite corner lands back on `fixed`
+    const [oi, oj] = CORNER_KINDS[kind].opp(p);
+    p.x0 = fixed[0] - (ex[0] * oi + ey[0] * oj) * p.dx;
+    p.y0 = fixed[1] - (ex[1] * oi + ey[1] * oj) * p.dx;
+  }
+
+  function _moveCenter(xy) {
+    const p = draft;
+    const { ex, ey } = axes(p.rotation);
+    const hx = p.nx * p.dx / 2, hy = p.ny * p.dx / 2;
+    p.x0 = xy[0] - ex[0] * hx - ey[0] * hy;
+    p.y0 = xy[1] - ex[1] * hx - ey[1] * hy;
   }
 
   function _rotateAbout(c, newRotation) {
@@ -251,14 +303,16 @@ const GridTab = (() => {
     p.y0 = c[1] - ex[1] * hx - ey[1] * hy;
   }
 
-  function _handle(kind, modelXY, cls, applyDrag, text = "") {
+  /* onStart (optional) captures state at dragstart (e.g. the pinned
+   * corner); its return value is passed to applyDrag as the 2nd arg. */
+  function _handle(kind, cls, applyDrag, onStart = null, text = "") {
     const node = U.el("div", { class: cls }, text);
     const marker = new maplibregl.Marker({ element: node, draggable: true, anchor: "center" })
-      .setLngLat(CRS.toLngLat(modelXY));
+      .setLngLat(CRS.toLngLat(_handlePos(kind)));
     marker._kind = kind;
-    marker.on("dragstart", () => { draggingHandle = true; });
+    marker.on("dragstart", () => { draggingHandle = true; marker._cap = onStart ? onStart() : null; });
     marker.on("drag", () => {
-      applyDrag(CRS.fromLngLat(marker.getLngLat()));
+      applyDrag(CRS.fromLngLat(marker.getLngLat()), marker._cap);
       _syncTable();
       _renderGeometryThrottled();
       _repositionHandles(marker);
@@ -273,10 +327,9 @@ const GridTab = (() => {
   /* While dragging one handle, keep the others in place without
    * rebuilding them (rebuilding would kill the active drag). */
   function _repositionHandles(activeMarker) {
-    const pos = _handlePositions();
     for (const marker of handles) {
       if (marker === activeMarker) continue;
-      marker.setLngLat(CRS.toLngLat(pos[marker._kind]));
+      marker.setLngLat(CRS.toLngLat(_handlePos(marker._kind)));
     }
   }
 
@@ -326,6 +379,8 @@ const GridTab = (() => {
         buffer_width: cfg.buffer_width ?? 10,
       });
       const shear = await Api.get(`/api/grid/shear?${q}`);
+      const map = MapView.instance();
+      const color = _lineColor();   // same palette as the main grid
       const ring = [...shear.ring, shear.ring[0]].map(CRS.toLngLat);
       MapView.upsertGeojson(SRC_SHEAR, {
         type: "Feature", properties: {},
@@ -333,8 +388,9 @@ const GridTab = (() => {
       });
       MapView.ensureLayer({
         id: SRC_SHEAR, type: "line", source: SRC_SHEAR,
-        paint: { "line-color": "#b4423b", "line-width": 1.6, "line-dasharray": [4, 3] },
+        paint: { "line-color": color, "line-width": 1.6, "line-dasharray": [4, 3] },
       });
+      map.setPaintProperty(SRC_SHEAR, "line-color", color);
       if (shear.inner.length) {
         const innerRing = [...shear.inner, shear.inner[0]].map(CRS.toLngLat);
         MapView.upsertGeojson(SRC_SHEAR + "-inner", {
@@ -343,11 +399,17 @@ const GridTab = (() => {
         });
         MapView.ensureLayer({
           id: SRC_SHEAR + "-inner", type: "line", source: SRC_SHEAR + "-inner",
-          paint: { "line-color": "#b4423b", "line-width": 1, "line-dasharray": [2, 3], "line-opacity": 0.6 },
+          paint: { "line-color": color, "line-width": 1, "line-dasharray": [2, 3], "line-opacity": 0.6 },
         });
+        map.setPaintProperty(SRC_SHEAR + "-inner", "line-color", color);
       }
-      MapView.setLabel("grid-shear-info", shear.ring[1],
-        `shear grid ${shear.n_cells[0]}×${shear.n_cells[1]} @ udir ${Math.round(shear.udir)}°`, "boundary-lateral");
+      // the shear info label follows the "Grid labels" toggle
+      if (_labelsVisible()) {
+        MapView.setLabel("grid-shear-info", shear.ring[1],
+          `shear grid ${shear.n_cells[0]}×${shear.n_cells[1]} @ udir ${Math.round(shear.udir)}°`, "boundary-lateral");
+      } else {
+        MapView.removeLabel("grid-shear-info");
+      }
       _syncShearInfo(shear);
     } catch (err) {
       console.warn("shear preview failed", err.message);
@@ -384,7 +446,7 @@ const GridTab = (() => {
     }
     hint.textContent = drawArmed
       ? "Click and drag on the map to draw the grid (Esc to cancel)"
-      : "Drag the handles: ⬤ move origin, ◯ resize, ↻ rotate";
+      : "Drag corners ◯ to scale · centre ✛ to move · ↻ to rotate";
   }
 
   function armDraw(force = null) {
@@ -480,50 +542,66 @@ const GridTab = (() => {
       },
     });
     const saveBtn = U.tbtn("save", "Save", {
-      primary: true, title: "Generate and save x.grd / y.grd",
+      title: "Generate and save x.grd / y.grd",
       onclick: _saveGrid,
     });
-    buttons = { draw: drawBtn, edit: editBtn };
+    buttons = { draw: drawBtn, edit: editBtn, save: saveBtn };
     panel.append(U.el("div", { class: "tbtn-row" }, drawBtn, editBtn, saveBtn));
 
-    // parameters table
+    // parameter rows with steppers (label · − · value · + · unit)
     const rows = [
-      ["x0", "Origin x (0,0 corner)", "m"],
-      ["y0", "Origin y", "m"],
-      ["dx", "Cell size dx = dy", "m"],
-      ["nx", "Cells cross-shore (nx)", "-"],
-      ["ny", "Cells alongshore (ny)", "-"],
-      ["rotation", "Rotation (CCW from east)", "°"],
+      ["x0", "Origin x (0,0 corner)", "m", () => (draft ? draft.dx : 1)],
+      ["y0", "Origin y", "m", () => (draft ? draft.dx : 1)],
+      ["dx", "Cell size dx = dy", "m", () => 1],
+      ["nx", "Cells cross-shore (nx)", "-", () => 1],
+      ["ny", "Cells alongshore (ny)", "-", () => 1],
+      ["rotation", "Rotation (CCW from east)", "°", () => 1],
     ];
-    const table = U.el("table", { class: "data" });
-    table.append(U.el("tr", {}, U.el("th", {}, "Parameter"), U.el("th", {}, "Value")));
+    const paramBox = U.el("div", { class: "gp-table" });
     tableInputs = {};
-    for (const [key, label, unit] of rows) {
-      const input = U.el("input", { type: "text" });
+    for (const [key, label, unit, stepOf] of rows) {
+      const input = U.el("input", { type: "text", class: "gp-value" });
       input.addEventListener("keydown", (ev) => {
         if (ev.key === "Enter") input.blur();
+        if (ev.key === "ArrowUp") { ev.preventDefault(); _stepTable(key, stepOf()); }
+        if (ev.key === "ArrowDown") { ev.preventDefault(); _stepTable(key, -stepOf()); }
       });
       input.addEventListener("blur", () => _commitTable(key, input));
       tableInputs[key] = input;
-      table.append(U.el("tr", {},
-        U.el("th", { title: `[${unit}]` }, label),
-        U.el("td", {}, input)));
+      const minus = U.el("button", { class: "gp-step", title: "Decrease" }, "−");
+      const plus = U.el("button", { class: "gp-step", title: "Increase" }, "＋");
+      minus.addEventListener("click", () => _stepTable(key, -stepOf()));
+      plus.addEventListener("click", () => _stepTable(key, stepOf()));
+      paramBox.append(U.el("div", { class: "gp-row" },
+        U.el("span", { class: "gp-label" }, label),
+        minus, input, plus,
+        U.el("span", { class: "gp-unit" }, unit === "-" ? "" : unit)));
     }
     panel.append(U.el("div", { class: "form-group" },
-      U.el("span", { class: "fg-label" }, "Grid parameters"), table));
+      U.el("span", { class: "fg-label" }, "Grid parameters"), paramBox));
 
     const derived = U.el("div", { class: "muted", id: "grid-derived" });
     panel.append(derived);
 
-    // secondary computational (shear) grid: own collapsible section
+    // secondary computational (shear) grid: own collapsible section, with
+    // an eye toggle in the header (replaces the old "Show on map" checkbox)
     const shear = U.section("Computational (shear) grid", { collapsed: true });
     shear.wrap.id = "grid-shear-section";
 
-    const shearToggle = U.el("input", { type: "checkbox", id: "shear-toggle" });
-    shearToggle.checked = shearVisible;
-    shearToggle.addEventListener("change", () => { shearVisible = shearToggle.checked; _renderShear(); });
-    shear.body.append(U.el("div", { class: "choice-row" },
-      shearToggle, U.el("label", { for: "shear-toggle" }, "Show on map")));
+    const shearEye = U.el("span", {
+      id: "shear-eye", class: `eye group-eye ${shearVisible ? "" : "off"}`,
+      title: shearVisible ? "Hide on map" : "Show on map",
+    }, "👁");
+    shearEye.addEventListener("click", (ev) => {
+      ev.stopPropagation();   // don't collapse the section
+      shearVisible = !shearVisible;
+      shearEye.classList.toggle("off", !shearVisible);
+      shearEye.title = shearVisible ? "Hide on map" : "Show on map";
+      const layer = Layers.get("grid-shear");
+      if (layer) { layer.visible = shearVisible; App.emit("layers", "grid-shear"); }
+      _renderShear();
+    });
+    shear.head.append(shearEye);
 
     shearInfoEl = U.el("div", { class: "shear-info" });
     shear.body.append(shearInfoEl);
@@ -538,14 +616,10 @@ const GridTab = (() => {
     });
     shear.body.append(U.el("div", { class: "form-row" }, udirLabel, udirSlider));
 
-    const settingsLink = U.miniBtn("gear", "Edit dx / dy / buffer_width (Settings)", () => {
-      Tabs.activate("settings");
-      document.getElementById("cfg-search").value = "buffer_width";
-      SchemaForm.filter("buffer");
-    });
-    shear.body.append(U.el("div", { class: "choice-row" },
-      settingsLink, U.el("span", { class: "muted", style: "font-size:12px" },
-        "cell size & buffer")));
+    const editShearBtn = U.el("button", { class: "ghost" },
+      U.icon("gear", 13), " Edit cell size & buffer…");
+    editShearBtn.addEventListener("click", _shearParamsDialog);
+    shear.body.append(U.el("div", { class: "choice-row" }, editShearBtn));
 
     panel.append(shear.wrap);
 
@@ -586,6 +660,49 @@ const GridTab = (() => {
     }
   }
 
+  /* dx / dy / buffer_width editor for the computational (shear) grid -
+   * all three in one place instead of a settings-search detour. */
+  function _shearParamsDialog() {
+    const cfg = App.state.config || {};
+    const popup = Popup.open({ title: "Computational grid cell size & buffer", width: 420 });
+    const fields = [
+      ["dx", "Cell size dx [m]", cfg.dx],
+      ["dy", "Cell size dy [m]", cfg.dy],
+      ["buffer_width", "Buffer width [m]", cfg.buffer_width],
+    ];
+    const inputs = {};
+    for (const [key, label, value] of fields) {
+      inputs[key] = U.el("input", { type: "text", value: value ?? "" });
+      popup.body.append(U.el("div", { class: "form-row" },
+        U.el("label", {}, label), inputs[key]));
+    }
+    const applyBtn = U.el("button", { class: "primary" }, "Apply");
+    applyBtn.addEventListener("click", async () => {
+      const patch = {};
+      for (const [key] of fields) {
+        const v = Number(inputs[key].value);
+        if (Number.isFinite(v)) patch[key] = v;
+      }
+      await SettingsTab.setConfigValues(patch, false);
+      popup.close();
+      _syncShearInfo(null);
+      _renderShear();
+    });
+    popup.body.append(
+      U.el("div", { class: "muted", style: "font-size:12px;margin-top:6px" },
+        "These are the dx / dy / buffer_width configuration parameters "
+        + "(saved together with the rest of the configuration)."),
+      U.el("div", { class: "btn-row", style: "justify-content:flex-end" }, applyBtn));
+  }
+
+  function _stepTable(key, delta) {
+    if (!draft) return;
+    const input = tableInputs[key];
+    const current = Number(input.value);
+    input.value = String((Number.isFinite(current) ? current : draft[key] || 0) + delta);
+    _commitTable(key, input);
+  }
+
   function _commitTable(key, input) {
     if (!draft) draft = { x0: 0, y0: 0, dx: 10, nx: 50, ny: 50, rotation: 0 };
     const v = Number(input.value);
@@ -602,6 +719,17 @@ const GridTab = (() => {
     for (const [key, input] of Object.entries(tableInputs)) {
       if (document.activeElement === input) continue;
       input.value = draft ? U.fmtNum(draft[key], 6) : "";
+    }
+    // the Save button only lights up while there is something to save
+    if (buttons.save) {
+      const saved = isSaved();
+      const dirty = Boolean(draft) && !saved;
+      buttons.save.classList.toggle("primary", dirty);
+      buttons.save.classList.toggle("dirty", dirty);
+      buttons.save.disabled = !draft || saved;
+      buttons.save.title = dirty
+        ? "Generate and save x.grd / y.grd (unsaved changes)"
+        : "Grid is saved";
     }
     const derived = document.getElementById("grid-derived");
     if (derived) {
@@ -697,11 +825,20 @@ const GridTab = (() => {
     });
     App.on("config-changed", (key) => {
       if (["boundary_offshore", "boundary_onshore", "boundary_lateral"].includes(key)) render();
-      if (key === "process_shear") _syncShearSection();
+      if (key === "process_shear") { _syncShearSection(); _registerShearLayer(); }
       if (["dx", "dy", "buffer_width"].includes(key)) { _syncShearInfo(null); _renderShear(); }
     });
     App.on("layer-visibility", (layer) => {
       if (layer.id === "grid-main" || layer.id === "grid-labels") render();
+      if (layer.id === "grid-shear") {
+        shearVisible = layer.visible !== false;
+        const eye = document.getElementById("shear-eye");
+        if (eye) {
+          eye.classList.toggle("off", !shearVisible);
+          eye.title = shearVisible ? "Hide on map" : "Show on map";
+        }
+        _renderShear();
+      }
     });
     App.on("basemap", () => renderThrottled());
     App.on("crs", () => renderThrottled());

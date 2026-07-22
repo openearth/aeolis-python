@@ -65,42 +65,68 @@ def download_wind(lon, lat, date0, date1, dest_dir, job=None):
         data = np.load(cache, allow_pickle=False)
         return data["t"], data["u"], data["v"], cache
 
-    if job:
-        job.update(progress=-1, message="requesting ERA5 subset (CDS queue, may take minutes)")
-
-    grib = dest_dir / f"era5_wind_{stamp}.nc"
     client = cdsapi.Client(quiet=True)
-    days = (date1 - date0).days + 1
-    dates = [date0 + timedelta(days=k) for k in range(days)]
-    years = sorted({f"{d.year}" for d in dates})
-    months = sorted({f"{d.month:02d}" for d in dates})
-    day_list = sorted({f"{d.day:02d}" for d in dates})
-    client.retrieve(
-        "reanalysis-era5-single-levels",
-        {
-            "product_type": "reanalysis",
-            "variable": ["10m_u_component_of_wind", "10m_v_component_of_wind"],
-            "year": years, "month": months, "day": day_list,
-            "time": [f"{h:02d}:00" for h in range(24)],
-            "area": [lat + 0.01, lon - 0.01, lat - 0.01, lon + 0.01],  # N W S E
-            "format": "netcdf",
-        },
-        str(grib),
-    )
+
+    # One CDS request per calendar year: a single request for a long
+    # period enumerates the year x month x day cross-product and blows
+    # past the CDS cost limit ("Your request is too large"). Yearly
+    # chunks (max ~17.5k fields) always fit, and finished years stay
+    # cached on disk so a retry only fetches what is missing.
+    year0, year1 = date0.year, date1.year
+    n_chunks = year1 - year0 + 1
+    parts = []
+    for k, year in enumerate(range(year0, year1 + 1)):
+        d0 = max(date0, datetime(year, 1, 1, tzinfo=timezone.utc))
+        d1 = min(date1, datetime(year, 12, 31, tzinfo=timezone.utc))
+        part = dest_dir / f"era5_wind_{lon:.2f}_{lat:.2f}_{d0:%Y%m%d}_{d1:%Y%m%d}.nc"
+        parts.append(part)
+        if part.exists():
+            continue
+        if job:
+            job.update(progress=k / n_chunks,
+                       message=f"ERA5 {year} ({k + 1}/{n_chunks}) - CDS queue, may take minutes")
+        days = (d1 - d0).days + 1
+        dates = [d0 + timedelta(days=i) for i in range(days)]
+        months = sorted({f"{d.month:02d}" for d in dates})
+        day_list = sorted({f"{d.day:02d}" for d in dates})
+        client.retrieve(
+            "reanalysis-era5-single-levels",
+            {
+                "product_type": "reanalysis",
+                "variable": ["10m_u_component_of_wind", "10m_v_component_of_wind"],
+                "year": [f"{year}"], "month": months, "day": day_list,
+                "time": [f"{h:02d}:00" for h in range(24)],
+                "area": [lat + 0.01, lon - 0.01, lat - 0.01, lon + 0.01],  # N W S E
+                "format": "netcdf",
+            },
+            str(part),
+        )
+
+    if job:
+        job.update(progress=0.95, message="reading ERA5 data")
 
     import netCDF4
     from aeolis.webui.backend.util import NC_LOCK
+    all_t, all_u, all_v = [], [], []
     with NC_LOCK:
-        ds = netCDF4.Dataset(grib)
-        try:
-            tvar = ds.variables.get("time") or ds.variables.get("valid_time")
-            times = netCDF4.num2date(tvar[:], tvar.units)
-            u = np.asarray(ds.variables["u10"][:]).reshape(len(times), -1)[:, 0]
-            v = np.asarray(ds.variables["v10"][:]).reshape(len(times), -1)[:, 0]
-        finally:
-            ds.close()
+        for part in parts:
+            ds = netCDF4.Dataset(part)
+            try:
+                tvar = ds.variables.get("time") or ds.variables.get("valid_time")
+                times = netCDF4.num2date(tvar[:], tvar.units)
+                u = np.asarray(ds.variables["u10"][:]).reshape(len(times), -1)[:, 0]
+                v = np.asarray(ds.variables["v10"][:]).reshape(len(times), -1)[:, 0]
+            finally:
+                ds.close()
+            all_t.append(np.array([np.datetime64(str(x)) for x in times]))
+            all_u.append(u)
+            all_v.append(v)
 
-    t = np.array([np.datetime64(str(x)) for x in times])
+    t = np.concatenate(all_t)
+    u = np.concatenate(all_u)
+    v = np.concatenate(all_v)
+    order = np.argsort(t)
+    t, u, v = t[order], u[order], v[order]
     np.savez_compressed(cache, t=t.astype("datetime64[s]").astype("int64"),
                         u=u.astype("float32"), v=v.astype("float32"))
     data = np.load(cache)
