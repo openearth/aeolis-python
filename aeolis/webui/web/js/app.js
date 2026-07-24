@@ -81,6 +81,16 @@
       DocsPopup.open("https://aeolis.readthedocs.io/en/update_documentation/", "AeoLiS documentation");
     });
 
+    // windrose — the single entry point (source + optional period chooser)
+    document.getElementById("btn-windrose").addEventListener("click", async () => {
+      if (!App.state.project) { U.toast("Open a project first", "error"); return; }
+      let sources = [];
+      try {
+        sources = await ConditionsTab.windroseSources();
+      } catch (err) { U.toast(err.message, "error"); return; }
+      Windrose.openChooser({ sources });
+    });
+
     // config file viewer + reveal-in-explorer
     document.getElementById("btn-cfg-view").addEventListener("click", async () => {
       try {
@@ -106,10 +116,70 @@
     document.getElementById("btn-cfg-reveal").addEventListener("click", () => {
       Api.post("/api/project/reveal").catch((err) => U.toast(err.message, "error"));
     });
+    document.getElementById("btn-duplicate").addEventListener("click", _duplicateModel);
     App.on("project", () => {
       document.getElementById("btn-cfg-view").disabled = false;
       document.getElementById("btn-cfg-reveal").disabled = false;
+      document.getElementById("btn-duplicate").disabled = false;
     });
+  }
+
+  /* Clone the whole model (config + input files + GUI state) into a new
+   * folder the user picks, then open it — a safe starting point for a
+   * variant that never touches the original files. */
+  async function _duplicateModel() {
+    if (!App.state.project) return;
+    const parent = await Api.pickFolder({ title: "Choose where to create the model copy" })
+      .catch((err) => { U.toast(err.message, "error"); return null; });
+    if (!parent) return;
+
+    const popup = Popup.open({ title: "Duplicate model into a new folder", width: 420 });
+    const inp = U.el("input", { type: "text", value: `${App.state.project.name || "model"}_copy` });
+    inp.addEventListener("keydown", (ev) => { if (ev.key === "Enter") go(); });
+    const outCb = U.el("input", { type: "checkbox", id: "dup-outputs", checked: "" });
+    const gatherRadio = U.el("input", { type: "radio", name: "dup-inputs", id: "dup-gather", value: "gather", checked: "" });
+    const keepRadio = U.el("input", { type: "radio", name: "dup-inputs", id: "dup-keep", value: "keep" });
+    const btn = U.el("button", { class: "primary" }, "Create copy");
+    btn.addEventListener("click", go);
+    popup.body.append(
+      U.el("div", { class: "muted", style: "font-size:12px;margin-bottom:6px" },
+        `A new folder is created inside ${parent}. All model files (config, grids, `
+        + "timeseries, GUI state) are copied; the gui cache is never copied."),
+      U.el("div", { class: "form-row" }, U.el("label", {}, "New folder name"), inp),
+      U.el("div", { class: "muted", style: "font-size:11.5px;margin:8px 0 3px" }, "Input files referenced from outside this folder:"),
+      U.el("div", { class: "choice-row" }, gatherRadio,
+        U.el("label", { for: "dup-gather" }, "Gather all into the new folder (self-contained)")),
+      U.el("div", { class: "choice-row" }, keepRadio,
+        U.el("label", { for: "dup-keep" }, "Keep originals in place (absolute links)")),
+      U.el("div", { class: "choice-row", style: "margin-top:6px" }, outCb,
+        U.el("label", { for: "dup-outputs" }, "Include run outputs (aeolis.nc, logs)")),
+      U.el("div", { class: "btn-row", style: "justify-content:flex-end" }, btn));
+
+    async function go() {
+      const name = inp.value.trim();
+      if (!name) { U.toast("Enter a folder name", "error"); return; }
+      btn.disabled = true;
+      let info;
+      try {
+        info = await Api.post("/api/project/duplicate",
+          { parent, name, include_outputs: outCb.checked,
+            input_mode: keepRadio.checked ? "keep" : "gather" });
+      } catch (err) {
+        btn.disabled = false;
+        U.toast(err.message, "error");
+        return;
+      }
+      popup.close();
+      try {
+        await _projectOpened(info);
+        U.toast(`Copied to ${info.name} — now editing the copy`, "ok");
+        if (info.skipped && info.skipped.length) {
+          U.toast(`Could not find ${info.skipped.length} referenced file(s): ${info.skipped.join(", ")}`, "error");
+        }
+      } catch (err) {
+        U.toast(`Copied, but loading state failed: ${err.message}`, "error");
+      }
+    }
   }
 
   function _dragResize(grip, onMove, onDone) {

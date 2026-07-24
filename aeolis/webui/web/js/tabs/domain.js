@@ -18,6 +18,7 @@ const DomainTab = (() => {
   const selectedIds = new Set();  // multi-selected sample cards
   let lastClickedId = null;       // shift+click range anchor
   const revealedTargets = new Set(); // optional domain files the user opted to add
+  const hiddenTargets = new Set();   // optional files the user chose to hide from the list
 
   function init() {
     Tabs.register("domain", { enter: _refresh });
@@ -145,47 +146,11 @@ const DomainTab = (() => {
     return U.el("span", { class: "warn-icon", title }, "⚠");
   }
 
-  /* Make the cards of a list draggable; onDrop(fromIdx, toIdx). */
+  /* Make the cards of a list draggable; onDrop(fromIdx, toIdx).
+   * Delegates to the shared, de-lagged sortable (drag starts from the
+   * grip so dblclick/selection on the card body keeps working). */
   function _wireCardDrag(list, onDrop) {
-    let fromIdx = null;
-    list.addEventListener("dragstart", (ev) => {
-      const card = ev.target.closest(".obj-card");
-      if (!card) return;
-      fromIdx = Number(card.dataset.idx);
-      card.classList.add("dragging");
-      ev.dataTransfer.effectAllowed = "move";
-      ev.dataTransfer.setData("text/plain", "");   // Firefox needs data to drag
-    });
-    list.addEventListener("dragend", () => {
-      fromIdx = null;
-      for (const c of list.querySelectorAll(".obj-card")) {
-        c.classList.remove("dragging", "drop-above", "drop-below");
-      }
-    });
-    list.addEventListener("dragover", (ev) => {
-      if (fromIdx === null) return;
-      ev.preventDefault();
-      const card = ev.target.closest(".obj-card");
-      for (const c of list.querySelectorAll(".obj-card")) {
-        c.classList.remove("drop-above", "drop-below");
-      }
-      if (!card) return;
-      const rect = card.getBoundingClientRect();
-      const below = ev.clientY > rect.top + rect.height / 2;
-      card.classList.add(below ? "drop-below" : "drop-above");
-    });
-    list.addEventListener("drop", (ev) => {
-      if (fromIdx === null) return;
-      ev.preventDefault();
-      const card = ev.target.closest(".obj-card");
-      if (!card) return;
-      const rect = card.getBoundingClientRect();
-      const below = ev.clientY > rect.top + rect.height / 2;
-      let toIdx = Number(card.dataset.idx) + (below ? 1 : 0);
-      if (toIdx > fromIdx) toIdx -= 1;
-      if (toIdx !== fromIdx) onDrop(fromIdx, toIdx);
-      fromIdx = null;
-    });
+    U.wireSortable(list, onDrop);
   }
 
   /* ---- sample list ---- */
@@ -200,17 +165,42 @@ const DomainTab = (() => {
       const layerId = `raw-${entry.id}`;
       const layer = Layers.get(layerId) || { visible: false };
 
-      const name = U.el("span", { class: "lp-name", title: "Double-click to rename" },
-        entry.label || entry.path);
-      name.addEventListener("dblclick", () => _renameSample(entry, name));
+      // always-editable name field; Save commits the label AND renames the
+      // underlying .npz file on disk (enabled only when the text changed)
+      const stored = entry.label || entry.path;
+      const nameInput = U.el("input", {
+        class: "lp-name-edit", type: "text", value: stored,
+        title: "Edit the sample name — Save also renames the file in gui/rawdata",
+      });
+      const saveName = U.miniBtn("save", "Save name (renames the file on disk)", async () => {
+        const nm = nameInput.value.trim();
+        if (!nm || nm === stored) return;
+        try {
+          await Api.post("/api/domain/sample_rename", { id: entry.id, name: nm, rename_file: true });
+          U.toast("Renamed", "ok");
+          _refresh();
+        } catch (err) { U.toast(err.message, "error"); }
+      });
+      const syncSave = () => {
+        const nm = nameInput.value.trim();
+        saveName.disabled = !nm || nm === stored;
+      };
+      nameInput.addEventListener("input", syncSave);
+      nameInput.addEventListener("click", (ev) => ev.stopPropagation());
+      nameInput.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") { ev.preventDefault(); saveName.click(); }
+        if (ev.key === "Escape") { nameInput.value = stored; syncSave(); }
+      });
+      syncSave();
 
       const card = U.el("div", {
         class: `obj-card ${selectedIds.has(entry.id) ? "selected" : ""}`,
-        draggable: "true", dataset: { idx, eid: entry.id },
+        dataset: { idx, eid: entry.id },
       },
-        U.el("span", { class: "drag-grip", title: "Drag to reorder (top = highest priority); selected cards move together" }, "⠿"),
+        U.el("span", { class: "drag-grip", draggable: "true", title: "Drag to reorder (top = highest priority); selected cards move together" }, "⠿"),
         _eyeOrSpinner(layerId, layer),
-        name,
+        nameInput,
+        saveName,
         U.el("span", { class: "lp-mini" }, entry.source),
         U.miniBtn("copy", "Duplicate", async () => {
           await Api.post("/api/domain/sample_duplicate", { id: entry.id });
@@ -303,24 +293,6 @@ const DomainTab = (() => {
     );
   }
 
-  function _renameSample(entry, nameNode) {
-    const input = U.el("input", { type: "text", value: entry.label || "", style: "flex:1;font-size:12px" });
-    nameNode.replaceWith(input);
-    input.focus(); input.select();
-    const commit = async () => {
-      const name = input.value.trim();
-      if (name && name !== entry.label) {
-        await Api.post("/api/domain/sample_rename", { id: entry.id, name });
-      }
-      _refresh();
-    };
-    input.addEventListener("blur", commit);
-    input.addEventListener("keydown", (ev) => {
-      if (ev.key === "Enter") input.blur();
-      if (ev.key === "Escape") { input.value = entry.label; input.blur(); }
-    });
-  }
-
   async function _importXyz() {
     const path = await Api.pickFile({
       title: "Import sample file",
@@ -350,7 +322,7 @@ const DomainTab = (() => {
     // hide opt-in files the user hasn't added yet (offered via "Add…")
     const order = _targetOrder().filter((name) => {
       const info = overview.targets[name];
-      return info && (!info.hidden || revealedTargets.has(name));
+      return info && (!info.hidden || revealedTargets.has(name)) && !hiddenTargets.has(name);
     });
     order.forEach((name, idx) => {
       const info = overview.targets[name];
@@ -361,20 +333,22 @@ const DomainTab = (() => {
         ? "The grid changed after this file was interpolated — re-interpolate before using it"
         : "Shape does not match the current grid — re-interpolate";
 
-      const eye = info.exists
+      // renderable when a saved file exists OR there is an unsaved draft
+      const renderable = info.exists || info.has_draft;
+      const eye = renderable
         ? _eyeOrSpinner(layerId, layer, {
           disabled: info.stale,
           disabledTitle: staleTitle,
         })
-        : U.el("span", { class: "eye off disabled", title: "File does not exist yet" }, "👁");
+        : U.el("span", { class: "eye off disabled", title: "Nothing to show yet — interpolate first" }, "👁");
 
       // not required by the current config (e.g. veg under the grass
       // method, or an opt-in mask) → de-emphasise, keep it usable
       const card = U.el("div", {
         class: `obj-card ${info.needed ? "" : "not-needed"}`,
-        draggable: "true", dataset: { idx },
+        dataset: { idx },
       },
-        U.el("span", { class: "drag-grip", title: "Drag to reorder" }, "⠿"),
+        U.el("span", { class: "drag-grip", draggable: "true", title: "Drag to reorder" }, "⠿"),
         eye,
         U.el("span", { class: "lp-name" }, `${name} — ${info.file}`));
 
@@ -384,14 +358,26 @@ const DomainTab = (() => {
           title: info.note || "not required by the current configuration",
         }, info.optional ? "optional" : "not needed"));
       }
-      if (!info.exists) {
-        card.append(U.el("span", { class: "lp-mini" }, "no file"));
+      // clear state indicator: unsaved draft > missing file > not created
+      if (info.has_draft) {
+        card.append(U.el("span", { class: "draft-badge", title: "Interpolated but not saved yet — click Save to write the file" }, "unsaved draft"));
+      } else if (!info.exists) {
+        card.append(info.configured
+          ? _warnIcon(`missing: ${info.file} — the configured file was not found`)
+          : U.el("span", { class: "lp-mini" }, "not created yet"));
       } else if (info.stale) {
         card.append(_warnIcon(staleTitle));
       }
 
       const actions = U.el("span", { class: "obj-actions" });
       actions.append(U.miniBtn("interp", "Interpolate…", () => _interpolateWizard(name, info)));
+      if (info.has_draft) {
+        actions.append(U.miniBtn("save", "Save the draft to the configured file", () => _saveTargetDraft(name)));
+      }
+      actions.append(U.miniBtn("open", "Load an existing .grd on top (as a draft)", () => _loadTarget(name)));
+      if (info.exists || info.has_draft) {
+        actions.append(U.miniBtn("saveas", "Save to a chosen location…", () => _saveTargetAs(name, info)));
+      }
       if (info.exists && !name.endsWith("_mask")) {
         actions.append(U.miniBtn("copy", "Duplicate to sample data (for modification)", async () => {
           try {
@@ -409,6 +395,12 @@ const DomainTab = (() => {
           revealedTargets.delete(name);
           _build();
         }));
+      } else if (info.optional) {
+        // optional masks shown by default (configured/exist) can be hidden
+        actions.append(U.miniBtn("trash", "Hide from this list (does not delete the file)", () => {
+          hiddenTargets.add(name);
+          _build();
+        }));
       }
       card.append(actions);
       list.append(card);
@@ -424,11 +416,62 @@ const DomainTab = (() => {
     return list;
   }
 
+  /* Load an existing .grd on top of a target as an unsaved draft. */
+  async function _loadTarget(name) {
+    const path = await Api.pickFile({
+      title: `Load a .grd file for ${name}`,
+      patterns: [["Grid files", "*.grd"], ["All files", "*.*"]],
+      initial: App.state.project ? App.state.project.root : "",
+    }).catch((err) => { U.toast(err.message, "error"); return null; });
+    if (!path) return;
+    try {
+      const res = await Api.post("/api/domain/target_load", { target: name, path });
+      U.toast(`Loaded as a draft${res.shape_ok ? "" : " (shape differs from grid)"} — Save to commit`,
+        res.shape_ok ? "ok" : "error");
+      await _refresh();
+      _reloadLayer(`domain-${name}`);
+    } catch (err) { U.toast(err.message, "error"); }
+  }
+
+  /* Commit the current draft to the target's configured file. */
+  async function _saveTargetDraft(name) {
+    try {
+      const res = await Api.post("/api/domain/target_save", { target: name });
+      U.toast(`Saved ${res.file}`, "ok");
+      const cfg = await Api.get("/api/config");
+      App.state.config = cfg.values;
+      App.emit("config-changed", overview.targets[name].config_key);
+      await _refresh();
+    } catch (err) { U.toast(err.message, "error"); }
+  }
+
+  /* Save the draft (or the saved file) to a chosen location + repoint config. */
+  async function _saveTargetAs(name, info) {
+    const path = await Api.pickFile({
+      title: `Save ${name} as…`,
+      save: true,
+      patterns: [["Grid files", "*.grd"], ["All files", "*.*"]],
+      initial: App.state.project ? App.state.project.root : "",
+      filename: info.file || `${name}.grd`,
+    }).catch((err) => { U.toast(err.message, "error"); return null; });
+    if (!path) return;
+    try {
+      const res = await Api.post("/api/domain/target_save_as", { target: name, path });
+      U.toast(`Saved ${res.file}`, "ok");
+      const cfg = await Api.get("/api/config");
+      App.state.config = cfg.values;
+      App.emit("config-changed", overview.targets[name].config_key);
+      await _refresh();
+    } catch (err) { U.toast(err.message, "error"); }
+  }
+
   /* "Add optional file…" — reveal an opt-in domain file (mask etc.) so it
    * can be interpolated; most domain files need no input and stay hidden. */
   function _addOptionalControl() {
     const hidden = Object.entries(overview.targets)
-      .filter(([name, info]) => info.hidden && !revealedTargets.has(name));
+      .filter(([name, info]) => info.optional
+        && (info.hidden || hiddenTargets.has(name))
+        && !(revealedTargets.has(name) && !hiddenTargets.has(name)));
     if (!hidden.length) return null;
     const sel = U.el("select", { style: "flex:1;min-width:0" },
       U.el("option", { value: "" }, "— add an optional domain file —"),
@@ -436,6 +479,7 @@ const DomainTab = (() => {
         U.el("option", { value: name }, `${name} (${info.file})`)));
     sel.addEventListener("change", () => {
       if (!sel.value) return;
+      hiddenTargets.delete(sel.value);
       revealedTargets.add(sel.value);
       _build();
     });
@@ -784,9 +828,9 @@ const DomainTab = (() => {
           if (cb.checked) checked.add(id); else checked.delete(id);
         });
         listEl.append(U.el("div", {
-          class: "obj-card", draggable: "true", dataset: { idx },
+          class: "obj-card", dataset: { idx },
         },
-          U.el("span", { class: "drag-grip", title: "Drag to reorder (top = highest priority)" }, "⠿"),
+          U.el("span", { class: "drag-grip", draggable: "true", title: "Drag to reorder (top = highest priority)" }, "⠿"),
           cb,
           U.el("span", { class: "lp-name" }, entry.label || entry.path),
           U.el("span", { class: "lp-mini" }, entry.kind)));
@@ -802,7 +846,7 @@ const DomainTab = (() => {
     const extrap = U.el("input", { type: "checkbox", id: "interp-extrap" });
     const fill = U.el("input", { type: "text", placeholder: "e.g. -20 (optional)", style: "width:120px" });
     const progress = U.progressBar();
-    const runBtn = U.el("button", { class: "primary" }, "Interpolate & save");
+    const runBtn = U.el("button", { class: "primary" }, "Interpolate");
     runBtn.addEventListener("click", async () => {
       const layers = order.filter((id) => checked.has(id));
       if (!layers.length) { U.toast("Select at least one sample layer", "error"); return; }
@@ -815,13 +859,10 @@ const DomainTab = (() => {
         const res = await Api.post("/api/domain/interpolate", body);
         const out = await Api.waitJob(res.job, (j) => progress.update(j));
         progress.done();
-        U.toast(`Wrote ${out.file} (${U.fmtNum(out.min)} … ${U.fmtNum(out.max)})`, "ok");
-        const cfg = await Api.get("/api/config");
-        App.state.config = cfg.values;
-        App.emit("config-changed", overview.targets[target].config_key);
+        U.toast(`Draft ready (${U.fmtNum(out.min)} … ${U.fmtNum(out.max)}) — Save to write the file`, "ok");
         popup.close();
         await _refresh();
-        _reloadLayer(`domain-${target}`);
+        _reloadLayer(`domain-${target}`);   // previews the draft via gridfield
       } catch (err) {
         progress.done();
         U.toast(err.message, "error");

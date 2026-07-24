@@ -164,31 +164,66 @@ const Windrose = (() => {
       `calm < ${U.fmtNum(data.calm ?? 0, 3)} ${unit || ""} · n = ${data.total}`));
   }
 
-  /* opts: { title, magnitude:[], direction:[], magName, magUnit } */
-  function open(opts) {
-    const mag = opts.magnitude || [];
-    const dir = opts.direction || [];
-    const unit = opts.magUnit || "";
-    const popup = Popup.open({ title: `Windrose — ${opts.title || opts.magName || ""}`, width: 620 });
+  /* a sensible default speed-bin width from the data spread */
+  function _defaultBinWidth(mag) {
+    let mx = 0;
+    for (const m of mag) { if (Number.isFinite(m) && m > mx) mx = m; }
+    if (mx <= 0) return 1;
+    return _niceStep(mx / 5);
+  }
 
-    const state = {
-      sectors: 16,
-      binWidth: _defaultBinWidth(mag),
-      calm: 0.5,
-      scheme: "viridis",
-    };
+  /* epoch seconds → a datetime-local value (UTC, matched by the "Z" parse
+   * below so the period filter lines up with the UTC data epochs). */
+  function _isoLocal(epoch) {
+    return Number.isFinite(epoch) ? new Date(epoch * 1000).toISOString().slice(0, 16) : "";
+  }
+  function _parseLocal(v) {
+    return v ? Date.parse(`${v}:00Z`) / 1000 : null;
+  }
+
+  /* The one windrose window: it shows the rose immediately for the first
+   * source over its full period, and every control (source, period, sectors,
+   * bin, calm, colours) recomputes it live.
+   *
+   * opts.sources = [{label, magName, magUnit, t0_epoch?, t1_epoch?,
+   *                  load: async () => ({magnitude, direction, t_epoch})}]
+   * or the legacy direct form { title, magnitude, direction, magName, magUnit }. */
+  async function open(opts = {}) {
+    let sources = opts.sources;
+    if (!sources) {
+      // legacy direct-arrays form → wrap as a single source
+      sources = [{
+        label: opts.title || opts.magName || "series",
+        magName: opts.magName, magUnit: opts.magUnit,
+        load: async () => ({
+          magnitude: opts.magnitude || [], direction: opts.direction || [],
+          t_epoch: opts.t_epoch || [],
+        }),
+      }];
+    }
+
+    const popup = Popup.open({ title: "Windrose", width: 840 });
+    if (!sources.length) {
+      popup.body.append(U.el("div", { class: "muted" },
+        "No magnitude + direction data available yet. Download or fill a wind or "
+        + "wave series in the Conditions tab first."));
+      return popup;
+    }
+
+    const state = { sectors: 16, binWidth: 1, calm: 0.5, scheme: "viridis" };
+    let cur = null;   // { mag, dir, t, unit, magName } of the loaded source
 
     const roseHost = U.el("div", { class: "wr-rose" });
     const legendHost = U.el("div", { class: "wr-legend" });
+    const infoLine = U.el("div", { class: "muted", style: "font-size:11.5px;margin-top:6px" });
 
-    const redraw = () => {
-      const data = _compute(mag, dir, state);
-      data.calm = state.calm;
-      _draw(roseHost, data, state.scheme);
-      _legend(legendHost, data, state.scheme, unit);
-    };
+    // --- source + period ---
+    const srcSel = U.el("select", {}, ...sources.map((s, i) =>
+      U.el("option", { value: String(i) }, s.label)));
+    const fromIn = U.el("input", { type: "datetime-local" });
+    const toIn = U.el("input", { type: "datetime-local" });
 
-    // --- controls ---
+    // --- rose controls ---
     const sectorsSel = U.el("select", {},
       ...[8, 16, 32].map((n) => U.el("option", { value: n, selected: n === state.sectors ? "" : null }, `${n} sectors`)));
     sectorsSel.value = String(state.sectors);
@@ -198,32 +233,84 @@ const Windrose = (() => {
       { style: "width:70px" });
     const calmInput = U.numField(state.calm, (v) => { if (v >= 0) { state.calm = v; redraw(); } },
       { style: "width:70px" });
+    const binLabel = U.el("label", {}, "Speed bin");
+    const calmLabel = U.el("label", {}, "Calm below");
 
     const schemeSel = U.el("select", {},
       ...Object.keys(SCHEMES).map((s) => U.el("option", { value: s }, s)));
     schemeSel.value = state.scheme;
     schemeSel.addEventListener("change", () => { state.scheme = schemeSel.value; redraw(); });
 
-    const controls = U.el("div", { class: "wr-controls" },
-      U.el("div", { class: "form-row" }, U.el("label", {}, "Sectors"), sectorsSel),
-      U.el("div", { class: "form-row" }, U.el("label", {}, `Speed bin [${unit || "–"}]`), binInput),
-      U.el("div", { class: "form-row" }, U.el("label", {}, `Calm below [${unit || "–"}]`), calmInput),
-      U.el("div", { class: "form-row" }, U.el("label", {}, "Colours"), schemeSel));
+    fromIn.addEventListener("change", redraw);
+    toIn.addEventListener("change", redraw);
 
+    function redraw() {
+      if (!cur) return;
+      const t0 = _parseLocal(fromIn.value);
+      const t1 = _parseLocal(toIn.value);
+      let mag = cur.mag, dir = cur.dir;
+      if ((t0 !== null || t1 !== null) && cur.t.length === mag.length && cur.t.length) {
+        const m2 = [], d2 = [];
+        for (let i = 0; i < cur.t.length; i += 1) {
+          if (t0 !== null && cur.t[i] < t0) continue;
+          if (t1 !== null && cur.t[i] > t1) continue;
+          m2.push(mag[i]); d2.push(dir[i]);
+        }
+        mag = m2; dir = d2;
+      }
+      const data = _compute(mag, dir, state);
+      data.calm = state.calm;
+      _draw(roseHost, data, state.scheme);
+      _legend(legendHost, data, state.scheme, cur.unit);
+      const u = cur.unit ? ` ${cur.unit}` : "";
+      binLabel.textContent = `Speed bin [${cur.unit || "–"}]`;
+      calmLabel.textContent = `Calm below [${cur.unit || "–"}]`;
+      infoLine.textContent = `${cur.magName || "magnitude"}${u} · ${data.total} samples in view`;
+    }
+
+    async function loadSource(i, fillPeriod) {
+      const src = sources[i] || sources[0];
+      U.clear(roseHost);
+      roseHost.append(U.el("div", { class: "muted", style: "padding:20px" }, "loading…"));
+      let d;
+      try { d = await src.load(); }
+      catch (err) { U.toast(err.message, "error"); return; }
+      const t = d.t_epoch || [];
+      cur = { mag: d.magnitude || [], dir: d.direction || [], t,
+        unit: src.magUnit || "", magName: src.magName };
+      state.binWidth = _defaultBinWidth(cur.mag);
+      binInput.value = String(state.binWidth);
+      if (fillPeriod) {
+        const lo = Number.isFinite(src.t0_epoch) ? src.t0_epoch : (t.length ? t[0] : null);
+        const hi = Number.isFinite(src.t1_epoch) ? src.t1_epoch : (t.length ? t[t.length - 1] : null);
+        fromIn.value = _isoLocal(lo);
+        toIn.value = _isoLocal(hi);
+      }
+      redraw();
+    }
+    srcSel.addEventListener("change", () => loadSource(Number(srcSel.value), true));
+
+    const controls = U.el("div", { class: "wr-controls" },
+      U.el("div", { class: "form-row" }, U.el("label", {}, "Source"), srcSel),
+      U.el("div", { class: "form-row" }, U.el("label", {}, "From"), fromIn),
+      U.el("div", { class: "form-row" }, U.el("label", {}, "To"), toIn),
+      U.el("div", { class: "form-row" }, U.el("label", {}, "Sectors"), sectorsSel),
+      U.el("div", { class: "form-row" }, binLabel, binInput),
+      U.el("div", { class: "form-row" }, calmLabel, calmInput),
+      U.el("div", { class: "form-row" }, U.el("label", {}, "Colours"), schemeSel),
+      infoLine);
+
+    // three aligned columns: legend (left) · rose (center) · settings (right)
     popup.body.append(U.el("div", { class: "wr-wrap" },
+      legendHost,
       roseHost,
-      U.el("div", { class: "wr-side" }, controls, legendHost)));
-    redraw();
+      controls));
+    await loadSource(0, true);   // draw immediately for the first source
     return popup;
   }
 
-  /* a sensible default speed-bin width from the data spread */
-  function _defaultBinWidth(mag) {
-    let mx = 0;
-    for (const m of mag) { if (Number.isFinite(m) && m > mx) mx = m; }
-    if (mx <= 0) return 1;
-    return _niceStep(mx / 5);
-  }
+  // back-compat alias: the topbar calls openChooser({sources})
+  const openChooser = open;
 
-  return { open };
+  return { open, openChooser };
 })();

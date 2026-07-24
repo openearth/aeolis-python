@@ -7,14 +7,16 @@ available as separate layers after interpolation.
 """
 
 import hashlib
+import os
 from datetime import datetime, timezone
+from pathlib import Path
 
 import numpy as np
 
 from aeolis.constants import DEFAULT_CONFIG
 from aeolis.webui.backend import datasources, grd_io, jobs, project, settings
 from aeolis.webui.backend.config_api import load_config
-from aeolis.webui.backend.grid_api import _load_current_grid, patch_config
+from aeolis.webui.backend.grid_api import _load_current_grid, patch_config, resolve_target
 from aeolis.webui.backend.httpd import route
 from aeolis.webui.backend.util import load_json, save_json, send_error_json, send_json
 
@@ -124,6 +126,9 @@ def _overview(handler, query, tail):
             needed = False  # masks / threshold / fence / supply are opt-in
         # optional files with no data yet stay hidden until the user adds them
         hidden = optional and not configured and not exists
+        # vegetation files the current config will never use: hide them too
+        if name in VEG and not needed:
+            hidden = True
         entry = {
             "config_key": key,
             "file": filename,
@@ -135,6 +140,7 @@ def _overview(handler, query, tail):
             "hidden": hidden,
             "stale": False,
             "shape_ok": True,
+            "has_draft": has_target_draft(name),
         }
         if exists and current_sig:
             stored = signatures.get(name)
@@ -305,6 +311,69 @@ def _sample_raster(x, y, Z, XI, YI):
 # interpolation onto the model grid
 # ---------------------------------------------------------------------
 
+# ---------------------------------------------------------------------
+# interpolated-target drafts
+#
+# Interpolating (or loading a .grd on top) produces an in-memory "draft"
+# grid stored in the gui cache — a first-class entity the user can preview
+# on the map before choosing to Save it to the configured path, Save-as a
+# new file, or Load a different file on top. Nothing touches aeolis.txt or
+# writes a .grd until the user explicitly Saves, so the workflow never
+# errors on a target file that does not exist yet.
+# ---------------------------------------------------------------------
+
+def _draft_dir():
+    d = project.require().cache_dir / "target_drafts"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _draft_path(target):
+    return _draft_dir() / f"{target}.npy"
+
+
+def has_target_draft(target):
+    return _draft_path(target).is_file()
+
+
+def get_target_draft(target):
+    """The unsaved interpolation array for *target*, or None."""
+    p = _draft_path(target)
+    if not p.is_file():
+        return None
+    try:
+        return np.load(p)
+    except Exception:  # noqa: BLE001 - a corrupt draft just means "no draft"
+        return None
+
+
+def _set_target_draft(target, Z):
+    np.save(_draft_path(target), np.asarray(Z, dtype="float64"))
+
+
+def _clear_target_draft(target):
+    p = _draft_path(target)
+    if p.is_file():
+        try:
+            p.unlink()
+        except OSError:
+            pass
+
+
+def _commit_draft(current, target, Z, write_path, config_ref):
+    """Write *Z* to disk at *write_path*, repoint the config to *config_ref*,
+    record the interpolation signature, and drop the draft."""
+    write_path.parent.mkdir(parents=True, exist_ok=True)
+    grd_io.write_grd(write_path, Z)
+    key, _ = TARGETS[target]
+    patch_config({key: config_ref})
+    state = current.load_state()
+    state.setdefault("interp_signatures", {})[target] = grid_signature()
+    state.get("draft_signatures", {}).pop(target, None)
+    current.save_state(state)
+    _clear_target_draft(target)
+
+
 @route("POST", "/api/domain/interpolate")
 def _interpolate(handler, body, tail):
     current = project.require()
@@ -372,22 +441,170 @@ def _interpolate(handler, body, tail):
                 "add more sources or set a fill value"
             )
 
-        key, default_name = TARGETS[target]
-        filename = values.get(key) or default_name
-        grd_io.write_grd(current.root / filename, result)
-        patch_config({key: filename})
-        # remember which grid this interpolation belongs to (staleness)
+        # produce a draft (not written to disk) — the user Saves it explicitly
+        _set_target_draft(target, result)
         state = current.load_state()
-        state.setdefault("interp_signatures", {})[target] = grid_signature()
+        state.setdefault("draft_signatures", {})[target] = grid_signature()
         current.save_state(state)
         _log_history({
-            "action": "interpolate", "target": target, "file": filename,
+            "action": "interpolate_draft", "target": target,
             "layers": layer_ids, "fill": fill, "extrapolate": extrapolate,
         })
-        return {"target": target, "file": filename,
+        return {"target": target, "draft": True,
                 "min": float(np.nanmin(result)), "max": float(np.nanmax(result))}
 
     send_json(handler, {"job": jobs.start(f"interpolate {target}", _run)})
+
+
+# ---------------------------------------------------------------------
+# draft commit / load: save to the configured path, save-as, load on top
+# ---------------------------------------------------------------------
+
+@route("POST", "/api/domain/target_save")
+def _target_save(handler, body, tail):
+    """Write the current draft to the target's *configured* path."""
+    current = project.require()
+    target = body.get("target")
+    if target not in TARGETS:
+        send_error_json(handler, f"unknown target '{target}'")
+        return
+    Z = get_target_draft(target)
+    if Z is None:
+        send_error_json(handler, "no interpolation draft to save - interpolate first")
+        return
+    values = load_config(current.configfile)
+    key, default_name = TARGETS[target]
+    filename = str(values.get(key) or default_name)
+    write_path, config_ref = resolve_target(current, filename, str(default_name))
+    _commit_draft(current, target, Z, write_path, config_ref)
+    _log_history({"action": "save_draft", "target": target, "file": config_ref})
+    send_json(handler, {"ok": True, "target": target, "file": config_ref})
+
+
+@route("POST", "/api/domain/target_save_as")
+def _target_save_as(handler, body, tail):
+    """Write the current draft (or the saved file, if there is no draft) to a
+    chosen path and repoint the config to it."""
+    current = project.require()
+    target = body.get("target")
+    raw = (body.get("path") or body.get("filename") or "").strip()
+    if target not in TARGETS:
+        send_error_json(handler, f"unknown target '{target}'")
+        return
+    if not raw:
+        send_error_json(handler, "missing path")
+        return
+    if not raw.lower().endswith(".grd"):
+        raw += ".grd"
+    key, default_name = TARGETS[target]
+    Z = get_target_draft(target)
+    if Z is None:
+        src_name = load_config(current.configfile).get(key) or default_name
+        src = current.root / str(src_name)
+        if not src.is_file():
+            send_error_json(handler, "nothing to save - interpolate first")
+            return
+        Z = grd_io.read_grd(src)
+    write_path, config_ref = resolve_target(current, raw, str(default_name))
+    _commit_draft(current, target, Z, write_path, config_ref)
+    _log_history({"action": "save_as", "target": target, "file": config_ref})
+    send_json(handler, {"ok": True, "target": target, "file": config_ref})
+
+
+@route("POST", "/api/domain/target_load")
+def _target_load(handler, body, tail):
+    """Load an existing .grd from disk into the target *draft* (replace on
+    top). Nothing is written to the config until the user Saves."""
+    current = project.require()
+    target = body.get("target")
+    path = body.get("path")
+    if target not in TARGETS:
+        send_error_json(handler, f"unknown target '{target}'")
+        return
+    if not path:
+        send_error_json(handler, "missing path")
+        return
+    try:
+        Z = grd_io.read_grd(Path(path))
+    except Exception as exc:  # noqa: BLE001 - report any read failure to the UI
+        send_error_json(handler, f"could not read {path}: {exc}")
+        return
+    _set_target_draft(target, Z)
+    state = current.load_state()
+    state.setdefault("draft_signatures", {})[target] = grid_signature()
+    current.save_state(state)
+    grids, _ = _load_current_grid()
+    shape_ok = grids is None or Z.shape == grids[0].shape
+    _log_history({"action": "load_draft", "target": target, "file": os.path.basename(path)})
+    send_json(handler, {"ok": True, "target": target, "draft": True,
+                        "shape_ok": bool(shape_ok),
+                        "min": float(np.nanmin(Z)), "max": float(np.nanmax(Z))})
+
+
+# ---------------------------------------------------------------------
+# load an existing .grd into a target / save a target under a new name
+# ---------------------------------------------------------------------
+
+@route("POST", "/api/domain/save_target_as")
+def _save_target_as(handler, body, tail):
+    current = project.require()
+    target = body.get("target")
+    # accept a full path from the file browser, or a legacy bare filename
+    raw = (body.get("path") or body.get("filename") or "").strip()
+    if target not in TARGETS:
+        send_error_json(handler, f"unknown target '{target}'")
+        return
+    if not raw:
+        send_error_json(handler, "missing path")
+        return
+    if not raw.lower().endswith(".grd"):
+        raw += ".grd"
+    key, default_name = TARGETS[target]
+    src_name = load_config(current.configfile).get(key) or default_name
+    src = current.root / str(src_name)
+    if not src.is_file():
+        send_error_json(handler, f"{src_name} does not exist yet - interpolate or initialize it first")
+        return
+    write_path, config_ref = resolve_target(current, raw, str(default_name))
+    write_path.parent.mkdir(parents=True, exist_ok=True)
+    Z = grd_io.read_grd(src)
+    grd_io.write_grd(write_path, Z)
+    patch_config({key: config_ref})
+    _log_history({"action": "save_as", "target": target, "file": config_ref})
+    send_json(handler, {"ok": True, "target": target, "file": config_ref})
+
+
+@route("POST", "/api/domain/load_target")
+def _load_target_file(handler, body, tail):
+    current = project.require()
+    target = body.get("target")
+    path = body.get("path")
+    if target not in TARGETS:
+        send_error_json(handler, f"unknown target '{target}'")
+        return
+    if not path:
+        send_error_json(handler, "missing path")
+        return
+    try:
+        Z = grd_io.read_grd(Path(path))
+    except Exception as exc:  # noqa: BLE001 - report any read failure to the UI
+        send_error_json(handler, f"could not read {path}: {exc}")
+        return
+    filename = os.path.basename(path)
+    if not filename.endswith(".grd"):
+        filename += ".grd"
+    grd_io.write_grd(current.root / filename, Z)
+    key, _ = TARGETS[target]
+    patch_config({key: filename})
+    # this file now defines the target for the current grid
+    state = current.load_state()
+    state.setdefault("interp_signatures", {})[target] = grid_signature()
+    current.save_state(state)
+    _log_history({"action": "load", "target": target, "file": filename})
+    grids, _ = _load_current_grid()
+    shape_ok = grids is None or Z.shape == grids[0].shape
+    send_json(handler, {"ok": True, "target": target, "file": filename,
+                        "shape_ok": bool(shape_ok)})
 
 
 # ---------------------------------------------------------------------
@@ -652,16 +869,48 @@ def _sample_duplicate(handler, body, tail):
 
 @route("POST", "/api/domain/sample_rename")
 def _sample_rename(handler, body, tail):
+    """Rename a sample. Always updates the display ``label``; when
+    ``rename_file`` is set, the underlying .npz in gui/rawdata is renamed to a
+    slug of the new name (collisions suffixed), and the entry's ``path``/``id``
+    are updated to match so the file and card stay in sync."""
+    import re
+
     name = (body.get("name") or "").strip()
     if not name:
         send_error_json(handler, "missing 'name'")
         return
+    rename_file = bool(body.get("rename_file"))
+    current = project.require()
     manifest = load_manifest()
+    updated = None
     for item in manifest["entries"]:
-        if item.get("id") == body.get("id"):
-            item["label"] = name
+        if item.get("id") != body.get("id"):
+            continue
+        item["label"] = name
+        if rename_file:
+            old_path = current.root / item.get("path", "")
+            suffix = old_path.suffix or ".npz"
+            slug = re.sub(r"[^A-Za-z0-9._-]+", "_", name).strip("_.") or "sample"
+            base = f"{slug}{suffix}"
+            target = current.rawdata_dir / base
+            n = 2
+            while target.exists() and target.resolve() != old_path.resolve():
+                base = f"{slug}_{n}{suffix}"
+                target = current.rawdata_dir / base
+                n += 1
+            if target.resolve() != old_path.resolve():
+                try:
+                    if old_path.is_file():
+                        old_path.rename(target)
+                except Exception as exc:  # noqa: BLE001
+                    send_error_json(handler, f"rename failed: {exc}")
+                    return
+                item["path"] = f"gui/rawdata/{base}"
+                item["id"] = hashlib.sha1(item["path"].encode()).hexdigest()[:10]
+        updated = item
+        break
     save_manifest(manifest)
-    send_json(handler, {"ok": True})
+    send_json(handler, {"ok": True, "entry": updated})
 
 
 @route("POST", "/api/domain/sample_order")

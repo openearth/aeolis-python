@@ -179,6 +179,9 @@ DOCS_LINKS = {}
 # (points in time only; plain durations like dt/restart don't need it)
 TIME_PARAMS = {"tstart", "tstop"}
 
+# calendar-date parameters rendered with a native datetime picker
+DATE_PARAMS = {"refdate"}
+
 # sections whose files are produced by a dedicated tab: the link moves
 # to the section header and the file parameters render read-only
 SECTION_TABS = {
@@ -286,7 +289,7 @@ def build_schema():
             params.append({
                 "key": key,
                 "default": default,
-                "type": _infer_type(key, default),
+                "type": "datetime" if key in DATE_PARAMS else _infer_type(key, default),
                 "unit": info["unit"],
                 "desc": info["desc"],
                 "options": OPTIONS_OVERRIDE.get(key) or _infer_options(default, info["desc"]),

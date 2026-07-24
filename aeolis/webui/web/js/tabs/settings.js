@@ -42,6 +42,7 @@ const SettingsTab = (() => {
       SchemaForm.build(panel, App.state.schema, App.state.config, _onEdit);
       const first = panel.querySelector(".section");
       if (first) first.classList.remove("collapsed");
+      _injectShearToggle(panel);
       _updateButtons();
     } catch (err) {
       U.clear(panel);
@@ -52,6 +53,27 @@ const SettingsTab = (() => {
   function _onEdit() {
     App.state.configDirty = true;
     _updateButtons();
+  }
+
+  /* Mirror the grid tab's shear-grid show/hide eye into the shear section
+   * header here, so the computational grid can be toggled from Settings too. */
+  function _injectShearToggle(panel) {
+    if (typeof GridTab === "undefined" || !GridTab.setShearVisible) return;
+    const head = panel.querySelector('[data-section="Topographic steering (shear)"] > header');
+    if (!head || head.querySelector(".shear-eye-settings")) return;
+    const vis = GridTab.shearVisible();
+    const eye = U.el("span", {
+      class: `eye group-eye shear-eye-settings ${vis ? "" : "off"}`,
+      title: "Show/hide the computational (shear) grid on the map",
+    }, "👁");
+    eye.addEventListener("click", (ev) => {
+      ev.stopPropagation();   // don't collapse the section
+      const next = !GridTab.shearVisible();
+      GridTab.setShearVisible(next);
+      eye.classList.toggle("off", !next);
+    });
+    const count = head.querySelector(".count");
+    head.insertBefore(eye, count);
   }
 
   function _updateButtons() {

@@ -151,11 +151,13 @@ const ViewerTab = (() => {
           section.wrap.classList.contains("collapsed");
         App.touchUi();
       });
-      // grip to drag whole groups + group show/hide
+      // grip to drag whole groups + group show/hide. Only the grip is
+      // draggable (exactly like the layer cards), so the drag feel — grab
+      // point, ghost, insertion line — is identical to reordering cells.
       section.head.prepend(U.el("span", {
-        class: "drag-grip", title: "Drag to reorder groups (top = drawn on top)",
+        class: "drag-grip", draggable: "true",
+        title: "Drag to reorder groups (top = drawn on top)",
       }, "⠿"));
-      section.head.draggable = true;
       if (group !== "background") {
         const countEl = section.head.querySelector(".count");
         section.head.insertBefore(_groupEye(group, groupLayers), countEl);
@@ -170,55 +172,23 @@ const ViewerTab = (() => {
   }
 
   /* drag & drop of whole sections to reorder groups (wired once per
-   * container element - _renderGroups re-runs often) */
+   * container element - _renderGroups re-runs often). Drag starts from a
+   * section header only, so nested layer-card drags don't hijack it. The
+   * new order is read straight from the DOM sequence, which makes every
+   * position reachable (incl. dropping a group above the first one). */
   function _wireGroupDrag(box) {
     if (box._groupDragWired) return;
     box._groupDragWired = true;
-    let fromGroup = null;
-    box.addEventListener("dragstart", (ev) => {
-      const head = ev.target.closest && ev.target.closest(".section > header");
-      const section = ev.target.closest && ev.target.closest(".section[data-group]");
-      if (!head || !section) return;
-      fromGroup = section.dataset.group;
-      section.classList.add("dragging");
-      ev.dataTransfer.effectAllowed = "move";
-      ev.dataTransfer.setData("text/plain", "");
-    });
-    box.addEventListener("dragend", () => {
-      fromGroup = null;
-      for (const s of box.querySelectorAll(".section")) {
-        s.classList.remove("dragging", "drop-above", "drop-below");
-      }
-    });
-    box.addEventListener("dragover", (ev) => {
-      if (!fromGroup) return;
-      ev.preventDefault();
-      const section = ev.target.closest && ev.target.closest(".section[data-group]");
-      for (const s of box.querySelectorAll(".section")) {
-        s.classList.remove("drop-above", "drop-below");
-      }
-      if (!section || section.dataset.group === fromGroup) return;
-      const rect = section.getBoundingClientRect();
-      section.classList.add(ev.clientY > rect.top + rect.height / 2 ? "drop-below" : "drop-above");
-    });
-    box.addEventListener("drop", (ev) => {
-      if (!fromGroup) return;
-      ev.preventDefault();
-      const section = ev.target.closest && ev.target.closest(".section[data-group]");
-      if (!section || section.dataset.group === fromGroup) return;
-      const rect = section.getBoundingClientRect();
-      const below = ev.clientY > rect.top + rect.height / 2;
-      const order = _orderedGroups().map(([g]) => g);
-      const from = order.indexOf(fromGroup);
-      order.splice(from, 1);
-      let to = order.indexOf(section.dataset.group) + (below ? 1 : 0);
-      order.splice(to, 0, fromGroup);
+    U.wireSortable(box, (from, to) => {
+      const order = [...box.querySelectorAll(".section[data-group]")]
+        .map((s) => s.dataset.group);
+      const [moved] = order.splice(from, 1);
+      order.splice(to, 0, moved);
       App.state.ui.viewerGroupOrder = order;
       App.touchUi();
-      fromGroup = null;
       _renderGroups();
       _applyLayerOrder();
-    });
+    }, { itemSel: ".section[data-group]", handleSel: ".section > header .drag-grip" });
   }
 
   function _renderLayerCards(body, group, layers) {
@@ -259,9 +229,9 @@ const ViewerTab = (() => {
     }
 
     const card = U.el("div", {
-      class: "obj-card", draggable: count > 1 ? "true" : null, dataset: { idx },
+      class: "obj-card", dataset: { idx },
     },
-      count > 1 ? U.el("span", { class: "drag-grip", title: "Drag to reorder (top = drawn on top)" }, "⠿") : null,
+      count > 1 ? U.el("span", { class: "drag-grip", draggable: "true", title: "Drag to reorder (top = drawn on top)" }, "⠿") : null,
       eye,
       U.el("span", { class: "lp-name", title: layer.title }, layer.title),
       layer.subtitle ? U.el("span", { class: "lp-mini" }, layer.subtitle) : null);
@@ -288,19 +258,26 @@ const ViewerTab = (() => {
       card.append(spBtn);
     }
 
-    // styling for field layers and point (sample) layers
+    // styling for field layers and point (sample) layers. The category picker
+    // is shown for every colormapped layer *type* (output / domain-* / raw-*),
+    // even when the layer is currently hidden and its map object destroyed, so
+    // the colour choice stays reachable; it applies when the layer is re-shown.
     const fieldId = _fieldIdFor(layer);
-    if ((fieldId && FieldLayer.get(fieldId)) || pointLayers.has(layer.id)) {
-      // simple per-layer colormap dropdown (overrides the category default)
-      const cur = _currentCmapOf(layer);
-      const sel = U.el("select", { class: "cmap-mini", title: "Colormap for this layer" });
-      for (const name of Colormaps.names()) {
-        sel.append(U.el("option", { value: name, selected: name === cur ? "" : null }, name));
+    const isColormapped = Boolean(fieldId) || pointLayers.has(layer.id);
+    if (isColormapped) {
+      // per-layer VARIABLE picker: choose which category's colormap this layer
+      // uses (colours & limits are set once per category in the Colormaps group)
+      const curCat = _categoryOfLayer(layer);
+      const sel = U.el("select", { class: "cmap-mini", title: "Which variable colormap this layer uses" });
+      for (const [ck, clabel] of CMAP_CATEGORIES) {
+        sel.append(U.el("option", { value: ck, selected: ck === curCat ? "" : null }, clabel));
       }
       sel.addEventListener("click", (ev) => ev.stopPropagation());
-      sel.addEventListener("change", () => _setLayerCmap(layer, sel.value));
+      sel.addEventListener("change", () => _setLayerCategory(layer, sel.value));
       card.append(sel);
-      card.append(U.miniBtn("gear", "More style options…", () => _styleEditor(layer)));
+      // the full style editor needs the live map object, so keep it gated
+      const live = (fieldId && FieldLayer.get(fieldId)) || pointLayers.has(layer.id);
+      if (live) card.append(U.miniBtn("gear", "More layer options…", () => _styleEditor(layer)));
     }
     return card;
   }
@@ -314,6 +291,47 @@ const ViewerTab = (() => {
     if (layer.id.startsWith("raw-")) return _effectiveRawStyle(layer).cmap;
     const fl = FieldLayer.get(_fieldIdFor(layer));
     return fl ? fl.style.cmap : _defaultCmapForName(_quantityOf(layer));
+  }
+
+  /* Apply a full style patch ({cmap?, min?, max?, opacity?}) to one layer. */
+  function _applyStyleToLayer(layer, upd) {
+    const map = MapView.instance();
+    if (layer.id === OUTPUT_LAYER) {
+      const l = FieldLayer.get(OUTPUT_LAYER);
+      if (l) l.setStyle(upd);
+    } else if (pointLayers.has(layer.id)) {
+      const st = _ownPointStyle(layer);
+      Object.assign(st, upd);
+      _setStyleLink(layer, "own");
+      if (map.getLayer(`pts-${layer.id}`)) {
+        map.setPaintProperty(`pts-${layer.id}`, "circle-color",
+          _pointColorExpr(st.cmap, st.min, st.max));
+      }
+    } else {
+      const fl = FieldLayer.get(_fieldIdFor(layer));
+      const target = _quantityOf(layer);
+      if (fl) {
+        fl.setStyle(upd);
+        if (layer.id.startsWith("domain-") && target) _rememberTargetStyle(target, fl.style);
+      } else if (layer.id.startsWith("domain-") && target) {
+        // layer hidden (no live object): persist to the remembered target
+        // style so the change is honoured when the layer is next shown
+        _rememberTargetStyle(target, Object.assign({}, _targetStyles()[target], upd));
+      }
+    }
+    _syncColorbars();
+  }
+
+  /* Point a layer at a variable category; it adopts that category's colormap
+   * and z-limits so every source in the category shares one scale. */
+  function _setLayerCategory(layer, cat) {
+    _catOverride()[_layerCatKey(layer)] = cat;
+    App.touchUi();
+    const upd = { cmap: _cmapForCategory(cat) };
+    const clim = _categoryClim(cat);
+    if (clim.min != null) upd.min = clim.min;
+    if (clim.max != null) upd.max = clim.max;
+    _applyStyleToLayer(layer, upd);
   }
 
   /* Set a single layer's colormap (its own override). */
@@ -345,47 +363,9 @@ const ViewerTab = (() => {
     }
   }
 
-  /* drag & drop within one list (shared pattern with the Domain tab) */
+  /* drag & drop within one list (shared, de-lagged, insertion-line UI) */
   function _wireCardDrag(list, onDrop) {
-    let fromIdx = null;
-    list.addEventListener("dragstart", (ev) => {
-      const card = ev.target.closest(".obj-card");
-      if (!card) return;
-      fromIdx = Number(card.dataset.idx);
-      card.classList.add("dragging");
-      ev.dataTransfer.effectAllowed = "move";
-      ev.dataTransfer.setData("text/plain", "");   // Firefox needs data to drag
-    });
-    list.addEventListener("dragend", () => {
-      fromIdx = null;
-      for (const c of list.querySelectorAll(".obj-card")) {
-        c.classList.remove("dragging", "drop-above", "drop-below");
-      }
-    });
-    list.addEventListener("dragover", (ev) => {
-      if (fromIdx === null) return;
-      ev.preventDefault();
-      const card = ev.target.closest(".obj-card");
-      for (const c of list.querySelectorAll(".obj-card")) {
-        c.classList.remove("drop-above", "drop-below");
-      }
-      if (!card) return;
-      const rect = card.getBoundingClientRect();
-      const below = ev.clientY > rect.top + rect.height / 2;
-      card.classList.add(below ? "drop-below" : "drop-above");
-    });
-    list.addEventListener("drop", (ev) => {
-      if (fromIdx === null) return;
-      ev.preventDefault();
-      const card = ev.target.closest(".obj-card");
-      if (!card) return;
-      const rect = card.getBoundingClientRect();
-      const below = ev.clientY > rect.top + rect.height / 2;
-      let toIdx = Number(card.dataset.idx) + (below ? 1 : 0);
-      if (toIdx > fromIdx) toIdx -= 1;
-      if (toIdx !== fromIdx) onDrop(fromIdx, toIdx);
-      fromIdx = null;
-    });
+    U.wireSortable(list, onDrop);
   }
 
   function _fieldIdFor(layer) {
@@ -505,16 +485,16 @@ const ViewerTab = (() => {
    * layer of that category defaults to it. Choices persist per project
    * (ui.varCmaps). A layer can still override its own via the dropdown. */
   const CMAP_CATEGORIES = [
-    ["elevation", "Elevation (zb, zne, zsep)", "topo_dutch"],
+    ["elevation", "Elevation", "topo_dutch"],
     ["bed_change", "Bed level change", "RdBu"],
-    ["veg_density", "Vegetation density", "viridis"],
-    ["veg_height", "Vegetation height", "viridis"],
+    ["veg_density", "Vegetation density", "Greens"],
+    ["veg_height", "Vegetation height", "Greens"],
     ["mask", "Masks", "gray"],
-    ["wind_speed", "Wind speed", "turbo"],
+    ["wind_speed", "Wind speed", "viridis"],
     ["shear_stress", "Shear stress", "plasma"],
     ["shear_velocity", "Shear velocity", "plasma"],
-    ["sed_conc", "Sediment concentration", "turbo"],
-    ["sed_transport", "Sediment transport", "turbo"],
+    ["sed_conc", "Sediment concentration", "sand"],
+    ["sed_transport", "Sediment transport", "sand"],
   ];
   const CMAP_DEFAULTS = Object.fromEntries(CMAP_CATEGORIES.map(([k, , c]) => [k, c]));
 
@@ -534,6 +514,30 @@ const ViewerTab = (() => {
     return null;
   }
 
+  /* Per-layer category overrides: a layer's colour is decided by the variable
+   * CATEGORY it belongs to (Elevation, Wind speed, …), inferred from its name
+   * but overridable per layer via the layer dropdown. All colours/limits then
+   * live at the category level (the Colormaps group), so every source in a
+   * category shares one scale. */
+  function _catOverride() {
+    App.state.ui.layerCategory = App.state.ui.layerCategory || {};
+    return App.state.ui.layerCategory;
+  }
+  function _layerCatKey(layer) {
+    if (layer.id === OUTPUT_LAYER) return `output:${variable}`;
+    if (layer.id.startsWith("raw-")) return `raw:${layer.id}`;
+    return `target:${_quantityOf(layer)}`;
+  }
+  function _layerName(layer) {
+    return layer.id === OUTPUT_LAYER ? variable : _quantityOf(layer);
+  }
+  function _categoryOfKey(key, name) {
+    return _catOverride()[key] || _categoryOfName(name);
+  }
+  function _categoryOfLayer(layer) {
+    return _categoryOfKey(_layerCatKey(layer), _layerName(layer));
+  }
+
   function _varCmaps() {
     App.state.ui.varCmaps = App.state.ui.varCmaps || {};
     return App.state.ui.varCmaps;
@@ -547,36 +551,79 @@ const ViewerTab = (() => {
     return _cmapForCategory(_categoryOfName(name)) || fallback;
   }
 
-  /* Apply a category's colormap to every currently loaded layer of that
-   * category (interpolated sets, sample layers and the output layer). */
-  function _applyCategoryCmap(cat, cmap) {
-    _varCmaps()[cat] = cmap;
+  function _categoryClim(cat) {
+    return (App.state.ui.varClim && App.state.ui.varClim[cat]) || {};
+  }
+
+  /* Apply a style patch ({cmap?, min?, max?}) to every currently loaded
+   * layer of a category (interpolated sets, sample layers, output). */
+  function _applyCategoryStyle(cat, patch) {
+    if (patch.cmap != null) _varCmaps()[cat] = patch.cmap;
+    if (patch.min != null || patch.max != null) {
+      App.state.ui.varClim = App.state.ui.varClim || {};
+      App.state.ui.varClim[cat] = Object.assign({}, App.state.ui.varClim[cat],
+        patch.min != null ? { min: patch.min } : {},
+        patch.max != null ? { max: patch.max } : {});
+    }
     App.touchUi();
     const map = MapView.instance();
-    // interpolated sets + remembered target styles
+    const upd = {};
+    if (patch.cmap != null) upd.cmap = patch.cmap;
+    if (patch.min != null) upd.min = patch.min;
+    if (patch.max != null) upd.max = patch.max;
+
     for (const [target, style] of Object.entries(_targetStyles())) {
-      if (_categoryOfName(target) !== cat) continue;
-      style.cmap = cmap;
+      if (_categoryOfKey(`target:${target}`, target) !== cat) continue;
+      Object.assign(style, upd);
       const live = FieldLayer.get(`field-domain-${target}`);
-      if (live) live.setStyle({ cmap });
+      if (live) live.setStyle(upd);
     }
-    // output layer, if its variable belongs to this category
-    if (variable && _categoryOfName(variable) === cat) {
+    if (variable && _categoryOfKey(`output:${variable}`, variable) === cat) {
       const l = FieldLayer.get(OUTPUT_LAYER);
-      if (l) l.setStyle({ cmap });
+      if (l) l.setStyle(upd);
     }
-    // sample layers styled on their own
     for (const layer of App.state.layers) {
       if (!layer.id.startsWith("raw-")) continue;
-      if (_categoryOfName(_quantityOf(layer)) !== cat) continue;
+      if (_categoryOfKey(`raw:${layer.id}`, _quantityOf(layer)) !== cat) continue;
       const own = _ownPointStyle(layer);
-      own.cmap = cmap;
+      Object.assign(own, upd);
       if (pointLayers.has(layer.id) && map.getLayer(`pts-${layer.id}`)) {
         map.setPaintProperty(`pts-${layer.id}`, "circle-color",
-          _pointColorExpr(cmap, own.min, own.max));
+          _pointColorExpr(own.cmap, own.min, own.max));
       }
     }
     _syncSharedStyles();   // also refreshes colorbars
+  }
+
+  function _applyCategoryCmap(cat, cmap) { _applyCategoryStyle(cat, { cmap }); }
+
+  /* Popup to set z-limits + reverse for a whole variable category. */
+  function _categoryStyleDialog(cat, label, rebuild) {
+    const full = _cmapForCategory(cat);
+    const clim = _categoryClim(cat);
+    const popup = Popup.open({ title: `${label} — colormap settings`, width: 360 });
+    const minIn = U.el("input", { type: "text", value: clim.min != null ? clim.min : "",
+      placeholder: "auto", style: "width:90px" });
+    const maxIn = U.el("input", { type: "text", value: clim.max != null ? clim.max : "",
+      placeholder: "auto", style: "width:90px" });
+    const revCb = U.el("input", { type: "checkbox", id: "cmap-rev" });
+    revCb.checked = Colormaps.isReversed(full);
+    const applyBtn = U.el("button", { class: "primary" }, "Apply");
+    applyBtn.addEventListener("click", () => {
+      const patch = { cmap: Colormaps.withReverse(Colormaps.baseName(full), revCb.checked) };
+      const mn = Number(minIn.value), mx = Number(maxIn.value);
+      if (minIn.value.trim() !== "" && Number.isFinite(mn)) patch.min = mn;
+      if (maxIn.value.trim() !== "" && Number.isFinite(mx)) patch.max = mx;
+      _applyCategoryStyle(cat, patch);
+      popup.close();
+      if (rebuild) rebuild();
+    });
+    popup.body.append(
+      U.el("div", { class: "form-row" }, U.el("label", {}, "min / max"), minIn, maxIn),
+      U.el("div", { class: "choice-row" }, revCb, U.el("label", { for: "cmap-rev" }, "reverse colormap")),
+      U.el("div", { class: "muted", style: "font-size:11.5px" },
+        "Applies to every layer of this variable; leave min/max empty to keep the current range."),
+      U.el("div", { class: "btn-row", style: "justify-content:flex-end" }, applyBtn));
   }
 
   /* Build the category → colormap controls into a container (used both in
@@ -584,24 +631,28 @@ const ViewerTab = (() => {
   function _buildColormapControls(container) {
     U.clear(container);
     container.append(U.el("div", { class: "muted", style: "font-size:11.5px;margin:0 0 6px" },
-      "Set the colormap per variable; every layer of that variable uses it "
-      + "(override an individual layer with its own dropdown)."));
+      "Set the colormap per variable; the gear sets z-limits & reverse. Every "
+      + "layer of that variable uses it (override an individual layer with its own dropdown)."));
     for (const [key, label] of CMAP_CATEGORIES) {
-      const current = _cmapForCategory(key);
-      const sel = U.el("select", { style: "flex:0 0 42%" });
+      const full = _cmapForCategory(key);
+      const base = Colormaps.baseName(full);
+      const sel = U.el("select", { style: "flex:0 0 38%" });
       for (const name of Colormaps.names()) {
-        sel.append(U.el("option", { value: name, selected: name === current ? "" : null }, name));
+        sel.append(U.el("option", { value: name, selected: name === base ? "" : null }, name));
       }
       const preview = U.el("span", {
         class: "cmap-preview",
-        style: `background:${Colormaps.cssGradient(current)}`,
+        style: `background:${Colormaps.cssGradient(full)}`,
       });
       sel.addEventListener("change", () => {
-        _applyCategoryCmap(key, sel.value);
-        preview.style.background = Colormaps.cssGradient(sel.value);
+        const cmap = Colormaps.withReverse(sel.value, Colormaps.isReversed(_cmapForCategory(key)));
+        _applyCategoryStyle(key, { cmap });
+        preview.style.background = Colormaps.cssGradient(cmap);
       });
+      const gear = U.miniBtn("gear", "Z-limits & reverse…",
+        () => _categoryStyleDialog(key, label, () => _buildColormapControls(container)));
       container.append(U.el("div", { class: "cmap-row" },
-        U.el("span", { class: "cmap-cat" }, label), sel, preview));
+        U.el("span", { class: "cmap-cat" }, label), sel, preview, gear));
     }
   }
 
@@ -730,29 +781,21 @@ const ViewerTab = (() => {
     if (!entries.size) { box.style.display = "none"; return; }
     box.style.display = "";
 
+    // eye toggle to hide/show the legend (colormap settings live in the
+    // Viewer tab's Colormaps group, so there's no gear here)
     const hidden = App.state.ui.colorbars === false;
-    const toggle = U.el("button", {
-      id: "colorbars-toggle",
-      title: hidden ? "Show colorbars" : "Hide colorbars",
-    }, hidden ? "▤ legend" : "✕");
+    const toggle = U.el("span", {
+      id: "colorbars-toggle", class: `eye ${hidden ? "off" : ""}`,
+      title: hidden ? "Show legend" : "Hide legend",
+    }, "👁");
     toggle.addEventListener("click", () => {
       App.state.ui.colorbars = hidden;   // toggled
       App.touchUi();
       _syncColorbars();
     });
 
-    // settings gear: opens the per-variable colormap controls (works from
-    // any tab since the colorbars overlay the map everywhere)
-    const gear = U.el("button", {
-      id: "colorbars-settings", title: "Colormap settings",
-    }, U.icon("palette", 13));
-    gear.addEventListener("click", () => {
-      const popup = Popup.open({ title: "Colormaps", width: 440 });
-      _buildColormapControls(popup.body);
-    });
-
     if (hidden) {
-      box.append(gear, toggle);
+      box.append(toggle);
       return;
     }
     for (const { title, style } of entries.values()) {
@@ -765,7 +808,7 @@ const ViewerTab = (() => {
         }),
         U.el("span", { class: "colorbar-max" }, U.fmtNum(style.max, 3))));
     }
-    box.append(U.el("div", { class: "colorbars-tools" }, gear, toggle));
+    box.append(U.el("div", { class: "colorbars-tools" }, toggle));
   }
 
   /* Per-layer style editor popup. Sample (raw) layers additionally
@@ -825,34 +868,36 @@ const ViewerTab = (() => {
       setTimeout(syncEnabled);
     }
 
-    const style = current();
-    const cmapSel = U.el("select", {});
-    for (const name of Colormaps.names()) {
-      cmapSel.append(U.el("option", { value: name, selected: name === style.cmap ? "" : null }, name));
+    // colours & z-limits are a property of the variable category, edited once
+    // in the Colormaps group; here the layer only picks WHICH category it uses
+    const catSel = U.el("select", {});
+    const curCat = _categoryOfLayer(layerInfo);
+    for (const [ck, clabel] of CMAP_CATEGORIES) {
+      catSel.append(U.el("option", { value: ck, selected: ck === curCat ? "" : null }, clabel));
     }
     const preview = U.el("div", {
-      style: `height:10px;border-radius:5px;margin:4px 0;background:${Colormaps.cssGradient(style.cmap)}`,
+      style: `height:10px;border-radius:5px;margin:4px 0;background:${Colormaps.cssGradient(_cmapForCategory(curCat))}`,
     });
-    cmapSel.addEventListener("change", () => {
-      applyCustom({ cmap: cmapSel.value });
-      preview.style.background = Colormaps.cssGradient(cmapSel.value);
+    catSel.addEventListener("change", () => {
+      _setLayerCategory(layerInfo, catSel.value);
+      preview.style.background = Colormaps.cssGradient(_cmapForCategory(catSel.value));
     });
-
-    const minIn = U.el("input", { type: "text", value: U.fmtNum(style.min, 4), style: "width:80px" });
-    const maxIn = U.el("input", { type: "text", value: U.fmtNum(style.max, 4), style: "width:80px" });
-    const commitRange = () => {
-      const lo = Number(minIn.value), hi = Number(maxIn.value);
-      if (Number.isFinite(lo) && Number.isFinite(hi) && hi > lo) applyCustom({ min: lo, max: hi });
-    };
-    for (const input of [minIn, maxIn]) {
-      input.addEventListener("blur", commitRange);
-      input.addEventListener("keydown", (ev) => { if (ev.key === "Enter") input.blur(); });
-    }
+    const gear = U.el("button", { class: "ghost", style: "font-size:11.5px" },
+      "Edit this variable's colormap & limits…");
+    gear.addEventListener("click", () => {
+      const cat = catSel.value;
+      const label = (CMAP_CATEGORIES.find(([k]) => k === cat) || [, cat])[1];
+      _categoryStyleDialog(cat, label, () => {
+        preview.style.background = Colormaps.cssGradient(_cmapForCategory(cat));
+      });
+    });
 
     customBox.append(
-      U.el("div", { class: "form-row" }, U.el("label", {}, "Colormap"), cmapSel),
+      U.el("div", { class: "form-row" }, U.el("label", {}, "Variable"), catSel),
       preview,
-      U.el("div", { class: "form-row" }, U.el("label", {}, "Min / max"), minIn, maxIn),
+      gear,
+      U.el("div", { class: "muted", style: "font-size:11.5px;margin-top:4px" },
+        "Colormap & z-limits are shared by every source of this variable."),
     );
     if (fieldLayer && !isPoints) {
       const opacity = U.el("input", { type: "range", min: 0, max: 1, step: 0.05, value: fieldLayer.style.opacity });
@@ -1063,21 +1108,24 @@ const ViewerTab = (() => {
     _renderExtraDims();
 
     const layer = FieldLayer.get(OUTPUT_LAYER);
+    // pick the VARIABLE category (Elevation, Wind speed, …) — the colormap
+    // itself and its z-limits are set once per category in the Colormaps group
+    const outCat = _categoryOfKey(`output:${variable}`, variable);
     const cmapSel = U.el("select", {});
-    for (const name of Colormaps.names()) {
-      cmapSel.append(U.el("option", { value: name }, name));
+    for (const [ck, clabel] of CMAP_CATEGORIES) {
+      cmapSel.append(U.el("option", { value: ck, selected: ck === outCat ? "" : null }, clabel));
     }
-    if (layer) cmapSel.value = layer.style.cmap;
     const cmapPreview = U.el("div", {
-      style: `height:10px;border-radius:5px;margin:4px 0;background:${Colormaps.cssGradient(cmapSel.value)}`,
+      style: `height:10px;border-radius:5px;margin:4px 0;background:${Colormaps.cssGradient(_cmapForCategory(outCat))}`,
     });
     cmapSel.addEventListener("change", () => {
-      const l = FieldLayer.get(OUTPUT_LAYER);
-      if (l) l.setStyle({ cmap: cmapSel.value });
-      cmapPreview.style.background = Colormaps.cssGradient(cmapSel.value);
+      _setLayerCategory({ id: OUTPUT_LAYER }, cmapSel.value);
+      cmapPreview.style.background = Colormaps.cssGradient(_cmapForCategory(cmapSel.value));
     });
-    panel.append(U.el("div", { class: "form-row" }, U.el("label", {}, "Colormap"), cmapSel));
-    panel.append(cmapPreview);
+    panel.append(U.el("div", { class: "form-row" }, U.el("label", {}, "Colormap"), cmapSel),
+      cmapPreview,
+      U.el("div", { class: "muted", style: "font-size:11.5px;margin:-2px 0 4px" },
+        "Edit the colormap & default limits in the Colormaps group above."));
 
     const autoCb = U.el("input", { type: "checkbox" });
     autoCb.checked = autoRange;

@@ -96,6 +96,7 @@ const U = (() => {
     draw: "M3 17.2 13.9 6.3l3.8 3.8L6.8 21H3v-3.8zM19.7 8 16 4.2l1.6-1.6a1 1 0 0 1 1.4 0l2.4 2.4a1 1 0 0 1 0 1.4L19.7 8z",
     edit: "M12 2l3.2 3.2h-2.2v4.6h4.6V7.6L20.8 12l-3.2 3.2v-2.2h-4.6v4.6h2.2L12 20.8l-3.2-3.2h2.2v-4.6H6.4v2.2L3.2 12l3.2-3.2v2.2H11V5.2H8.8L12 2z",
     save: "M5 3h11l5 5v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm2 2v5h9V5H7zm10 15v-7H7v7h10z",
+    saveas: "M5 3h11l5 5v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm2 2v5h9V5H7zm3 9h4v2h2v2h-2v2h-4v-2H8v-2h2v-2z",
     download: "M12 3v10.2l3.6-3.6 1.4 1.4-6 6-6-6 1.4-1.4L10 13.2V3h2zM4 19h16v2H4v-2z",
     upload: "M12 21V10.8l-3.6 3.6L7 13l6-6 6 6-1.4 1.4-3.6-3.6V21h-2zM4 3h16v2H4V3z",
     check: "M9.2 16.6 4.8 12.2l-1.6 1.6 6 6L21 8l-1.6-1.6-10.2 10.2z",
@@ -151,6 +152,66 @@ const U = (() => {
     const btn = el("button", { class: "mini-btn", title }, icon(iconName, 13));
     if (onclick) btn.addEventListener("click", onclick);
     return btn;
+  }
+
+  /* Shared drag-to-reorder for a list of items, with a horizontal
+   * insertion line between items (the .drop-above/.drop-below CSS).
+   * onDrop(fromIndex, toIndex) receives positions among matched items in
+   * DOM order, with toIndex already adjusted for the removed item.
+   * opts.itemSel selects the draggable items (default ".obj-card").
+   * The item's drag handle must carry draggable="true" (the item itself
+   * need not be draggable), which keeps dblclick/selection on the body. */
+  function wireSortable(list, onDrop, opts = {}) {
+    const itemSel = opts.itemSel || ".obj-card";
+    let fromEl = null, cached = [], lastEl = null, lastBelow = null;
+    const clearMarks = () => {
+      for (const c of cached) c.classList.remove("drop-above", "drop-below");
+    };
+    list.addEventListener("dragstart", (ev) => {
+      const item = ev.target.closest(itemSel);
+      if (!item || !list.contains(item)) return;
+      // only start when the drag originates from the handle (if required),
+      // so nested draggable lists don't hijack each other's drags
+      if (opts.handleSel && !(ev.target.closest && ev.target.closest(opts.handleSel))) return;
+      fromEl = item;
+      cached = [...list.querySelectorAll(itemSel)];
+      lastEl = null; lastBelow = null;
+      item.classList.add("dragging");
+      ev.dataTransfer.effectAllowed = "move";
+      try { ev.dataTransfer.setData("text/plain", ""); } catch { /* Firefox */ }
+    });
+    list.addEventListener("dragend", () => {
+      clearMarks();
+      for (const c of cached) c.classList.remove("dragging");
+      fromEl = null; cached = []; lastEl = null; lastBelow = null;
+    });
+    list.addEventListener("dragover", (ev) => {
+      if (!fromEl) return;
+      ev.preventDefault();
+      const item = ev.target.closest(itemSel);
+      if (!item || item === fromEl) return;
+      const rect = item.getBoundingClientRect();
+      const below = ev.clientY > rect.top + rect.height / 2;
+      // only touch the DOM when the insertion point actually moves
+      if (item === lastEl && below === lastBelow) return;
+      clearMarks();
+      item.classList.add(below ? "drop-below" : "drop-above");
+      lastEl = item; lastBelow = below;
+    });
+    list.addEventListener("drop", (ev) => {
+      if (!fromEl) return;
+      ev.preventDefault();
+      const item = ev.target.closest(itemSel);
+      const dragged = fromEl; fromEl = null;
+      clearMarks();
+      if (!item || item === dragged) return;
+      const from = cached.indexOf(dragged);
+      const rect = item.getBoundingClientRect();
+      const below = ev.clientY > rect.top + rect.height / 2;
+      let to = cached.indexOf(item) + (below ? 1 : 0);
+      if (to > from) to -= 1;
+      if (to !== from && from >= 0 && to >= 0) onDrop(from, to);
+    });
   }
 
   /* Collapsible section (same look as the Settings sections).
@@ -263,5 +324,5 @@ const U = (() => {
 
   return { el, clear, toast, showTip, hideTip, fmtNum, fmtBytes, fmtDuration, fmtDate,
     debounce, clamp, numField, icon, tbtn, miniBtn, section, progressBar,
-    initTruncationTips, deselectOnOutside };
+    wireSortable, initTruncationTips, deselectOnOutside };
 })();

@@ -12,14 +12,16 @@ stay cached in gui/rawdata.
 """
 
 import hashlib
+import os
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import numpy as np
 
 from aeolis.webui.backend import jobs, project
 from aeolis.webui.backend.config_api import load_config
 from aeolis.webui.backend.datasources import era5, synthetic, waterinfo
-from aeolis.webui.backend.grid_api import _load_current_grid, patch_config
+from aeolis.webui.backend.grid_api import _load_current_grid, patch_config, resolve_target
 from aeolis.webui.backend.httpd import route
 from aeolis.webui.backend.util import load_json, save_json, send_error_json, send_json
 
@@ -29,7 +31,21 @@ KINDS = {
     "wave": {"key": "wave_file", "default": "waves.txt", "cols": ["Hs [m]", "Tp [s]"]},
 }
 
+KIND_TITLES = {"wind": "Wind", "tide": "Water levels", "wave": "Waves"}
+
 MAX_PREVIEW = 3000
+
+# The six physical variables the Generate wizard works with. Each is a
+# single column of its kind's file, generated on its own so a raw series can
+# hold just that one quantity (they recombine later in Fill).
+VARIABLE_META = {
+    "wind_speed":  {"kind": "wind", "label": "speed [m/s]",     "clip0": True,  "wrap360": False},
+    "wind_dir":    {"kind": "wind", "label": "direction [deg]", "clip0": False, "wrap360": True},
+    "water_level": {"kind": "tide", "label": "water level [m]", "clip0": False, "wrap360": False},
+    "wave_height": {"kind": "wave", "label": "Hs [m]",          "clip0": True,  "wrap360": False},
+    "wave_period": {"kind": "wave", "label": "Tp [s]",          "clip0": True,  "wrap360": False},
+    "wave_dir":    {"kind": "wave", "label": "direction [deg]", "clip0": False, "wrap360": True},
+}
 
 
 def parse_refdate(values):
@@ -42,21 +58,48 @@ def parse_refdate(values):
     raise ValueError(f"cannot parse refdate '{raw}'")
 
 
-def _series_payload(data, refdate):
-    """Decimated series + epoch times for the graphs."""
+def _series_payload(data, refdate, tmin=None, tmax=None):
+    """Decimated series + epoch times for the graphs. When a [tmin, tmax]
+    epoch window is given, the series is restricted to it BEFORE decimating,
+    so zooming in re-fetches denser detail (n/t0/t1 stay the full extent so
+    the availability band still spans the whole record)."""
     data = np.atleast_2d(np.asarray(data, dtype=float))
+    epoch0 = refdate.timestamp()
+    t_all = epoch0 + data[:, 0]
+    full_n = int(data.shape[0])
+    full_t0 = float(t_all[0]) if full_n else float(epoch0)
+    full_t1 = float(t_all[-1]) if full_n else float(epoch0)
+    if tmin is not None or tmax is not None:
+        lo = -np.inf if tmin is None else float(tmin)
+        hi = np.inf if tmax is None else float(tmax)
+        # keep one sample of padding each side so lines reach the edges
+        idx = np.where((t_all >= lo) & (t_all <= hi))[0]
+        if idx.size:
+            a = max(0, idx[0] - 1)
+            b = min(full_n, idx[-1] + 2)
+            data = data[a:b]
     stride = max(1, data.shape[0] // MAX_PREVIEW)
     d = data[::stride]
-    epoch0 = refdate.timestamp()
     return {
         "t_epoch": (epoch0 + d[:, 0]).tolist(),
         # NaN (e.g. in a hand-edited wind.txt) is invalid JSON -> null
         "columns": [[float(v) if np.isfinite(v) else None for v in d[:, i]]
                     for i in range(1, d.shape[1])],
-        "n": int(data.shape[0]),
-        "t0_epoch": float(epoch0 + data[0, 0]),
-        "t1_epoch": float(epoch0 + data[-1, 0]),
+        "n": full_n,
+        "t0_epoch": full_t0,
+        "t1_epoch": full_t1,
     }
+
+
+def _query_window(query):
+    """Parse optional tmin/tmax epoch-second query params."""
+    def _num(key):
+        v = query.get(key)
+        try:
+            return float(v) if v not in (None, "") else None
+        except (TypeError, ValueError):
+            return None
+    return _num("tmin"), _num("tmax")
 
 
 @route("GET", "/api/conditions")
@@ -119,6 +162,26 @@ def _generate_synthetic(kind, body, values):
     return synthetic.waves(tstart, tstop, dt, body.get("hs", {}), body.get("tp", {}))
 
 
+def _generate_variable(variable, spec, values, body):
+    """Generate a single-column [t, value] series for one physical variable
+    from its segment spec. Mirrors the repeat-when-fully-timed behaviour of
+    the kind-based generator."""
+    meta = VARIABLE_META[variable]
+    tstart = float(body.get("tstart", values.get("tstart") or 0.0))
+    tstop = float(body.get("tstop", values.get("tstop") or 3600.0))
+    dt = float(body.get("dt", 3600.0))
+    total = synthetic.segments_duration(spec)
+    if total is not None and total > 0:
+        tstop = min(tstop, tstart + total)
+    t = synthetic.time_axis(tstart, tstop, dt)
+    col = synthetic.profile(t, spec)
+    if meta["clip0"]:
+        col = np.clip(col, 0.0, None)
+    if meta["wrap360"]:
+        col = np.mod(col, 360.0)
+    return np.column_stack([t, col]), meta["label"]
+
+
 def _tile_series(data, t_end):
     """Repeat a [t, cols...] series cyclically until *t_end*, the way
     AeoLiS wraps boundary conditions (interp_circular*). Returns the
@@ -140,20 +203,30 @@ def _tile_series(data, t_end):
 
 @route("POST", "/api/conditions/preview")
 def _preview(handler, body, tail):
-    """Synthetic series preview - computed only, nothing written."""
+    """Synthetic series preview - computed only, nothing written. Accepts a
+    single `variable` (one column) or the legacy `kind` (all columns)."""
     current = project.require()
-    kind = body.get("kind")
-    if kind not in KINDS:
-        send_error_json(handler, f"unknown kind '{kind}'")
-        return
+    variable = body.get("variable")
     values = load_config(current.configfile)
     refdate = parse_refdate(values)
     try:
-        data = _generate_synthetic(kind, body, values)
+        if variable is not None:
+            if variable not in VARIABLE_META:
+                send_error_json(handler, f"unknown variable '{variable}'")
+                return
+            data, label = _generate_variable(variable, body.get("segments", {}), values, body)
+            labels = [label]
+        else:
+            kind = body.get("kind")
+            if kind not in KINDS:
+                send_error_json(handler, f"unknown kind '{kind}'")
+                return
+            data = _generate_synthetic(kind, body, values)
+            labels = KINDS[kind]["cols"]
     except ValueError as exc:
         send_error_json(handler, exc)
         return
-    out = {"series": _series_payload(data, refdate), "labels": KINDS[kind]["cols"]}
+    out = {"series": _series_payload(data, refdate), "labels": labels}
     # preview the cyclic repetition AeoLiS applies when the series is
     # shorter than the simulation
     tstop = float(values.get("tstop") or 0.0)
@@ -421,6 +494,28 @@ def _raw_list(handler, query, tail):
     send_json(handler, {"entries": entries})
 
 
+@route("GET", "/api/conditions/series")
+def _input_series(handler, query, tail):
+    """A single input file's series, optionally windowed (for zoom-aware
+    higher-resolution graph data). Returns the same shape as overview series."""
+    current = project.require()
+    kind = query.get("kind")
+    if kind not in KINDS:
+        send_error_json(handler, f"unknown kind '{kind}'")
+        return
+    values = load_config(current.configfile)
+    refdate = parse_refdate(values)
+    filename = values.get(KINDS[kind]["key"])
+    path = current.root / str(filename) if filename else None
+    if not path or not path.is_file():
+        send_error_json(handler, f"{kind} file not written yet", 404)
+        return
+    tmin, tmax = _query_window(query)
+    data = np.atleast_2d(np.loadtxt(path))
+    send_json(handler, {"series": _series_payload(data, refdate, tmin, tmax),
+                        "labels": KINDS[kind]["cols"]})
+
+
 @route("GET", "/api/conditions/raw_series")
 def _raw_series(handler, query, tail):
     entry = _get_raw_entry(query.get("id", ""))
@@ -428,15 +523,29 @@ def _raw_series(handler, query, tail):
         send_error_json(handler, "unknown raw series", 404)
         return
     t, cols = _load_raw_series(entry)
-    stride = max(1, t.size // MAX_PREVIEW)
+    full_n = int(t.size)
+    full_t0 = float(t[0]) if t.size else None
+    full_t1 = float(t[-1]) if t.size else None
+    # optional zoom window: decimate within it for denser detail on zoom-in
+    tmin, tmax = _query_window(query)
+    tw, cw = t, cols
+    if (tmin is not None or tmax is not None) and t.size:
+        lo = -np.inf if tmin is None else tmin
+        hi = np.inf if tmax is None else tmax
+        idx = np.where((t >= lo) & (t <= hi))[0]
+        if idx.size:
+            a = max(0, idx[0] - 1)
+            b = min(t.size, idx[-1] + 2)
+            tw, cw = t[a:b], cols[a:b]
+    stride = max(1, tw.size // MAX_PREVIEW)
     payload = {
-        "t_epoch": t[::stride].tolist(),
-        "columns": [[float(v) if np.isfinite(v) else None for v in cols[::stride, i]]
-                    for i in range(cols.shape[1])],
+        "t_epoch": tw[::stride].tolist(),
+        "columns": [[float(v) if np.isfinite(v) else None for v in cw[::stride, i]]
+                    for i in range(cw.shape[1])],
         "labels": entry.get("labels") or KINDS[entry["kind"]]["cols"][:cols.shape[1]],
-        "n": int(t.size),
-        "t0_epoch": float(t[0]) if t.size else None,
-        "t1_epoch": float(t[-1]) if t.size else None,
+        "n": full_n,
+        "t0_epoch": full_t0,
+        "t1_epoch": full_t1,
         "nan": int(np.sum(~np.isfinite(cols))),
     }
     send_json(handler, {"entry": entry, "series": payload})
@@ -606,13 +715,265 @@ def _raw_apply(handler, body, tail):
     })
 
 
+@route("POST", "/api/conditions/synthetic_raw")
+def _synthetic_raw(handler, body, tail):
+    """Generate a synthetic series and store it as a RAW series (so it joins
+    downloads in the raw-data section). Accepts a single `variable` (one
+    column) or the legacy `kind` (all columns)."""
+    current = project.require()
+    variable = body.get("variable")
+    values = load_config(current.configfile)
+    refdate = parse_refdate(values)
+    try:
+        if variable is not None:
+            if variable not in VARIABLE_META:
+                send_error_json(handler, f"unknown variable '{variable}'")
+                return
+            data, col_label = _generate_variable(variable, body.get("segments", {}), values, body)
+            kind = VARIABLE_META[variable]["kind"]
+            labels = [col_label]
+        else:
+            kind = body.get("kind")
+            if kind not in KINDS:
+                send_error_json(handler, f"unknown kind '{kind}'")
+                return
+            data = _generate_synthetic(kind, body, values)
+            labels = None
+    except ValueError as exc:
+        send_error_json(handler, exc)
+        return
+    t = refdate.timestamp() + data[:, 0]
+    cols = [data[:, i] for i in range(1, data.shape[1])]
+    default_label = f"synthetic {variable}" if variable else f"synthetic {kind}"
+    label = (body.get("label") or "").strip() or default_label
+    entry = _save_raw_entry(kind, "synthetic", label,
+                            np.asarray(t, dtype="float64"), cols)
+    # a single-variable series carries its own column label (not the kind's
+    # default first column, which _save_raw_entry would otherwise assign)
+    if labels is not None:
+        manifest = _load_cond_manifest()
+        for item in manifest["entries"]:
+            if item.get("id") == entry["id"]:
+                item["labels"] = labels
+        _save_cond_manifest(manifest)
+        entry["labels"] = labels
+    send_json(handler, {"ok": True, "entry": entry})
+
+
+def _nearest_fill(master, mask_good, values):
+    """Nearest-neighbour hold for the NaN samples of *values* on time base
+    *master*, using only the samples flagged good in *mask_good*."""
+    out = values.copy()
+    good_idx = np.where(mask_good)[0]
+    bad_idx = np.where(~mask_good)[0]
+    if good_idx.size == 0 or bad_idx.size == 0:
+        return out
+    mt = master[good_idx]
+    pos = np.searchsorted(mt, master[bad_idx])
+    pos = np.clip(pos, 1, mt.size - 1)
+    left = pos - 1
+    choose_left = (master[bad_idx] - mt[left]) <= (mt[pos] - master[bad_idx])
+    src = np.where(choose_left, good_idx[left], good_idx[pos])
+    if mt.size == 1:
+        src = np.full(bad_idx.shape, good_idx[0])
+    out[bad_idx] = values[src]
+    return out
+
+
+def _column_from_sources(master, series_list, fill, cache_loader):
+    """Build one output column on time base *master* by layering *series_list*
+    (priority order, top first — lower ones only fill samples still NaN), then
+    apply the remaining-NaN *fill* policy (value / nearest / linear / series)."""
+    out = np.full(master.shape, np.nan, dtype=float)
+    for t, v in series_list:
+        good = np.isfinite(v)
+        if not good.any():
+            continue
+        tg, vg = t[good], v[good]
+        # only fill master samples the source actually covers (no extrapolation)
+        inrange = (master >= tg[0]) & (master <= tg[-1])
+        need = (~np.isfinite(out)) & inrange
+        if need.any():
+            out[need] = np.interp(master[need], tg, vg)
+
+    bad = ~np.isfinite(out)
+    if bad.any():
+        method = (fill or {}).get("method")
+        if method == "value":
+            out[bad] = float((fill or {}).get("value", 0.0))
+        elif method == "nearest":
+            out = _nearest_fill(master, ~bad, out)
+        elif method == "linear":
+            good = ~bad
+            if good.any():
+                out[bad] = np.interp(master[bad], master[good], out[good])
+        elif method == "series":
+            other = (fill or {}).get("other") or {}
+            ot, ocols = cache_loader(other.get("id", ""))
+            oc = int(other.get("column") or 0)
+            if oc >= ocols.shape[1]:
+                oc = 0
+            ov = ocols[:, oc]
+            ogood = np.isfinite(ov)
+            if ogood.any():
+                inr = bad & (master >= ot[ogood][0]) & (master <= ot[ogood][-1])
+                if inr.any():
+                    out[inr] = np.interp(master[inr], ot[ogood], ov[ogood])
+    return out
+
+
+@route("POST", "/api/conditions/fill")
+def _fill(handler, body, tail):
+    """Assemble a wind/tide/wave input file. Each output column is built from a
+    PRIORITY-ORDERED list of raw-series columns (top wins; lower ones only fill
+    samples still NaN), then a chosen remaining-NaN method fills the rest. The
+    legacy one-source-per-column `sources` body is still accepted."""
+    current = project.require()
+    kind = body.get("kind")
+    if kind not in KINDS:
+        send_error_json(handler, f"unknown kind '{kind}'")
+        return
+    ncol = len(KINDS[kind]["cols"])
+
+    columns_spec = body.get("columns")
+    if columns_spec is None:
+        # legacy: one source per column, no NaN-fill policy
+        sources = body.get("sources") or []
+        columns_spec = [{"sources": [s], "fill": {}} for s in sources]
+    if len(columns_spec) != ncol:
+        send_error_json(handler, f"{kind} needs {ncol} column(s), got {len(columns_spec)}")
+        return
+
+    values = load_config(current.configfile)
+    refdate = parse_refdate(values)
+
+    _cache = {}
+
+    def _load_cached(entry_id):
+        if entry_id not in _cache:
+            entry = _get_raw_entry(entry_id)
+            if entry is None:
+                raise ValueError("unknown raw series in selection")
+            _cache[entry_id] = _load_raw_series(entry)
+        return _cache[entry_id]
+
+    def _column_series(spec):
+        out = []
+        for s in (spec.get("sources") or []):
+            t, cols = _load_cached(s.get("id", ""))
+            ci = int(s.get("column") or 0)
+            if ci >= cols.shape[1]:
+                ci = 0
+            if t.size:
+                out.append((t, cols[:, ci]))
+        return out
+
+    try:
+        # master time base = the top-priority source of the first column
+        first_series = _column_series(columns_spec[0])
+        if not first_series:
+            send_error_json(handler, "select at least one source for each column")
+            return
+        master = first_series[0][0]
+        if master.size < 2:
+            send_error_json(handler, "the primary series is too short")
+            return
+
+        out_cols = []
+        for spec in columns_spec:
+            series_list = _column_series(spec)
+            if not series_list:
+                send_error_json(handler, "select at least one source for each column")
+                return
+            out_cols.append(_column_from_sources(master, series_list, spec.get("fill"), _load_cached))
+    except ValueError as exc:
+        send_error_json(handler, exc, 404)
+        return
+
+    resample = body.get("resample")
+    if resample:
+        master, out_cols = _resample(master, out_cols, kind, resample)
+
+    n_bad = int(np.sum(~np.isfinite(np.column_stack(out_cols))))
+    if n_bad:
+        send_error_json(handler, f"result still has {n_bad} NaN value(s) - add a lower-priority "
+                        "source or choose a fill method for the gaps")
+        return
+
+    seconds = master - refdate.timestamp()
+    data = np.column_stack([seconds] + list(out_cols))
+    info = KINDS[kind]
+    filename = body.get("filename") or values.get(info["key"]) or info["default"]
+    synthetic.write_series(current.root / filename, data)
+    patch_config({info["key"]: filename})
+    send_json(handler, {
+        "ok": True, "file": filename, "rows": int(data.shape[0]),
+        "series": _series_payload(data, refdate),
+    })
+
+
+@route("POST", "/api/conditions/save_file_as")
+def _save_file_as(handler, body, tail):
+    """Save the current input file under a new name and repoint the config."""
+    current = project.require()
+    kind = body.get("kind")
+    # accept a full path from the file browser, or a legacy bare filename
+    raw = (body.get("path") or body.get("filename") or "").strip()
+    if kind not in KINDS:
+        send_error_json(handler, f"unknown kind '{kind}'")
+        return
+    if not raw:
+        send_error_json(handler, "missing path")
+        return
+    info = KINDS[kind]
+    values = load_config(current.configfile)
+    src_name = values.get(info["key"]) or info["default"]
+    src = current.root / str(src_name)
+    if not src.is_file():
+        send_error_json(handler, f"{src_name} does not exist yet - fill or generate it first")
+        return
+    write_path, config_ref = resolve_target(current, raw, str(info["default"]))
+    write_path.parent.mkdir(parents=True, exist_ok=True)
+    data = np.atleast_2d(np.loadtxt(src))
+    synthetic.write_series(write_path, data)
+    patch_config({info["key"]: config_ref})
+    send_json(handler, {"ok": True, "file": config_ref})
+
+
+@route("POST", "/api/conditions/load_file")
+def _load_file(handler, body, tail):
+    """Import an existing condition file from disk (copy + repoint config)."""
+    current = project.require()
+    kind = body.get("kind")
+    path = body.get("path")
+    if kind not in KINDS:
+        send_error_json(handler, f"unknown kind '{kind}'")
+        return
+    if not path:
+        send_error_json(handler, "missing path")
+        return
+    try:
+        data = np.atleast_2d(np.loadtxt(Path(path)))
+    except Exception as exc:  # noqa: BLE001 - report any read failure to the UI
+        send_error_json(handler, f"could not read {path}: {exc}")
+        return
+    filename = os.path.basename(path)
+    synthetic.write_series(current.root / filename, data)
+    info = KINDS[kind]
+    patch_config({info["key"]: filename})
+    send_json(handler, {"ok": True, "file": filename, "rows": int(data.shape[0])})
+
+
 @route("POST", "/api/conditions/fetch")
 def _fetch(handler, body, tail):
     current = project.require()
     source = body.get("source")
-    kind = body.get("kind")
-    if kind not in KINDS:
-        send_error_json(handler, f"unknown kind '{kind}'")
+    # accept several quantities (kinds) to download from one station in one
+    # action; fall back to the legacy single `kind`
+    kinds = body.get("kinds") or ([body.get("kind")] if body.get("kind") else [])
+    kinds = [k for k in kinds if k in KINDS]
+    if not kinds:
+        send_error_json(handler, "select at least one quantity to download")
         return
     values = load_config(current.configfile)
     refdate = parse_refdate(values)
@@ -625,7 +986,7 @@ def _fetch(handler, body, tail):
     if body.get("date1"):
         date1 = datetime.fromisoformat(body["date1"]).replace(tzinfo=timezone.utc)
 
-    def _run(job):
+    def _fetch_one(kind, job):
         if source == "era5":
             if kind != "wind":
                 raise RuntimeError("ERA5 source currently provides wind only")
@@ -657,13 +1018,22 @@ def _fetch(handler, body, tail):
             job.update(message="resampling to interval means")
             epoch, cols = _resample(np.asarray(epoch, dtype="float64"), cols, kind, resample)
 
-        # store as a raw series object; the user inspects/cleans it and
-        # then applies it to wind.txt/tide.txt/waves.txt explicitly
-        label = body.get("label") or \
-            f"{station_name} {date0:%Y-%m-%d} — {date1:%Y-%m-%d}"
-        job.update(message="storing raw series")
-        entry = _save_raw_entry(kind, source, label,
-                                np.asarray(epoch, dtype="float64"), cols)
-        return {"entry": entry}
+        label = body.get("label") if len(kinds) == 1 and body.get("label") else \
+            f"{station_name} {KIND_TITLES.get(kind, kind)} {date0:%Y-%m-%d} — {date1:%Y-%m-%d}"
+        return _save_raw_entry(kind, source, label,
+                               np.asarray(epoch, dtype="float64"), cols)
 
-    send_json(handler, {"job": jobs.start(f"fetch {source} {kind}", _run)})
+    def _run(job):
+        entries, errors = [], []
+        for i, kind in enumerate(kinds):
+            job.update(message=f"downloading {KIND_TITLES.get(kind, kind)} "
+                               f"({i + 1}/{len(kinds)})")
+            try:
+                entries.append(_fetch_one(kind, job))
+            except Exception as exc:  # noqa: BLE001 - one quantity may be absent
+                errors.append(f"{KIND_TITLES.get(kind, kind)}: {exc}")
+        if not entries:
+            raise RuntimeError("; ".join(errors) or "nothing downloaded")
+        return {"entries": entries, "errors": errors}
+
+    send_json(handler, {"job": jobs.start(f"fetch {source} {'+'.join(kinds)}", _run)})

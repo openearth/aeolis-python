@@ -186,6 +186,13 @@ const SchemaForm = (() => {
       return input;
     }
 
+    if (param.type === "datetime") {
+      const input = U.el("input", { type: "datetime-local", id });
+      input.value = _toDatetimeLocal(value);
+      input.addEventListener("change", () => _commit(param, _fromDatetimeLocal(input.value)));
+      return input;
+    }
+
     if (param.options) {
       const select = U.el("select", { id });
       const opts = [...param.options];
@@ -257,6 +264,17 @@ const SchemaForm = (() => {
     if (value === null || value === undefined) return "";
     if (Array.isArray(value)) return value.join(" ");
     return String(value);
+  }
+
+  /* AeoLiS stores dates as "YYYY-MM-DD HH:MM"; <input datetime-local> wants a "T". */
+  function _toDatetimeLocal(value) {
+    if (!value) return "";
+    const s = String(value).trim().replace(" ", "T");
+    return s.slice(0, 16); // drop any seconds
+  }
+  function _fromDatetimeLocal(value) {
+    if (!value) return null;
+    return value.replace("T", " ").slice(0, 16);
   }
 
   function _parseValue(param, text) {

@@ -193,6 +193,67 @@ class TestSynthetic:
         assert loaded.shape == data.shape
 
 
+class TestResolveTarget:
+    """resolve_target must never leak a '..' segment into the config ref
+    (the file browser can hand back .../input/../input/wind.txt)."""
+
+    def _current(self, root):
+        import types
+        return types.SimpleNamespace(root=root)
+
+    def test_collapses_dotdot_to_clean_relative(self, tmp_path):
+        from aeolis.webui.backend.grid_api import resolve_target
+        root = tmp_path / "input"
+        root.mkdir()
+        weird = str(root / ".." / "input" / "wind.txt")
+        write_path, ref = resolve_target(self._current(root), weird, "wind.txt")
+        assert ".." not in ref
+        assert ref == "wind.txt"
+        assert Path(write_path).name == "wind.txt"
+
+    def test_outside_root_stays_absolute(self, tmp_path):
+        from aeolis.webui.backend.grid_api import resolve_target
+        root = tmp_path / "proj"
+        root.mkdir()
+        other = tmp_path / "elsewhere" / "wind.txt"
+        write_path, ref = resolve_target(self._current(root), str(other), "wind.txt")
+        assert Path(ref).is_absolute()
+
+    def test_bare_name_joins_root(self, tmp_path):
+        from aeolis.webui.backend.grid_api import resolve_target
+        root = tmp_path / "proj"
+        root.mkdir()
+        write_path, ref = resolve_target(self._current(root), "wind.txt", "wind.txt")
+        assert ref == "wind.txt"
+
+
+class TestFillColumns:
+    """The priority-layered column builder and its remaining-NaN policies."""
+
+    def test_priority_and_fill_methods(self):
+        from aeolis.webui.backend.conditions_api import _column_from_sources
+        master = np.array([0.0, 1.0, 2.0, 3.0, 4.0])
+        # top source covers only 0..2 -> 3,4 stay NaN until the fill method
+        top = [(np.array([0.0, 1.0, 2.0]), np.array([10.0, 11.0, 12.0]))]
+
+        val = _column_from_sources(master, top, {"method": "value", "value": -1}, None)
+        assert val[0] == 10 and val[2] == 12 and val[3] == -1 and val[4] == -1
+
+        near = _column_from_sources(master, top, {"method": "nearest"}, None)
+        assert near[3] == 12 and near[4] == 12
+
+        lin = _column_from_sources(master, top, {"method": "linear"}, None)
+        assert lin[3] == pytest.approx(12) and lin[4] == pytest.approx(12)
+
+    def test_lower_priority_fills_gaps(self):
+        from aeolis.webui.backend.conditions_api import _column_from_sources
+        master = np.array([0.0, 1.0, 2.0, 3.0])
+        top = (np.array([0.0, 1.0]), np.array([5.0, 6.0]))          # covers 0..1
+        low = (np.array([2.0, 3.0]), np.array([70.0, 80.0]))        # covers 2..3
+        out = _column_from_sources(master, [top, low], {"method": "value", "value": 0}, None)
+        assert list(out) == [5.0, 6.0, 70.0, 80.0]
+
+
 # ---------------------------------------------------------------------
 # run progress parsing
 # ---------------------------------------------------------------------
@@ -251,6 +312,18 @@ def server_project(tmp_path, monkeypatch):
     post("/api/project/open", {"path": str(configfile)})
     yield tmp_path, get, post
     server.shutdown()
+
+
+def _wait_job(get, job_id, timeout=15.0):
+    """Poll a background job until it finishes (or the timeout elapses)."""
+    import time
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        job = get(f"/api/job/{job_id}")
+        if job["status"] in ("done", "error"):
+            return job
+        time.sleep(0.05)
+    raise AssertionError(f"job {job_id} did not finish in {timeout}s")
 
 
 class TestApi:
@@ -334,6 +407,160 @@ class TestApi:
         assert not res["ready"]
         errors = [c["text"] for c in res["checks"] if c["level"] == "error"]
         assert any("does not match" in t for t in errors)
+
+    def test_synthetic_raw_single_variable(self, server_project):
+        tmp_path, get, post = server_project
+        res = post("/api/conditions/synthetic_raw", {
+            "variable": "wind_dir", "dt": 3600, "tstart": 0, "tstop": 86400,
+            "segments": {"type": "segments",
+                         "segments": [{"type": "constant", "value": 123}]},
+        })
+        assert res["ok"]
+        entry = res["entry"]
+        # a single-variable series carries its own column label, not the kind default
+        assert entry["labels"] == ["direction [deg]"]
+        raw = get(f"/api/conditions/raw_series?id={entry['id']}")
+        cols = raw["series"]["columns"]
+        assert len(cols) == 1
+        assert all(abs(v - 123) < 1e-6 for v in cols[0])
+
+    def test_fill_columns_body(self, server_project):
+        tmp_path, get, post = server_project
+        r = post("/api/conditions/synthetic_raw", {
+            "kind": "wind", "dt": 3600, "tstart": 0, "tstop": 86400,
+            "speed": {"type": "constant", "value": 8},
+            "direction": {"type": "constant", "value": 210},
+        })
+        rid = r["entry"]["id"]
+        res = post("/api/conditions/fill", {
+            "kind": "wind",
+            "columns": [
+                {"sources": [{"id": rid, "column": 0}], "fill": {"method": "linear"}},
+                {"sources": [{"id": rid, "column": 1}], "fill": {"method": "nearest"}},
+            ],
+        })
+        assert res["ok"]
+        data = np.loadtxt(tmp_path / "wind.txt")
+        assert data.shape[1] == 3
+        assert np.allclose(data[:, 1], 8) and np.allclose(data[:, 2], 210)
+
+    def test_duplicate_include_outputs(self, server_project):
+        tmp_path, get, post = server_project
+        (tmp_path / "aeolis.nc").write_text("nc")
+        (tmp_path / "wind.txt").write_text("0 1 2\n")
+        # the copy destination must live OUTSIDE the project root
+        parent = tmp_path.parent / f"dup_{tmp_path.name}"
+        parent.mkdir()
+
+        post("/api/project/duplicate",
+             {"parent": str(parent), "name": "noout", "include_outputs": False})
+        assert (parent / "noout" / "wind.txt").is_file()
+        assert not (parent / "noout" / "aeolis.nc").is_file()
+
+        post("/api/project/open", {"path": str(tmp_path / "aeolis.txt")})
+        post("/api/project/duplicate",
+             {"parent": str(parent), "name": "withnc", "include_outputs": True})
+        assert (parent / "withnc" / "aeolis.nc").is_file()
+
+    def test_duplicate_gather_external_input(self, server_project):
+        tmp_path, get, post = server_project
+        # an input file referenced from OUTSIDE the project root
+        ext = tmp_path.parent / f"ext_{tmp_path.name}"
+        ext.mkdir()
+        grd_io.write_grd(ext / "zext.grd", np.ones((4, 4)))
+        values = get("/api/config")["values"]
+        values["bed_file"] = str(ext / "zext.grd")
+        post("/api/config/save", {"values": values})
+
+        parent = tmp_path.parent / f"dupg_{tmp_path.name}"
+        parent.mkdir()
+        post("/api/project/duplicate",
+             {"parent": str(parent), "name": "g", "input_mode": "gather"})
+        # gather copies the external file in and repoints the config locally
+        assert (parent / "g" / "zext.grd").is_file()
+        import aeolis.inout
+        parsed = aeolis.inout.read_configfile(
+            str(parent / "g" / "aeolis.txt"), parse_files=False)
+        assert parsed["bed_file"] == "zext.grd"
+
+    def test_duplicate_keep_external_input(self, server_project):
+        tmp_path, get, post = server_project
+        ext = tmp_path.parent / f"ext2_{tmp_path.name}"
+        ext.mkdir()
+        grd_io.write_grd(ext / "zext.grd", np.ones((4, 4)))
+        extfile = str(ext / "zext.grd")
+        values = get("/api/config")["values"]
+        values["bed_file"] = extfile
+        post("/api/config/save", {"values": values})
+
+        parent = tmp_path.parent / f"dupk_{tmp_path.name}"
+        parent.mkdir()
+        post("/api/project/duplicate",
+             {"parent": str(parent), "name": "k", "input_mode": "keep"})
+        # keep leaves the original in place and stores an absolute link
+        assert not (parent / "k" / "zext.grd").is_file()
+        import aeolis.inout
+        parsed = aeolis.inout.read_configfile(
+            str(parent / "k" / "aeolis.txt"), parse_files=False)
+        assert Path(parsed["bed_file"]) == Path(extfile)
+
+    def test_domain_sample_rename_file(self, server_project):
+        tmp_path, get, post = server_project
+        xyz = tmp_path / "pts.xyz"
+        xyz.write_text("0 0 1\n1 0 2\n0 1 3\n1 1 4\n")
+        eid = post("/api/domain/import_xyz", {"path": str(xyz)})["entry"]["id"]
+        old_path = get("/api/domain")["entries"][0]["path"]
+
+        res = post("/api/domain/sample_rename",
+                   {"id": eid, "name": "My Bed Points", "rename_file": True})
+        entry = res["entry"]
+        assert entry["label"] == "My Bed Points"
+        # the file on disk is renamed to a slug and the id follows the new path
+        assert entry["path"].endswith("My_Bed_Points.npz")
+        assert (tmp_path / entry["path"]).is_file()
+        assert not (tmp_path / old_path).is_file()
+        assert entry["id"] != eid
+
+    def test_domain_target_draft_load_and_save(self, server_project):
+        tmp_path, get, post = server_project
+        post("/api/grid/save",
+             {"x0": 0.0, "y0": 0.0, "dx": 1.0, "nx": 4, "ny": 4, "rotation": 0.0})
+        grd_io.write_grd(tmp_path / "src.grd", np.full((5, 5), 7.0))
+
+        r = post("/api/domain/target_load",
+                 {"target": "bed", "path": str(tmp_path / "src.grd")})
+        assert r["ok"] and r["draft"] and r["shape_ok"]
+        # loaded as a draft: nothing written to disk yet
+        assert get("/api/domain")["targets"]["bed"]["has_draft"] is True
+        assert not (tmp_path / "zb.grd").is_file()
+
+        s = post("/api/domain/target_save", {"target": "bed"})
+        Z = grd_io.read_grd(tmp_path / s["file"])
+        assert np.allclose(Z, 7.0)
+        # after save the draft is cleared and the file exists
+        ov = get("/api/domain")["targets"]["bed"]
+        assert ov["has_draft"] is False and ov["exists"] is True
+
+    def test_domain_interpolate_produces_draft(self, server_project):
+        tmp_path, get, post = server_project
+        post("/api/grid/save",
+             {"x0": 0.0, "y0": 0.0, "dx": 1.0, "nx": 4, "ny": 4, "rotation": 0.0})
+        xyz = tmp_path / "pts.xyz"
+        lines = [f"{i} {j} {i + j}" for i in range(5) for j in range(5)]
+        xyz.write_text("\n".join(lines) + "\n")
+        eid = post("/api/domain/import_xyz", {"path": str(xyz)})["entry"]["id"]
+
+        res = post("/api/domain/interpolate",
+                   {"target": "bed", "layers": [eid], "extrapolate": True})
+        job = _wait_job(get, res["job"])
+        assert job["status"] == "done", job.get("error")
+        assert job["result"]["draft"] is True
+        # interpolation makes a draft, it does NOT write the .grd
+        assert get("/api/domain")["targets"]["bed"]["has_draft"] is True
+        assert not (tmp_path / "zb.grd").is_file()
+        # committing the draft writes the file
+        post("/api/domain/target_save", {"target": "bed"})
+        assert (tmp_path / "zb.grd").is_file()
 
     def test_unknown_route_404(self, server_project):
         tmp_path, get, post = server_project

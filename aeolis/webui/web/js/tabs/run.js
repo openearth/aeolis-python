@@ -81,20 +81,45 @@ const RunTab = (() => {
     logOffset = 0;
   }
 
+  const _CHECK_ICON = { ok: "✔", warn: "⚠", error: "✖" };
+
+  function _checkPill(level, n) {
+    return U.el("span", { class: `check-pill ${level}` }, `${_CHECK_ICON[level]} ${n}`);
+  }
+
+  function _checkGroup(title, list, level, collapsed) {
+    if (!list.length) return null;
+    const body = U.el("div", { class: "check-group-body" },
+      ...list.map((c) => U.el("div", { class: `check-row ${level}` },
+        U.el("span", { class: "check-ic" }, _CHECK_ICON[level]),
+        U.el("span", { class: "check-txt", title: c.text }, c.text))));
+    const head = U.el("header", {},
+      U.el("span", { class: "caret" }, "▾"), title,
+      U.el("span", { class: "count" }, String(list.length)));
+    const wrap = U.el("div", { class: `check-group ${level} ${collapsed ? "collapsed" : ""}` },
+      head, body);
+    head.addEventListener("click", () => wrap.classList.toggle("collapsed"));
+    return wrap;
+  }
+
   async function _refreshChecklist() {
     try {
       const res = await Api.get("/api/run/checklist");
       U.clear(els.checklist);
-      els.checklist.append(U.el("span", { class: "fg-label" }, "Pre-run checks"));
-      for (const check of res.checks) {
-        const level = check.level || (check.ok ? "ok" : "error");
-        const icon = level === "ok" ? "✔" : level === "warn" ? "⚠" : "✖";
-        const style = level === "error" ? "color:var(--danger)"
-          : level === "warn" ? "color:#a06a00" : "";
-        els.checklist.append(U.el("div", { class: "lp-row" },
-          U.el("span", { class: "eye", style }, icon),
-          U.el("span", { class: "lp-name", style, title: check.text }, check.text)));
-      }
+      const checks = res.checks || [];
+      const by = { error: [], warn: [], ok: [] };
+      for (const c of checks) (by[c.level] || by.ok).push(c);
+
+      els.checklist.append(U.el("div", { class: "checks-summary" },
+        U.el("span", { class: "fg-label" }, "Pre-run checks"),
+        U.el("span", { class: "grow" }),
+        by.error.length ? _checkPill("error", by.error.length) : null,
+        by.warn.length ? _checkPill("warn", by.warn.length) : null,
+        _checkPill("ok", by.ok.length)));
+
+      els.checklist.append(_checkGroup("Must fix", by.error, "error", false));
+      els.checklist.append(_checkGroup("Warnings", by.warn, "warn", false));
+      els.checklist.append(_checkGroup("Passed", by.ok, "ok", true));
       els.ready = res.ready;
     } catch (err) {
       U.clear(els.checklist);

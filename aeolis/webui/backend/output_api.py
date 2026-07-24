@@ -25,7 +25,8 @@ import numpy as np
 from aeolis.webui.backend import grd_io, project
 from aeolis.webui.backend.config_api import load_config
 from aeolis.webui.backend.conditions_api import parse_refdate
-from aeolis.webui.backend.domain_api import TARGETS, get_entry, load_raw
+from aeolis.webui.backend.domain_api import (
+    TARGETS, get_entry, get_target_draft, load_raw)
 from aeolis.webui.backend.grid_api import _load_current_grid
 from aeolis.webui.backend.httpd import route
 from aeolis.webui.backend.util import NC_LOCK, send_bytes, send_error_json, send_json
@@ -251,11 +252,17 @@ def _gridfield(handler, query, tail):
     X, Y = grids
     key, default_name = TARGETS[target]
     filename = values.get(key) or default_name
-    path = project.require().root / str(filename)
-    if not path.is_file():
-        send_error_json(handler, f"{filename} does not exist", 404)
-        return
-    V = grd_io.read_grd(path)
+    # an unsaved interpolation draft takes precedence, so it previews on the
+    # map before the user commits it to a .grd
+    draft = get_target_draft(target)
+    if draft is not None:
+        V = np.asarray(draft, dtype="float64")
+    else:
+        path = project.require().root / str(filename)
+        if not path.is_file():
+            send_error_json(handler, f"{filename} does not exist", 404)
+            return
+        V = grd_io.read_grd(path)
     n_species = 1
     if V.shape != X.shape:
         # species-stacked file (hveg/Nt: flat ny*nx*nspecies, cf.

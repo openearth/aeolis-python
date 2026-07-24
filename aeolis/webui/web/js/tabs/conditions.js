@@ -18,6 +18,19 @@ const ConditionsTab = (() => {
   const KIND_TITLES = { wind: "Wind", tide: "Water levels", wave: "Waves" };
   const COLORS = TSPlot.COLORS;
 
+  // The six physical variables the raw-data section works with. Each maps
+  // to an AeoLiS input "kind" (file) and to the primary column of that
+  // kind's series (used to seed pickers / windrose).
+  const VARIABLES = [
+    { id: "wind_speed",   label: "Wind speed",     kind: "wind", col: 0 },
+    { id: "wind_dir",     label: "Wind direction", kind: "wind", col: 1 },
+    { id: "water_level",  label: "Water level",    kind: "tide", col: 0 },
+    { id: "wave_height",  label: "Wave height",    kind: "wave", col: 0 },
+    { id: "wave_period",  label: "Wave period",    kind: "wave", col: 1 },
+    { id: "wave_dir",     label: "Wave direction", kind: "wave", col: 1 },
+  ];
+  function _variableById(id) { return VARIABLES.find((v) => v.id === id) || VARIABLES[0]; }
+
   let overview = null;
   let rawEntries = [];
   let stationMarkers = [];
@@ -88,27 +101,46 @@ const ConditionsTab = (() => {
       : null;
   }
 
-  async function _openWindroseRaw(entry) {
-    const cols = _windroseCols(entry.labels);
-    if (!cols) return;
-    try {
-      const [, magArr] = await _loadRawColumn(entry, cols.mag);
-      const [, dirArr] = await _loadRawColumn(entry, cols.dir);
-      Windrose.open({ title: entry.label, magnitude: magArr, direction: dirArr,
-        magName: cols.magName, magUnit: cols.magUnit });
-    } catch (err) { U.toast(err.message, "error"); }
-  }
-
-  function _openWindroseInput(kind) {
-    const info = overview.kinds[kind];
-    const cols = _windroseCols(info && info.labels);
-    if (!info || !info.series || !cols) return;
-    Windrose.open({
-      title: info.file || kind,
-      magnitude: info.series.columns[cols.mag],
-      direction: info.series.columns[cols.dir],
-      magName: cols.magName, magUnit: cols.magUnit,
-    });
+  /* Every magnitude+direction pair available for a windrose, drawn from the
+   * input files (wind/wave) and the raw series. Fetches fresh so the topbar
+   * windrose works even before the Conditions tab has been opened. Each entry
+   * is {label, magName, magUnit, load()} where load() yields the arrays. */
+  async function windroseSources() {
+    if (!App.state.project) return [];
+    const ov = await Api.get("/api/conditions");
+    const raws = (await Api.get("/api/conditions/raw")).entries || [];
+    const out = [];
+    for (const kind of ["wind", "wave"]) {
+      const info = ov.kinds[kind];
+      const cols = info && _windroseCols(info.labels);
+      if (info && info.series && cols) {
+        out.push({
+          label: `${info.file || KIND_TITLES[kind]} (input file)`,
+          magName: cols.magName, magUnit: cols.magUnit,
+          t0_epoch: info.series.t0_epoch, t1_epoch: info.series.t1_epoch,
+          load: async () => ({
+            magnitude: info.series.columns[cols.mag],
+            direction: info.series.columns[cols.dir],
+            t_epoch: info.series.t_epoch,
+          }),
+        });
+      }
+    }
+    for (const entry of raws) {
+      const cols = _windroseCols(entry.labels);
+      if (!cols) continue;
+      out.push({
+        label: `${entry.label} (raw)`,
+        magName: cols.magName, magUnit: cols.magUnit,
+        t0_epoch: entry.t0_epoch, t1_epoch: entry.t1_epoch,
+        load: async () => {
+          const [t, magArr] = await _loadRawColumn(entry, cols.mag);
+          const [, dirArr] = await _loadRawColumn(entry, cols.dir);
+          return { magnitude: magArr, direction: dirArr, t_epoch: t };
+        },
+      });
+    }
+    return out;
   }
 
   /* Repeat a series' sample points cyclically until *until* - exactly
@@ -163,6 +195,11 @@ const ConditionsTab = (() => {
           unit: _unitOfLabel(label),
           points: isDir,
           data: [t, v],
+          // zoom-aware refetch for denser detail within the file's own range —
+          // even when the series repeats (a long measured file that ends before
+          // tstop is still marked "repeats", but its samples are far denser than
+          // the full-span decimation, so windowing must stay enabled)
+          loadWindow: (t0, t1) => _loadInputWindow(kind, i, t0, t1),
           range: [s.t0_epoch, Math.max(s.t1_epoch, repeats ? simT1 : s.t1_epoch)],
           repeatFrom: repeats ? s.t1_epoch : null,
         });
@@ -181,6 +218,7 @@ const ConditionsTab = (() => {
           points: /direction/i.test(label),
           data: null,
           load: () => _loadRawColumn(entry, i),
+          loadWindow: (t0, t1) => _loadRawColumn(entry, i, [t0, t1]),
           range: (entry.t0_epoch !== null && entry.t1_epoch !== null)
             ? [entry.t0_epoch, entry.t1_epoch] : null,
         });
@@ -190,7 +228,13 @@ const ConditionsTab = (() => {
 
   function _rawSeriesKey(entry, col) { return `rawcond-${entry.id}-${col}`; }
 
-  async function _loadRawColumn(entry, col) {
+  async function _loadRawColumn(entry, col, win) {
+    // windowed fetch (zoom-aware): denser detail within [t0,t1], not cached
+    if (win) {
+      const res = await Api.get(
+        `/api/conditions/raw_series?id=${entry.id}&tmin=${win[0]}&tmax=${win[1]}`);
+      return [res.series.t_epoch, res.series.columns[col] || []];
+    }
     if (!rawSeriesCache.has(entry.id)) {
       // don't cache failures: a transient error would stick forever
       const promise = Api.get(`/api/conditions/raw_series?id=${entry.id}`)
@@ -198,6 +242,12 @@ const ConditionsTab = (() => {
       rawSeriesCache.set(entry.id, promise);
     }
     const res = await rawSeriesCache.get(entry.id);
+    return [res.series.t_epoch, res.series.columns[col] || []];
+  }
+
+  /* Higher-resolution slice of an input file within a zoom window. */
+  async function _loadInputWindow(kind, col, t0, t1) {
+    const res = await Api.get(`/api/conditions/series?kind=${kind}&tmin=${t0}&tmax=${t1}`);
     return [res.series.t_epoch, res.series.columns[col] || []];
   }
 
@@ -210,64 +260,77 @@ const ConditionsTab = (() => {
     panel.append(U.el("div", { class: "muted", style: "font-size:12px" },
       `refdate ${overview.refdate} — simulation ${U.fmtDuration(overview.tstop - overview.tstart)}`));
 
+    // ---- Raw data: download / generate / clean any variable ----
+    const rawSec = U.section("Raw data", { count: rawEntries.length || null });
+    rawSec.body.append(U.el("div", { class: "muted", style: "font-size:12px" },
+      "Measured, reanalysis or synthetic series for any variable. Clean them here, "
+      + "then build the input timeseries below."));
+    rawSec.body.append(U.el("div", { class: "tbtn-row" },
+      U.tbtn("download", "Download", {
+        title: "Download measured/reanalysis data (pick a variable and source)",
+        onclick: () => _sourceWizard(),
+      }),
+      U.tbtn("wand", "Generate", {
+        title: "Generate a synthetic series (pick a variable)",
+        onclick: () => _synthWizard(),
+      }),
+      (() => {
+        const sel = rawEntries.filter((e) => selectedRaw.has(e.id));
+        const btn = U.tbtn("trash", "Remove", {
+          title: sel.length ? `Remove ${sel.length} selected series…`
+            : "Select series first (click, Ctrl+click, Shift+click for a range)",
+          onclick: () => _removeSelectedRaw(),
+        });
+        btn.disabled = !sel.length;
+        return btn;
+      })()));
+    for (const fetching of activeFetch.values()) rawSec.body.append(fetching.progressBar.el);
+    if (rawEntries.length) rawSec.body.append(_rawList(rawEntries));
+    else rawSec.body.append(U.el("div", { class: "muted" }, "Nothing downloaded or generated yet."));
+    panel.append(rawSec.wrap);
+
+    // ---- Input timeseries: the wind/tide/wave files AeoLiS reads ----
+    const inSec = U.section("Input timeseries", { count: null });
+    inSec.body.append(U.el("div", { class: "muted", style: "font-size:12px" },
+      "The wind / water-level / wave files AeoLiS reads — build (fill) each from the raw series above."));
+    const fileList = U.el("div", { class: "obj-list" });
     for (const kind of ["wind", "tide", "wave"]) {
-      const info = overview.kinds[kind];
-      const kindRaw = rawEntries.filter((e) => e.kind === kind);
-      const section = U.section(KIND_TITLES[kind],
-        { count: kindRaw.length || null });
-
-      const status = info.exists
-        ? U.el("div", { class: "muted" },
-          `✔ ${info.file} (${info.series ? info.series.n + " rows" : "unreadable"})`)
-        : U.el("div", { class: "muted" }, `${info.file || "input file"} not written yet`);
-
-      const tools = U.el("div", { class: "tbtn-row" },
-        U.tbtn("wand", "Generate", {
-          primary: !info.exists && !kindRaw.length,
-          title: "Generate a synthetic series (written directly to the input file)",
-          onclick: () => _synthWizard(kind),
-        }),
-        U.tbtn("download", "Download", {
-          title: "Download measured/reanalysis data as a raw series",
-          onclick: () => _sourceWizard(kind),
-        }));
-      // the input file has both magnitude + direction → offer a windrose
-      if (info.series && _windroseCols(info.labels)) {
-        tools.append(U.tbtn("compass", "Windrose", {
-          title: `Windrose of ${info.file || kind}`,
-          onclick: () => _openWindroseInput(kind),
-        }));
-      }
-      section.body.append(status, tools);
-
-      // active background downloads (possibly several per kind)
-      for (const fetching of activeFetch.values()) {
-        if (fetching.kind === kind) section.body.append(fetching.progressBar.el);
-      }
-
-      // raw series cards
-      if (kindRaw.length) {
-        section.body.append(U.el("span", { class: "fg-label" }, "Raw series"));
-        section.body.append(_rawList(kind, kindRaw));
-      }
-      panel.append(section.wrap);
+      fileList.append(_inputFileCard(kind));
     }
+    inSec.body.append(fileList);
+    panel.append(inSec.wrap);
   }
 
-  function _rawList(kind, entries) {
+  function _inputFileCard(kind) {
+    const info = overview.kinds[kind];
+    // clear state: present & readable / present but broken / configured but
+    // missing (e.g. a link that broke on duplicate) / never created
+    let status, cls;
+    if (info.exists && info.series) {
+      status = `✔ ${info.file} (${info.series.n} rows)`; cls = "";
+    } else if (info.exists) {
+      status = `⚠ ${info.file} — ${info.error ? "unreadable" : "empty"}`; cls = "warn";
+    } else if (info.file) {
+      status = `⚠ missing: ${info.file}`; cls = "warn";
+    } else {
+      status = `${KIND_TITLES[kind]} file — not created yet`; cls = "muted";
+    }
+
+    const actions = U.el("span", { class: "obj-actions" });
+    actions.append(U.miniBtn("interp", "Fill / create from raw series…", () => _fillWizard(kind)));
+    if (info.series) {
+      actions.append(U.miniBtn("saveas", "Save to a chosen location…", () => _saveFileAs(kind)));
+    }
+    actions.append(U.miniBtn("open", "Load an existing file…", () => _loadFile(kind)));
+
+    return U.el("div", { class: "obj-card" },
+      U.el("span", { class: "lp-name", title: info.file || "" }, KIND_TITLES[kind]),
+      U.el("span", { class: `lp-mini ${cls}`, title: info.error || info.file || "" }, status),
+      actions);
+  }
+
+  function _rawList(entries) {
     const wrap = U.el("div", {});
-
-    // top toolbar: Remove acts on the multi-selection (mirrors Domain tab)
-    const selInKind = entries.filter((e) => selectedRaw.has(e.id));
-    const removeBtn = U.tbtn("trash", "Remove", {
-      title: selInKind.length
-        ? `Remove ${selInKind.length} selected series…`
-        : "Select series first (click, Ctrl+click, Shift+click for a range)",
-      onclick: () => _removeSelectedRaw(kind),
-    });
-    removeBtn.disabled = !selInKind.length;
-    wrap.append(U.el("div", { class: "tbtn-row", style: "margin:2px 0 6px" }, removeBtn));
-
     const list = U.el("div", { class: "obj-list" });
     const ids = entries.map((e) => e.id);
     for (const entry of entries) {
@@ -275,35 +338,27 @@ const ConditionsTab = (() => {
         entry.label);
       name.addEventListener("dblclick", () => _renameRaw(entry, name));
 
-      const meta = `${entry.rows || 0} rows` +
+      const meta = `${KIND_TITLES[entry.kind] || entry.kind} · ${entry.rows || 0} rows` +
         (entry.nan ? ` · ${entry.nan} NaN` : "");
 
       const actions = U.el("span", { class: "obj-actions" });
-      actions.append(U.miniBtn("chart", "Show in the graph panel",
-        () => Graphs.select(_rawSeriesKey(entry, 0))));
-      if (_windroseCols(entry.labels)) {
-        actions.append(U.miniBtn("compass", "Windrose (magnitude + direction)",
-          () => _openWindroseRaw(entry)));
-      }
       actions.append(U.miniBtn("copy", "Duplicate this series", () => _duplicateRaw(entry)));
-      actions.append(U.miniBtn("modify", "Modify… (clean NaN, crop, resample, …)",
+      actions.append(U.miniBtn("modify", "Modify… (clean NaN, crop, arithmetic, …)",
         () => _rawModifyWizard(entry)));
-      actions.append(U.miniBtn("check",
-        `Use as ${overview.kinds[kind].file || "the input file"} (converts to seconds since refdate)`,
-        () => _applyRaw(entry)));
 
       const card = U.el("div", {
         class: `obj-card ${selectedRaw.has(entry.id) ? "selected" : ""}`,
       },
+        U.el("span", { class: "drag-grip", draggable: "true", title: "Drag to reorder" }, "⠿"),
         name,
         entry.nan
-          ? U.el("span", { class: "warn-icon", title: `${entry.nan} NaN value(s) — clean before applying` }, "⚠")
+          ? U.el("span", { class: "warn-icon", title: `${entry.nan} NaN value(s) — clean before use` }, "⚠")
           : null,
         U.el("span", { class: "lp-mini" }, meta),
         actions);
       // click = select (Ctrl toggles, Shift selects a range)
       card.addEventListener("click", (ev) => {
-        if (ev.target.closest("button, .eye, input")) return;
+        if (ev.target.closest("button, .eye, input, .drag-grip")) return;
         if (ev.shiftKey && lastRawClicked && ids.includes(lastRawClicked)) {
           const a = ids.indexOf(lastRawClicked), b = ids.indexOf(entry.id);
           for (let k = Math.min(a, b); k <= Math.max(a, b); k += 1) selectedRaw.add(ids[k]);
@@ -321,6 +376,14 @@ const ConditionsTab = (() => {
       });
       list.append(card);
     }
+    // reorder is cosmetic (raw order), but keep it consistent with Domain
+    U.wireSortable(list, (from, to) => {
+      const arr = rawEntries.slice();
+      const [moved] = arr.splice(from, 1);
+      arr.splice(to, 0, moved);
+      rawEntries = arr;
+      _build();
+    });
     wrap.append(list);
     if (entries.length > 1) {
       wrap.append(U.el("div", { class: "muted", style: "font-size:11px;margin-top:4px" },
@@ -339,8 +402,8 @@ const ConditionsTab = (() => {
     }
   }
 
-  function _removeSelectedRaw(kind) {
-    const entries = rawEntries.filter((e) => selectedRaw.has(e.id) && e.kind === kind);
+  function _removeSelectedRaw() {
+    const entries = rawEntries.filter((e) => selectedRaw.has(e.id));
     if (!entries.length) return;
     const popup = Popup.open({ title: `Remove ${entries.length} raw series`, width: 440 });
     const okBtn = U.el("button", { class: "danger" }, `Remove ${entries.length}`);
@@ -432,7 +495,6 @@ const ConditionsTab = (() => {
     ["fill_nan", "fill NaN with value"],
     ["fill_from", "fill NaN from another series"],
     ["crop", "crop to date range"],
-    ["resample", "resample to interval means"],
     ["add", "add value"],
     ["subtract", "subtract value"],
     ["multiply", "multiply by value"],
@@ -648,14 +710,35 @@ const ConditionsTab = (() => {
     return { el, spec };
   }
 
-  function _synthWizard(kind) {
-    const popup = Popup.open({ title: `Generate ${KIND_TITLES[kind].toLowerCase()}`, width: 700 });
-    const forms = {};
+  // Segment-table preset + label for each variable (one column per variable).
+  const SYNTH_FORMS = {
+    wind_speed:  ["Wind speed [m/s]",     { value: 10 }],
+    wind_dir:    ["Wind direction [deg]", { value: 270 }],
+    water_level: ["Water level [m]",      { type: "harmonic", mean: 0, amplitude: 1, period: 12.42 }],
+    wave_height: ["Wave height Hs [m]",   { value: 1 }],
+    wave_period: ["Wave period Tp [s]",   { value: 6 }],
+    wave_dir:    ["Wave direction [deg]", { value: 300 }],
+  };
+
+  function _synthWizard(initialVar) {
+    const popup = Popup.open({ title: "Generate synthetic series", width: 700 });
+    let variable = _variableById(initialVar || "wind_speed").id;
+    let form = null;
     const previewPlots = [];
     const previewEl = U.el("div", { class: "wizard-preview" });
     const aliasNote = U.el("div", { class: "muted", style: "font-size:11.5px;color:#b45309" });
+    const formHost = U.el("div", {});
+    // guards out-of-order async previews (rapid variable switching used to
+    // let a stale preview resolve into a rebuilt/closed wizard and crash)
+    let previewToken = 0;
 
-    const renderPreview = (res) => {
+    const varSel = U.el("select", {},
+      ...VARIABLES.map((v) => U.el("option", {
+        value: v.id, selected: v.id === variable ? "" : null,
+      }, v.label)));
+
+    const renderPreview = (res, token) => {
+      if (token !== previewToken || !previewEl.isConnected) return;
       for (const p of previewPlots.splice(0)) p.destroy();
       U.clear(previewEl);
       const s = res.series;
@@ -670,7 +753,7 @@ const ConditionsTab = (() => {
             points: /direction/i.test(label) }],
           yRange: /direction/i.test(label) ? [0, 360] : null,
           width: Math.min(620, window.innerWidth * 0.55),
-          height: res.labels.length > 1 ? 130 : 170,
+          height: 170,
           drawExtra: Number.isFinite(repeatFrom)
             ? (u) => _drawRepeatShade(u, repeatFrom) : null,
         }));
@@ -682,21 +765,17 @@ const ConditionsTab = (() => {
       }
     };
 
-    const collectBody = () => {
-      const body = { kind, dt: Number(dtInput.value) * 3600 || 3600 };
-      for (const [name, form] of Object.entries(forms)) body[name] = form.spec();
-      return body;
-    };
+    const collectBody = () => ({
+      variable,
+      dt: Number(dtInput.value) * 3600 || 3600,
+      segments: form.spec(),
+    });
 
     const checkAliasing = (body) => {
       const dt = body.dt;
       let worst = null;
-      for (const key of Object.keys(forms)) {
-        for (const seg of (body[key].segments || [])) {
-          if (seg.type === "harmonic" && seg.period && seg.period < 4 * dt) {
-            worst = seg.period;
-          }
-        }
+      for (const seg of (body.segments.segments || [])) {
+        if (seg.type === "harmonic" && seg.period && seg.period < 4 * dt) worst = seg.period;
       }
       aliasNote.textContent = worst !== null
         ? `⚠ the output step (${U.fmtNum(dt / 3600, 3)} h) is coarse for a ` +
@@ -707,34 +786,35 @@ const ConditionsTab = (() => {
     const updatePreview = U.debounce(async () => {
       const body = collectBody();
       checkAliasing(body);
+      const token = ++previewToken;
       try {
-        renderPreview(await Api.post("/api/conditions/preview", body));
+        renderPreview(await Api.post("/api/conditions/preview", body), token);
       } catch (err) {
         console.warn("preview failed", err.message);
       }
     }, 350);
 
-    if (kind === "wind") {
-      forms.speed = _segmentTable("Wind speed [m/s]", { value: 10 }, updatePreview);
-      forms.direction = _segmentTable("Wind direction [deg]", { value: 270 }, updatePreview);
-    } else if (kind === "tide") {
-      forms.level = _segmentTable("Water level [m]",
-        { type: "harmonic", mean: 0, amplitude: 1, period: 12.42 }, updatePreview);
-    } else {
-      forms.hs = _segmentTable("Wave height Hs [m]", { value: 1 }, updatePreview);
-      forms.tp = _segmentTable("Wave period Tp [s]", { value: 6 }, updatePreview);
-    }
+    const buildForm = () => {
+      U.clear(formHost);
+      const [label, preset] = SYNTH_FORMS[variable] || SYNTH_FORMS.wind_speed;
+      form = _segmentTable(label, preset, updatePreview);
+      formHost.append(form.el);
+      updatePreview();
+    };
+    varSel.addEventListener("change", () => {
+      variable = varSel.value;
+      buildForm();
+    });
 
     const dtInput = U.el("input", { type: "text", value: "1", style: "width:70px" });
     dtInput.addEventListener("input", updatePreview);
 
-    const saveBtn = U.el("button", { class: "primary" }, "Generate & save");
+    const saveBtn = U.el("button", { class: "primary" }, "Generate raw series");
     saveBtn.addEventListener("click", async () => {
       try {
         saveBtn.disabled = true;
-        const res = await Api.post("/api/conditions/synthetic", collectBody());
-        U.toast(`Wrote ${res.file} (${res.rows} rows)`, "ok");
-        await _reloadConfig(kind);
+        const res = await Api.post("/api/conditions/synthetic_raw", collectBody());
+        U.toast(`Generated ${res.entry.label} (${res.entry.rows} rows)`, "ok");
         popup.close();
         _refresh();
       } catch (err) {
@@ -743,15 +823,196 @@ const ConditionsTab = (() => {
       }
     });
 
-    for (const form of Object.values(forms)) popup.body.append(form.el);
     popup.body.append(
+      U.el("div", { class: "form-row" }, U.el("label", {}, "variable"), varSel),
+      formHost,
       U.el("div", { class: "form-row" }, U.el("label", {}, "output step [h]"), dtInput),
       aliasNote,
       U.el("span", { class: "fg-label" }, "Preview (incl. repetition over the simulation)"),
       previewEl,
       U.el("div", { class: "btn-row" }, saveBtn),
     );
-    updatePreview();
+    buildForm();
+  }
+
+  /* ================= fill / save-as / load input files ================= */
+
+  /* One output column's source picker: a priority-ordered, drag-sortable,
+   * checkbox list of raw-series columns (top = highest priority; lower ones
+   * only fill samples still NaN), plus how to fill whatever gaps remain. */
+  function _fillColumnBlock(colLabel, opts, defaultKey) {
+    const keyOf = (o) => `${o.id}:${o.column}`;
+    const byKey = new Map(opts.map((o) => [keyOf(o), o]));
+    let order = opts.map(keyOf);
+    if (defaultKey) order = [defaultKey, ...order.filter((k) => k !== defaultKey)];
+    const checked = new Set(defaultKey ? [defaultKey] : []);
+
+    const listEl = U.el("div", { class: "obj-list" });
+    const render = () => {
+      U.clear(listEl);
+      order.forEach((k) => {
+        const o = byKey.get(k);
+        if (!o) return;
+        const cb = U.el("input", { type: "checkbox" });
+        cb.checked = checked.has(k);
+        cb.addEventListener("change", () => { if (cb.checked) checked.add(k); else checked.delete(k); });
+        listEl.append(U.el("div", { class: "obj-card" },
+          U.el("span", { class: "drag-grip", draggable: "true", title: "Drag to reorder (top = highest priority)" }, "⠿"),
+          cb,
+          U.el("span", { class: "lp-name" }, o.text)));
+      });
+    };
+    render();
+    U.wireSortable(listEl, (from, to) => {
+      const [m] = order.splice(from, 1);
+      order.splice(to, 0, m);
+      render();
+    });
+
+    const methodSel = U.el("select", {},
+      U.el("option", { value: "linear" }, "linear interpolation"),
+      U.el("option", { value: "nearest" }, "nearest value"),
+      U.el("option", { value: "value" }, "fill value"),
+      U.el("option", { value: "series" }, "another series"));
+    const valInput = U.el("input", { type: "text", value: "0", style: "width:80px" });
+    const otherSel = U.el("select", { style: "flex:1;min-width:0" },
+      ...opts.map((o) => U.el("option", { value: keyOf(o) }, o.text)));
+    const valRow = U.el("div", { class: "form-row" }, U.el("label", {}, "value"), valInput);
+    const otherRow = U.el("div", { class: "form-row" }, U.el("label", {}, "from series"), otherSel);
+    const syncMethod = () => {
+      valRow.style.display = methodSel.value === "value" ? "" : "none";
+      otherRow.style.display = methodSel.value === "series" ? "" : "none";
+    };
+    methodSel.addEventListener("change", syncMethod);
+    syncMethod();
+
+    const el = U.el("div", { class: "form-group" },
+      U.el("span", { class: "fg-label" }, `${colLabel} — sources (top = highest priority)`),
+      listEl,
+      U.el("div", { class: "form-row" }, U.el("label", {}, "fill remaining gaps"), methodSel),
+      valRow, otherRow);
+
+    const collect = () => {
+      const sources = order.filter((k) => checked.has(k))
+        .map((k) => { const o = byKey.get(k); return { id: o.id, column: o.column }; });
+      const fill = { method: methodSel.value };
+      if (methodSel.value === "value") fill.value = Number(valInput.value);
+      if (methodSel.value === "series") {
+        const o = byKey.get(otherSel.value);
+        if (o) fill.other = { id: o.id, column: o.column };
+      }
+      return { sources, fill };
+    };
+    return { el, collect };
+  }
+
+  function _fillWizard(kind) {
+    const info = overview.kinds[kind];
+    const labels = info.labels || [];
+    const popup = Popup.open({ title: `Fill ${info.file || KIND_TITLES[kind]} from raw series`, width: 600 });
+    if (!rawEntries.length) {
+      popup.body.append(U.el("div", { class: "muted" },
+        "No raw series yet — download or generate some in the Raw data section first."));
+      return;
+    }
+    // flat list of every (raw series, column) as a pickable option
+    const opts = [];
+    for (const e of rawEntries) {
+      (e.labels || []).forEach((lab, ci) => {
+        opts.push({ id: e.id, column: ci, entry: e, text: `${e.label}: ${_nameOfLabel(lab)}` });
+      });
+    }
+    // one prioritized-source block per output column; default-select the
+    // best-matching raw column (same kind + column index)
+    const blocks = labels.map((lab, i) => {
+      let match = opts.find((o) => o.entry.kind === kind && o.column === i);
+      if (!match) match = opts[Math.min(i, opts.length - 1)];
+      const defaultKey = match ? `${match.id}:${match.column}` : null;
+      return { label: lab, block: _fillColumnBlock(lab, opts, defaultKey) };
+    });
+
+    const rsCb = U.el("input", { type: "checkbox", id: "fill-rs" });
+    const rsVal = U.el("input", { type: "text", value: "1", style: "width:60px", disabled: "" });
+    const rsUnit = U.el("select", { disabled: "" },
+      U.el("option", { value: 60 }, "minutes"),
+      U.el("option", { value: 3600, selected: "" }, "hours"),
+      U.el("option", { value: 86400 }, "days"));
+    rsCb.addEventListener("change", () => {
+      rsVal.disabled = !rsCb.checked;
+      rsUnit.disabled = !rsCb.checked;
+    });
+    const fname = U.el("input", { type: "text", value: info.file || `${kind}.txt` });
+
+    const fillBtn = U.el("button", { class: "primary" }, "Fill & save");
+    fillBtn.addEventListener("click", async () => {
+      const columns = blocks.map((b) => b.block.collect());
+      if (columns.some((c) => !c.sources.length)) {
+        U.toast("Select at least one source for each column", "error");
+        return;
+      }
+      const body = { kind, columns };
+      if (rsCb.checked) {
+        const w = Number(rsVal.value) * Number(rsUnit.value);
+        if (Number.isFinite(w) && w > 0) body.resample = w;
+      }
+      if (fname.value.trim()) body.filename = fname.value.trim();
+      try {
+        fillBtn.disabled = true;
+        const res = await Api.post("/api/conditions/fill", body);
+        U.toast(`Wrote ${res.file} (${res.rows} rows)`, "ok");
+        await _reloadConfig(kind);
+        popup.close();
+        _refresh();
+      } catch (err) {
+        U.toast(err.message, "error");
+        fillBtn.disabled = false;
+      }
+    });
+
+    popup.body.append(
+      U.el("div", { class: "muted", style: "font-size:12px" },
+        `Build each column of ${KIND_TITLES[kind].toLowerCase()} from one or more raw series. `
+        + "Higher in the list = higher priority; lower series only fill samples still missing, "
+        + "then the chosen method fills whatever gaps remain."),
+      ...blocks.map((b) => b.block.el),
+      U.el("div", { class: "form-row" },
+        U.el("label", { for: "fill-rs" }, "resample to interval means"), rsCb, rsVal, rsUnit),
+      U.el("div", { class: "form-row" }, U.el("label", {}, "save as"), fname),
+      U.el("div", { class: "btn-row", style: "justify-content:flex-end" }, fillBtn),
+    );
+  }
+
+  async function _saveFileAs(kind) {
+    const info = overview.kinds[kind];
+    const path = await Api.pickFile({
+      title: `Save ${KIND_TITLES[kind]} file as…`,
+      save: true,
+      patterns: [["Text files", "*.txt"], ["All files", "*.*"]],
+      initial: App.state.project ? App.state.project.root : "",
+      filename: info.file || `${kind}.txt`,
+    }).catch((err) => { U.toast(err.message, "error"); return null; });
+    if (!path) return;
+    try {
+      const res = await Api.post("/api/conditions/save_file_as", { kind, path });
+      U.toast(`Saved ${res.file}`, "ok");
+      await _reloadConfig(kind);
+      _refresh();
+    } catch (err) { U.toast(err.message, "error"); }
+  }
+
+  async function _loadFile(kind) {
+    const path = await Api.pickFile({
+      title: `Load a ${KIND_TITLES[kind].toLowerCase()} file`,
+      patterns: [["Text files", "*.txt"], ["All files", "*.*"]],
+      initial: App.state.project ? App.state.project.root : "",
+    }).catch((err) => { U.toast(err.message, "error"); return null; });
+    if (!path) return;
+    try {
+      const res = await Api.post("/api/conditions/load_file", { kind, path });
+      U.toast(`Loaded ${res.file} (${res.rows} rows)`, "ok");
+      await _reloadConfig(kind);
+      _refresh();
+    } catch (err) { U.toast(err.message, "error"); }
   }
 
   function _drawRepeatShade(u, repeatFrom) {
@@ -782,19 +1043,59 @@ const ConditionsTab = (() => {
     return [iso(t0), iso(t1)];
   }
 
-  function _sourceWizard(kind) {
+  function _sourceWizard(initialVar) {
     // a background fetch finishing must not re-close this popup after
     // the user already closed it (Popup.close re-runs onClose, which
     // would clear a LATER wizard's station markers / pick mode)
     let wizardOpen = true;
-    const popup = Popup.open({ title: `Download ${KIND_TITLES[kind].toLowerCase()} (raw series)`,
+    const popup = Popup.open({ title: "Download raw series",
       width: 700, onClose: () => { wizardOpen = false; _clearStations(); } });
     const box = popup.body;
 
-    const sources = kind === "wind" ? ["waterinfo", "era5"] : ["waterinfo"];
-    const sourceSel = U.el("select", {},
-      ...sources.map((s) => U.el("option", { value: s },
-        s === "era5" ? "ERA5 reanalysis (CDS)" : "waterinfo.rws.nl (measurements)")));
+    // pick a source, then tick one or more quantities to download from a
+    // single station in one action (waterinfo has wind/water level/waves;
+    // ERA5 provides wind only). Stations are discovered for the FIRST ticked
+    // quantity; the others are pulled from that same station.
+    const KIND_LIST = [["wind", "Wind (speed + direction)"],
+      ["tide", "Water level"], ["wave", "Waves (Hs + Tp)"]];
+    const selectedKinds = new Set([_variableById(initialVar || "wind_speed").kind]);
+    const primaryKind = () => (selectedKinds.size ? [...selectedKinds][0] : "wind");
+    let kind = primaryKind();   // station discovery + period probe use this
+
+    const sourceSel = U.el("select", {});
+    const rebuildSources = () => {
+      U.clear(sourceSel);
+      // ERA5 only makes sense while the selection is wind-only
+      const onlyWind = selectedKinds.size === 1 && selectedKinds.has("wind");
+      const sources = onlyWind ? ["waterinfo", "era5"] : ["waterinfo"];
+      for (const s of sources) {
+        sourceSel.append(U.el("option", { value: s },
+          s === "era5" ? "ERA5 reanalysis (CDS)" : "waterinfo.rws.nl (measurements)"));
+      }
+    };
+    rebuildSources();
+
+    const kindBox = U.el("div", { class: "choice-col" });
+    const rebuildKindBox = () => {
+      U.clear(kindBox);
+      const eraOnly = sourceSel.value === "era5";
+      for (const [k, label] of KIND_LIST) {
+        const cb = U.el("input", { type: "checkbox", id: `dl-k-${k}` });
+        cb.checked = selectedKinds.has(k);
+        cb.disabled = eraOnly && k !== "wind";
+        cb.addEventListener("change", () => {
+          if (cb.checked) selectedKinds.add(k); else selectedKinds.delete(k);
+          kind = primaryKind();
+          rebuildSources();
+          _clearStations();
+          _renderStations([], null);
+          _syncPickBtn();
+          syncCds();
+        });
+        kindBox.append(U.el("div", { class: "choice-row" }, cb,
+          U.el("label", { for: `dl-k-${k}` }, label)));
+      }
+    };
 
     const cdsBox = U.el("div", { class: "muted", style: "font-size:12px" });
     const syncCds = async () => {
@@ -825,11 +1126,13 @@ const ConditionsTab = (() => {
       }
     };
     sourceSel.addEventListener("change", () => {
+      rebuildKindBox();   // ERA5 disables non-wind quantities
       _clearStations();
       _renderStations([], null);
       _syncPickBtn();
       syncCds();
     });
+    rebuildKindBox();
     syncCds();
 
     let selectedStation = null;
@@ -945,40 +1248,25 @@ const ConditionsTab = (() => {
     const date0 = U.el("input", { type: "text", value: simFrom, title: "YYYY-MM-DD" });
     const date1 = U.el("input", { type: "text", value: simTo, title: "YYYY-MM-DD" });
 
-    // resample: off by default; on -> custom interval value + unit
-    const resampleCb = U.el("input", { type: "checkbox", id: "rs-on" });
-    const resampleVal = U.el("input", { type: "text", value: "1", style: "width:60px", disabled: "" });
-    const resampleUnit = U.el("select", { disabled: "" },
-      U.el("option", { value: 60 }, "minutes"),
-      U.el("option", { value: 3600, selected: "" }, "hours"),
-      U.el("option", { value: 86400 }, "days"));
-    resampleCb.addEventListener("change", () => {
-      resampleVal.disabled = !resampleCb.checked;
-      resampleUnit.disabled = !resampleCb.checked;
-    });
-
     const progress = U.progressBar();
     const fetchBtn = U.el("button", { class: "primary btn-ict" },
       U.icon("download", 14), U.el("span", {}, "Download raw series"));
     const bgNote = U.el("div", { class: "muted", style: "font-size:11.5px" });
     fetchBtn.addEventListener("click", async () => {
       if (!selectedStation) { U.toast("Select a station/cell first", "error"); return; }
-      const body = { source: sourceSel.value, kind };
+      if (!selectedKinds.size) { U.toast("Tick at least one quantity to download", "error"); return; }
+      const body = { source: sourceSel.value, kinds: [...selectedKinds] };
       body.station = sourceSel.value === "waterinfo" ? selectedStation.id : selectedStation;
       body.station_name = selectedStation.name || selectedStation.id;
       if (date0.value.trim()) body.date0 = date0.value.trim();
       if (date1.value.trim()) body.date1 = date1.value.trim();
-      if (resampleCb.checked) {
-        const width = Number(resampleVal.value) * Number(resampleUnit.value);
-        if (Number.isFinite(width) && width > 0) body.resample = width;
-      }
       try {
         fetchBtn.disabled = true;
         progress.start("starting download…");
         bgNote.textContent = "The download continues in the background — " +
           "you can close this window (progress stays visible in the Conditions tab).";
         const res = await Api.post("/api/conditions/fetch", body);
-        _watchFetch(kind, res.job, progress, (err) => {
+        _watchFetch(primaryKind(), res.job, progress, (err) => {
           if (!wizardOpen) return;   // user closed the wizard meanwhile
           fetchBtn.disabled = false;
           progress.done();
@@ -994,6 +1282,8 @@ const ConditionsTab = (() => {
 
     box.append(
       U.el("div", { class: "form-row" }, U.el("label", {}, "source"), sourceSel),
+      U.el("span", { class: "fg-label" }, "Quantities to download"),
+      kindBox,
       cdsBox,
       U.el("div", { class: "btn-row" }, findBtn, pickBtn),
       stationList,
@@ -1002,12 +1292,9 @@ const ConditionsTab = (() => {
       periodLine,
       U.el("div", { class: "form-row" }, U.el("label", {}, "from"), date0),
       U.el("div", { class: "form-row" }, U.el("label", {}, "to"), date1),
-      U.el("div", { class: "form-row" },
-        U.el("label", { for: "rs-on" }, "resample to interval means"),
-        resampleCb, resampleVal, resampleUnit),
       U.el("div", { class: "muted", style: "font-size:11.5px" },
-        "The download is stored as a raw series first — inspect and clean it, ",
-        "then apply it to the input file with the ✓ button."),
+        "The download is stored as a raw series — inspect and clean it, ",
+        "then build the input file with Fill (resampling happens there)."),
       U.el("div", { class: "btn-row" }, fetchBtn),
       progress.el,
       bgNote,
@@ -1026,7 +1313,16 @@ const ConditionsTab = (() => {
       if (popupProgress) popupProgress.update(j);
     }).then(async (out) => {
       activeFetch.delete(jobId);
-      U.toast(`Downloaded ${out.entry.label} (${out.entry.rows} rows)`, "ok");
+      // one job can now yield several raw series (multiple quantities)
+      const entries = out.entries || (out.entry ? [out.entry] : []);
+      if (entries.length === 1) {
+        U.toast(`Downloaded ${entries[0].label} (${entries[0].rows} rows)`, "ok");
+      } else if (entries.length) {
+        U.toast(`Downloaded ${entries.length} raw series`, "ok");
+      }
+      if (out.errors && out.errors.length) {
+        U.toast(`Some quantities failed: ${out.errors.join("; ")}`, "error");
+      }
       if (onDone) onDone();
       await _refresh();
     }).catch((err) => {
@@ -1105,5 +1401,5 @@ const ConditionsTab = (() => {
     App.emit("config-changed", overview.kinds[kind].config_key);
   }
 
-  return { init };
+  return { init, windroseSources };
 })();

@@ -13,14 +13,33 @@ const Colormaps = (() => {
     terrain: [[40,54,154],[0,120,180],[80,180,120],[210,205,120],[160,110,70],[240,240,240]],
     topo_dutch: [[10,40,90],[40,110,170],[130,190,220],[235,225,180],[210,180,110],[120,160,80],[70,110,50]],
     phase: [[240,80,80],[200,160,40],[80,190,80],[40,170,200],[110,90,220],[220,80,190],[240,80,80]],
+    Greens: [[247,252,245],[199,233,192],[161,217,155],[116,196,118],[65,171,93],[35,139,69],[0,90,50]],
+    sand: [[255,250,235],[240,220,160],[214,178,110],[181,137,74],[140,98,52],[92,62,34]],
   };
 
   const cache = new Map();
 
   function names() { return Object.keys(STOPS); }
 
-  function sample(name, t) {
+  /* A trailing "!r" on a name means "reversed" (used to store the reverse
+   * flag inside the cmap string, so every consumer honours it for free). */
+  function _resolve(name) {
+    let rev = false;
+    if (typeof name === "string" && name.endsWith("!r")) { rev = true; name = name.slice(0, -2); }
     const stops = STOPS[name] || STOPS.viridis;
+    return rev ? stops.slice().reverse() : stops;
+  }
+
+  /* Combine a base colormap name with a reverse flag into a cmap string. */
+  function withReverse(name, reversed) {
+    const base = String(name || "viridis").replace(/!r$/, "");
+    return reversed ? `${base}!r` : base;
+  }
+  function isReversed(name) { return typeof name === "string" && name.endsWith("!r"); }
+  function baseName(name) { return String(name || "viridis").replace(/!r$/, ""); }
+
+  function sample(name, t) {
+    const stops = _resolve(name);
     t = U.clamp(t, 0, 1);
     const pos = t * (stops.length - 1);
     const i = Math.min(stops.length - 2, Math.floor(pos));
@@ -46,13 +65,13 @@ const Colormaps = (() => {
   }
 
   function cssGradient(name, direction = "to right") {
-    const stops = STOPS[name] || STOPS.viridis;
+    const stops = _resolve(name);
     const parts = stops.map((c, i) =>
       `rgb(${c[0]},${c[1]},${c[2]}) ${(100 * i / (stops.length - 1)).toFixed(1)}%`);
     return `linear-gradient(${direction}, ${parts.join(", ")})`;
   }
 
-  function stops(name) { return STOPS[name] || STOPS.viridis; }
+  function stops(name) { return _resolve(name); }
 
-  return { names, sample, ramp, cssGradient, stops };
+  return { names, sample, ramp, cssGradient, stops, withReverse, isReversed, baseName };
 })();

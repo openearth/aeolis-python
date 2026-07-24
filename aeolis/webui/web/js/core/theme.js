@@ -19,11 +19,11 @@ const Theme = (() => {
   const THEMES = [
     { id: "light",     name: "Light",                     sub: "AeoLiS default", chip: "#f4f5f7" },
     { id: "dark",      name: "Dark",                      sub: "Night mode",     chip: "#12181f" },
-    { id: "nevermind", name: "Nevermind",                 sub: "Nirvana",        cover: "covers/nevermind.jpg" },
     { id: "discovery", name: "Discovery",                 sub: "Daft Punk",      cover: "covers/discovery.jpg" },
-    { id: "darkside",  name: "The Dark Side of the Moon", sub: "Pink Floyd",     cover: "covers/darkside.jpg" },
     { id: "rumours",   name: "Rumours",                   sub: "Fleetwood Mac",  cover: "covers/rumours.jpg" },
+    { id: "nevermind", name: "Nevermind",                 sub: "Nirvana",        cover: "covers/nevermind.jpg" },
     { id: "velvet",    name: "The Velvet Underground",    sub: "& Nico",         cover: "covers/velvet.jpg" },
+    { id: "darkside",  name: "The Dark Side of the Moon", sub: "Pink Floyd",     cover: "covers/darkside.jpg" },
   ];
 
   let current = "light";

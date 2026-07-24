@@ -22,15 +22,11 @@ const Graphs = (() => {
   let ts = null;             // TSPlot instance
   let card = null;
   let chartHost = null;
-  let availHost = null;
-  let availRange = null;
-  let availLast = null;
+  let availLast = null;       // last {conditions, output, domain} payloads
   let timeWindow = null;     // [t0,t1] epoch or null (= full range)
   let pickerEl = null;
   let building = false;
   let rebuildQueued = false;
-
-  const AXIS_W = 56;         // = TSPlot.Y_AXIS_SIZE, avail strip aligns to it
 
   function _wrapEl() { return document.getElementById("graphs-wrap"); }
   function _container() { return document.getElementById("graphs"); }
@@ -146,10 +142,31 @@ const Graphs = (() => {
 
   function setTimeWindow(win) {
     timeWindow = win;
-    if (ts) ts.setWindow(win);
-    _updateAvail();
+    if (ts) ts.setWindow(win);   // redraws the canvas (band + series) together
+    _reloadWindow(win);
     if (typeof Playbar !== "undefined") Playbar.setViewWindow(win);
   }
+
+  /* Zoom-aware refetch: pull denser data for the visible window from the
+   * backend (which decimates within [t0,t1]) and swap it in, so zooming
+   * reveals the true cadence instead of the coarse full-range decimation. */
+  const _reloadWindow = U.debounce(async (win) => {
+    if (!ts) return;
+    const plotted = _selValid().filter((k) => {
+      const s = sources.get(k);
+      return s && s.data && typeof s.loadWindow === "function";
+    });
+    if (!plotted.length) return;
+    await Promise.all(plotted.map(async (k) => {
+      const s = sources.get(k);
+      if (!win) { s.windowData = null; return; }
+      try {
+        const d = await s.loadWindow(win[0], win[1]);
+        s.windowData = (d && d[0] && d[0].length) ? d : null;
+      } catch { s.windowData = null; }
+    }));
+    _rebuild();
+  }, 260);
 
   function _zoomBy(factor) {
     const full = _fullWindow();
@@ -169,14 +186,17 @@ const Graphs = (() => {
   function _plotSize() {
     const wrap = _wrapEl();
     const width = Math.max(220, _container().clientWidth - 36);
-    let height = Math.max(90, (wrap ? wrap.clientHeight : 240) - 46);
-    if (_availVisible() && availHost) {
-      height = Math.max(80, height - availHost.getBoundingClientRect().height - 4);
-    }
+    // the availability band lives INSIDE the canvas (uPlot top padding), so
+    // the plot keeps the full height — no separate strip to subtract
+    const height = Math.max(90, (wrap ? wrap.clientHeight : 240) - 40);
     return { width, height };
   }
 
   function _availVisible() { return App.state.ui.graphAvail !== false; }
+  // height (CSS px) reserved at the BOTTOM of the canvas (below the x-axis
+  // labels) for the availability band when visible; a small pad otherwise
+  const BAND_PX = 70;
+  function _bandPx() { return _availVisible() && availLast ? BAND_PX : 4; }
 
   async function _rebuild() {
     if (building) { rebuildQueued = true; return; }
@@ -214,7 +234,6 @@ const Graphs = (() => {
 
     if (ts) { ts.destroy(); ts = null; }
     if (card) { card.remove(); card = null; }
-    availHost = null;
 
     const note = document.getElementById("graphs-empty");
     if (!sources.size && !availLast) {
@@ -226,12 +245,7 @@ const Graphs = (() => {
     card = U.el("div", { class: "graph-card graph-single" });
     container.append(card);
     chartHost = U.el("div", { class: "graph-chart" });
-    // availability strip lives ABOVE the chart (rendered between the
-    // header and the plot once TSPlot is built); create it now so its
-    // height can be subtracted from the plot height
-    availHost = U.el("div", { class: "graph-avail" });
-    card.append(availHost, chartHost);
-    _renderAvailInto(availHost);
+    card.append(chartHost);
 
     /* ---- header buttons: variable/source picker on the LEFT; only a
      *      "home" (reset zoom) on the RIGHT. Zoom/step buttons removed —
@@ -245,33 +259,12 @@ const Graphs = (() => {
     const homeBtn = U.el("button", { class: "gbtn",
       title: "Reset to the full time range (or double-click the chart)",
       onclick: () => setTimeWindow(null) }, U.icon("home", 13));
+    // the availability show/hide eye lives on the band itself now (next to the
+    // lane labels), added as an overlay after the chart is built
     const rightActions = [homeBtn];
     const leftActions = [addBtn];
-
-    // windrose: when a plotted magnitude has a direction companion (same
-    // origin, e.g. wind speed ↔ wind direction), offer a windrose. The two
-    // can't be plotted together (different units), so we pull the direction
-    // series in on demand.
-    const magK = plotted.find((k) => !/°|deg/.test(sources.get(k).unit || ""));
-    const dirK = magK ? _companionDir(magK) : null;
-    if (magK && dirK && typeof Windrose !== "undefined") {
-      rightActions.unshift(U.el("button", {
-        class: "gbtn", title: "Windrose of this magnitude + its direction",
-        onclick: async () => {
-          const ms = sources.get(magK), ds = sources.get(dirK);
-          try {
-            const md = ms.data || (ms.load ? await ms.load() : null);
-            const dd = ds.data || (ds.load ? await ds.load() : null);
-            if (!md || !dd) { U.toast("Direction data unavailable", "error"); return; }
-            Windrose.open({
-              title: ms.variable || ms.label,
-              magnitude: md[1], direction: dd[1],
-              magName: ms.variable, magUnit: ms.unit,
-            });
-          } catch (err) { U.toast(err.message, "error"); }
-        },
-      }, U.icon("compass", 13)));
-    }
+    // (the windrose lives in the topbar now — one entry point with a source
+    // + period chooser — so no per-graph windrose button here.)
 
     if (!plotted.length) {
       chartHost.append(U.el("div", { class: "graph-pick-note" },
@@ -283,7 +276,6 @@ const Graphs = (() => {
         ...leftActions,
         U.el("span", { class: "ts-title" }, "Time series"),
         U.el("span", { class: "grow" }), ...rightActions));
-      _syncAvailHeight();
       return;
     }
 
@@ -299,12 +291,14 @@ const Graphs = (() => {
         spanGaps: plotted.length > 1 && !s.points,
       };
     });
+    // use the zoom-windowed data when present (denser detail on zoom-in)
+    const dataOf = (k) => sources.get(k).windowData || sources.get(k).data;
     let data;
     if (plotted.length === 1) {
-      data = TSPlot.withGaps(sources.get(plotted[0]).data);
+      data = TSPlot.withGaps(dataOf(plotted[0]));
     } else {
       // align different time bases on one x array (uPlot.join)
-      data = uPlot.join(plotted.map((k) => sources.get(k).data));
+      data = uPlot.join(plotted.map(dataOf));
     }
 
     const unit = specs[0].unit;
@@ -323,30 +317,42 @@ const Graphs = (() => {
       yZeroFloor: !isDir,
       fullRange: _fullWindow(),
       width, height,
+      bottomBand: _bandPx(),
       actionsLeft: leftActions,
       actions: rightActions,
       onWindow: (win) => {
         timeWindow = win;
-        _updateAvail();
+        _reloadWindow(win);
         if (typeof Playbar !== "undefined") Playbar.setViewWindow(win);
       },
-      drawExtra: (u) => { _drawRepeats(u, plotted); _drawSimLines(u); _drawTimeCursor(u); },
+      // everything below the series lives in one canvas: full-height x-grid,
+      // the availability band, sim start/finish lines and the playbar cursor
+      drawExtra: (u) => {
+        _drawGridLines(u);
+        _drawAvailBand(u);
+        _drawRepeats(u, plotted);
+        _drawBaseline(u);
+        _drawSimLines(u);
+        _drawTimeCursor(u);
+      },
     });
-    // move the availability strip between the header and the plot so the
-    // order reads header · availability · time-graph (top to bottom)
-    if (ts.head && availHost) ts.head.after(availHost);
     if (timeWindow) ts.setWindow(timeWindow);
-    _syncAvailHeight();
+
+    // availability show/hide eye, overlaid at the left of the chart just
+    // ABOVE the band's first ("Simulation") lane label
+    chartHost.style.position = "relative";
+    const availBtn = U.el("span", {
+      class: `eye avail-eye ${_availVisible() ? "" : "off"}`,
+      title: _availVisible() ? "Hide the data-availability band" : "Show the data-availability band",
+      onclick: () => { App.state.ui.graphAvail = !_availVisible(); App.touchUi(); _rebuild(); },
+    }, "👁");
+    // sit just above the band top when the band is shown, else near the base
+    availBtn.style.bottom = `${(_availVisible() && availLast) ? BAND_PX + 6 : 6}px`;
+    chartHost.append(availBtn);
+
     // the first build happens before the flex layout has settled, so the
     // plot can render at the wrong height; re-measure on the next frame
     requestAnimationFrame(() => { if (ts) resizeAll(); });
-  }
-
-  function _syncAvailHeight() {
-    // the strip always stays in the layout: when collapsed it renders as
-    // just its header (which carries the toggle to re-open it), so never
-    // display:none the whole host or the toggle becomes unreachable
-    if (availHost) availHost.style.display = availLast ? "" : "none";
   }
 
   /* ================= series picker ================= */
@@ -556,6 +562,145 @@ const Graphs = (() => {
     }
     return _dangerCache;
   }
+  let _mutedCache = null;
+  function _muted() {
+    if (_mutedCache === null) {
+      _mutedCache = (getComputedStyle(document.documentElement)
+        .getPropertyValue("--muted").trim()) || "#6b7686";
+    }
+    return _mutedCache;
+  }
+
+  /* Device-pixel span of the availability band, at the BOTTOM of the canvas
+   * (below the x-axis labels). When hidden, the band collapses and the
+   * grid/sim lines simply reach the plot baseline. */
+  function _bandGeom(u) {
+    const dpr = window.devicePixelRatio || 1;
+    const H = u.ctx.canvas.height;
+    const visible = _availVisible() && Boolean(availLast);
+    if (!visible) {
+      const y = u.bbox.top + u.bbox.height;
+      return { top: y, bottom: y, visible: false, dpr };
+    }
+    return { top: H - BAND_PX * dpr + 2 * dpr, bottom: H - 3 * dpr, visible: true, dpr };
+  }
+
+  /* Vertical grid lines at the x-axis ticks. Drawn through the plot AND the
+   * availability band (skipping the label strip between them) so the raster
+   * reads as spanning the whole panel. */
+  function _drawGridLines(u) {
+    const scale = u.scales.x;
+    if (!Number.isFinite(scale.min) || !Number.isFinite(scale.max)) return;
+    const splits = TSPlot.timeSplits(u, 0, scale.min, scale.max) || [];
+    const ctx = u.ctx;
+    const plotTop = u.bbox.top;
+    const plotBottom = u.bbox.top + u.bbox.height;
+    const band = _bandGeom(u);
+    ctx.save();
+    ctx.strokeStyle = "rgba(128,128,128,.18)";
+    ctx.lineWidth = 1;
+    for (const t of splits) {
+      if (t < scale.min || t > scale.max) continue;
+      const x = Math.round(u.valToPos(t, "x", true)) + 0.5;
+      ctx.beginPath();
+      ctx.moveTo(x, plotTop);
+      ctx.lineTo(x, plotBottom);
+      ctx.stroke();
+      if (band.visible) {
+        ctx.beginPath();
+        ctx.moveTo(x, band.top);
+        ctx.lineTo(x, band.bottom);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  /* A slightly thicker baseline at the bottom of the plot so y=0 reads as
+   * the floor of the graph (there are no protruding ticks below it). */
+  function _drawBaseline(u) {
+    const ctx = u.ctx;
+    const y = u.bbox.top + u.bbox.height + 0.5;
+    ctx.save();
+    ctx.strokeStyle = _muted();
+    ctx.globalAlpha = 0.55;
+    ctx.lineWidth = 1.5 * (window.devicePixelRatio || 1);
+    ctx.beginPath();
+    ctx.moveTo(u.bbox.left, y);
+    ctx.lineTo(u.bbox.left + u.bbox.width, y);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function _roundRect(ctx, x, y, w, h, r) {
+    const rr = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + rr, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rr);
+    ctx.arcTo(x + w, y + h, x, y + h, rr);
+    ctx.arcTo(x, y + h, x, y, rr);
+    ctx.arcTo(x, y, x + w, y, rr);
+    ctx.closePath();
+  }
+
+  /* Data-availability lanes, drawn on the canvas in the reserved top band so
+   * they share the chart's exact x-scale (perfect alignment, live pan/zoom).
+   * Every lane uses the same accent blue; survey events are diamonds. */
+  function _drawAvailBand(u) {
+    if (!availLast || !_availVisible()) return;
+    const { rows } = _availRows(availLast);
+    if (!rows.length) return;
+    const ctx = u.ctx;
+    const dpr = window.devicePixelRatio || 1;
+    const scale = u.scales.x;
+    const left = u.bbox.left;
+    const right = u.bbox.left + u.bbox.width;
+    const band = _bandGeom(u);
+    const top = band.top;
+    const bottom = band.bottom;
+    const laneH = (bottom - top) / rows.length;
+    const accent = _accent();
+    const xOf = (t) => u.valToPos(t, "x", true);
+    ctx.save();
+    ctx.font = `${10.5 * dpr}px ${(getComputedStyle(document.documentElement)
+      .getPropertyValue("--font-ui") || "system-ui").trim()}`;
+    ctx.textBaseline = "middle";
+    rows.forEach((row, i) => {
+      const cy = top + i * laneH;
+      const mid = cy + laneH / 2;
+      // lane label in the left gutter (where the y-axis sits below)
+      ctx.fillStyle = _muted();
+      ctx.textAlign = "left";
+      ctx.fillText(row.label, 3 * dpr, mid, left - 7 * dpr);
+      const barH = Math.max(3 * dpr, laneH * 0.56);
+      const barTop = mid - barH / 2;
+      for (const [a, b, cls] of row.spans || []) {
+        if (b < scale.min || a > scale.max) continue;
+        const xa = Math.max(xOf(Math.max(a, scale.min)), left);
+        const xb = Math.min(xOf(Math.min(b, scale.max)), right);
+        if (xb <= xa + 0.5) continue;
+        ctx.fillStyle = accent;
+        ctx.globalAlpha = cls === "repeat" ? 0.32 : (cls === "sim" ? 0.3 : 0.8);
+        _roundRect(ctx, xa, barTop, xb - xa, barH, 3 * dpr);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      for (const m of row.marks || []) {
+        if (m < scale.min || m > scale.max) continue;
+        const xm = xOf(m);
+        const r = Math.min(laneH * 0.34, 5 * dpr);
+        ctx.fillStyle = accent;
+        ctx.beginPath();
+        ctx.moveTo(xm, mid - r);
+        ctx.lineTo(xm + r, mid);
+        ctx.lineTo(xm, mid + r);
+        ctx.lineTo(xm - r, mid);
+        ctx.closePath();
+        ctx.fill();
+      }
+    });
+    ctx.restore();
+  }
 
   function _simBounds() {
     if (!availLast) return null;
@@ -571,19 +716,34 @@ const Graphs = (() => {
     if (!bounds) return;
     const scale = u.scales.x;
     const ctx = u.ctx;
+    const band = _bandGeom(u);
+    const top = u.bbox.top;
+    const bottom = band.visible ? band.bottom : (u.bbox.top + u.bbox.height);
     ctx.save();
     ctx.globalAlpha = 0.55;
     ctx.lineWidth = 1.5;
     bounds.forEach((t, i) => {
       if (!Number.isFinite(t) || t < scale.min || t > scale.max) return;
-      // start = accent, end = danger — matches the strip's marker colours
-      // so the same line reads continuously across both graphs
-      ctx.strokeStyle = i === 0 ? _accent() : _danger();
+      // start = accent, end = danger; one continuous line spanning the plot
+      // and the availability band below (ties the two together, no gap)
+      const color = i === 0 ? _accent() : _danger();
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = 0.6;
       const x = u.valToPos(t, "x", true);
       ctx.beginPath();
-      ctx.moveTo(x, u.bbox.top);
-      ctx.lineTo(x, u.bbox.top + u.bbox.height);
+      ctx.moveTo(x, top);
+      ctx.lineTo(x, bottom);
       ctx.stroke();
+      // a solid "pin" symbol at the very top so start/finish pop out
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = color;
+      const r = 5 * (window.devicePixelRatio || 1);
+      ctx.beginPath();
+      ctx.moveTo(x - r, top);
+      ctx.lineTo(x + r, top);
+      ctx.lineTo(x, top + r * 1.5);
+      ctx.closePath();
+      ctx.fill();
     });
     ctx.restore();
   }
@@ -597,20 +757,20 @@ const Graphs = (() => {
     if (t < scale.min || t > scale.max) return;
     const x = u.valToPos(t, "x", true);
     const ctx = u.ctx;
+    const band = _bandGeom(u);
     ctx.save();
     ctx.strokeStyle = _accent();
     ctx.lineWidth = 1.5;
     ctx.setLineDash([5, 4]);
     ctx.beginPath();
     ctx.moveTo(x, u.bbox.top);
-    ctx.lineTo(x, u.bbox.top + u.bbox.height);
+    ctx.lineTo(x, band.visible ? band.bottom : (u.bbox.top + u.bbox.height));
     ctx.stroke();
     ctx.restore();
   }
 
   function redrawCursors() {
-    if (ts) ts.redraw();
-    _updateAvailCursor();
+    if (ts) ts.redraw();   // drawExtra repaints the band + cursor on the canvas
   }
 
   function resizeAll() {
@@ -620,7 +780,7 @@ const Graphs = (() => {
   }
 
   /* =================================================================
-   * Data availability strip (inside the same card, same time axis)
+   * Data availability (drawn inside the chart canvas, same time axis)
    * ================================================================= */
 
   const refreshAvailability = U.debounce(async () => {
@@ -630,11 +790,21 @@ const Graphs = (() => {
     try { output = await Api.get("/api/output/meta"); } catch { /* none */ }
     try { domain = await Api.get("/api/domain"); } catch { /* none */ }
     if (!conditions) return;
+    const hadData = Boolean(availLast);
     availLast = { conditions, output, domain };
-    // widen the chart range FIRST so the strip renders against the
-    // same axis span (it reads ts.fullRange())
-    if (ts) ts.setFullRange(_fullWindow());
-    if (availHost) _renderAvailInto(availHost);
+    // widen the chart range FIRST so the band renders against the same span
+    const fw = _fullWindow();
+    if (ts) ts.setFullRange(fw);
+    // keep the playbar slider usable off the graph's own time span (the
+    // simulation range at minimum), so it scrubs/animates the time cursor
+    // even before a run produces output
+    if (typeof Playbar !== "undefined") {
+      if (fw) Playbar.setSource("graph", fw[0], fw[1]);
+      else Playbar.removeSource("graph");
+    }
+    // when availability first appears the reserved band height changes, so
+    // the plot must be rebuilt; afterwards a redraw repaints the band
+    if (ts && hadData) ts.redraw();
     else _rebuild();
   }, 400);
 
@@ -719,108 +889,14 @@ const Graphs = (() => {
     return [t0, t1];
   }
 
-  function _updateAvail() {
-    if (availHost && availLast) _renderAvailInto(availHost);
-  }
-
-  function _renderAvailInto(host) {
-    U.clear(host);
-    if (!availLast) { availRange = null; return; }
-    const visible = _availVisible();
-
-    // strip header: a caret + label + its OWN show/hide toggle (the
-    // control belongs with the strip it governs, not with the chart's
-    // zoom tools)
-    const caret = U.el("span", { class: `avail-caret ${visible ? "" : "off"}` }, "▾");
-    const stripHead = U.el("div", { class: "avail-head" },
-      caret, U.el("span", { class: "avail-head-label" }, "Data availability"));
-    stripHead.addEventListener("click", () => {
-      App.state.ui.graphAvail = !_availVisible();
-      App.touchUi();
-      _rebuild();
-    });
-    host.append(stripHead);
-    if (!visible) { availRange = null; return; }
-
-    const { rows } = _availRows(availLast);
-
-    // same axis span as the chart
-    let range = timeWindow;
-    if (!range) range = ts ? ts.fullRange() : _fullWindow();
-    if (!range) range = _availFullRange(availLast);
-    if (!range) { availRange = null; return; }
-    const [t0, t1] = range;
-    availRange = [t0, t1];
-    const pct = (t) => `${U.clamp(100 * (t - t0) / (t1 - t0), 0, 100).toFixed(2)}%`;
-
-    const body = U.el("div", { class: "avail-grid" });
-    for (const row of rows) {
-      body.append(U.el("div", { class: "avail-label" }, row.label));
-      const track = U.el("div", { class: "avail-track" });
-      for (const [a, b, cls] of row.spans || []) {
-        if (b < t0 || a > t1) continue;
-        const left = pct(a);
-        const width = `${Math.max(0.15,
-          (100 * (Math.min(b, t1) - Math.max(a, t0)) / (t1 - t0))).toFixed(2)}%`;
-        track.append(U.el("div", {
-          class: `avail-span ${cls}`,
-          style: `left:${left};width:${width}`,
-          title: `${U.fmtDate(a)} — ${U.fmtDate(b)}${cls === "repeat" ? " (repeated by AeoLiS)" : ""}`,
-        }));
-      }
-      for (const m of row.marks || []) {
-        if (m < t0 || m > t1) continue;
-        track.append(U.el("div", {
-          class: "avail-mark", style: `left:${pct(m)}`, title: U.fmtDate(m),
-        }));
-      }
-      body.append(track);
-    }
-    // simulation start/end lines across the whole strip, aligned to the
-    // chart's identical lines (same axis-offset + fraction mapping)
-    const simLines = [];
-    const bounds = _simBounds();
-    if (bounds) {
-      bounds.forEach((t, i) => {
-        if (!Number.isFinite(t) || t < t0 || t > t1) return;
-        const left = `calc(${AXIS_W}px + (100% - ${AXIS_W + 8}px) * ${((t - t0) / (t1 - t0)).toFixed(4)})`;
-        const isStart = i === 0;
-        // the vertical line (extends down into the chart via CSS)…
-        simLines.push(U.el("div", {
-          class: `avail-simline ${isStart ? "start" : "end"}`, style: `left:${left}`,
-        }));
-        // …plus a start / finish marker icon at the top of the line
-        simLines.push(U.el("div", {
-          class: `avail-simflag ${isStart ? "start" : "end"}`, style: `left:${left}`,
-          title: isStart ? "Simulation start" : "Simulation end",
-        }, U.icon(isStart ? "flag" : "target", 11)));
-      });
-    }
-    host.append(U.el("div", { class: "avail-cursor-host" }, body, ...simLines,
-      U.el("div", { class: "avail-cursor", id: "avail-cursor" })));
-    _updateAvailCursor();
-  }
-
-  function _updateAvailCursor() {
-    const cursor = document.getElementById("avail-cursor");
-    if (!cursor || !availRange) return;
-    const t = App.state.clock.t;
-    const [t0, t1] = availRange;
-    if (!Number.isFinite(t) || t < t0 || t > t1) {
-      cursor.style.display = "none";
-      return;
-    }
-    cursor.style.display = "";
-    // offset by the label column (48px + 8px gap = chart axis width),
-    // minus the 8px right padding (see .avail-grid CSS)
-    cursor.style.left = `calc(${AXIS_W}px + (100% - ${AXIS_W + 8}px) * ${((t - t0) / (t1 - t0)).toFixed(4)})`;
-  }
-
   /* ================= init ================= */
 
   function init() {
     App.on("clock-tick", redrawCursors);
-    App.on("theme", () => { _accentCache = null; _dangerCache = null; _rebuild(); redrawCursors(); });
+    App.on("theme", () => {
+      _accentCache = null; _dangerCache = null; _mutedCache = null;
+      _rebuild(); redrawCursors();
+    });
     window.addEventListener("resize", U.debounce(resizeAll, 150));
     App.on("project", refreshAvailability);
     App.on("config-changed", refreshAvailability);

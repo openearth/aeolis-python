@@ -94,10 +94,21 @@ const Playbar = (() => {
     raf = requestAnimationFrame(_tick);
   }
 
+  /* Human-readable playback rate: model time advanced per real second. */
+  function _fmtSpeed(sp) {
+    const MONTH = 30.44 * 86400;
+    if (sp >= MONTH) return `${(sp / MONTH).toFixed(sp >= 10 * MONTH ? 0 : 1)} mo/s`;
+    if (sp >= 86400) return `${(sp / 86400).toFixed(sp >= 864000 ? 0 : 1)} day/s`;
+    if (sp >= 3600) return `${(sp / 3600).toFixed(sp >= 36000 ? 0 : 1)} hr/s`;
+    if (sp >= 60) return `${Math.round(sp / 60)} min/s`;
+    return `${Math.round(sp)} s/s`;
+  }
+
   /* speed slider is logarithmic: 10^v model-seconds per wall-second */
   function _applySpeed() {
     const clock = _clock();
     clock.speed = Math.pow(10, parseFloat(els.speed.value));
+    if (els.speedVal) els.speedVal.textContent = _fmtSpeed(clock.speed);
   }
 
   /* ---- UI ---- */
@@ -143,6 +154,7 @@ const Playbar = (() => {
     els.timeline = document.getElementById("timeline");
     els.label = document.getElementById("time-label");
     els.speed = document.getElementById("rng-speed");
+    els.speedVal = document.getElementById("speed-val");
 
     els.play.addEventListener("click", () => togglePlay());
     els.timeline.addEventListener("input", () => {

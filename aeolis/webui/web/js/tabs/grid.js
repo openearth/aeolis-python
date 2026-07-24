@@ -27,6 +27,7 @@ const GridTab = (() => {
   const SRC_LINES = "grid-lines";
   const SRC_OUTLINE = "grid-outline";
   const SRC_SHEAR = "grid-shear";
+  const SRC_WIND = "grid-wind";
 
   /* ================= geometry (model CRS) ================= */
 
@@ -361,16 +362,28 @@ const GridTab = (() => {
 
   /* ================= shear (2nd computational) grid ================= */
 
+  // the last computational-grid outline (model coords, open ring) returned by
+  // /api/grid/shear — the wind arrow anchors its tip on this boundary
+  let _lastShearRing = null;
+  // monotonic request token: only the latest shear fetch is allowed to draw,
+  // so rapid wind-slider drags never paint a stale (out-of-order) outline
+  let _shearReq = 0;
+
   async function _renderShear() {
+    _renderWindArrow();
     if (!shearVisible || !committed || !isSaved()) {
       // an unsaved draft no longer matches the grid on disk -> the
       // computational grid preview would be misleading
+      _lastShearRing = null;
+      _shearReq += 1;                                 // cancel any in-flight draw
       MapView.removeLayerAndSource(SRC_SHEAR);
       MapView.removeLayerAndSource(SRC_SHEAR + "-inner");
       MapView.removeLabel("grid-shear-info");
       _syncShearInfo(null);
+      _renderWindArrow();                             // arrow falls back to main ring
       return;
     }
+    const myReq = ++_shearReq;
     try {
       const cfg = App.state.config || {};
       const q = new URLSearchParams({
@@ -379,6 +392,7 @@ const GridTab = (() => {
         buffer_width: cfg.buffer_width ?? 10,
       });
       const shear = await Api.get(`/api/grid/shear?${q}`);
+      if (myReq !== _shearReq) return;                // a newer drag superseded us
       const map = MapView.instance();
       const color = _lineColor();   // same palette as the main grid
       const ring = [...shear.ring, shear.ring[0]].map(CRS.toLngLat);
@@ -411,9 +425,112 @@ const GridTab = (() => {
         MapView.removeLabel("grid-shear-info");
       }
       _syncShearInfo(shear);
+      // re-anchor the wind arrow on the freshly computed computational-grid
+      // boundary so arrow + outline stay in lock-step
+      _lastShearRing = shear.ring;
+      _renderWindArrow();
     } catch (err) {
       console.warn("shear preview failed", err.message);
     }
+  }
+
+  // the shear fetch hits the backend; a short debounce keeps rapid wind-slider
+  // drags cheap while the outline still tracks the arrow tightly (stale
+  // responses are dropped via the _shearReq token above)
+  const _renderShearDebounced = U.debounce(() => _renderShear(), 40);
+
+  /* A big arrow on the map showing where the demo wind comes from.
+   * Drawn purely as GeoJSON (shaft line + arrowhead polygon) so it needs
+   * no glyph sprites, and updates live with the wind-direction slider. */
+  // Normalized dart/kite arrow (compass-needle style, matching the condhud
+  // mini-panel arrow): [right, forward]; the tip ([_, +1]) is anchored on the
+  // incoming boundary and the dart points downwind (into the domain).
+  const _ARROW_SHAPE = [
+    [0, 1.0],        // tip
+    [0.53, -0.32],   // right barb
+    [0, -0.05],      // tail notch
+    [-0.53, -0.32],  // left barb
+  ];
+
+  /* First positive intersection of the ray origin+s·dir (s>0) with the
+   * grid outline (model coords) — the point where an incoming wind first
+   * meets the domain boundary. Returns null when the ray misses. */
+  function _rayBoundaryHit(origin, dir, ring) {
+    let bestS = Infinity, hit = null;
+    for (let i = 0; i < ring.length - 1; i += 1) {
+      const a = ring[i], b = ring[i + 1];
+      const ex = b[0] - a[0], ey = b[1] - a[1];
+      const den = ex * dir[1] - ey * dir[0];
+      if (Math.abs(den) < 1e-12) continue;          // parallel
+      const rx = a[0] - origin[0], ry = a[1] - origin[1];
+      const s = (ex * ry - ey * rx) / den;
+      const u = (dir[0] * ry - dir[1] * rx) / den;
+      if (s > 1e-9 && u >= -1e-9 && u <= 1 + 1e-9 && s < bestS) {
+        bestS = s;
+        hit = [origin[0] + s * dir[0], origin[1] + s * dir[1]];
+      }
+    }
+    return hit;
+  }
+
+  function _renderWindArrow() {
+    if (!shearVisible || !committed || !isSaved() || !draft) {
+      // remove the outline layer first — it shares the SRC_WIND source, which
+      // maplibre refuses to drop while a layer still references it
+      MapView.removeLayerAndSource(SRC_WIND + "-outline");
+      MapView.removeLayerAndSource(SRC_WIND);
+      return;
+    }
+    const c = center(draft);
+    const R = 0.6 * Math.max(draft.nx * draft.dx, draft.ny * draft.dx);
+    const S = 0.2 * R;                              // ~4× smaller than before
+    const a = shearUdir * Math.PI / 180;
+    const f = [Math.sin(a), Math.cos(a)];           // toward the wind source (upwind)
+    // the incoming boundary: where the upwind ray from the centre crosses the
+    // COMPUTATIONAL (shear) grid outline — the grid the wind actually enters.
+    // Falls back to the main grid outline until the first shear fetch lands.
+    // The arrow's TIP sits there and it points downwind (−f, into the domain);
+    // its body sits just outside the boundary, upwind.
+    const boundary = _lastShearRing && _lastShearRing.length
+      ? [..._lastShearRing, _lastShearRing[0]]      // close the ring for the ray test
+      : outlineRing(draft);
+    const tip = _rayBoundaryHit(c, f, boundary) || [c[0] + f[0] * R, c[1] + f[1] * R];
+    const g = [-f[0], -f[1]];                        // downwind = arrow forward
+    const p = [-g[1], g[0]];                         // perpendicular (right)
+    const ring = _ARROW_SHAPE.map(([px, py]) => [
+      // shift so the tip ([_,1.0]) lands exactly on the boundary point
+      tip[0] + g[0] * ((py - 1) * S) + p[0] * (px * S),
+      tip[1] + g[1] * ((py - 1) * S) + p[1] * (px * S),
+    ]);
+    ring.push(ring[0]);                              // close the polygon
+    const color = _lineColor();
+    MapView.upsertGeojson(SRC_WIND, {
+      type: "Feature", properties: {},
+      geometry: { type: "Polygon", coordinates: [ring.map(CRS.toLngLat)] },
+    });
+    MapView.ensureLayer({
+      id: SRC_WIND, type: "fill", source: SRC_WIND,
+      paint: { "fill-color": color, "fill-opacity": 0.85 },
+    });
+    MapView.instance().setPaintProperty(SRC_WIND, "fill-color", color);
+    MapView.ensureLayer({
+      id: SRC_WIND + "-outline", type: "line", source: SRC_WIND,
+      paint: { "line-color": "#ffffff", "line-width": 1.5, "line-opacity": 0.85 },
+    });
+  }
+
+  /* Toggle the shear-grid preview visibility (shared by the grid-tab eye
+   * and the Settings shear section). */
+  function _setShearVisible(v) {
+    shearVisible = Boolean(v);
+    const eye = document.getElementById("shear-eye");
+    if (eye) {
+      eye.classList.toggle("off", !shearVisible);
+      eye.title = shearVisible ? "Hide on map" : "Show on map";
+    }
+    const layer = Layers.get("grid-shear");
+    if (layer) { layer.visible = shearVisible; App.emit("layers", "grid-shear"); }
+    _renderShear();
   }
 
   /* ================= draw interaction ================= */
@@ -541,12 +658,10 @@ const GridTab = (() => {
         render();
       },
     });
-    const saveBtn = U.tbtn("save", "Save", {
-      title: "Generate and save x.grd / y.grd",
-      onclick: _saveGrid,
-    });
-    buttons = { draw: drawBtn, edit: editBtn, save: saveBtn };
-    panel.append(U.el("div", { class: "tbtn-row" }, drawBtn, editBtn, saveBtn));
+    // Save / Save-as / Load live on the "Grid files" card below (mirrors the
+    // Domain tab), so the toolbar keeps only the map-drawing modes.
+    buttons = { draw: drawBtn, edit: editBtn };
+    panel.append(U.el("div", { class: "tbtn-row" }, drawBtn, editBtn));
 
     // parameter rows with steppers (label · − · value · + · unit)
     const rows = [
@@ -583,6 +698,11 @@ const GridTab = (() => {
     const derived = U.el("div", { class: "muted", id: "grid-derived" });
     panel.append(derived);
 
+    // the x/y .grd files backing the grid (mirrors the Domain file cards)
+    panel.append(U.el("div", { class: "obj-list" },
+      U.el("div", { class: "obj-card", id: "grid-files" })));
+    _syncFileCard();
+
     // secondary computational (shear) grid: own collapsible section, with
     // an eye toggle in the header (replaces the old "Show on map" checkbox)
     const shear = U.section("Computational (shear) grid", { collapsed: true });
@@ -594,25 +714,21 @@ const GridTab = (() => {
     }, "👁");
     shearEye.addEventListener("click", (ev) => {
       ev.stopPropagation();   // don't collapse the section
-      shearVisible = !shearVisible;
-      shearEye.classList.toggle("off", !shearVisible);
-      shearEye.title = shearVisible ? "Hide on map" : "Show on map";
-      const layer = Layers.get("grid-shear");
-      if (layer) { layer.visible = shearVisible; App.emit("layers", "grid-shear"); }
-      _renderShear();
+      _setShearVisible(!shearVisible);
     });
     shear.head.append(shearEye);
 
     shearInfoEl = U.el("div", { class: "shear-info" });
     shear.body.append(shearInfoEl);
 
-    const udirSlider = U.el("input", { type: "range", min: 0, max: 360, step: 5, value: shearUdir });
+    const udirSlider = U.el("input", { type: "range", min: 0, max: 360, step: 10, value: shearUdir });
     const udirLabel = U.el("label", { style: "flex:0 0 40%;font-size:12px;color:var(--muted)" },
       `example wind dir ${shearUdir}°`);
     udirSlider.addEventListener("input", () => {
       shearUdir = Number(udirSlider.value);
       udirLabel.textContent = `example wind dir ${shearUdir}°`;
-      _renderShear();
+      _renderWindArrow();          // cheap, immediate
+      _renderShearDebounced();     // network fetch, throttled
     });
     shear.body.append(U.el("div", { class: "form-row" }, udirLabel, udirSlider));
 
@@ -720,17 +836,7 @@ const GridTab = (() => {
       if (document.activeElement === input) continue;
       input.value = draft ? U.fmtNum(draft[key], 6) : "";
     }
-    // the Save button only lights up while there is something to save
-    if (buttons.save) {
-      const saved = isSaved();
-      const dirty = Boolean(draft) && !saved;
-      buttons.save.classList.toggle("primary", dirty);
-      buttons.save.classList.toggle("dirty", dirty);
-      buttons.save.disabled = !draft || saved;
-      buttons.save.title = dirty
-        ? "Generate and save x.grd / y.grd (unsaved changes)"
-        : "Grid is saved";
-    }
+    // the Save action (on the "Grid files" card) reflects the dirty state
     const derived = document.getElementById("grid-derived");
     if (derived) {
       if (draft) {
@@ -744,6 +850,36 @@ const GridTab = (() => {
         derived.textContent = "No grid yet — draw a box or enter parameters.";
       }
     }
+    _syncFileCard();
+  }
+
+  /* Fill the x/y .grd file card with the current filenames + Save/Save-as/
+   * Load (the Grid tab's only file actions, mirroring the Domain cards). */
+  function _syncFileCard() {
+    const card = document.getElementById("grid-files");
+    if (!card) return;
+    U.clear(card);
+    const cfg = App.state.config || {};
+    const x = cfg.xgrid_file, y = cfg.ygrid_file;
+    const has = Boolean(x && y);
+    const dirty = Boolean(draft) && !isSaved();
+    card.append(
+      U.el("span", { class: "lp-name", title: "The x/y grid files this model uses" }, "Grid files"),
+      U.el("span", { class: `lp-mini ${has ? "" : "muted"}`, title: has ? `${x} · ${y}` : "" },
+        has ? `${x} · ${y}${dirty ? "  ⚠ unsaved" : ""}` : "not saved yet"));
+    const actions = U.el("span", { class: "obj-actions" });
+    // Save the current draft to the configured x.grd / y.grd (highlighted
+    // while there are unsaved changes)
+    const saveBtn = U.miniBtn("save",
+      dirty ? "Save changes to x.grd / y.grd" : "Grid is saved",
+      () => _saveGrid());
+    saveBtn.classList.toggle("primary", dirty);
+    saveBtn.classList.toggle("dirty", dirty);
+    saveBtn.disabled = !draft || isSaved();
+    actions.append(saveBtn);
+    actions.append(U.miniBtn("saveas", "Save the grid to chosen files…", _saveGridAs));
+    actions.append(U.miniBtn("open", "Load an existing x/y .grd pair", _loadGrid));
+    card.append(actions);
   }
 
   function _zoomToGrid() {
@@ -753,26 +889,90 @@ const GridTab = (() => {
     MapView.fitModelBounds(Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys));
   }
 
-  async function _saveGrid() {
+  /* Adopt a saved/loaded grid result as the current grid. */
+  async function _applyGridResult(res) {
+    committed = res.params;
+    draft = { x0: res.params.x0, y0: res.params.y0, dx: res.params.dx,
+      nx: res.params.nx, ny: res.params.ny, rotation: res.params.rotation };
+    editing = false;
+    const cfg = await Api.get("/api/config");
+    App.state.config = cfg.values;
+    for (const key of ["xgrid_file", "ygrid_file", "nx", "ny"]) App.emit("config-changed", key);
+    Layers.register({ id: "grid-main", group: "grid", title: "Model grid",
+      subtitle: `${draft.nx}×${draft.ny}` });
+    _registerLabelLayer();
+    _syncButtons();
+    _syncTable();
+    render();
+  }
+
+  async function _saveGrid(files) {
     if (!draft) { U.toast("Draw or define a grid first", "error"); return; }
     try {
-      const res = await Api.post("/api/grid/save", draft);
-      committed = res.params;
-      draft = { x0: res.params.x0, y0: res.params.y0, dx: res.params.dx,
-        nx: res.params.nx, ny: res.params.ny, rotation: res.params.rotation };
-      editing = false;
-      const cfg = await Api.get("/api/config");
-      App.state.config = cfg.values;
-      for (const key of ["xgrid_file", "ygrid_file", "nx", "ny"]) App.emit("config-changed", key);
-      Layers.register({ id: "grid-main", group: "grid", title: "Model grid",
-        subtitle: `${draft.nx}×${draft.ny}` });
-      _registerLabelLayer();
-      _syncButtons();
-      _syncTable();
-      render();
+      const res = await Api.post("/api/grid/save", { ...draft, ...(files || {}) });
+      await _applyGridResult(res);
       U.toast(`Saved ${res.files.xgrid_file} / ${res.files.ygrid_file}`, "ok");
     } catch (err) {
       U.toast(`Grid save failed: ${err.message}`, "error");
+    }
+  }
+
+  /* Given a chosen x-grid path, derive a sibling y-grid path: swap the
+   * first embedded 'x' in the basename for 'y', else append '_y'. */
+  function _deriveYPath(xpath) {
+    const sep = xpath.includes("\\") ? "\\" : "/";
+    const idx = xpath.lastIndexOf(sep);
+    const dir = idx >= 0 ? xpath.slice(0, idx + 1) : "";
+    const base = idx >= 0 ? xpath.slice(idx + 1) : xpath;
+    let yb;
+    if (/x/i.test(base)) {
+      yb = base.replace(/x/i, (m) => (m === "X" ? "Y" : "y"));
+    } else {
+      const dot = base.lastIndexOf(".");
+      yb = dot > 0 ? `${base.slice(0, dot)}_y${base.slice(dot)}` : `${base}_y`;
+    }
+    return dir + yb;
+  }
+
+  /* Save the grid to chosen x/y files (opens the file browser). The
+   * y-grid path is derived from the x-grid file name the user picks. */
+  async function _saveGridAs() {
+    if (!draft) { U.toast("Draw or define a grid first", "error"); return; }
+    const cfg = App.state.config || {};
+    const initial = App.state.project ? App.state.project.root : "";
+    const xpath = await Api.pickFile({
+      title: "Save the x-grid as… (the y-grid is written alongside)",
+      save: true,
+      patterns: [["Grid files", "*.grd"]],
+      initial,
+      filename: cfg.xgrid_file || "x.grd",
+    }).catch((err) => { U.toast(err.message, "error"); return null; });
+    if (!xpath) return;
+    const ypath = _deriveYPath(xpath);
+    await _saveGrid({ xgrid_file: xpath, ygrid_file: ypath });
+  }
+
+  /* Load an existing x/y .grd pair from disk into the project. */
+  async function _loadGrid() {
+    const initial = App.state.project ? App.state.project.root : "";
+    const xpath = await Api.pickFile({
+      title: "Select the x-grid (.grd) file",
+      patterns: [["Grid files", "*.grd"], ["All files", "*.*"]],
+      initial,
+    }).catch((err) => { U.toast(err.message, "error"); return null; });
+    if (!xpath) return;
+    const ypath = await Api.pickFile({
+      title: "Select the matching y-grid (.grd) file",
+      patterns: [["Grid files", "*.grd"], ["All files", "*.*"]],
+      initial: xpath,
+    }).catch((err) => { U.toast(err.message, "error"); return null; });
+    if (!ypath) return;
+    try {
+      const res = await Api.post("/api/grid/load", { xgrid_file: xpath, ygrid_file: ypath });
+      await _applyGridResult(res);
+      U.toast(`Loaded ${res.files.xgrid_file} / ${res.files.ygrid_file}`, "ok");
+    } catch (err) {
+      U.toast(`Grid load failed: ${err.message}`, "error");
     }
   }
 
@@ -827,6 +1027,7 @@ const GridTab = (() => {
       if (["boundary_offshore", "boundary_onshore", "boundary_lateral"].includes(key)) render();
       if (key === "process_shear") { _syncShearSection(); _registerShearLayer(); }
       if (["dx", "dy", "buffer_width"].includes(key)) { _syncShearInfo(null); _renderShear(); }
+      if (["xgrid_file", "ygrid_file"].includes(key)) _syncFileCard();
     });
     App.on("layer-visibility", (layer) => {
       if (layer.id === "grid-main" || layer.id === "grid-labels") render();
@@ -847,5 +1048,10 @@ const GridTab = (() => {
     });
   }
 
-  return { init, params: () => committed };
+  return {
+    init, params: () => committed,
+    setShearVisible: _setShearVisible,
+    shearVisible: () => shearVisible,
+    shearAvailable: () => Boolean((App.state.config || {}).process_shear && committed && isSaved()),
+  };
 })();
