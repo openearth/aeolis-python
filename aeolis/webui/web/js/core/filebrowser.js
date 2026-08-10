@@ -61,6 +61,9 @@ const FileBrowser = (() => {
     const upBtn = U.el("button", { class: "ghost", title: "Parent folder" }, "↑");
     upBtn.addEventListener("click", () => { if (state.parent) _navigate(state.parent); });
 
+    const newFolderBtn = U.el("button", { class: "ghost", title: "Create a new folder here" }, "New folder");
+    newFolderBtn.addEventListener("click", _promptNewFolder);
+
     els.drives = U.el("select", { class: "fb-drives", title: "Drive" });
     els.drives.addEventListener("change", () => _navigate(els.drives.value));
 
@@ -91,7 +94,7 @@ const FileBrowser = (() => {
 
     const box = U.el("div", { class: "modal fb-modal" },
       U.el("h2", {}, state.title),
-      U.el("div", { class: "fb-toolbar" }, upBtn, els.drives, els.pathInput),
+      U.el("div", { class: "fb-toolbar" }, upBtn, newFolderBtn, els.drives, els.pathInput),
       els.list,
       nameRow,
       U.el("div", { class: "modal-actions" }, okBtn, cancelBtn),
@@ -156,6 +159,44 @@ const FileBrowser = (() => {
     if (!res.dirs.length && !res.files.length) {
       els.list.append(U.el("div", { class: "muted", style: "padding:10px" }, "Empty folder"));
     }
+  }
+
+  /* Inline "new folder" prompt: an editable row at the top of the list.
+   * Enter creates the folder (via /api/mkdir) and navigates into it so
+   * the user can immediately save there; Escape cancels just the prompt. */
+  function _promptNewFolder() {
+    if (!state.path) return;
+    const existing = els.list.querySelector(".fb-newfolder input");
+    if (existing) { existing.focus(); existing.select(); return; }
+
+    const input = U.el("input", { type: "text", class: "fb-newfolder-input", value: "New folder" });
+    const row = U.el("div", { class: "fb-row fb-newfolder" },
+      U.el("span", { class: "fb-icon" }, "📁"), input);
+    els.list.prepend(row);
+    input.focus();
+    input.select();
+
+    let done = false;
+    const commit = async () => {
+      if (done) return;
+      const name = input.value.trim();
+      if (!name) { row.remove(); return; }
+      done = true;
+      try {
+        const res = await Api.post("/api/mkdir", { path: state.path, name });
+        _navigate(res.path);      // enter the freshly-made folder
+      } catch (err) {
+        done = false;
+        U.toast(err.message, "error");
+        input.focus();
+        input.select();
+      }
+    };
+    input.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") { ev.preventDefault(); commit(); }
+      else if (ev.key === "Escape") { ev.stopPropagation(); done = true; row.remove(); }
+    });
+    input.addEventListener("blur", () => { if (!done) row.remove(); });
   }
 
   function _highlight(row) {

@@ -84,7 +84,7 @@ aeolis/webui/
     output_api.py        netCDF/gridfield binary streaming
     project.py/objects…  project folder + shapes store
     datasources/         rws_lidar, jarkus, vaklodingen, xyz_import,
-                         synthetic, era5, waterinfo
+                         tiff_import, synthetic, era5, waterinfo
   web/
     index.html           layout + script load order
     js/core/             state bus, map view, CRS, field layer, draw,

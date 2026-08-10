@@ -8,6 +8,7 @@ available as separate layers after interpolation.
 
 import hashlib
 import os
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -171,7 +172,7 @@ def _overview(handler, query, tail):
 @route("POST", "/api/domain/check")
 def _check(handler, body, tail):
     bounds = body.get("bounds")
-    source_ids = body.get("sources") or [s["id"] for s in datasources.INFO if s["id"] != "xyz"]
+    source_ids = body.get("sources") or [s["id"] for s in datasources.INFO if s["id"] in datasources.SOURCES]
     if not bounds or len(bounds) != 4:
         send_error_json(handler, "missing 'bounds' [minx,miny,maxx,maxy]")
         return
@@ -221,6 +222,107 @@ def _import_xyz(handler, body, tail):
     send_json(handler, {"ok": True, "entry": entry})
 
 
+@route("POST", "/api/domain/import_tiff")
+def _import_tiff(handler, body, tail):
+    current = project.require()
+    path = body.get("path")
+    if not path:
+        send_error_json(handler, "missing 'path'")
+        return
+    from aeolis.webui.backend.datasources import tiff_import
+    entry = tiff_import.import_file(path, current.rawdata_dir, crs=body.get("crs"))
+    add_entries([entry])
+    send_json(handler, {"ok": True, "entry": entry})
+
+
+# ---------------------------------------------------------------------
+# linking raw data that already lives in another project (no re-download)
+# ---------------------------------------------------------------------
+
+def _find_external_manifest(raw):
+    """Locate a rawdata manifest from a path the user picked - it may be
+    the manifest.json itself, a project root, or a gui/rawdata folder."""
+    base = Path(raw).expanduser()
+    candidates = [base]
+    if base.name != settings.MANIFEST_FILE:
+        candidates += [
+            base / settings.MANIFEST_FILE,
+            base / "gui" / "rawdata" / settings.MANIFEST_FILE,
+        ]
+    for c in candidates:
+        if c.is_file() and c.name == settings.MANIFEST_FILE:
+            return c
+    return None
+
+
+@route("POST", "/api/domain/scan_external")
+def _scan_external(handler, body, tail):
+    """List the datasets of another project so the user can pick which to
+    link. Resolves each entry's file to an absolute path and reports
+    whether it still exists on disk."""
+    manifest_path = _find_external_manifest(body.get("path") or "")
+    if manifest_path is None:
+        send_error_json(handler, "no rawdata manifest found there "
+                                 "(pick a project folder or its gui/rawdata)", 404)
+        return
+    src_root = manifest_path.parent.parent.parent   # <root>/gui/rawdata/manifest.json
+    current = project.require()
+    data = load_json(manifest_path, default={"entries": []})
+    items = []
+    for e in data.get("entries", []):
+        abspath = (src_root / e.get("path", "")).resolve()
+        exists = abspath.is_file()
+        # already present in this project? (same resolved file)
+        here = (current.root / e.get("path", "")).resolve()
+        items.append({
+            "src_id": e.get("id"),
+            "label": e.get("label") or e.get("path"),
+            "source": e.get("source"),
+            "kind": e.get("kind"),
+            "year": e.get("year"),
+            "date": e.get("date"),
+            "abspath": str(abspath),
+            "size": abspath.stat().st_size if exists else 0,
+            "exists": exists,
+            "is_local": here == abspath,
+        })
+    send_json(handler, {"manifest": str(manifest_path), "root": str(src_root), "entries": items})
+
+
+@route("POST", "/api/domain/link_external")
+def _link_external(handler, body, tail):
+    """Add manifest entries that POINT AT another project's files
+    (absolute path, ``linked`` flag) instead of copying/re-downloading."""
+    manifest_path = _find_external_manifest(body.get("path") or "")
+    if manifest_path is None:
+        send_error_json(handler, "no rawdata manifest found there", 404)
+        return
+    wanted = set(body.get("ids") or [])
+    src_root = manifest_path.parent.parent.parent
+    data = load_json(manifest_path, default={"entries": []})
+
+    new_entries = []
+    for e in data.get("entries", []):
+        if wanted and e.get("id") not in wanted:
+            continue
+        abspath = (src_root / e.get("path", "")).resolve()
+        if not abspath.is_file():
+            continue
+        entry = dict(e)
+        entry["path"] = str(abspath)         # absolute -> resolves from any project
+        entry["linked"] = True
+        entry["origin"] = str(src_root)
+        entry["downloaded"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
+        entry.pop("id", None)                # add_entries re-keys by path
+        new_entries.append(entry)
+
+    if not new_entries:
+        send_error_json(handler, "no linkable files selected")
+        return
+    add_entries(new_entries)
+    send_json(handler, {"ok": True, "linked": len(new_entries)})
+
+
 @route("POST", "/api/domain/forget")
 def _forget(handler, body, tail):
     entry_id = body.get("id")
@@ -233,9 +335,23 @@ def _forget(handler, body, tail):
     save_manifest(manifest)
     if body.get("delete_file"):
         target = project.require().root / entry["path"]
-        if target.is_file():
-            target.unlink()
+        # never delete data that physically lives outside this project
+        # (a linked/external reference) - only unlink our own rawdata copy
+        if not entry.get("linked") and _under_rawdata(target):
+            if target.is_file():
+                target.unlink()
     send_json(handler, {"ok": True})
+
+
+def _under_rawdata(path):
+    """True if ``path`` resolves to somewhere inside this project's
+    gui/rawdata folder (so it is safe for us to delete/rename)."""
+    try:
+        rd = project.require().rawdata_dir.resolve()
+        p = Path(path).resolve()
+        return p == rd or rd in p.parents
+    except Exception:  # noqa: BLE001
+        return False
 
 
 # ---------------------------------------------------------------------
@@ -248,8 +364,10 @@ def load_raw(entry):
     kind = entry.get("kind")
     if kind == "raster":
         import rasterio
+        band = int(entry.get("band", 1))
         with rasterio.open(path) as ds:
-            z = ds.read(1).astype("float32")
+            band = min(max(1, band), ds.count)
+            z = ds.read(band).astype("float32")
             nodata = ds.nodata
             if nodata is not None:
                 z[z == np.float32(nodata)] = np.nan
@@ -608,6 +726,103 @@ def _load_target_file(handler, body, tail):
 
 
 # ---------------------------------------------------------------------
+# draft-based creation / editing of interpolated targets
+#   - make a constant grid (e.g. all 1s for a mask)
+#   - apply set/add/multiply/clip over the whole grid, a polygon, or an
+#     index range; result stays a DRAFT until the user Saves it
+# ---------------------------------------------------------------------
+
+@route("POST", "/api/domain/target_constant")
+def _target_constant(handler, body, tail):
+    current = project.require()
+    target = body.get("target")
+    if target not in TARGETS:
+        send_error_json(handler, f"unknown target '{target}'")
+        return
+    try:
+        value = float(body.get("value", 0))
+    except (TypeError, ValueError):
+        send_error_json(handler, "missing numeric value")
+        return
+    grids, _ = _load_current_grid()
+    if grids is None:
+        send_error_json(handler, "no model grid yet - create one in the Grid tab")
+        return
+    X, _ = grids
+    Z = np.full(X.shape, value, dtype="float64")
+    _set_target_draft(target, Z)
+    state = current.load_state()
+    state.setdefault("draft_signatures", {})[target] = grid_signature()
+    current.save_state(state)
+    _log_history({"action": "constant_draft", "target": target, "value": value})
+    send_json(handler, {"ok": True, "target": target, "draft": True, "min": value, "max": value})
+
+
+@route("POST", "/api/domain/target_modify")
+def _target_modify(handler, body, tail):
+    """Edit the target DRAFT (or the saved .grd, loaded into a draft) with a
+    set/add/multiply/clip op over the whole grid, a polygon or an index box."""
+    current = project.require()
+    target = body.get("target")
+    op = body.get("op")
+    if target not in TARGETS:
+        send_error_json(handler, f"unknown target '{target}'")
+        return
+    if op not in _OPS:
+        send_error_json(handler, f"unknown op '{op}'")
+        return
+    try:
+        value = float(body.get("value"))
+    except (TypeError, ValueError):
+        send_error_json(handler, "missing numeric value")
+        return
+    grids, values = _load_current_grid()
+    if grids is None:
+        send_error_json(handler, "no model grid yet")
+        return
+    X, Y = grids
+
+    Z = get_target_draft(target)
+    if Z is None:
+        try:
+            _, _, _, Z = _load_target(values, target, X)   # fall back to the saved file
+        except RuntimeError as exc:
+            send_error_json(handler, exc)
+            return
+    Z = np.array(Z, dtype="float64", copy=True)
+    if Z.shape != X.shape:
+        send_error_json(handler, f"grid data shape {Z.shape} does not match the grid {X.shape}")
+        return
+
+    scope = body.get("scope") or {"type": "all"}
+    mask = np.ones(X.shape, dtype=bool)
+    if scope.get("type") == "polygon":
+        try:
+            mask = _polygon_mask(X, Y, scope.get("polygon"))
+        except RuntimeError as exc:
+            send_error_json(handler, exc, 404)
+            return
+    elif scope.get("type") == "indices":
+        idx = [int(v) for v in (scope.get("indices") or [])]
+        mask = np.zeros(X.shape, dtype=bool)
+        if len(idx) >= 4:
+            mask[idx[0]:idx[1] + 1, idx[2]:idx[3] + 1] = True
+    if not mask.any():
+        send_error_json(handler, "selection covers no grid cells")
+        return
+
+    Z[mask] = _OPS[op](Z[mask], value)
+    _set_target_draft(target, Z)
+    state = current.load_state()
+    state.setdefault("draft_signatures", {})[target] = grid_signature()
+    current.save_state(state)
+    _log_history({"action": "modify_draft", "target": target, "op": op,
+                  "value": value, "cells": int(mask.sum())})
+    send_json(handler, {"ok": True, "target": target, "draft": True, "cells": int(mask.sum()),
+                        "min": float(np.nanmin(Z)), "max": float(np.nanmax(Z))})
+
+
+# ---------------------------------------------------------------------
 # modifications (polygon / index-range) and duplication
 # ---------------------------------------------------------------------
 
@@ -845,6 +1060,121 @@ def _sample_modify(handler, body, tail):
                         "min": float(np.nanmin(z)), "max": float(np.nanmax(z))})
 
 
+# ---------------------------------------------------------------------
+# band math on multi-channel rasters (e.g. NDVI) + threshold classify.
+# Produces a new single-band raster dataset, e.g. for vegetation masks.
+# ---------------------------------------------------------------------
+
+def _read_all_bands(entry):
+    """Every band of a raster entry as float32 arrays, plus x/y coords."""
+    path = project.require().root / entry["path"]
+    if entry.get("kind") == "raster_nc":
+        data = np.load(path)
+        return (np.asarray(data["x"]), np.asarray(data["y"]),
+                [np.asarray(data["z"], dtype="float32")])
+    import rasterio
+    with rasterio.open(path) as ds:
+        bands = [ds.read(i + 1).astype("float32") for i in range(ds.count)]
+        nodata = ds.nodata
+        if nodata is not None:
+            for b in bands:
+                b[b == np.float32(nodata)] = np.nan
+        tr = ds.transform
+        x = tr.c + tr.a * (np.arange(ds.width) + 0.5)
+        y = tr.f + tr.e * (np.arange(ds.height) + 0.5)
+    return x, y, bands
+
+
+_EXPR_OK = re.compile(r"^[\s0-9.eE+\-*/()bB]+$")
+
+
+def _eval_band_expr(expr, bands):
+    """Evaluate an arithmetic expression over band arrays b1..bN. Only
+    numbers and + - * / ( ) are allowed (regex-guarded, no builtins)."""
+    expr = (expr or "").strip() or "b1"
+    if not _EXPR_OK.match(expr):
+        raise RuntimeError("expression may use only b1..bN, numbers and + - * / ( )")
+    env = {f"b{i + 1}": bands[i] for i in range(len(bands))}
+    with np.errstate(divide="ignore", invalid="ignore"):
+        try:
+            out = eval(expr, {"__builtins__": {}}, env)   # noqa: S307 - regex-restricted
+        except Exception as exc:  # noqa: BLE001
+            raise RuntimeError(f"bad expression: {exc}")
+    return np.asarray(out, dtype="float32")
+
+
+@route("POST", "/api/domain/sample_band")
+def _sample_band(handler, body, tail):
+    """Select which band of a multi-channel raster is displayed/used."""
+    entry = get_entry(body.get("id", ""))
+    if entry is None:
+        send_error_json(handler, "unknown dataset", 404)
+        return
+    try:
+        band = int(body.get("band"))
+    except (TypeError, ValueError):
+        send_error_json(handler, "missing integer 'band'")
+        return
+    band = max(1, min(band, int(entry.get("bands", 1))))
+    manifest = load_manifest()
+    for item in manifest["entries"]:
+        if item.get("id") == entry["id"]:
+            item["band"] = band
+    save_manifest(manifest)
+    send_json(handler, {"ok": True, "band": band})
+
+
+@route("POST", "/api/domain/raster_derive")
+def _raster_derive(handler, body, tail):
+    """New single-band raster from a band expression (e.g. NDVI
+    ``(b4-b1)/(b4+b1)``) with an optional threshold that classifies it
+    (value cmp x -> then, else other). Saved as a new raw dataset."""
+    current = project.require()
+    entry = get_entry(body.get("id", ""))
+    if entry is None:
+        send_error_json(handler, "unknown dataset", 404)
+        return
+    if entry.get("kind") not in ("raster", "raster_nc"):
+        send_error_json(handler, "band math needs a raster dataset")
+        return
+    save_as = (body.get("save_as") or "").strip() or "derived"
+    try:
+        x, y, bands = _read_all_bands(entry)
+        z = _eval_band_expr(body.get("expr"), bands)
+    except RuntimeError as exc:
+        send_error_json(handler, exc)
+        return
+
+    thr = body.get("threshold")
+    if thr:
+        try:
+            xcut = float(thr.get("x"))
+            then_v = float(thr.get("then", 1))
+            else_v = float(thr.get("else", 0))
+        except (TypeError, ValueError):
+            send_error_json(handler, "threshold needs numeric x / then / else")
+            return
+        cmp = z >= xcut if str(thr.get("op", ">")) in (">", ">=") else z <= xcut
+        z = np.where(np.isfinite(z) & cmp, then_v, else_v).astype("float32")
+
+    slug = re.sub(r"[^A-Za-z0-9._-]+", "_", save_as).strip("_") or "raster"
+    out_name = f"derived_{slug}.npz"
+    out_path = current.rawdata_dir / out_name
+    np.savez_compressed(out_path, x=np.asarray(x), y=np.asarray(y), z=z)
+    new_entry = {
+        "source": "derived", "kind": "raster_nc",
+        "path": f"gui/rawdata/{out_name}", "crs": entry.get("crs"),
+        "res": entry.get("res"), "bounds": entry.get("bounds"),
+        "label": save_as,
+        "downloaded": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M"),
+    }
+    add_entries([new_entry])
+    finite = z[np.isfinite(z)]
+    send_json(handler, {"ok": True, "entry": new_entry,
+                        "min": float(finite.min()) if finite.size else 0.0,
+                        "max": float(finite.max()) if finite.size else 0.0})
+
+
 @route("POST", "/api/domain/sample_duplicate")
 def _sample_duplicate(handler, body, tail):
     import shutil
@@ -887,7 +1217,9 @@ def _sample_rename(handler, body, tail):
         if item.get("id") != body.get("id"):
             continue
         item["label"] = name
-        if rename_file:
+        # a linked/external entry only gets a new label - never move the
+        # file it points at (it belongs to another project)
+        if rename_file and not item.get("linked"):
             old_path = current.root / item.get("path", "")
             suffix = old_path.suffix or ".npz"
             slug = re.sub(r"[^A-Za-z0-9._-]+", "_", name).strip("_.") or "sample"

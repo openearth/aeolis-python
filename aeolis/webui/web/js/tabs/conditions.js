@@ -345,6 +345,8 @@ const ConditionsTab = (() => {
       actions.append(U.miniBtn("copy", "Duplicate this series", () => _duplicateRaw(entry)));
       actions.append(U.miniBtn("modify", "Modify… (clean NaN, crop, arithmetic, …)",
         () => _rawModifyWizard(entry)));
+      actions.append(U.miniBtn("check", "Clean up… (detect sentinel values & stuck-sensor stretches)",
+        () => _rawCleanWizard(entry)));
 
       const card = U.el("div", {
         class: `obj-card ${selectedRaw.has(entry.id) ? "selected" : ""}`,
@@ -595,6 +597,116 @@ const ConditionsTab = (() => {
       U.el("div", { class: "btn-row", style: "justify-content:flex-end" }, applyBtn),
     );
     syncRows();
+  }
+
+  /* Clean-up wizard: sensors report flaws as sentinel values (999 m
+   * waves) or long constant stretches (0 m/s wind, 72 deg direction for
+   * days). Detect them, preview the counts, then replace with NaN,
+   * interpolate over, or remove the samples. */
+  function _rawCleanWizard(entry) {
+    const popup = Popup.open({ title: `Clean up — ${entry.label}`, width: 540 });
+
+    const colSel = U.el("select", {},
+      U.el("option", { value: "all" }, "all columns"),
+      ...(entry.labels || []).map((label, i) => U.el("option", { value: i }, label)));
+
+    const sentOn = U.el("input", { type: "checkbox", id: "cl-sent", checked: "" });
+    const sentVals = U.el("input", { type: "text", value: "999, -999, 9999", style: "flex:1",
+      title: "Comma-separated exact values treated as 'no data'" });
+
+    const runOn = U.el("input", { type: "checkbox", id: "cl-run", checked: "" });
+    const runMin = U.el("input", { type: "number", value: "24", style: "width:64px",
+      title: "Flag stretches where the value does not change for at least this many time steps" });
+    const runVal = U.el("input", { type: "text", placeholder: "any value", style: "width:90px",
+      title: "Only flag constant stretches of this value (empty = any repeated value)" });
+
+    const actionSel = U.el("select", {},
+      U.el("option", { value: "nan" }, "replace with NaN"),
+      U.el("option", { value: "interp" }, "replace + interpolate over"),
+      U.el("option", { value: "remove" }, "remove the samples"));
+
+    const saveNew = U.el("input", { type: "checkbox", id: "cl-new" });
+    const newName = U.el("input", { type: "text", placeholder: "new series name" });
+    newName.addEventListener("input", () => { if (newName.value) saveNew.checked = true; });
+
+    const result = U.el("div", { class: "muted", style: "font-size:12px;margin-top:6px" });
+
+    const buildBody = (preview) => {
+      const rules = {};
+      if (sentOn.checked) {
+        rules.sentinels = sentVals.value.split(",").map((s) => Number(s.trim()))
+          .filter((v) => Number.isFinite(v));
+      }
+      if (runOn.checked) {
+        rules.run_min = Number(runMin.value) || 24;
+        if (runVal.value.trim() !== "") rules.run_value = Number(runVal.value);
+      }
+      const body = { id: entry.id, rules, action: actionSel.value, preview };
+      if (colSel.value !== "all") body.column = Number(colSel.value);
+      if (!preview && saveNew.checked) body.save_as = newName.value.trim();
+      return body;
+    };
+
+    const previewBtn = U.el("button", { class: "ghost" }, "Preview");
+    previewBtn.addEventListener("click", async () => {
+      try {
+        previewBtn.disabled = true;
+        const res = await Api.post("/api/conditions/raw_clean", buildBody(true));
+        U.clear(result);
+        result.append(U.el("div", {},
+          `${res.total} of ${res.rows * res.report.length} samples flagged:`));
+        for (const r of res.report) {
+          const parts = Object.entries(r.rules).map(([k, n]) => `${k}: ${n}`).join(" · ");
+          result.append(U.el("div", {}, `— ${r.column}: ${r.flagged} (${parts || "none"})`));
+        }
+      } catch (err) { U.toast(err.message, "error"); }
+      previewBtn.disabled = false;
+    });
+
+    const applyBtn = U.el("button", { class: "primary" }, "Clean");
+    applyBtn.addEventListener("click", async () => {
+      if (saveNew.checked && !newName.value.trim()) {
+        U.toast("Enter a name for the new series", "error"); return;
+      }
+      try {
+        applyBtn.disabled = true;
+        const res = await Api.post("/api/conditions/raw_clean", buildBody(false));
+        rawSeriesCache.delete(entry.id);
+        rawSeriesCache.delete(res.entry.id);
+        U.toast(`Cleaned ${res.total} samples → ${res.entry.label} ` +
+          `(${res.entry.rows} rows${res.entry.nan ? `, ${res.entry.nan} NaN` : ""})`, "ok");
+        popup.close();
+        await _refresh();
+        _reregisterRaw(res.entry);
+      } catch (err) {
+        U.toast(err.message, "error");
+        applyBtn.disabled = false;
+      }
+    });
+
+    popup.body.append(
+      U.el("div", { class: "muted", style: "font-size:12px" },
+        `${entry.rows || 0} rows, ${entry.nan || 0} NaN — ` +
+        `${U.fmtDate(entry.t0_epoch)} — ${U.fmtDate(entry.t1_epoch)}`),
+      U.el("div", { class: "form-row", style: "margin-top:8px" },
+        U.el("label", {}, "check"), colSel),
+      U.el("span", { class: "fg-label", style: "margin-top:8px" }, "Detect"),
+      U.el("div", { class: "choice-row" }, sentOn,
+        U.el("label", { for: "cl-sent" }, "sentinel values"), sentVals),
+      U.el("div", { class: "choice-row" }, runOn,
+        U.el("label", { for: "cl-run" }, "constant for ≥"), runMin,
+        U.el("span", {}, "steps, value"), runVal),
+      U.el("span", { class: "fg-label", style: "margin-top:8px" }, "Then"),
+      U.el("div", { class: "form-row" }, U.el("label", {}, "action"), actionSel),
+      U.el("div", { class: "muted", style: "font-size:11.5px" },
+        "Tip: interpolating across a direction column can cut the 360° wrap — "
+        + "prefer NaN + the Fill wizard for wind direction."),
+      U.el("div", { class: "choice-row", style: "margin-top:8px" },
+        saveNew, U.el("label", { for: "cl-new" }, "Save as a new series"),
+        U.el("span", { class: "grow" }), newName),
+      result,
+      U.el("div", { class: "btn-row", style: "justify-content:flex-end" }, previewBtn, applyBtn),
+    );
   }
 
   /* re-register a modified raw entry's series with fresh data */
@@ -1101,6 +1213,12 @@ const ConditionsTab = (() => {
     const syncCds = async () => {
       U.clear(cdsBox);
       if (sourceSel.value !== "era5") return;
+      cdsBox.append(U.el("div", { style: "margin-bottom:4px" },
+        "ⓘ ERA5 requests wait in the shared Copernicus (CDS) server queue — "
+        + "typically minutes, but it can take hours when the service is busy. "
+        + "That wait is on Copernicus' side and cannot be sped up from here; "
+        + "the download runs in the background and finished years are cached, "
+        + "so a retry resumes where it left off."));
       const status = await Api.get("/api/conditions/cds").catch(() => null);
       if (status && status.configured) {
         const changeBtn = U.el("button", { class: "ghost", style: "font-size:11.5px;padding:1px 8px" },

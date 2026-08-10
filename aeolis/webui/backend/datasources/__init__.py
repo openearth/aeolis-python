@@ -18,7 +18,9 @@ Sources with heavy dependencies (rasterio) or network requirements
 raise a clear error message the frontend shows verbatim.
 """
 
-from aeolis.webui.backend.datasources import jarkus, rws_lidar, vaklodingen, xyz_import
+from aeolis.webui.backend.datasources import (
+    jarkus, rws_lidar, tiff_import, vaklodingen, xyz_import,
+)
 
 SOURCES = {
     "rws_lidar": rws_lidar,
@@ -58,6 +60,15 @@ INFO = [
                        "separated text).",
         "kind": "points",
         "crs": None,
+    },
+    {
+        "id": "tiff",
+        "title": "Custom topography (*.tif)",
+        "description": "Import your own GeoTIFF elevation raster (e.g. a "
+                       "survey DTM or design variant). RD-New assumed when "
+                       "the file carries no EPSG code.",
+        "kind": "raster",
+        "crs": 28992,
     },
 ]
 

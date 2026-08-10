@@ -30,9 +30,11 @@ const ViewerTab = (() => {
 
   const GROUPS = [
     ["output", "Model output"],
+    ["custom", "Custom layers"],
     ["domain", "Interpolated (.grd)"],
     ["rawdata", "Sample data"],
     ["grid", "Grid"],
+    ["transect", "Transects"],
     ["objects", "Objects"],
     ["background", "Background"],
   ];
@@ -40,6 +42,8 @@ const ViewerTab = (() => {
   const loadingLayers = new Set();
   const dataRanges = new Map();   // layer id -> [lo, hi] of the loaded data
   const pointLayers = new Set();  // layer ids rendered as circle layers
+  const pointData = new Map();    // layer id -> {x,y,z,radius} for hover/transect sampling
+  const customIds = new Set();    // live field ids of custom computed layers
 
   function init() {
     Tabs.register("viewer", { enter: _enter });
@@ -51,15 +55,19 @@ const ViewerTab = (() => {
     App.on("objects", () => _renderGroups());
     App.on("basemap", () => _renderGroups());
     App.on("layer-order", _applyLayerOrder);
+    App.on("clock-tick", _onCustomClock);
+    MapView.setHoverSampler(_hoverSample);
     _buildPanel();
   }
 
   function _reset() {
     meta = null; mesh = null; variable = null;
     frameCache.clear(); frameRange.clear(); inflight.clear();
-    dataRanges.clear(); pointLayers.clear();
+    dataRanges.clear(); pointLayers.clear(); pointData.clear();
     currentBracket = null;
     FieldLayer.remove(OUTPUT_LAYER);
+    for (const fid of customIds) FieldLayer.remove(fid);
+    customIds.clear();
     Playbar.removeSource("output");
     _syncColorbars();
   }
@@ -124,18 +132,28 @@ const ViewerTab = (() => {
     const box = els.groups;
     if (!box) return;
     U.clear(box);
+    _syncCustomRegistry();
 
     for (const [group, title] of _orderedGroups()) {
       let contentBuilder = null;
       let count = 0;
       let groupLayers = [];
       if (group === "objects") {
-        if (!App.state.objects.length) continue;
-        count = App.state.objects.length;
+        const polys = App.state.objects.filter((o) => o.kind !== "transect");
+        if (!polys.length) continue;
+        count = polys.length;
         contentBuilder = (body) => _renderObjectCards(body);
+      } else if (group === "transect") {
+        // always shown (even empty) so the draw button stays reachable
+        count = Objects.byKind("transect").length;
+        contentBuilder = (body) => _renderTransectCards(body);
       } else if (group === "background") {
         if (CRS.isLocal()) continue;
         contentBuilder = (body) => _renderBackgroundCards(body);
+      } else if (group === "custom") {
+        // always shown (even empty) so the "add" control stays reachable
+        count = (App.state.ui.customLayers || []).length;
+        contentBuilder = (body) => _renderCustomCards(body);
       } else {
         groupLayers = Layers.byGroup(group);
         if (!groupLayers.length) continue;
@@ -158,7 +176,7 @@ const ViewerTab = (() => {
         class: "drag-grip", draggable: "true",
         title: "Drag to reorder groups (top = drawn on top)",
       }, "⠿"));
-      if (group !== "background") {
+      if (group !== "background" && group !== "custom") {
         const countEl = section.head.querySelector(".count");
         section.head.insertBefore(_groupEye(group, groupLayers), countEl);
       }
@@ -371,12 +389,58 @@ const ViewerTab = (() => {
   function _fieldIdFor(layer) {
     if (layer.id === OUTPUT_LAYER) return OUTPUT_LAYER;
     if (layer.id.startsWith("domain-") || layer.id.startsWith("raw-")) return `field-${layer.id}`;
+    if (layer.id.startsWith("custom-")) return `field-${layer.id}`;
     return null;
+  }
+
+  function _renderTransectCards(body) {
+    const list = U.el("div", { class: "obj-list" });
+    const transects = Objects.byKind("transect");
+    for (const obj of transects) {
+      const eye = U.el("span", { class: `eye ${obj.visible ? "" : "off"}`, title: "Show/hide" }, "👁");
+      eye.addEventListener("click", () => Objects.update(obj.id, { visible: !obj.visible }));
+      const name = U.el("span", { class: "lp-name", title: "Double-click to rename" }, obj.name);
+      name.addEventListener("dblclick", () => {
+        const input = U.el("input", { type: "text", value: obj.name, style: "flex:1;font-size:12px" });
+        name.replaceWith(input); input.focus(); input.select();
+        const commit = () => Objects.update(obj.id, { name: input.value.trim() || obj.name });
+        input.addEventListener("blur", commit);
+        input.addEventListener("keydown", (ev) => {
+          if (ev.key === "Enter") input.blur();
+          if (ev.key === "Escape") { input.value = obj.name; input.blur(); }
+        });
+      });
+      const zoom = U.miniBtn("eye", "Zoom to", () => {
+        const xs = obj.coords.map((c) => c[0]), ys = obj.coords.map((c) => c[1]);
+        MapView.fitModelBounds(Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys));
+      });
+      const del = U.miniBtn("trash", "Delete", () => {
+        if (window.confirm(`Delete ${obj.name}?`)) Objects.remove(obj.id);
+      });
+      del.classList.add("danger-hover");
+      list.append(U.el("div", { class: "obj-card" }, eye, name,
+        U.el("span", { class: "lp-mini" }, "transect"), zoom, del));
+    }
+    if (!transects.length) {
+      list.append(U.el("div", { class: "muted" }, "No transects — draw one, then plot it in the Transect tab."));
+    }
+    body.append(list);
+    const drawBtn = U.el("button", { class: "add-optional" }, "+ Draw transect");
+    drawBtn.addEventListener("click", _drawTransect);
+    body.append(drawBtn);
+  }
+
+  async function _drawTransect() {
+    try {
+      const n = Objects.byKind("transect").length + 1;
+      await Draw.transect({ name: `Transect ${n}`, color: "#111111" });
+      _renderGroups();
+    } catch (e) { /* draw cancelled */ }
   }
 
   function _renderObjectCards(body) {
     const list = U.el("div", { class: "obj-list" });
-    for (const obj of App.state.objects) {
+    for (const obj of App.state.objects.filter((o) => o.kind !== "transect")) {
       const eye = U.el("span", { class: `eye ${obj.visible ? "" : "off"}` }, "👁");
       eye.addEventListener("click", () => Objects.update(obj.id, { visible: !obj.visible }));
 
@@ -431,12 +495,380 @@ const ViewerTab = (() => {
     body.append(list);
   }
 
+  /* ================= custom computed layers =================
+   * A custom layer combines OUTPUT variable snapshots on the shared
+   * output mesh (e.g. bed-level change zb@t2 − zb@t1, or a scalar
+   * multiple). Definitions persist per project in ui.customLayers;
+   * arithmetic runs client-side on the cached frame arrays. */
+
+  const CUSTOM_OPS = [
+    ["sub", "A − B (difference)"],
+    ["add", "A + B"],
+    ["mul", "A × B"],
+    ["div", "A ÷ B"],
+    ["scale", "k × A (scalar)"],
+    ["offset", "A + k (scalar)"],
+  ];
+  const _binaryOp = (op) => op !== "scale" && op !== "offset";
+  const SENTINEL = -1e30;
+  const _bad = (v) => !(v > -1e29);   // NaN or nodata sentinel
+
+  function _customList() { return App.state.ui.customLayers || (App.state.ui.customLayers = []); }
+
+  function _syncCustomRegistry() {
+    const cl = _customList();
+    const wanted = new Set(cl.map((c) => `custom-${c.id}`));
+    for (const c of cl) {
+      Layers.register({ id: `custom-${c.id}`, group: "custom", title: c.name, visible: !!c.visible });
+    }
+    for (const l of Layers.byGroup("custom")) {
+      if (!wanted.has(l.id)) Layers.unregister(l.id);
+    }
+  }
+
+  async function _fetchFrameFor(varName, t) {
+    const key = `${varName}|0|${t}`;
+    if (frameCache.has(key)) return frameCache.get(key);
+    if (inflight.has(key)) return inflight.get(key);
+    const promise = Api.binary(`/api/output/field?var=${varName}&t=${t}&k=0`)
+      .then(({ buffer }) => {
+        const arr = new Float32Array(buffer);
+        frameCache.set(key, arr);
+        while (frameCache.size > FRAME_CACHE_MAX) {
+          const oldest = frameCache.keys().next().value;
+          frameCache.delete(oldest); frameRange.delete(oldest);
+        }
+        inflight.delete(key);
+        return arr;
+      })
+      .catch((err) => { inflight.delete(key); throw err; });
+    inflight.set(key, promise);
+    return promise;
+  }
+
+  // resolve one operand: "current" interpolates the two bracketing frames
+  async function _operandArray(varName, timeSel) {
+    if (!meta || !varName) return null;
+    if (timeSel === "current" || timeSel == null) {
+      const { k, frac } = _bracket(App.state.clock.t);
+      const k2 = Math.min(k + 1, meta.times.length - 1);
+      const [A, B] = await Promise.all([_fetchFrameFor(varName, k), _fetchFrameFor(varName, k2)]);
+      if (!frac || A === B) return A;
+      const out = new Float32Array(A.length);
+      for (let i = 0; i < A.length; i += 1) {
+        out[i] = (_bad(A[i]) || _bad(B[i])) ? SENTINEL : A[i] + frac * (B[i] - A[i]);
+      }
+      return out;
+    }
+    const t = Math.max(0, Math.min(Number(timeSel) || 0, meta.times.length - 1));
+    return _fetchFrameFor(varName, t);
+  }
+
+  // ---- operands: any grid of consistent shape (output var@time OR a loaded grid) ----
+  // grid (raster) sources for custom-layer operands (async: uses the catalog)
+  async function _fieldSources() {
+    return (await datasetCatalog()).filter((s) => s.kind === "raster");
+  }
+
+  function _srcLabel(key, time) {
+    if (!key) return "?";
+    const base = _srcLabels[key] || key.replace(/^(out|tgt|ent):/, "");
+    if (key.startsWith("out:")) {
+      return `${key.slice(4)}@${(time === "current" || time == null) ? "now" : "#" + time}`;
+    }
+    return base;
+  }
+
+  async function _resolveOperand(key, time) {
+    if (key && key.startsWith("out:")) {
+      if (!mesh) return null;
+      const arr = await _operandArray(key.slice(4), time || "current");
+      return arr ? { arr, mesh } : null;
+    }
+    const src = await _ensureSource(key);   // tgt: / ent:
+    if (src && src.mesh && src.data) return { arr: src.data, mesh: src.mesh };
+    return null;   // point datasets can't be used for grid arithmetic
+  }
+
+  function _sameMesh(m1, m2) {
+    if (!m1 || !m2 || m1.x.length !== m2.x.length) return false;
+    const n = m1.x.length;
+    const eq = (a, b) => Math.abs(a - b) < 1e-6 * (1 + Math.abs(a));
+    return eq(m1.x[0], m2.x[0]) && eq(m1.y[0], m2.y[0])
+      && eq(m1.x[n - 1], m2.x[n - 1]) && eq(m1.y[n - 1], m2.y[n - 1]);
+  }
+
+  // nearest-neighbour resample of srcData (on srcMesh) onto dstMesh, with a
+  // cached index map (so per-clock recomputes stay cheap)
+  const _resampleMaps = new WeakMap();
+  function _nearestMap(dstMesh, srcMesh) {
+    let byDst = _resampleMaps.get(dstMesh);
+    if (!byDst) { byDst = new WeakMap(); _resampleMaps.set(dstMesh, byDst); }
+    let idx = byDst.get(srcMesh);
+    if (idx) return idx;
+    idx = new Int32Array(dstMesh.x.length);
+    for (let d = 0; d < dstMesh.x.length; d += 1) {
+      idx[d] = _nearestIdx(srcMesh, dstMesh.x[d], dstMesh.y[d]).best;
+    }
+    byDst.set(srcMesh, idx);
+    return idx;
+  }
+  function _resampleTo(dstMesh, src) {
+    const idx = _nearestMap(dstMesh, src.mesh);
+    const out = new Float32Array(idx.length);
+    for (let d = 0; d < idx.length; d += 1) out[d] = src.arr[idx[d]];
+    return { arr: out, mesh: dstMesh };
+  }
+
+  async function _computeCustom(c) {
+    const A = await _resolveOperand(c.aKey, c.aTime);
+    if (!A) return null;
+    let B = null;
+    if (_binaryOp(c.op)) {
+      B = await _resolveOperand(c.bKey, c.bTime);
+      if (!B) return null;
+      // operands must share the grid; optionally resample B onto A's grid
+      if (A.mesh !== B.mesh && !_sameMesh(A.mesh, B.mesh)) {
+        if (c.resample) B = _resampleTo(A.mesh, B);
+        else return { error: "shape-mismatch" };
+      }
+    }
+    const S = Number(c.scalar) || 0;
+    const a = A.arr, bArr = B && B.arr;
+    const out = new Float32Array(a.length);
+    for (let i = 0; i < a.length; i += 1) {
+      const av = a[i];
+      if (_bad(av)) { out[i] = SENTINEL; continue; }
+      let v;
+      if (c.op === "scale") v = S * av;
+      else if (c.op === "offset") v = av + S;
+      else {
+        const bv = bArr[i];
+        if (_bad(bv)) { out[i] = SENTINEL; continue; }
+        v = c.op === "sub" ? av - bv : c.op === "add" ? av + bv
+          : c.op === "mul" ? av * bv : (bv !== 0 ? av / bv : NaN);
+      }
+      out[i] = Number.isFinite(v) ? v : SENTINEL;
+    }
+    return { out, mesh: A.mesh };
+  }
+
+  async function _recomputeCustom(c) {
+    const res = await _computeCustom(c);
+    if (!res) return;
+    const fid = `field-custom-${c.id}`;
+    if (res.error) {                       // operands not ready or mismatched shapes
+      if (res.error === "shape-mismatch" && c._warned !== true) {
+        c._warned = true;
+        U.toast(`"${c.name}": datasets have different grids — tick "resample to match" in the layer`, "error");
+      }
+      return;
+    }
+    c._warned = false;
+    let layer = FieldLayer.get(fid);
+    if (!layer || layer.mesh !== res.mesh) {
+      FieldLayer.remove(fid);
+      layer = FieldLayer.create(fid, res.mesh, {
+        cmap: c.cmap || "RdBu", min: c.min != null ? c.min : -1, max: c.max != null ? c.max : 1, opacity: 1,
+      });
+      customIds.add(fid);
+    }
+    const patch = { cmap: c.cmap || "RdBu" };
+    if (c.min != null && c.max != null) { patch.min = c.min; patch.max = c.max; }
+    else {
+      let lo = Infinity, hi = -Infinity;
+      for (let i = 0; i < res.out.length; i += 1) {
+        const v = res.out[i];
+        if (!_bad(v) && Number.isFinite(v)) { if (v < lo) lo = v; if (v > hi) hi = v; }
+      }
+      if (lo <= hi) {
+        if (c.op === "sub" || c.op === "offset") { const m = Math.max(Math.abs(lo), Math.abs(hi)) || 1; patch.min = -m; patch.max = m; }
+        else { patch.min = lo; patch.max = hi; }
+      }
+    }
+    layer.setStyle(patch);
+    layer.setFrames(res.out);
+  }
+
+  async function _restoreCustomLayers() {
+    for (const c of _customList()) if (c.visible) await _recomputeCustom(c);
+    _syncCustomRegistry();
+  }
+
+  // recompute custom layers that depend on the current time as the clock moves
+  function _onCustomClock() {
+    for (const c of _customList()) {
+      if (!c.visible) continue;
+      const usesNow = (c.aKey && c.aKey.startsWith("out:") && (c.aTime === "current" || c.aTime == null)) ||
+                      (_binaryOp(c.op) && c.bKey && c.bKey.startsWith("out:") && (c.bTime === "current" || c.bTime == null));
+      if (usesNow) _recomputeCustom(c).catch(() => {});
+    }
+  }
+
+  async function _toggleCustom(c) {
+    c.visible = !c.visible;
+    App.touchUi();
+    if (c.visible) await _recomputeCustom(c);
+    else { FieldLayer.remove(`field-custom-${c.id}`); customIds.delete(`field-custom-${c.id}`); }
+    _syncCustomRegistry();
+    _applyLayerOrder();
+    _renderGroups();
+  }
+
+  function _renderCustomCards(body) {
+    const list = U.el("div", { class: "obj-list" });
+    _customList().forEach((c) => list.append(_customCard(c)));
+    body.append(list);
+    const addBtn = U.el("button", { class: "add-optional" }, "+ Add custom layer");
+    addBtn.addEventListener("click", () => _customDialog(null));
+    addBtn.title = "Combine output variables / timesteps or any interpolated & raster grids";
+    body.append(addBtn);
+  }
+
+  function _customCard(c) {
+    const eye = U.el("span", { class: `eye ${c.visible ? "" : "off"}`, title: "Show/hide" }, "\u{1F441}");
+    eye.addEventListener("click", () => _toggleCustom(c));
+    const cmapSel = U.el("select", { class: "cmap-mini", title: "Colormap" });
+    for (const name of Colormaps.names()) {
+      cmapSel.append(U.el("option", { value: name, selected: name === c.cmap ? "" : null }, name));
+    }
+    cmapSel.addEventListener("click", (ev) => ev.stopPropagation());
+    cmapSel.addEventListener("change", () => { c.cmap = cmapSel.value; App.touchUi(); if (c.visible) _recomputeCustom(c); });
+    const edit = U.miniBtn("modify", "Edit…", () => _customDialog(c));
+    const del = U.miniBtn("trash", "Delete", () => {
+      FieldLayer.remove(`field-custom-${c.id}`);
+      customIds.delete(`field-custom-${c.id}`);
+      App.state.ui.customLayers = _customList().filter((x) => x.id !== c.id);
+      App.touchUi();
+      _syncCustomRegistry();
+      _renderGroups();
+    });
+    del.classList.add("danger-hover");
+    return U.el("div", { class: "obj-card" },
+      eye,
+      U.el("span", { class: "lp-name", title: _customFormula(c) }, c.name),
+      U.el("span", { class: "lp-mini" }, _customFormula(c)),
+      cmapSel, edit, del);
+  }
+
+  function _customFormula(c) {
+    const a = _srcLabel(c.aKey, c.aTime);
+    if (c.op === "scale") return `${c.scalar} × ${a}`;
+    if (c.op === "offset") return `${a} + ${c.scalar}`;
+    const b = _srcLabel(c.bKey, c.bTime);
+    const sym = { sub: "−", add: "+", mul: "×", div: "÷" }[c.op] || "?";
+    return `${a} ${sym} ${b}`;
+  }
+
+  async function _customDialog(existing) {
+    const sources = await _fieldSources();
+    if (!sources.length) { U.toast("Load a layer or run a model output first", "error"); return; }
+    const keys = sources.map((s) => s.key);
+    const c = existing || {
+      id: `${Date.now()}`, name: "", op: "sub", cmap: "RdBu",
+      aKey: keys[0], aTime: "current", bKey: keys[1] || keys[0], bTime: "current",
+      scalar: 1, min: null, max: null,
+    };
+    const popup = Popup.open({ title: existing ? "Edit custom layer" : "New custom layer", width: 480 });
+
+    const name = U.el("input", { type: "text", value: c.name, placeholder: "e.g. bed level change" });
+    const opSel = U.el("select", {});
+    for (const [k, lbl] of CUSTOM_OPS) opSel.append(U.el("option", { value: k, selected: k === c.op ? "" : null }, lbl));
+
+    const srcSel = (val) => {
+      const s = U.el("select", {});
+      for (const src of sources) s.append(U.el("option", { value: src.key, selected: src.key === val ? "" : null }, src.label));
+      return s;
+    };
+    const timeSel = (val) => {
+      const s = U.el("select", { style: "max-width:150px" });
+      if (meta) {
+        s.append(U.el("option", { value: "current", selected: val === "current" ? "" : null }, "Current time"));
+        for (let i = 0; i < meta.times.length; i += 1) {
+          const lbl = meta.times_epoch ? `#${i} · ${U.fmtDate(meta.times_epoch[i])}` : `#${i}`;
+          s.append(U.el("option", { value: String(i), selected: String(val) === String(i) ? "" : null }, lbl));
+        }
+      }
+      return s;
+    };
+    const aSel = srcSel(c.aKey), aTime = timeSel(c.aTime);
+    const bSel = srcSel(c.bKey), bTime = timeSel(c.bTime);
+    const scalar = U.el("input", { type: "number", step: "any", value: c.scalar });
+    const cmap = U.el("select", {});
+    for (const n of Colormaps.names()) cmap.append(U.el("option", { value: n, selected: n === c.cmap ? "" : null }, n));
+    const minI = U.el("input", { type: "number", step: "any", value: c.min != null ? c.min : "", placeholder: "auto" });
+    const maxI = U.el("input", { type: "number", step: "any", value: c.max != null ? c.max : "", placeholder: "auto" });
+
+    // the time selector only applies when the operand is an output variable
+    const syncTime = (sel, timeEl) => { timeEl.style.display = sel.value.startsWith("out:") ? "" : "none"; };
+    aSel.addEventListener("change", () => syncTime(aSel, aTime));
+    bSel.addEventListener("change", () => syncTime(bSel, bTime));
+
+    const resampleCb = U.el("input", { type: "checkbox" });
+    resampleCb.checked = !!c.resample;
+
+    const rowA = U.el("div", { class: "form-row" }, U.el("label", {}, "A"), aSel, aTime);
+    const rowB = U.el("div", { class: "form-row" }, U.el("label", {}, "B"), bSel, bTime);
+    const rowK = U.el("div", { class: "form-row" }, U.el("label", {}, "Scalar k"), scalar);
+    const rowR = U.el("div", { class: "form-row" }, U.el("label", {}, "Different grids"),
+      U.el("label", { class: "choice-row", style: "font-size:12px" },
+        resampleCb, U.el("span", {}, "resample B onto A's grid (nearest)")));
+    const syncRows = () => {
+      const bin = _binaryOp(opSel.value);
+      rowB.style.display = bin ? "" : "none";
+      rowR.style.display = bin ? "" : "none";
+      rowK.style.display = bin ? "none" : "";
+    };
+    opSel.addEventListener("change", syncRows);
+    syncRows(); syncTime(aSel, aTime); syncTime(bSel, bTime);
+
+    const saveBtn = U.el("button", { class: "primary" }, "Save");
+    saveBtn.addEventListener("click", async () => {
+      const def = {
+        id: c.id, op: opSel.value, cmap: cmap.value,
+        aKey: aSel.value, aTime: aTime.value, bKey: bSel.value, bTime: bTime.value,
+        scalar: Number(scalar.value) || 0,
+        resample: resampleCb.checked,
+        min: minI.value === "" ? null : Number(minI.value),
+        max: maxI.value === "" ? null : Number(maxI.value),
+        visible: existing ? c.visible : true,
+      };
+      def.name = name.value.trim() || _customFormula(def);
+      const cl = _customList();
+      const idx = cl.findIndex((x) => x.id === def.id);
+      if (idx >= 0) cl[idx] = def; else cl.push(def);
+      App.touchUi();
+      FieldLayer.remove(`field-custom-${def.id}`);
+      customIds.delete(`field-custom-${def.id}`);
+      if (def.visible) await _recomputeCustom(def);
+      _syncCustomRegistry();
+      _applyLayerOrder();
+      _renderGroups();
+      popup.close();
+    });
+    const cancelBtn = U.el("button", { class: "ghost" }, "Cancel");
+    cancelBtn.addEventListener("click", popup.close);
+
+    popup.body.append(
+      U.el("div", { class: "form-row" }, U.el("label", {}, "Name"), name),
+      U.el("div", { class: "form-row" }, U.el("label", {}, "Compute"), opSel),
+      rowA, rowB, rowK, rowR,
+      U.el("div", { class: "form-row" }, U.el("label", {}, "Colormap"), cmap),
+      U.el("div", { class: "form-row" }, U.el("label", {}, "z-limits"), minI, maxI),
+      U.el("div", { class: "muted", style: "font-size:11.5px" },
+        "Combine output timesteps or any interpolated / raster grids. If the two grids differ, tick "
+        + "“resample”. Leave z-limits blank to auto-scale."),
+      U.el("div", { class: "btn-row", style: "justify-content:flex-end;margin-top:8px" }, cancelBtn, saveBtn),
+    );
+  }
+
   /* Apply the tree order to the map. Groups draw in their (draggable)
    * tree order - the first group/row of the tree ends up on top - so
    * e.g. the grid can be placed in front of or behind the objects. */
   const GROUP_MAP_IDS = {
     grid: ["grid-fill", "grid-lines", "grid-outline", "grid-shear", "grid-shear-inner"],
-    objects: ["objects-fill", "objects-fill-outline", "objects-lines"],
+    objects: ["objects-fill", "objects-fill-outline"],
+    // transect lines (objects-lines) are floated to the very top separately
   };
 
   function _applyLayerOrder() {
@@ -459,6 +891,8 @@ const ViewerTab = (() => {
     for (const id of ordered) {
       if (map.getLayer(id)) map.moveLayer(id);
     }
+    // transect lines always float on top of everything
+    if (map.getLayer("objects-lines")) map.moveLayer("objects-lines");
   }
 
   /* ================= shared colormaps + colorbars ================= */
@@ -948,6 +1382,7 @@ const ViewerTab = (() => {
       _createOutputLayer();
       _buildPanel();
       await _showStep(0);
+      await _restoreCustomLayers();
       _applyLayerOrder();
     } catch (err) {
       console.warn("output load failed", err);
@@ -1205,6 +1640,79 @@ const ViewerTab = (() => {
     extraIdx = selects.map((sel) => sel.value).join(",");
   }
 
+  /* ================= hover value readout ================= */
+
+  function _nearestIdx(m, px, py) {
+    let best = 0, bestD = Infinity;
+    const xs = m.x, ys = m.y;
+    for (let idx = 0; idx < xs.length; idx += 1) {
+      const dx = xs[idx] - px, dy = ys[idx] - py;
+      const d = dx * dx + dy * dy;
+      if (d < bestD) { bestD = d; best = idx; }
+    }
+    return { best, dist: Math.sqrt(bestD) };
+  }
+
+  function _cellSize(m) {
+    const c = Math.hypot((m.x[1] || 0) - (m.x[0] || 0), (m.y[1] || 0) - (m.y[0] || 0));
+    return c > 0 ? c : Infinity;
+  }
+
+  // interpolated value of a field layer at the cursor (output uses its
+  // live A/B/frac; static grids use A). null if off-grid or no data.
+  function _sampleFieldLayer(fl, px, py) {
+    if (!fl || !fl.mesh || !fl.mesh.x || !fl.mesh.x.length || !fl._pending || !fl._pending.a) return null;
+    const { best, dist } = _nearestIdx(fl.mesh, px, py);
+    if (dist > 2.5 * _cellSize(fl.mesh)) return null;
+    const p = fl._pending;
+    const v = (p.b && p.frac) ? p.a[best] + p.frac * (p.b[best] - p.a[best]) : p.a[best];
+    return _bad(v) ? null : v;
+  }
+
+  function _samplePoints(pd, px, py) {
+    let best = -1, bestD = Infinity;
+    for (let i = 0; i < pd.x.length; i += 1) {
+      const dx = pd.x[i] - px, dy = pd.y[i] - py;
+      const d = dx * dx + dy * dy;
+      if (d < bestD) { bestD = d; best = i; }
+    }
+    if (best < 0 || Math.sqrt(bestD) > pd.radius) return null;
+    return _bad(pd.z[best]) ? null : pd.z[best];
+  }
+
+  function _labelFor(layer, fid) {
+    if (fid === OUTPUT_LAYER) {
+      const info = (meta && meta.variables.find((v) => v.name === variable)) || {};
+      return { label: variable || "z", unit: info.units || "" };
+    }
+    return { label: "z", unit: "m" };
+  }
+
+  /* Value of the TOP visible layer under the cursor — walks the viewer's
+   * group order (top first) and samples whichever kind the layer is:
+   * output (interpolated), interpolated .grd, imported raster, or point
+   * samples. Returns e.g. "zb = 5.230 m" or null when nothing is hit. */
+  function _hoverSample(xy) {
+    const px = xy[0], py = xy[1];
+    for (const [group] of _orderedGroups()) {
+      if (!["output", "custom", "domain", "rawdata"].includes(group)) continue;
+      for (const layer of Layers.byGroup(group)) {
+        if (layer.visible === false) continue;
+        const fid = _fieldIdFor(layer);
+        const fl = fid && FieldLayer.get(fid);
+        let v = null;
+        if (fl) v = _sampleFieldLayer(fl, px, py);
+        else if (pointData.has(layer.id)) v = _samplePoints(pointData.get(layer.id), px, py);
+        if (v != null) {
+          const lu = _labelFor(layer, fid);
+          const dec = Math.abs(v) < 100 ? 3 : 1;
+          return `${lu.label} = ${v.toFixed(dec)}${lu.unit ? " " + lu.unit : ""}`;
+        }
+      }
+    }
+    return null;
+  }
+
   /* ================= probe ================= */
 
   function _armProbe(button) {
@@ -1270,6 +1778,7 @@ const ViewerTab = (() => {
       FieldLayer.remove(id);
       MapView.removeLayerAndSource(`pts-${layerInfo.id}`);
       pointLayers.delete(layerInfo.id);
+      pointData.delete(layerInfo.id);
       return;
     }
     _setLoading(layerInfo.id, true);
@@ -1285,6 +1794,14 @@ const ViewerTab = (() => {
         let zmin = Infinity, zmax = -Infinity;
         for (const z of res.z) { if (z < zmin) zmin = z; if (z > zmax) zmax = z; }
         dataRanges.set(layerInfo.id, [zmin, zmax]);
+        // cache the samples so hover/transect can read z at a location
+        let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+        for (let i = 0; i < res.x.length; i += 1) {
+          if (res.x[i] < minx) minx = res.x[i]; if (res.x[i] > maxx) maxx = res.x[i];
+          if (res.y[i] < miny) miny = res.y[i]; if (res.y[i] > maxy) maxy = res.y[i];
+        }
+        const spacing = Math.sqrt(Math.max(1, (maxx - minx) * (maxy - miny)) / Math.max(1, res.x.length));
+        pointData.set(layerInfo.id, { x: res.x, y: res.y, z: res.z, radius: 2.5 * spacing });
         pointLayers.add(layerInfo.id);
         MapView.upsertGeojson(`pts-${layerInfo.id}`, { type: "FeatureCollection", features });
         const style = _effectiveRawStyle(layerInfo);
@@ -1350,5 +1867,137 @@ const ViewerTab = (() => {
     }
   }
 
-  return { init };
+  /* ================= dataset catalog + on-demand sampling ==============
+   * Sources for the Transect tab and Custom layers, whether or not shown
+   * on the map. Keys: "out:<var>" (output variable at the current time),
+   * "tgt:<target>" (interpolated .grd), "ent:<entryId>" (raw/imported).
+   * Field data is fetched and cached on demand. */
+  function hasOutput() { return !!meta; }
+
+  const sourceCache = new Map();   // key -> {mesh,data} | {points}
+  const _entKind = {};             // entry id -> "points" | "raster"
+  const _srcLabels = {};           // key -> friendly label (for formulas)
+
+  async function datasetCatalog() {
+    const out = [];
+    if (meta) {
+      for (const v of meta.variables) {
+        const key = `out:${v.name}`, label = `output: ${v.name}`;
+        _srcLabels[key] = label; out.push({ key, label, kind: "raster" });
+      }
+    }
+    let ov = null;
+    try { ov = await Api.get("/api/domain"); } catch (e) { ov = null; }
+    if (ov) {
+      for (const [t, info] of Object.entries(ov.targets || {})) {
+        if (info && (info.exists || info.has_draft)) {
+          const key = `tgt:${t}`, label = `interpolated: ${t}`;
+          _srcLabels[key] = label; out.push({ key, label, kind: "raster" });
+        }
+      }
+      for (const e of (ov.entries || [])) {
+        _entKind[e.id] = e.kind === "points" ? "points" : "raster";
+        const key = `ent:${e.id}`, label = e.label || e.id;
+        _srcLabels[key] = label; out.push({ key, label, kind: _entKind[e.id] });
+      }
+    }
+    return out;
+  }
+
+  function _pointsFrom(res) {
+    let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+    for (let i = 0; i < res.x.length; i += 1) {
+      if (res.x[i] < minx) minx = res.x[i]; if (res.x[i] > maxx) maxx = res.x[i];
+      if (res.y[i] < miny) miny = res.y[i]; if (res.y[i] > maxy) maxy = res.y[i];
+    }
+    const spacing = Math.sqrt(Math.max(1, (maxx - minx) * (maxy - miny)) / Math.max(1, res.x.length));
+    return { x: res.x, y: res.y, z: res.z, radius: 2.5 * spacing };
+  }
+
+  // resolve a key to {mesh,data} or {points}, fetching + caching if needed
+  async function _ensureSource(key) {
+    if (key.startsWith("out:")) {
+      if (!mesh) return null;
+      const data = await _operandArray(key.slice(4), "current");
+      return data ? { mesh, data } : null;
+    }
+    if (key.startsWith("tgt:")) {
+      const target = key.slice(4);
+      const live = FieldLayer.get(`field-domain-${target}`);
+      if (live && live._pending && live._pending.a) return { mesh: live.mesh, data: live._pending.a };
+      if (sourceCache.has(key)) return sourceCache.get(key);
+      try {
+        const { buffer, headers } = await Api.binary(`/api/domain/gridfield?target=${target}&k=0`);
+        const parsed = FieldLayer.parseGridfield(buffer, headers);
+        const r = { mesh: parsed.mesh, data: parsed.values };
+        sourceCache.set(key, r); return r;
+      } catch (e) { return null; }
+    }
+    if (key.startsWith("ent:")) {
+      const id = key.slice(4);
+      const live = FieldLayer.get(`field-raw-${id}`);
+      if (live && live._pending && live._pending.a) return { mesh: live.mesh, data: live._pending.a };
+      if (pointData.has(`raw-${id}`)) return { points: pointData.get(`raw-${id}`) };
+      if (sourceCache.has(key)) return sourceCache.get(key);
+      try {
+        if (_entKind[id] === "points") {
+          const res = await Api.get(`/api/domain/rawfield?id=${id}`);
+          const r = { points: _pointsFrom(res) };
+          sourceCache.set(key, r); return r;
+        }
+        const { buffer, headers } = await Api.binary(`/api/domain/rawfield?id=${id}`);
+        const parsed = FieldLayer.parseGridfield(buffer, headers);
+        const r = { mesh: parsed.mesh, data: parsed.values };
+        sourceCache.set(key, r); return r;
+      } catch (e) { return null; }
+    }
+    return null;
+  }
+
+  function _polylinePoints(coords, n) {
+    const segs = [];
+    let total = 0;
+    for (let i = 1; i < coords.length; i += 1) {
+      const dx = coords[i][0] - coords[i - 1][0], dy = coords[i][1] - coords[i - 1][1];
+      const L = Math.hypot(dx, dy);
+      segs.push({ x0: coords[i - 1][0], y0: coords[i - 1][1], dx, dy, L, acc: total });
+      total += L;
+    }
+    if (total <= 0) return null;
+    const dist = new Array(n), px = new Array(n), py = new Array(n);
+    for (let k = 0; k < n; k += 1) {
+      const d = total * k / (n - 1);
+      dist[k] = d;
+      let s = segs[segs.length - 1];
+      for (const sg of segs) { if (d <= sg.acc + sg.L) { s = sg; break; } }
+      const f = s.L > 0 ? (d - s.acc) / s.L : 0;
+      px[k] = s.x0 + s.dx * f; py[k] = s.y0 + s.dy * f;
+    }
+    return { dist, px, py };
+  }
+
+  async function sampleTransect(coords, keys, nPoints = 240) {
+    if (!coords || coords.length < 2 || !keys || !keys.length) return null;
+    const line = _polylinePoints(coords, nPoints);
+    if (!line) return null;
+    const values = {};
+    for (const key of keys) {
+      const src = await _ensureSource(key);
+      if (!src) continue;
+      const out = new Array(nPoints);
+      if (src.mesh) {
+        for (let k = 0; k < nPoints; k += 1) {
+          const best = _nearestIdx(src.mesh, line.px[k], line.py[k]).best;
+          const v = src.data[best];
+          out[k] = _bad(v) ? null : v;
+        }
+      } else {
+        for (let k = 0; k < nPoints; k += 1) out[k] = _samplePoints(src.points, line.px[k], line.py[k]);
+      }
+      values[key] = out;
+    }
+    return { dist: line.dist, values };
+  }
+
+  return { init, sampleTransect, datasetCatalog, hasOutput };
 })();

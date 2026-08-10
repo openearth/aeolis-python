@@ -81,7 +81,8 @@ def download(bounds, years, dest_dir, job=None):
             if rows.size == 0:
                 return []
             times = ds.variables["time"]
-            years_all = np.array([d.year for d in netCDF4.num2date(times[:], times.units)])
+            dates_all = netCDF4.num2date(times[:], times.units)
+            years_all = np.array([d.year for d in dates_all])
             zvar = ds.variables["altitude"]
 
             for n, year in enumerate(years):
@@ -109,6 +110,7 @@ def download(bounds, years, dest_dir, job=None):
                 entries.append({
                     "source": "jarkus",
                     "year": int(year),
+                    "date": str(dates_all[t_idx[0]])[:10],   # actual survey date
                     "kind": "points",
                     "path": f"gui/rawdata/{out_name}",
                     "crs": 28992,

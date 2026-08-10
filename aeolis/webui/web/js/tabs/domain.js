@@ -96,7 +96,8 @@ const DomainTab = (() => {
     samples.body.append(
       U.el("div", { class: "tbtn-row" },
         U.tbtn("download", "Download", { primary: true, title: "Download data from Dutch coastal sources", onclick: _downloadWizard }),
-        U.tbtn("upload", "Import", { title: "Import a *.xyz sample file", onclick: _importXyz }),
+        U.tbtn("upload", "Import", { title: "Import a *.tif topography raster or *.xyz sample file", onclick: _importFile }),
+        U.tbtn("link", "Link", { title: "Reference raw data from another project (no copy / re-download)", onclick: _linkExternal }),
         removeBtn),
       _sampleList(),
     );
@@ -202,6 +203,7 @@ const DomainTab = (() => {
         nameInput,
         saveName,
         U.el("span", { class: "lp-mini" }, entry.source),
+        _bandSelect(entry),
         U.miniBtn("copy", "Duplicate", async () => {
           await Api.post("/api/domain/sample_duplicate", { id: entry.id });
           _refresh();
@@ -255,6 +257,79 @@ const DomainTab = (() => {
     return list;
   }
 
+  /* Reference raw data that already lives in another project instead of
+   * re-downloading it: pick that project (or its gui/rawdata), choose
+   * datasets, and add manifest entries that point at the files in place. */
+  async function _linkExternal() {
+    const path = await Api.pickFolder({
+      title: "Select another AeoLiS project (or its gui/rawdata folder)",
+    }).catch(() => null);
+    if (!path) return;
+    let scan;
+    try {
+      scan = await Api.post("/api/domain/scan_external", { path });
+    } catch (err) { U.toast(err.message, "error"); return; }
+
+    const linkable = scan.entries.filter((e) => e.exists && !e.is_local);
+    if (!linkable.length) {
+      U.toast(scan.entries.length ? "Nothing new to link here" : "No datasets found there", "error");
+      return;
+    }
+
+    const popup = Popup.open({ title: "Link external raw data", width: 540 });
+    const checks = new Map();
+    const list = U.el("div", { class: "obj-list", style: "max-height:320px;overflow-y:auto" });
+    for (const e of linkable) {
+      const cb = U.el("input", { type: "checkbox", checked: "" });
+      checks.set(e.src_id, { cb, e });
+      const meta = [e.source, e.date || (e.year != null ? String(e.year) : null), U.fmtBytes(e.size)]
+        .filter((v) => v != null && v !== "").join(" · ");
+      list.append(U.el("label", { class: "obj-card", style: "cursor:pointer" },
+        cb,
+        U.el("span", { class: "lp-name" }, e.label),
+        U.el("span", { class: "lp-mini" }, meta)));
+    }
+    const okBtn = U.el("button", { class: "primary" }, "Link selected");
+    okBtn.addEventListener("click", async () => {
+      const ids = [...checks.values()].filter(({ cb }) => cb.checked).map(({ e }) => e.src_id);
+      if (!ids.length) { U.toast("Select at least one dataset", "error"); return; }
+      okBtn.disabled = true;
+      try {
+        const res = await Api.post("/api/domain/link_external", { path, ids });
+        U.toast(`Linked ${res.linked} dataset(s)`, "ok");
+        popup.close();
+        _refresh();
+      } catch (err) { U.toast(err.message, "error"); okBtn.disabled = false; }
+    });
+    const cancelBtn = U.el("button", { class: "ghost" }, "Cancel");
+    cancelBtn.addEventListener("click", popup.close);
+    popup.body.append(
+      U.el("div", { class: "muted", style: "font-size:12px;margin-bottom:6px" },
+        `From ${scan.root} — referenced in place (no copy, no re-download).`),
+      list,
+      U.el("div", { class: "btn-row", style: "justify-content:flex-end;margin-top:8px" }, cancelBtn, okBtn),
+    );
+  }
+
+  /* band picker for multi-channel rasters (RGB/CIR tiffs): which band is
+   * displayed and used in interpolation. Returns null for single-band. */
+  function _bandSelect(entry) {
+    if (!entry.bands || entry.bands <= 1) return null;
+    const sel = U.el("select", { class: "cmap-mini", title: "Which band (channel) to display & use" });
+    for (let b = 1; b <= entry.bands; b += 1) {
+      sel.append(U.el("option", { value: b, selected: b === (entry.band || 1) ? "" : null }, `b${b}`));
+    }
+    sel.addEventListener("click", (ev) => ev.stopPropagation());
+    sel.addEventListener("change", async () => {
+      try {
+        await Api.post("/api/domain/sample_band", { id: entry.id, band: Number(sel.value) });
+        await _refresh();
+        _reloadLayer(`raw-${entry.id}`);
+      } catch (err) { U.toast(err.message, "error"); }
+    });
+    return sel;
+  }
+
   function _removeSelected() {
     const entries = overview.entries.filter((e) => selectedIds.has(e.id));
     if (!entries.length) return;
@@ -293,15 +368,21 @@ const DomainTab = (() => {
     );
   }
 
-  async function _importXyz() {
+  async function _importFile() {
     const path = await Api.pickFile({
-      title: "Import sample file",
-      patterns: [["Sample files", "*.xyz;*.txt;*.csv"], ["All files", "*.*"]],
+      title: "Import topography or samples",
+      patterns: [
+        ["Topography & samples", "*.tif;*.tiff;*.xyz;*.txt;*.csv"],
+        ["GeoTIFF topography", "*.tif;*.tiff"],
+        ["Sample files", "*.xyz;*.txt;*.csv"],
+        ["All files", "*.*"],
+      ],
     }).catch(() => null);
     if (!path) return;
+    const isTiff = /\.tiff?$/i.test(path);
     try {
-      await Api.post("/api/domain/import_xyz", { path });
-      U.toast("Samples imported", "ok");
+      await Api.post(isTiff ? "/api/domain/import_tiff" : "/api/domain/import_xyz", { path });
+      U.toast(isTiff ? "Topography imported" : "Samples imported", "ok");
       _refresh();
     } catch (err) {
       U.toast(err.message, "error");
@@ -371,6 +452,10 @@ const DomainTab = (() => {
 
       const actions = U.el("span", { class: "obj-actions" });
       actions.append(U.miniBtn("interp", "Interpolate…", () => _interpolateWizard(name, info)));
+      actions.append(U.miniBtn("wand", "New grid from a constant value (e.g. a mask of 1s)", () => _targetConstant(name)));
+      if (info.exists || info.has_draft) {
+        actions.append(U.miniBtn("modify", "Edit values (set/add/… over a polygon or index box)", () => _targetModifyWizard(name)));
+      }
       if (info.has_draft) {
         actions.append(U.miniBtn("save", "Save the draft to the configured file", () => _saveTargetDraft(name)));
       }
@@ -570,7 +655,7 @@ const DomainTab = (() => {
       U.clear(results);
       selections.clear();
       for (const source of overview.sources) {
-        if (source.id === "xyz") continue;
+        if (source.id === "xyz" || source.id === "tiff") continue;
         const res = availability[source.id];
         if (!res) continue;
         results.append(U.el("div", { class: "fg-label", style: "margin-top:8px" }, source.title));
@@ -796,6 +881,169 @@ const DomainTab = (() => {
       U.el("div", { class: "choice-row" }, saveOver, U.el("label", { for: "msv-over" }, "Overwrite this layer")),
       U.el("div", { class: "choice-row" }, saveNew, U.el("label", { for: "msv-new" }, "Save as new layer"),
         U.el("span", { class: "grow" }), newName),
+      U.el("div", { class: "btn-row", style: "justify-content:flex-end" }, applyBtn),
+    );
+
+    // ---- band math & classify (rasters): NDVI-style expressions ----
+    if (entry.kind === "raster" || entry.kind === "raster_nc") {
+      _appendBandMath(popup, entry);
+    }
+  }
+
+  /* Band math + threshold classification producing a NEW dataset, e.g.
+   * NDVI = (b4-b1)/(b4+b1) then "NDVI > 0.3 → 1 else 0" for rho_veg. */
+  function _appendBandMath(popup, entry) {
+    const bands = entry.bands || 1;
+    const expr = U.el("input", {
+      type: "text", style: "flex:1",
+      placeholder: bands > 1 ? "e.g. (b4-b1)/(b4+b1)" : "e.g. b1",
+      value: bands >= 4 ? "(b4-b1)/(b4+b1)" : "b1",
+    });
+    const thrOn = U.el("input", { type: "checkbox", id: "bm-thr", checked: "" });
+    const thrOp = U.el("select", {},
+      U.el("option", { value: ">" }, ">"), U.el("option", { value: "<" }, "<"));
+    const thrX = U.el("input", { type: "text", value: "0.3", style: "width:64px" });
+    const thrThen = U.el("input", { type: "text", value: "1", style: "width:52px" });
+    const thrElse = U.el("input", { type: "text", value: "0", style: "width:52px" });
+    const outName = U.el("input", { type: "text", placeholder: "new dataset name", style: "flex:1" });
+
+    const runBtn = U.el("button", { class: "primary" }, "Create dataset");
+    runBtn.addEventListener("click", async () => {
+      const name = outName.value.trim();
+      if (!name) { U.toast("Name the new dataset", "error"); return; }
+      const body = { id: entry.id, expr: expr.value, save_as: name };
+      if (thrOn.checked) {
+        body.threshold = { op: thrOp.value, x: Number(thrX.value),
+          then: Number(thrThen.value), else: Number(thrElse.value) };
+      }
+      try {
+        runBtn.disabled = true;
+        const res = await Api.post("/api/domain/raster_derive", body);
+        U.toast(`"${name}" created (${U.fmtNum(res.min)} … ${U.fmtNum(res.max)})`, "ok");
+        popup.close();
+        _refresh();
+      } catch (err) { U.toast(err.message, "error"); runBtn.disabled = false; }
+    });
+
+    popup.body.append(
+      U.el("hr", { style: "margin:12px 0;border:none;border-top:1px solid var(--border)" }),
+      U.el("span", { class: "fg-label" }, "Band math & classify → new dataset"),
+      U.el("div", { class: "muted", style: "font-size:11.5px" },
+        `Available bands: ${Array.from({ length: bands }, (_, i) => `b${i + 1}`).join(", ")}`
+        + " — e.g. NDVI = (NIR−Red)/(NIR+Red)."),
+      U.el("div", { class: "form-row" }, U.el("label", {}, "Expression"), expr),
+      U.el("div", { class: "choice-row" }, thrOn,
+        U.el("label", { for: "bm-thr" }, "classify: if result"), thrOp, thrX,
+        U.el("span", {}, "→"), thrThen, U.el("span", {}, "else"), thrElse),
+      U.el("div", { class: "form-row" }, U.el("label", {}, "Save as"), outName, runBtn),
+    );
+  }
+
+  /* ================= interpolated-target editing ================= */
+
+  /* New draft filled with one constant value — e.g. a mask of all 1s
+   * that polygon edits then carve 0s into. */
+  function _targetConstant(target) {
+    const popup = Popup.open({ title: `New ${target} grid — constant value`, width: 380 });
+    const value = U.el("input", { type: "text", value: "1", style: "width:90px" });
+    const okBtn = U.el("button", { class: "primary" }, "Create draft");
+    okBtn.addEventListener("click", async () => {
+      const v = Number(value.value);
+      if (!Number.isFinite(v)) { U.toast("Enter a numeric value", "error"); return; }
+      try {
+        okBtn.disabled = true;
+        await Api.post("/api/domain/target_constant", { target, value: v });
+        U.toast(`${target} draft created (all ${v}) — edit it, then Save`, "ok");
+        popup.close();
+        await _refresh();
+        _reloadLayer(`domain-${target}`);
+      } catch (err) { U.toast(err.message, "error"); okBtn.disabled = false; }
+    });
+    const cancelBtn = U.el("button", { class: "ghost" }, "Cancel");
+    cancelBtn.addEventListener("click", popup.close);
+    popup.body.append(
+      U.el("div", { class: "form-row" }, U.el("label", {}, "Fill value"), value),
+      U.el("div", { class: "muted", style: "font-size:11.5px" },
+        "Creates an unsaved draft on the model grid (e.g. 1 everywhere for a mask). "
+        + "Use Edit values to set areas, then Save to write the .grd."),
+      U.el("div", { class: "btn-row", style: "justify-content:flex-end;margin-top:8px" }, cancelBtn, okBtn),
+    );
+  }
+
+  /* Edit the target draft (or saved .grd) — same scope options as the
+   * sample modify wizard, but writing to the target draft. */
+  function _targetModifyWizard(target) {
+    const popup = Popup.open({ title: `Edit values — ${target}`, width: 520 });
+
+    const scopeAll = U.el("input", { type: "radio", name: "tm-scope", id: "tms-all", checked: "" });
+    const scopePoly = U.el("input", { type: "radio", name: "tm-scope", id: "tms-poly" });
+    const scopeIdx = U.el("input", { type: "radio", name: "tm-scope", id: "tms-idx" });
+
+    const polySelect = U.el("select", {});
+    const refreshPolys = () => {
+      U.clear(polySelect);
+      for (const obj of Objects.byKind("polygon")) {
+        polySelect.append(U.el("option", { value: obj.id }, obj.name));
+      }
+      if (!polySelect.children.length) {
+        polySelect.append(U.el("option", { value: "" }, "— none drawn yet —"));
+      }
+    };
+    refreshPolys();
+    const drawBtn = U.el("button", { class: "ghost" }, "Draw new");
+    drawBtn.addEventListener("click", async () => {
+      scopePoly.checked = true;
+      popup.hide();
+      try {
+        const obj = await Draw.polygon({ name: `${target} area` });
+        refreshPolys();
+        polySelect.value = obj.id;
+      } catch { /* cancelled */ }
+      popup.show();
+    });
+
+    const idxInputs = ["j0", "j1", "i0", "i1"].map((ph) =>
+      U.el("input", { type: "text", placeholder: ph, style: "width:52px" }));
+
+    const op = U.el("select", {},
+      ...MODIFY_OPS.map(([value, label]) => U.el("option", { value }, label)));
+    const value = U.el("input", { type: "text", placeholder: "value", style: "width:90px" });
+
+    const applyBtn = U.el("button", { class: "primary" }, "Apply to draft");
+    applyBtn.addEventListener("click", async () => {
+      const body = { target, op: op.value, value: value.value };
+      if (scopePoly.checked) {
+        if (!polySelect.value) { U.toast("Select or draw a polygon", "error"); return; }
+        body.scope = { type: "polygon", polygon: polySelect.value };
+      } else if (scopeIdx.checked) {
+        body.scope = { type: "indices", indices: idxInputs.map((n) => Number(n.value || 0)) };
+      } else {
+        body.scope = { type: "all" };
+      }
+      try {
+        applyBtn.disabled = true;
+        const res = await Api.post("/api/domain/target_modify", body);
+        U.toast(`Edited ${res.cells} cells (${U.fmtNum(res.min)} … ${U.fmtNum(res.max)}) — draft updated`, "ok");
+        popup.close();
+        await _refresh();
+        _reloadLayer(`domain-${target}`);
+      } catch (err) {
+        U.toast(err.message, "error");
+        applyBtn.disabled = false;
+      }
+    });
+
+    popup.body.append(
+      U.el("span", { class: "fg-label" }, "Which cells"),
+      U.el("div", { class: "choice-row" }, scopeAll, U.el("label", { for: "tms-all" }, "All")),
+      U.el("div", { class: "choice-row" }, scopePoly, U.el("label", { for: "tms-poly" }, "Inside polygon"),
+        polySelect, drawBtn),
+      U.el("div", { class: "choice-row" }, scopeIdx, U.el("label", { for: "tms-idx" }, "Index range"),
+        ...idxInputs),
+      U.el("span", { class: "fg-label", style: "margin-top:8px" }, "Operation"),
+      U.el("div", { class: "form-row" }, op, value),
+      U.el("div", { class: "muted", style: "font-size:11.5px" },
+        "Edits the unsaved draft (shown on the map). Save the card afterwards to write the .grd."),
       U.el("div", { class: "btn-row", style: "justify-content:flex-end" }, applyBtn),
     );
   }

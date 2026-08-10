@@ -670,6 +670,59 @@ input.readonly { background: var(--panel-2); color: var(--muted); }
 .fb-name-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
 .fb-name-row label { color: var(--muted); font-size: 0.8929rem; }
 .fb-name-row .fb-name { flex: 1; }
+.fb-row.fb-newfolder { background: var(--accent-soft); }
+.fb-newfolder-input { flex: 1; font-size: 0.9286rem; }
+
+/* metadata "info" popup: a two-column key/value grid */
+.info-grid {
+  display: grid; grid-template-columns: max-content 1fr; gap: 5px 14px;
+  font-size: 0.9286rem; align-items: baseline;
+}
+.info-key { color: var(--muted); white-space: nowrap; }
+.info-val { word-break: break-word; }
+
+/* HPC job-script preview / editor */
+.hpc-script {
+  width: 100%; min-height: 190px; margin-top: 4px;
+  font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px;
+  line-height: 1.45; white-space: pre; overflow: auto;
+  background: var(--panel-2); color: var(--fg);
+  border: 1px solid var(--border); border-radius: 6px; padding: 8px;
+}
+.hpc-script[readonly] { opacity: .85; }
+/* small help "i" next to a form label */
+.help-i {
+  display: inline-flex; vertical-align: middle; margin-left: 5px;
+  color: var(--muted); cursor: help;
+}
+.help-i:hover { color: var(--accent); }
+
+/* Transect tab in the shared time-series area (#graphs-wrap becomes a
+ * flex column so the tab strip and the chart content can coexist) */
+#graphs-wrap { display: flex; flex-direction: column; }
+#graphs, #transect-panel { flex: 1 1 auto; min-height: 0; height: auto; }
+.gt-tabs { flex: none; display: flex; gap: 2px; padding: 4px 6px 0; }
+.gt-tab {
+  font-size: 12px; padding: 3px 12px; cursor: pointer; color: var(--muted);
+  background: var(--panel-2); border: 1px solid var(--border); border-bottom: none;
+  border-radius: 6px 6px 0 0;
+}
+.gt-tab.active { background: var(--panel); color: var(--fg); font-weight: 600; }
+#transect-panel { display: flex; flex-direction: column; }
+.gt-bar { flex: none; display: flex; align-items: center; gap: 8px; padding: 4px 8px; font-size: 12px; }
+.gt-bar .gt-sel { min-width: 140px; }
+.gt-chart { flex: 1 1 auto; min-height: 0; position: relative; padding: 2px 6px 6px; }
+.gt-msg { color: var(--muted); font-size: 12.5px; padding: 20px; text-align: center; }
+
+/* drawing instruction banner (shown over the map while drawing) */
+.draw-banner {
+  position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+  z-index: 350; display: flex; align-items: center; gap: 10px;
+  background: #26303d; color: #fff; padding: 8px 14px; border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.35); font-size: 13px; max-width: 92vw;
+}
+.draw-banner .draw-banner-keys { color: #9fb0c3; font-size: 11.5px; }
+.draw-banner button { padding: 3px 12px; }
 
 /* ============ Toasts ============ */
 
@@ -831,11 +884,13 @@ button.toggle.active {
   display: flex; align-items: center; justify-content: center;
   font-size: 0.9286rem; font-weight: 700; color: var(--accent);
   background: #fff; border: 2px solid var(--accent);
-  cursor: grab;
 }
-/* the ↻ glyph is a child node; force the grab cursor on it too so hovering
- * anywhere on the handle shows the rotate affordance */
-.grid-handle.rotate, .grid-handle.rotate * { cursor: grab; }
+/* a circular-arrow "rotate" cursor (with a fallback keyword) makes the
+ * affordance unmistakable; the ↻ glyph is a child node so force it there
+ * too, else hovering the glyph reverts to the default arrow */
+.grid-handle.rotate, .grid-handle.rotate * {
+  cursor: url("../img/rotate-cursor.svg") 14 14, grab;
+}
 .grid-handle.rotate:active, .grid-handle.rotate:active * { cursor: grabbing; }
 .shear-info { margin: 4px 0; }
 

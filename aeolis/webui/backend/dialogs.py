@@ -173,3 +173,32 @@ def _browse(handler, body, tail):
         "files": files,
         "drives": _list_drives(),
     })
+
+
+@route("POST", "/api/mkdir")
+def _mkdir(handler, body, tail):
+    """Create a single subfolder inside an existing directory, so the
+    save-as picker can make a new folder to save into."""
+    parent = body.get("path")
+    name = (body.get("name") or "").strip()
+    if not parent or not name:
+        send_error_json(handler, "missing 'path' or 'name'")
+        return
+    # single path segment only - never traverse
+    if name in (".", "..") or any(sep in name for sep in ("/", "\\")):
+        send_error_json(handler, "invalid folder name")
+        return
+    base = Path(parent).expanduser()
+    if not base.is_dir():
+        send_error_json(handler, f"not a folder: {parent}", 404)
+        return
+    target = (base / name).resolve()
+    try:
+        target.mkdir(parents=False, exist_ok=False)
+    except FileExistsError:
+        send_error_json(handler, f"'{name}' already exists")
+        return
+    except OSError as exc:
+        send_error_json(handler, f"cannot create folder: {exc}", 403)
+        return
+    send_json(handler, {"path": str(target)})

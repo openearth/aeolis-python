@@ -116,6 +116,7 @@ const TSPlot = (() => {
    * } */
   function create(host, spec) {
     const timeBased = spec.timeBased !== false;
+    const minSpan = spec.minSpan || MIN_SPAN;   // e.g. metres for a transect
     const seriesSpecs = (spec.series || []).map((s, i) => ({
       color: s.color || COLORS[i % COLORS.length], ...s,
     }));
@@ -177,7 +178,7 @@ const TSPlot = (() => {
       if (!full || !win) return win;
       const dataSpan = full[1] - full[0];
       const marginAbs = dataSpan * OUTER_MARGIN;
-      const span = U.clamp(win[1] - win[0], MIN_SPAN, _maxSpan());
+      const span = U.clamp(win[1] - win[0], minSpan, _maxSpan());
       const loMin = full[0] - marginAbs;
       const loMax = full[1] + marginAbs - span;
       let lo;
@@ -275,7 +276,7 @@ const TSPlot = (() => {
         const { min, max } = u.scales.x;
         const span = max - min;
         const factor = ev.deltaY < 0 ? 0.8 : 1.25;
-        const newSpan = U.clamp(span * factor, MIN_SPAN, _maxSpan());
+        const newSpan = U.clamp(span * factor, minSpan, _maxSpan());
         const tAt = u.posToVal(pxOf(ev), "x");
         const frac = (tAt - min) / span;
         const lo = tAt - newSpan * frac;
@@ -364,7 +365,8 @@ const TSPlot = (() => {
       }
       const t = u.data[0][idx];
       // floating tooltip: time (with minutes) + each series' value
-      let html = `<div class="tt-time">${U.fmtDate(t)}</div>`;
+      const xlab = spec.xFormat ? spec.xFormat(t) : (timeBased ? U.fmtDate(t) : U.fmtNum(t, 1));
+      let html = `<div class="tt-time">${xlab}</div>`;
       seriesSpecs.forEach((s, i) => {
         const v = u.data[i + 1] ? u.data[i + 1][idx] : null;
         const val = (v === null || v === undefined) ? "–"
@@ -399,6 +401,9 @@ const TSPlot = (() => {
         points: { show: Boolean(s.points), size: 4, fill: s.color, stroke: s.color },
       };
       if (s.points) entry.paths = () => null;   // dots only (e.g. direction)
+      if (s.fill) entry.fill = s.fill;
+      if (s.fillTo != null) entry.fillTo = s.fillTo;
+      if (s.dash) entry.dash = s.dash;
       uSeries.push(entry);
     });
 
@@ -439,6 +444,7 @@ const TSPlot = (() => {
       // canvas and one x-scale
       padding: [6, 12, spec.bottomBand || 4, 4],
       series: uSeries,
+      bands: spec.bands || undefined,
       axes,
       scales,
       legend: { show: false },

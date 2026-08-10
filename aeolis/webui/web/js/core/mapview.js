@@ -12,6 +12,7 @@ const MapView = (() => {
 
   let map = null;
   const markers = new Map();   // id -> maplibregl.Marker
+  let hoverSampler = null;      // fn(modelXY) -> "z = 5.230 m" | null
 
   const BASEMAPS = {
     gray: {
@@ -68,7 +69,14 @@ const MapView = (() => {
       const out = document.getElementById("coord-readout");
       if (out) {
         const digits = App.state.crs.epsg === 4326 ? 5 : 1;
-        out.textContent = `x ${xy[0].toFixed(digits)}  y ${xy[1].toFixed(digits)}`;
+        let text = `x ${xy[0].toFixed(digits)}  y ${xy[1].toFixed(digits)}`;
+        // append the value of the top visible dataset under the cursor
+        if (hoverSampler) {
+          let z = null;
+          try { z = hoverSampler(xy); } catch (e) { z = null; }
+          if (z) text += `    ${z}`;
+        }
+        out.textContent = text;
       }
     });
 
@@ -187,9 +195,12 @@ const MapView = (() => {
     if (map.getSource(id)) map.removeSource(id);
   }
 
+  function setHoverSampler(fn) { hoverSampler = fn; }
+
   return {
     init, instance, setBasemap, fitModelBounds,
     setLabel, removeLabel, removeLabels,
     upsertGeojson, ensureLayer, removeLayerAndSource,
+    setHoverSampler,
   };
 })();

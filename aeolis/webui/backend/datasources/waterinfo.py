@@ -168,12 +168,39 @@ def _fetch_window(station, code, scale, date0, date1):
     return np.asarray(times)[order], np.asarray(values)[order]
 
 
+def _fetch_window_retry(station, code, scale, date0, date1, job=None, attempts=3):
+    """_fetch_window with retries for transient failures (timeouts,
+    connection resets, 5xx). LimitExceeded passes straight through -
+    that one is handled by shrinking the chunk, not by retrying."""
+    import time
+    last = None
+    for attempt in range(attempts):
+        try:
+            return _fetch_window(station, code, scale, date0, date1)
+        except LimitExceeded:
+            raise
+        except RuntimeError as exc:
+            last = exc
+            if attempt + 1 < attempts:
+                if job:
+                    job.update(message=f"waterinfo {station} {code}: retrying "
+                                       f"({attempt + 2}/{attempts}) — {str(exc)[:80]}")
+                time.sleep(3 * (attempt + 1))
+    raise last
+
+
 def fetch_series(station, kind, date0, date1, job=None):
-    """Measured series per quantity code -> [(epoch_seconds, values), ...].
+    """Measured series per quantity code.
+
+    Returns ``(results, warnings)`` with results
+    ``[(epoch_seconds, values), ...]`` (one per quantity code) and
+    human-readable warnings for anything non-fatal.
 
     The DD-API caps a single request at 263 088 observations, so long
     periods are fetched in adaptive chunks (start ~6 months, halve on a
-    limit error) and concatenated.
+    limit error). Transient errors are retried; if a chunk keeps
+    failing, the data downloaded so far is KEPT and returned as a
+    partial series with a warning instead of being thrown away.
     """
     from datetime import timedelta
 
@@ -181,6 +208,7 @@ def fetch_series(station, kind, date0, date1, job=None):
         raise ValueError(f"unknown quantity kind '{kind}'")
     spec = QUANTITIES[kind]
     results = []
+    warnings = []
     total_seconds = max(1.0, (date1 - date0).total_seconds())
 
     for code, scale in zip(spec["codes"], spec["scale"]):
@@ -194,27 +222,37 @@ def fetch_series(station, kind, date0, date1, job=None):
                            message=f"waterinfo {station} {code} "
                                    f"({cursor:%Y-%m}, chunk {chunk.days} d)")
                 if job.cancel_requested:
+                    warnings.append(f"{code}: cancelled at {cursor:%Y-%m-%d} — "
+                                    "the data up to there is kept")
                     break
             end = min(cursor + chunk, date1)
             try:
-                e, v = _fetch_window(station, code, scale, cursor, end)
+                e, v = _fetch_window_retry(station, code, scale, cursor, end, job)
             except LimitExceeded:
                 if chunk.days <= 7:
-                    raise RuntimeError(
-                        "waterinfo: observation limit hit even for a 7-day "
-                        f"window ({station}/{code})"
-                    )
+                    warnings.append(f"{code}: observation limit hit even for a "
+                                    f"7-day window at {cursor:%Y-%m-%d} — stored up to there")
+                    break
                 chunk = timedelta(days=max(7, chunk.days // 2))
                 continue
+            except RuntimeError as exc:
+                # keep everything downloaded so far instead of losing it
+                warnings.append(f"{code}: download stopped at {cursor:%Y-%m-%d} "
+                                f"after 3 attempts ({exc}) — the data up to there is kept")
+                break
             epochs.append(e)
             values.append(v)
             cursor = end
         epoch = np.concatenate(epochs) if epochs else np.array([])
         vals = np.concatenate(values) if values else np.array([])
+        if epoch.size == 0 and not results:
+            # nothing at all for the primary quantity -> genuine failure
+            detail = f" ({warnings[-1]})" if warnings else ""
+            raise RuntimeError(f"waterinfo: no data for {station}/{code} in this period{detail}")
         if epoch.size == 0:
-            raise RuntimeError(f"waterinfo: no data for {station}/{code} in this period")
+            warnings.append(f"{code}: no data — column left empty (NaN)")
         results.append((epoch, vals))
-    return results
+    return results, warnings
 
 
 def probe_period(station, kind, job=None):

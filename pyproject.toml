@@ -67,6 +67,10 @@ classifiers = [
     "pyproj",
     "cdsapi",
   ]
+  # submit runs to the Deltares HYDRAX (SLURM) cluster over SSH
+  webui-hpc = [
+    "paramiko",
+  ]
   dev = [
     "pytest",
     "pytest-cov",

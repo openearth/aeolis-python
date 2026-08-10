@@ -84,7 +84,10 @@ def download_wind(lon, lat, date0, date1, dest_dir, job=None):
             continue
         if job:
             job.update(progress=k / n_chunks,
-                       message=f"ERA5 {year} ({k + 1}/{n_chunks}) - CDS queue, may take minutes")
+                       message=f"ERA5 {year} ({k + 1}/{n_chunks}) — waiting in the "
+                               "Copernicus (CDS) server queue; this is outside our "
+                               "control and can take minutes to hours when busy. "
+                               "Finished years are cached, so retrying later resumes.")
         days = (d1 - d0).days + 1
         dates = [d0 + timedelta(days=i) for i in range(days)]
         months = sorted({f"{d.month:02d}" for d in dates})

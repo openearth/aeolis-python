@@ -629,6 +629,100 @@ def _raw_modify(handler, body, tail):
     send_json(handler, {"ok": True, "entry": entry})
 
 
+# ---------------------------------------------------------------------
+# data-flaw detection & clean-up: sensors report flaws as sentinel
+# values (999 m waves, -999) or as long constant stretches (0 m/s wind,
+# 72 deg direction for days). Detect them and replace / interpolate /
+# remove.
+# ---------------------------------------------------------------------
+
+def _flag_flaws(col, rules):
+    """Boolean mask of flawed samples in one column + per-rule counts."""
+    flags = np.zeros(col.size, dtype=bool)
+    counts = {}
+    for s in (rules.get("sentinels") or []):
+        m = np.isclose(col, float(s), rtol=0.0, atol=1e-9)
+        counts[f"= {s}"] = int(m.sum())
+        flags |= m
+    run_min = rules.get("run_min")
+    if run_min and col.size >= 2:
+        finite = np.isfinite(col)
+        change = np.ones(col.size, dtype=bool)
+        change[1:] = ~((col[1:] == col[:-1]) & finite[1:] & finite[:-1])
+        run_id = np.cumsum(change) - 1
+        lengths = np.bincount(run_id)[run_id]
+        m = (lengths >= int(run_min)) & finite
+        rv = rules.get("run_value")
+        if rv not in (None, ""):
+            m &= np.isclose(col, float(rv), rtol=0.0, atol=1e-9)
+        counts[f"constant ≥ {int(run_min)} steps"] = int(m.sum())
+        flags |= m
+    return flags, counts
+
+
+@route("POST", "/api/conditions/raw_clean")
+def _raw_clean(handler, body, tail):
+    """Detect flawed stretches in a raw series and clean them up.
+
+    body: {id, column: "all"|idx, rules: {sentinels: [999, ...],
+    run_min: N, run_value: v|null}, action: "nan"|"interp"|"remove",
+    preview: bool, save_as: str}
+    """
+    entry = _get_raw_entry(body.get("id", ""))
+    if entry is None:
+        send_error_json(handler, "unknown raw series", 404)
+        return
+    rules = body.get("rules") or {}
+    action = body.get("action") or "nan"
+    t, cols = _load_raw_series(entry)
+    labels = entry.get("labels") or KINDS[entry["kind"]]["cols"][:cols.shape[1]]
+
+    column = body.get("column")
+    col_idx = list(range(cols.shape[1])) if column in (None, "", "all") else [int(column)]
+
+    report = []
+    masks = np.zeros(cols.shape, dtype=bool)
+    for i in col_idx:
+        flags, counts = _flag_flaws(cols[:, i], rules)
+        masks[:, i] = flags
+        report.append({"column": labels[i] if i < len(labels) else f"col {i}",
+                       "flagged": int(flags.sum()), "rules": counts})
+    total = int(masks.sum())
+
+    if body.get("preview"):
+        send_json(handler, {"ok": True, "preview": True, "total": total,
+                            "rows": int(t.size), "report": report})
+        return
+    if total == 0:
+        send_error_json(handler, "nothing detected with these rules - nothing to clean")
+        return
+
+    if action == "remove":
+        keep = ~masks.any(axis=1)
+        t, cols = t[keep], cols[keep]
+        if not t.size:
+            send_error_json(handler, "cleaning removed every sample - nothing saved")
+            return
+    else:
+        cols = np.array(cols, copy=True)
+        cols[masks] = np.nan
+        if action == "interp":
+            for i in col_idx:
+                col = cols[:, i]
+                good = np.isfinite(col)
+                if good.sum() >= 2:
+                    bad = ~good
+                    col[bad] = np.interp(t[bad], t[good], col[good])
+
+    save_as = (body.get("save_as") or "").strip()
+    if save_as:
+        entry = _save_raw_entry(entry["kind"], "cleaned", save_as, t, cols)
+    else:
+        entry = _save_raw_entry(entry["kind"], entry.get("source"), entry.get("label"),
+                                t, cols, entry=entry)
+    send_json(handler, {"ok": True, "entry": entry, "total": total, "report": report})
+
+
 @route("POST", "/api/conditions/raw_rename")
 def _raw_rename(handler, body, tail):
     name = (body.get("name") or "").strip()
@@ -986,6 +1080,8 @@ def _fetch(handler, body, tail):
     if body.get("date1"):
         date1 = datetime.fromisoformat(body["date1"]).replace(tzinfo=timezone.utc)
 
+    warnings = []   # non-fatal notes (partial downloads etc.) shown in the UI
+
     def _fetch_one(kind, job):
         if source == "era5":
             if kind != "wind":
@@ -1002,10 +1098,16 @@ def _fetch(handler, body, tail):
             station_name = (cell.get("name") or "ERA5")
         elif source == "waterinfo":
             station = body.get("station")
-            series = waterinfo.fetch_series(station, kind, date0, date1, job)
+            series, warns = waterinfo.fetch_series(station, kind, date0, date1, job)
+            for w in warns:
+                warnings.append(f"{KIND_TITLES.get(kind, kind)}: {w}")
             epoch, base = series[0]
             cols = [base]
             for epoch_i, values_i in series[1:]:
+                if len(values_i) == 0:
+                    # secondary quantity absent/failed: keep the column as NaN
+                    cols.append(np.full(epoch.shape, np.nan))
+                    continue
                 # nearest-neighbour align extra quantities on the first one
                 idx = np.searchsorted(epoch_i, epoch).clip(0, len(values_i) - 1)
                 cols.append(values_i[idx])
@@ -1034,6 +1136,7 @@ def _fetch(handler, body, tail):
                 errors.append(f"{KIND_TITLES.get(kind, kind)}: {exc}")
         if not entries:
             raise RuntimeError("; ".join(errors) or "nothing downloaded")
-        return {"entries": entries, "errors": errors}
+        # partial-download warnings surface next to real errors in the UI
+        return {"entries": entries, "errors": errors + warnings}
 
     send_json(handler, {"job": jobs.start(f"fetch {source} {'+'.join(kinds)}", _run)})

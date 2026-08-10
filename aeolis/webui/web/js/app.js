@@ -20,6 +20,7 @@
   ConditionsTab.init();
   RunTab.init();
   ViewerTab.init();
+  Transect.init();
 
   _wireChrome();
 

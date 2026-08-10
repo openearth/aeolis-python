@@ -89,6 +89,81 @@ class TestSchema:
         assert by_key["output_vars"]["picker"] == "output_vars"
 
 
+class TestHpcRunner:
+
+    def test_build_job_script_matches_shape(self):
+        from aeolis.webui.backend import run_manager as rm
+        s = rm.build_job_script({
+            "user": "weste_bt", "partition": "4vcpu", "walltime": "20-00:00:00",
+            "env_path": "/p/x/00_environments/env", "run_dir": "/p/x/03_simulations/run",
+            "job_name": "NPZK77c", "config": "blowout.txt", "ntasks": 2,
+        })
+        assert s.startswith("#!/bin/bash\n")
+        assert "#SBATCH --job-name=NPZK77c" in s
+        assert "#SBATCH --output=NPZK77c.o%j" in s
+        assert "#SBATCH --partition=4vcpu" in s
+        assert "#SBATCH --ntasks=2" in s
+        assert "#SBATCH --time=20-00:00:00" in s
+        assert "module load miniforge/latest" in s
+        assert "conda activate /p/x/00_environments/env" in s
+        assert "cd /p/x/03_simulations/run" in s
+        assert s.strip().endswith("aeolis run ./blowout.txt")
+
+    def test_job_script_optional_mail(self):
+        from aeolis.webui.backend import run_manager as rm
+        s = rm.build_job_script({"mail_user": "a@deltares.nl"})
+        assert "#SBATCH --mail-user=a@deltares.nl" in s
+        assert "#SBATCH --mail-type=BEGIN,END,FAIL" in s
+        assert "--mail-user" not in rm.build_job_script({})
+
+    def test_parse_job_id(self):
+        from aeolis.webui.backend import run_manager as rm
+        assert rm.parse_job_id("Submitted batch job 215578") == "215578"
+        assert rm.parse_job_id("nope") is None
+
+    def test_path_conversion_roundtrip(self):
+        from aeolis.webui.backend import run_manager as rm
+        assert rm.local_to_linux(r"P:\proj\run") == "/p/proj/run"
+        assert rm.local_to_linux("P:/proj/run") == "/p/proj/run"
+        assert rm.linux_to_local("/p/proj/run") == r"P:\proj\run"
+        # already-linux path is left alone
+        assert rm.local_to_linux("/p/proj/run") == "/p/proj/run"
+
+    def test_parse_squeue_and_sacct(self):
+        from aeolis.webui.backend import run_manager as rm
+        assert rm.parse_squeue("PENDING|Priority|0:00|1|1vcpu")["reason"] == "Priority"
+        assert rm.parse_squeue("RUNNING|None|1:23|1|4vcpu")["state"] == "RUNNING"
+        assert rm.parse_squeue("") is None
+        fin = rm.parse_sacct("215578|COMPLETED|0:0|00:03:36\n215578.batch|COMPLETED|0:0|00:03:36", "215578")
+        assert fin["state"] == "COMPLETED" and fin["elapsed"] == "00:03:36"
+        assert rm.parse_sacct("", "1") is None
+
+
+class TestRawClean:
+
+    def test_flag_sentinels(self):
+        from aeolis.webui.backend.conditions_api import _flag_flaws
+        col = np.array([1.0, 999.0, 2.0, -999.0, 3.0])
+        flags, counts = _flag_flaws(col, {"sentinels": [999, -999]})
+        assert flags.tolist() == [False, True, False, True, False]
+        assert counts["= 999"] == 1 and counts["= -999"] == 1
+
+    def test_flag_constant_runs(self):
+        from aeolis.webui.backend.conditions_api import _flag_flaws
+        col = np.array([1.0, 5.0, 5.0, 5.0, 5.0, 2.0, 3.0, 3.0])
+        flags, _ = _flag_flaws(col, {"run_min": 4})
+        assert flags.tolist() == [False, True, True, True, True, False, False, False]
+        # restricted to a specific value: the run of 5s only
+        flags, _ = _flag_flaws(col, {"run_min": 2, "run_value": 3})
+        assert flags.tolist() == [False, False, False, False, False, False, True, True]
+
+    def test_runs_not_bridged_by_nan(self):
+        from aeolis.webui.backend.conditions_api import _flag_flaws
+        col = np.array([0.0, 0.0, np.nan, 0.0, 0.0])
+        flags, _ = _flag_flaws(col, {"run_min": 3})
+        assert not flags.any()   # two 2-runs separated by NaN, no 3-run
+
+
 class TestDownloadCaching:
 
     def test_bounds_tag_distinguishes_areas(self):
@@ -520,6 +595,73 @@ class TestApi:
         assert (tmp_path / entry["path"]).is_file()
         assert not (tmp_path / old_path).is_file()
         assert entry["id"] != eid
+
+    def test_link_external_references_in_place(self, server_project):
+        import json
+        tmp_path, get, post = server_project
+        # build a second project on disk with one downloaded dataset
+        ext = tmp_path.parent / "otherproj"
+        ext_raw = ext / "gui" / "rawdata"
+        ext_raw.mkdir(parents=True, exist_ok=True)
+        np.savez_compressed(ext_raw / "shared.npz",
+                            x=np.array([0.0, 1.0]), y=np.array([0.0, 1.0]),
+                            z=np.array([2.0, 3.0], dtype="float32"))
+        (ext_raw / "manifest.json").write_text(json.dumps({"entries": [{
+            "id": "abc123", "source": "xyz", "kind": "points",
+            "path": "gui/rawdata/shared.npz", "label": "Shared points",
+        }]}))
+
+        scan = post("/api/domain/scan_external", {"path": str(ext)})
+        assert len(scan["entries"]) == 1
+        assert scan["entries"][0]["exists"] and not scan["entries"][0]["is_local"]
+
+        res = post("/api/domain/link_external", {"path": str(ext), "ids": ["abc123"]})
+        assert res["linked"] == 1
+        entry = get("/api/domain")["entries"][0]
+        assert entry["linked"] is True
+        # the manifest points at the external file, not a local copy
+        assert entry["path"] == str((ext_raw / "shared.npz").resolve())
+        assert not (tmp_path / "gui" / "rawdata" / "shared.npz").exists()
+
+        # deleting a linked entry must NOT remove the external source file
+        post("/api/domain/forget", {"id": entry["id"], "delete_file": True})
+        assert (ext_raw / "shared.npz").is_file()
+        assert not get("/api/domain")["entries"]
+
+    def test_target_constant_and_modify(self, server_project):
+        tmp_path, get, post = server_project
+        post("/api/grid/save",
+             {"x0": 0.0, "y0": 0.0, "dx": 1.0, "nx": 4, "ny": 4, "rotation": 0.0})
+        r = post("/api/domain/target_constant", {"target": "bed", "value": 1})
+        assert r["min"] == 1 and r["max"] == 1
+        assert get("/api/domain")["targets"]["bed"]["has_draft"] is True
+        # set a 2x2 index box to 0 (wave-mask style edit)
+        r = post("/api/domain/target_modify", {"target": "bed", "op": "set", "value": 0,
+                 "scope": {"type": "indices", "indices": [0, 1, 0, 1]}})
+        assert r["cells"] == 4 and r["min"] == 0 and r["max"] == 1
+        post("/api/domain/target_save", {"target": "bed"})
+        assert (tmp_path / "zb.grd").is_file()
+
+    def test_raster_derive_ndvi_threshold(self, server_project):
+        import rasterio
+        from rasterio.transform import from_origin
+        tmp_path, get, post = server_project
+        tif = tmp_path / "cir.tif"
+        nir = np.array([[0.8, 0.1], [0.9, 0.2]], dtype="float32")
+        red = np.array([[0.2, 0.3], [0.1, 0.4]], dtype="float32")
+        with rasterio.open(tif, "w", driver="GTiff", height=2, width=2, count=2,
+                           dtype="float32", crs="EPSG:28992",
+                           transform=from_origin(0, 2, 1, 1)) as ds:
+            ds.write(nir, 1)
+            ds.write(red, 2)
+        eid = post("/api/domain/import_tiff", {"path": str(tif)})["entry"]["id"]
+        ent = next(e for e in get("/api/domain")["entries"] if e["id"] == eid)
+        assert ent["bands"] == 2
+        # NDVI = (b1-b2)/(b1+b2), classify > 0.4 -> 1 else 0
+        r = post("/api/domain/raster_derive", {"id": eid, "expr": "(b1-b2)/(b1+b2)",
+                 "threshold": {"op": ">", "x": 0.4, "then": 1, "else": 0}, "save_as": "veg"})
+        assert r["min"] == 0 and r["max"] == 1
+        assert "veg" in [e["label"] for e in get("/api/domain")["entries"]]
 
     def test_domain_target_draft_load_and_save(self, server_project):
         tmp_path, get, post = server_project
