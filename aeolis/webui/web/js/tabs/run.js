@@ -492,9 +492,25 @@ const RunTab = (() => {
 
     // --- environment ---
     subhead("Environment");
-    pathField("Conda env", "env_path",
-      "Path to the conda environment to activate (on /p). Browse to pick it as a folder.",
+    const kindSel = U.el("select", {});
+    kindSel.append(
+      U.el("option", { value: "conda", selected: p.env_kind === "venv" ? null : "" },
+        "conda / miniforge"),
+      U.el("option", { value: "venv", selected: p.env_kind === "venv" ? "" : null },
+        "Python venv (uv)"));
+    kindSel.addEventListener("change", _scheduleHpcPreview);
+    hpc.fields.env_kind = () => kindSel.value;
+    // a venv needs no module/conda bootstrap lines
+    hpc.fields.modules = () => (kindSel.value === "venv" ? [] : (hpc.base.modules || []));
+    rowNode("Environment kind", kindSel,
+      "conda: module load + 'conda activate <path>'. venv: 'source <path>/bin/activate' — pick this for the uv environments in 00_environments.");
+    pathField("Environment", "env_path",
+      "Path to the environment on /p (conda prefix or venv root). Browse to pick it as a folder.",
       "/p/<project>/00_environments/<env>");
+    // the model does not create missing output directories, so the job
+    // script must (e.g. output_file = output/aeolis.nc -> mkdir -p output)
+    hpc.fields.pre_lines = () => (cfg.output_subdir
+      ? [`mkdir -p ${cfg.output_subdir}`] : (hpc.base.pre_lines || []));
 
     // editable script preview
     subhead("Job script");

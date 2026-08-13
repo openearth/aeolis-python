@@ -211,12 +211,14 @@ DEFAULT_HPC_PROFILE = {
     "cpus_per_task": 1,
     "walltime": "5-00:00:00",         # days-hours:min:sec (mandatory on HYDRAX)
     "modules": ["miniforge/latest"],
+    "env_kind": "conda",               # "conda" | "venv" (how env_path is activated)
     "conda_setup": "/opt/miniforge3/etc/profile.d/conda.sh",
-    "env_path": "",                    # conda activate target (user-selected)
+    "env_path": "",                    # conda prefix or venv root (user-selected)
     "run_dir": "",                     # /p/... folder holding the config (user-selected)
     "config": "aeolis.txt",
     "mail_user": "",
     "extra_sbatch": [],
+    "pre_lines": [],                   # shell lines between cd and aeolis run (e.g. mkdir -p output)
     "run_mode": "inplace",             # "inplace" (project already on /p) | "copy"
 }
 
@@ -296,12 +298,20 @@ def build_job_script(profile):
     for mod in p.get("modules") or []:
         if str(mod).strip():
             lines.append(f"module load {str(mod).strip()}")
-    if p.get("conda_setup"):
-        lines.append(f"source {p['conda_setup']}")
-    if p.get("env_path"):
-        lines.append(f"conda activate {p['env_path']}")
+    if p.get("env_kind") == "venv":
+        if p.get("env_path"):
+            lines.append(f"source {str(p['env_path']).rstrip('/')}/bin/activate")
+    else:
+        if p.get("conda_setup"):
+            lines.append(f"source {p['conda_setup']}")
+        if p.get("env_path"):
+            lines.append(f"conda activate {p['env_path']}")
     if p.get("run_dir"):
         lines.append(f"cd {p['run_dir']}")
+    for pre in p.get("pre_lines") or []:
+        pre = str(pre).strip()
+        if pre:
+            lines.append(pre)
     lines.append(f"aeolis run ./{p.get('config') or 'aeolis.txt'}")
     return "\n".join(lines) + "\n"
 

@@ -258,6 +258,18 @@ def _find_external_manifest(raw):
     return None
 
 
+def _external_root(manifest_path):
+    """Folder that the manifest's relative entry paths resolve against.
+    A project manifest lives at <root>/gui/rawdata/manifest.json and its
+    entries carry gui/rawdata/... paths relative to <root>; a bare data
+    folder (e.g. a shared 01_data/lidar) keeps its manifest next to the
+    files with plain filenames as paths."""
+    parent = manifest_path.parent
+    if parent.name == settings.RAWDATA_DIRNAME and parent.parent.name == settings.GUI_DIRNAME:
+        return parent.parent.parent
+    return parent
+
+
 @route("POST", "/api/domain/scan_external")
 def _scan_external(handler, body, tail):
     """List the datasets of another project so the user can pick which to
@@ -268,15 +280,15 @@ def _scan_external(handler, body, tail):
         send_error_json(handler, "no rawdata manifest found there "
                                  "(pick a project folder or its gui/rawdata)", 404)
         return
-    src_root = manifest_path.parent.parent.parent   # <root>/gui/rawdata/manifest.json
+    src_root = _external_root(manifest_path)
     current = project.require()
     data = load_json(manifest_path, default={"entries": []})
     items = []
     for e in data.get("entries", []):
         abspath = (src_root / e.get("path", "")).resolve()
         exists = abspath.is_file()
-        # already present in this project? (same resolved file)
-        here = (current.root / e.get("path", "")).resolve()
+        # already part of this project? (file lives under our root)
+        is_local = abspath.is_relative_to(current.root.resolve())
         items.append({
             "src_id": e.get("id"),
             "label": e.get("label") or e.get("path"),
@@ -287,7 +299,7 @@ def _scan_external(handler, body, tail):
             "abspath": str(abspath),
             "size": abspath.stat().st_size if exists else 0,
             "exists": exists,
-            "is_local": here == abspath,
+            "is_local": is_local,
         })
     send_json(handler, {"manifest": str(manifest_path), "root": str(src_root), "entries": items})
 
@@ -301,7 +313,7 @@ def _link_external(handler, body, tail):
         send_error_json(handler, "no rawdata manifest found there", 404)
         return
     wanted = set(body.get("ids") or [])
-    src_root = manifest_path.parent.parent.parent
+    src_root = _external_root(manifest_path)
     data = load_json(manifest_path, default={"entries": []})
 
     new_entries = []

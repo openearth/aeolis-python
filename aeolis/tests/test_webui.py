@@ -116,6 +116,27 @@ class TestHpcRunner:
         assert "#SBATCH --mail-type=BEGIN,END,FAIL" in s
         assert "--mail-user" not in rm.build_job_script({})
 
+    def test_build_job_script_venv(self):
+        # env_kind "venv" activates by sourcing bin/activate and emits no
+        # conda/module bootstrap; pre_lines land between cd and aeolis run
+        from aeolis.webui.backend import run_manager as rm
+        s = rm.build_job_script({
+            "env_kind": "venv", "modules": [],
+            "env_path": "/p/x/00_environments/aeolis_linux/",
+            "run_dir": "/p/x/03_simulations/run",
+            "pre_lines": ["mkdir -p output"],
+        })
+        assert "source /p/x/00_environments/aeolis_linux/bin/activate" in s
+        assert "conda" not in s
+        assert "module load" not in s
+        cd_i = s.index("cd /p/x/03_simulations/run")
+        mk_i = s.index("mkdir -p output")
+        run_i = s.index("aeolis run ./aeolis.txt")
+        assert cd_i < mk_i < run_i
+        # default profile stays conda and is unchanged by the new keys
+        assert "conda activate" not in rm.build_job_script({})  # no env_path set
+        assert "module load miniforge/latest" in rm.build_job_script({})
+
     def test_parse_job_id(self):
         from aeolis.webui.backend import run_manager as rm
         assert rm.parse_job_id("Submitted batch job 215578") == "215578"
@@ -875,6 +896,34 @@ class TestApi:
         post("/api/domain/forget", {"id": entry["id"], "delete_file": True})
         assert (ext_raw / "shared.npz").is_file()
         assert not get("/api/domain")["entries"]
+
+    def test_link_external_bare_data_folder(self, server_project):
+        # a shared data folder (e.g. 01_data/lidar on a network drive)
+        # carries its manifest NEXT TO the files with plain filenames as
+        # paths - no gui/rawdata nesting
+        import json
+        tmp_path, get, post = server_project
+        ext = tmp_path.parent / "shared_data" / "lidar"
+        ext.mkdir(parents=True, exist_ok=True)
+        np.savez_compressed(ext / "flat.npz",
+                            x=np.array([0.0, 1.0]), y=np.array([0.0, 1.0]),
+                            z=np.array([2.0, 3.0], dtype="float32"))
+        (ext / "manifest.json").write_text(json.dumps({"entries": [{
+            "id": "bare01", "source": "rws_lidar", "kind": "points",
+            "path": "flat.npz", "label": "Bare-folder points",
+        }]}))
+
+        scan = post("/api/domain/scan_external", {"path": str(ext)})
+        assert len(scan["entries"]) == 1
+        e = scan["entries"][0]
+        assert e["exists"] and not e["is_local"]
+        assert e["abspath"] == str((ext / "flat.npz").resolve())
+
+        res = post("/api/domain/link_external", {"path": str(ext), "ids": ["bare01"]})
+        assert res["linked"] == 1
+        entry = get("/api/domain")["entries"][0]
+        assert entry["linked"] is True
+        assert entry["path"] == str((ext / "flat.npz").resolve())
 
     def test_target_constant_and_modify(self, server_project):
         tmp_path, get, post = server_project

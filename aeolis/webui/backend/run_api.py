@@ -90,6 +90,18 @@ def _hpc_backend():
     return run_manager.BACKENDS["hpc"]
 
 
+def _output_subdir(current):
+    """Directory part of the config's output_file (POSIX form), e.g.
+    'output' for output/aeolis.nc. The model does not create missing
+    directories, so the job script must mkdir it before the run."""
+    try:
+        out = str(load_config(current.configfile).get("output_file") or "")
+    except Exception:
+        return ""
+    out = out.replace("\\", "/")
+    return posixpath.dirname(out)
+
+
 def _load_hpc_profile(current):
     profile = dict(run_manager.DEFAULT_HPC_PROFILE)
     profile.update(current.load_state().get("hpc_profile") or {})
@@ -120,6 +132,7 @@ def _hpc_get(handler, query, tail):
         "note": backend.note,
         "project_dir": str(current.root),
         "project_dir_linux": run_manager.local_to_linux(str(current.root)),
+        "output_subdir": _output_subdir(current),
         # jobs previously submitted from this project (for reattaching
         # after the GUI was closed and reopened)
         "jobs": run_manager.recorded_hpc_jobs(current),
