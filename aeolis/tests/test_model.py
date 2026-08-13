@@ -114,3 +114,32 @@ class TestAeoLiSRunner:
             callback = runner.parse_callback("aeolis/tests/invalid_file.py:mock_callback")
         assert "Check definition in input file" in str(excinfo.value)
         
+
+
+class TestGrassInitialize:
+    """Regression tests for aeolis.grass.initialize"""
+
+    def test_rate_conversion_accepts_integer_params(self, monkeypatch):
+        """Integer-valued config entries (e.g. ``G_c = 5``) arrive as int
+        arrays; the yearly-to-secondly conversion crashed with a ufunc
+        casting error when dividing them in place."""
+        from aeolis import grass
+        from aeolis import grass_utils as gutils
+
+        # skip the full parameter validation: the divide loop is under test
+        monkeypatch.setattr(gutils, "ensure_grass_parameters", lambda p: p)
+
+        rate_params = ['G_h', 'G_c', 'G_s', 'dzb_tol_c', 'dzb_tol_s',
+                       'dzb_opt_h', 'dzb_opt_c', 'dzb_opt_s']
+        p = {param: np.array([5]) for param in rate_params}   # int dtype
+        p['veg_res_factor'] = 2
+        p['Nt_file'] = None
+
+        # initialize proceeds past the conversion and then fails on the
+        # (deliberately empty) state - that failure is the sentinel that
+        # the division itself succeeded
+        with pytest.raises(RuntimeError, match="Shape mismatch"):
+            grass.initialize({}, p)
+        for param in rate_params:
+            assert p[param].dtype == np.float64
+            assert np.isclose(p[param][0], 5.0 / (365.25 * 24.0 * 3600.0))
