@@ -285,7 +285,7 @@ DEFAULT_CONFIG = {
     'output_vars'                   : ['zb', 'zs',
                                        'Ct', 'Cu',
                                        'uw', 'udir', 
-                                       'uth', 'mass'
+                                       'uth', 'mass',
                                        'pickup', 'w'],    # Names of spatial grids to be included in output
     'external_vars'                 : None,               # Names of variables that are overwritten by an external (coupling) model, i.e. CoCoNuT
     'output_sedtrails'              : False,              # NEW! [T/F] Boolean to see whether additional output for SedTRAILS should be generated
