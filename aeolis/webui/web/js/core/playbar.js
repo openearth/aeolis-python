@@ -12,6 +12,7 @@ const Playbar = (() => {
   const sources = new Map();   // id -> {t0, t1}
   let raf = null;
   let lastWall = null;
+  let indexTimes = null;       // model-output step times for the step-index box
 
   const els = {};
 
@@ -32,6 +33,34 @@ const Playbar = (() => {
   function clearSources() {
     sources.clear();
     _recomputeRange();
+  }
+
+  /* Model-output step times: shows the "step N / M" box so the user can
+   * type (or arrow through) an output time index and jump straight to
+   * it. Pass null when there is no output. */
+  function setIndexTimes(times) {
+    indexTimes = (times && times.length) ? Array.from(times) : null;
+    if (els.stepWrap) {
+      els.stepWrap.style.display = indexTimes ? "" : "none";
+      if (indexTimes) {
+        els.stepIdx.max = String(indexTimes.length - 1);
+        els.stepCount.textContent = `/ ${indexTimes.length - 1}`;
+      }
+    }
+    _updateUI();
+  }
+
+  // closest output step to time t (binary search)
+  function _nearestIndex(t) {
+    const a = indexTimes;
+    let lo = 0, hi = a.length - 1;
+    if (t <= a[0]) return 0;
+    if (t >= a[hi]) return hi;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if (a[mid] <= t) lo = mid; else hi = mid;
+    }
+    return (t - a[lo] <= a[hi] - t) ? lo : hi;
   }
 
   function _recomputeRange() {
@@ -127,6 +156,11 @@ const Playbar = (() => {
       els.timeline.value = Math.round(frac * 1000);
     }
     els.label.textContent = U.fmtDate(clock.t);
+    // mirror the current output step index (unless the user is typing)
+    if (indexTimes && els.stepIdx && document.activeElement !== els.stepIdx
+        && Number.isFinite(clock.t)) {
+      els.stepIdx.value = String(_nearestIndex(clock.t));
+    }
   }
 
   /* Highlight the graphs' current zoom window on the timeline. */
@@ -166,6 +200,23 @@ const Playbar = (() => {
     els.speed.addEventListener("input", _applySpeed);
     _applySpeed();
 
+    // step-index box: type an output time index (or use the arrows) to
+    // jump the clock - and with it the map, graphs and slider - there
+    els.stepWrap = document.getElementById("step-wrap");
+    els.stepIdx = document.getElementById("step-idx");
+    els.stepCount = document.getElementById("step-count");
+    const jumpToStep = () => {
+      if (!indexTimes) return;
+      const i = U.clamp(Math.round(Number(els.stepIdx.value) || 0),
+        0, indexTimes.length - 1);
+      els.stepIdx.value = String(i);
+      setTime(indexTimes[i]);
+    };
+    els.stepIdx.addEventListener("change", jumpToStep);
+    els.stepIdx.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") { ev.preventDefault(); jumpToStep(); }
+    });
+
     window.addEventListener("keydown", (ev) => {
       if (ev.code === "Space" && !["INPUT", "TEXTAREA", "SELECT"].includes(ev.target.tagName)) {
         ev.preventDefault();
@@ -176,5 +227,6 @@ const Playbar = (() => {
     _updateUI();
   }
 
-  return { init, setSource, removeSource, clearSources, setTime, togglePlay, setViewWindow };
+  return { init, setSource, removeSource, clearSources, setTime, togglePlay,
+    setViewWindow, setIndexTimes };
 })();

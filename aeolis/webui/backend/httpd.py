@@ -51,6 +51,7 @@ def _load_api_modules():
     from aeolis.webui.backend import run_api  # noqa: F401
     from aeolis.webui.backend import output_api  # noqa: F401
     from aeolis.webui.backend import jobs_api  # noqa: F401
+    from aeolis.webui.backend import styles_api  # noqa: F401
     from aeolis.webui.backend import dialogs  # noqa: F401
 
 

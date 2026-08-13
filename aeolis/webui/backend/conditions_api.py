@@ -340,7 +340,12 @@ def _stations(handler, query, tail):
 def _resample(seconds, cols, kind, interval):
     """Bin-average a series to a fixed interval. ``interval`` is a bin
     width in seconds (legacy "hour"/"day" strings still work). Wind
-    direction is averaged circularly via unit-vector components."""
+    direction is averaged circularly via unit-vector components.
+
+    Bins are stamped at their LEFT edge, so the first output sample keeps
+    the exact start time of the input (stamping at bin centres shifted
+    the whole series by half an interval, and a series meant to start at
+    tstart began at tstart + width/2 instead)."""
     width = {"hour": 3600.0, "day": 86400.0}.get(interval)
     if width is None:
         try:
@@ -352,7 +357,7 @@ def _resample(seconds, cols, kind, interval):
     bins = np.floor((seconds - seconds[0]) / width).astype(int)
     unique_bins, inverse = np.unique(bins, return_inverse=True)
     counts = np.bincount(inverse)
-    t_out = seconds[0] + (unique_bins + 0.5) * width
+    t_out = seconds[0] + unique_bins * width
 
     if kind == "wind" and len(cols) >= 2:
         speed, direction = cols[0], cols[1]
@@ -406,6 +411,45 @@ def _cds_key(handler, body, tail):
     rc.write_text(f"url: {url}\nkey: {key}\n", encoding="utf-8")
     ok, reason = era5.configured()
     send_json(handler, {"ok": ok, "reason": reason, "path": str(rc)})
+
+
+@route("POST", "/api/conditions/era5_cached")
+def _era5_cached(handler, body, tail):
+    """Which years of the requested period are already cached on disk for
+    an ERA5 cell — shown in the download wizard before starting."""
+    current = project.require()
+    try:
+        lon = float(body.get("lon"))
+        lat = float(body.get("lat"))
+        date0 = datetime.fromisoformat(str(body.get("date0"))).replace(tzinfo=timezone.utc)
+        date1 = datetime.fromisoformat(str(body.get("date1"))).replace(tzinfo=timezone.utc)
+    except (TypeError, ValueError) as exc:
+        send_error_json(handler, f"missing/invalid lon, lat or dates: {exc}")
+        return
+    send_json(handler, era5.cached_summary(lon, lat, date0, date1, current.rawdata_dir))
+
+
+@route("POST", "/api/conditions/era5_cells_cached")
+def _era5_cells_cached(handler, body, tail):
+    """Cached-year counts for a LIST of ERA5 cells — lets the wizard mark
+    (and auto-select) the cell that was downloaded before."""
+    current = project.require()
+    try:
+        date0 = datetime.fromisoformat(str(body.get("date0"))).replace(tzinfo=timezone.utc)
+        date1 = datetime.fromisoformat(str(body.get("date1"))).replace(tzinfo=timezone.utc)
+    except (TypeError, ValueError) as exc:
+        send_error_json(handler, f"invalid dates: {exc}")
+        return
+    out = []
+    for cell in (body.get("cells") or []):
+        try:
+            lon, lat = float(cell.get("lon")), float(cell.get("lat"))
+        except (TypeError, ValueError):
+            continue
+        s = era5.cached_summary(lon, lat, date0, date1, current.rawdata_dir)
+        out.append({"id": cell.get("id"), "lon": lon, "lat": lat,
+                    "cached": len(s["cached"]), "total": s["total"]})
+    send_json(handler, {"cells": out})
 
 
 @route("POST", "/api/conditions/cds_clear")
@@ -874,21 +918,41 @@ def _nearest_fill(master, mask_good, values):
     return out
 
 
+def _paint_from_source(master, out, t, v):
+    """Fill still-NaN samples of *out* (on time base *master*) from source
+    (t, v) — but ONLY where the source genuinely has data: a master sample
+    is claimed when its bracketing source samples are at most ~3 sampling
+    steps apart. Bigger holes (data gaps, sensor outage) stay NaN so a
+    lower-priority source or the gap-fill method can take them; the old
+    blanket np.interp silently drew straight lines across such gaps and
+    lower sources never got a turn."""
+    good = np.isfinite(v)
+    if not good.any():
+        return
+    tg, vg = t[good], v[good]
+    need = (~np.isfinite(out)) & (master >= tg[0]) & (master <= tg[-1])
+    if not need.any():
+        return
+    tm = master[need]
+    if tg.size < 2:
+        ok = tm == tg[0]
+    else:
+        gap_limit = 3.0 * float(np.median(np.diff(tg)))
+        idx = np.clip(np.searchsorted(tg, tm, side="right"), 1, tg.size - 1)
+        ok = (tg[idx] - tg[idx - 1]) <= gap_limit
+        ok |= (tm == tg[idx]) | (tm == tg[idx - 1])   # exact hits always count
+    if ok.any():
+        sel = np.flatnonzero(need)[ok]
+        out[sel] = np.interp(tm[ok], tg, vg)
+
+
 def _column_from_sources(master, series_list, fill, cache_loader):
     """Build one output column on time base *master* by layering *series_list*
     (priority order, top first — lower ones only fill samples still NaN), then
     apply the remaining-NaN *fill* policy (value / nearest / linear / series)."""
     out = np.full(master.shape, np.nan, dtype=float)
     for t, v in series_list:
-        good = np.isfinite(v)
-        if not good.any():
-            continue
-        tg, vg = t[good], v[good]
-        # only fill master samples the source actually covers (no extrapolation)
-        inrange = (master >= tg[0]) & (master <= tg[-1])
-        need = (~np.isfinite(out)) & inrange
-        if need.any():
-            out[need] = np.interp(master[need], tg, vg)
+        _paint_from_source(master, out, t, v)
 
     bad = ~np.isfinite(out)
     if bad.any():
@@ -907,12 +971,7 @@ def _column_from_sources(master, series_list, fill, cache_loader):
             oc = int(other.get("column") or 0)
             if oc >= ocols.shape[1]:
                 oc = 0
-            ov = ocols[:, oc]
-            ogood = np.isfinite(ov)
-            if ogood.any():
-                inr = bad & (master >= ot[ogood][0]) & (master <= ot[ogood][-1])
-                if inr.any():
-                    out[inr] = np.interp(master[inr], ot[ogood], ov[ogood])
+            _paint_from_source(master, out, ot, ocols[:, oc])
     return out
 
 
@@ -963,15 +1022,23 @@ def _fill(handler, body, tail):
         return out
 
     try:
-        # master time base = the top-priority source of the first column
+        # Master time base: the UNION of every selected source's timestamps,
+        # clipped to the span of the top-priority source of the first column.
+        # Using only the primary's own timestamps (the old behaviour) meant a
+        # data gap in the primary — a stretch with no samples at all — could
+        # never be filled by a lower-priority station: those moments simply
+        # did not exist in the output.
         first_series = _column_series(columns_spec[0])
         if not first_series:
             send_error_json(handler, "select at least one source for each column")
             return
-        master = first_series[0][0]
-        if master.size < 2:
+        primary = first_series[0][0]
+        if primary.size < 2:
             send_error_json(handler, "the primary series is too short")
             return
+        all_t = [s[0] for spec in columns_spec for s in _column_series(spec)]
+        master = np.unique(np.concatenate(all_t))
+        master = master[(master >= primary[0]) & (master <= primary[-1])]
 
         out_cols = []
         for spec in columns_spec:

@@ -1,5 +1,7 @@
 """Run tab API routes."""
 
+import posixpath
+
 from aeolis.webui.backend import project, run_manager
 from aeolis.webui.backend.config_api import load_config
 from aeolis.webui.backend.httpd import route
@@ -45,6 +47,13 @@ def _start(handler, body, tail):
     except RuntimeError as exc:
         send_error_json(handler, exc)
         return
+    # a local run writes the project's own output file — stop following a
+    # remote run folder so the Viewer shows what is being computed here
+    from aeolis.webui.backend import output_api
+    try:
+        output_api.set_source(current, None)
+    except Exception:  # noqa: BLE001 - the run itself already started
+        pass
     send_json(handler, {"ok": True})
 
 
@@ -56,7 +65,15 @@ def _stop(handler, body, tail):
 
 @route("GET", "/api/run/status")
 def _status(handler, query, tail):
-    send_json(handler, run_manager.active.status())
+    status = run_manager.active.status()
+    # where the Viewer reads output from, so the frontend can react to
+    # backend-side switches (e.g. the automatic one after an HPC submit)
+    from aeolis.webui.backend import output_api
+    try:
+        status["output"] = output_api.source_summary()
+    except Exception:  # noqa: BLE001 - no open project
+        pass
+    send_json(handler, status)
 
 
 @route("GET", "/api/run/log")
@@ -103,6 +120,9 @@ def _hpc_get(handler, query, tail):
         "note": backend.note,
         "project_dir": str(current.root),
         "project_dir_linux": run_manager.local_to_linux(str(current.root)),
+        # jobs previously submitted from this project (for reattaching
+        # after the GUI was closed and reopened)
+        "jobs": run_manager.recorded_hpc_jobs(current),
     })
 
 
@@ -153,4 +173,60 @@ def _hpc_start(handler, body, tail):
     except (ValueError, RuntimeError) as exc:
         send_error_json(handler, exc)
         return
-    send_json(handler, {"ok": True, "job_id": backend._job_id})
+    # submission continues in the background - stages stream into the log
+    send_json(handler, {"ok": True})
+
+
+@route("POST", "/api/run/hpc/jobs")
+def _hpc_jobs(handler, body, tail):
+    """The user's jobs on the cluster (live via squeue, merged with the
+    jobs recorded for this project) — POST because it carries the
+    password needed to open the SSH connection."""
+    current = project.require()
+    password = body.get("password")
+    if not password:
+        send_error_json(handler, "enter your HPC password")
+        return
+    profile = {**run_manager.DEFAULT_HPC_PROFILE, **(body.get("profile") or {})}
+    backend = _hpc_backend()
+    backend.configure(profile=profile, password=password)
+    try:
+        jobs = backend.list_jobs(run_manager.recorded_hpc_jobs(current))
+    except Exception as exc:  # noqa: BLE001 - ssh/squeue errors go to the user
+        send_error_json(handler, exc)
+        return
+    send_json(handler, {"jobs": jobs})
+
+
+@route("POST", "/api/run/hpc/attach")
+def _hpc_attach(handler, body, tail):
+    """Re-attach the monitor to an already-submitted SLURM job, e.g.
+    after the GUI was closed and reopened while the job kept running."""
+    current = project.require()
+    job_id = str(body.get("job_id") or "").strip()
+    password = body.get("password")
+    if not job_id:
+        send_error_json(handler, "missing 'job_id'")
+        return
+    if not password:
+        send_error_json(handler, "enter your HPC password")
+        return
+    profile = {**run_manager.DEFAULT_HPC_PROFILE, **(body.get("profile") or {})}
+    _save_hpc_profile(current, profile)
+    backend = _hpc_backend()
+    backend.configure(profile=profile, password=password)
+    # a job recorded from this project knows its exact stdout path;
+    # other jobs are resolved via scontrol on the attach thread
+    out_file = None
+    for entry in run_manager.recorded_hpc_jobs(current):
+        if str(entry.get("job_id")) == job_id and entry.get("run_dir"):
+            name = entry.get("job_name") or "aeolis"
+            out_file = posixpath.join(entry["run_dir"], f"{name}.o{job_id}")
+            break
+    try:
+        run_manager.select("hpc")
+        backend.attach(job_id, out_file=out_file)
+    except (ValueError, RuntimeError) as exc:
+        send_error_json(handler, exc)
+        return
+    send_json(handler, {"ok": True})

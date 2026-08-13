@@ -3,7 +3,7 @@
  * Two sections, both rendered as one card per dataset:
  *  - Sample data: downloaded/imported datasets with visibility, rename,
  *    drag-to-reorder, duplicate, remove and a Modify… popup.
- *  - Interpolated data: the model .grd files with visibility, an
+ *  - Model files: the model .grd files with visibility, an
  *    Interpolate… popup and a duplicate-to-samples action. Staleness vs
  *    the current grid shows as an orange warning icon (hover for the
  *    reason); a stale file cannot be displayed.
@@ -82,6 +82,7 @@ const DomainTab = (() => {
 
   function _build() {
     const panel = document.getElementById("domain-panel");
+    U.keepScroll(panel);
     U.clear(panel);
 
     // --- sample data ---
@@ -109,7 +110,7 @@ const DomainTab = (() => {
 
     // --- interpolated data ---
     const targetCount = Object.values(overview.targets).filter((t) => t.exists).length;
-    const targets = U.section("Interpolated data (.grd)", { count: targetCount });
+    const targets = U.section("Model files", { count: targetCount });
     targets.body.append(_targetList());
     const addOptional = _addOptionalControl();
     if (addOptional) targets.body.append(addOptional);
@@ -173,7 +174,7 @@ const DomainTab = (() => {
         class: "lp-name-edit", type: "text", value: stored,
         title: "Edit the sample name — Save also renames the file in gui/rawdata",
       });
-      const saveName = U.miniBtn("save", "Save name (renames the file on disk)", async () => {
+      const saveName = U.miniBtn("check", "Save name (renames the file on disk)", async () => {
         const nm = nameInput.value.trim();
         if (!nm || nm === stored) return;
         try {
@@ -424,16 +425,19 @@ const DomainTab = (() => {
         : U.el("span", { class: "eye off disabled", title: "Nothing to show yet — interpolate first" }, "👁");
 
       // not required by the current config (e.g. veg under the grass
-      // method, or an opt-in mask) → de-emphasise, keep it usable
+      // method, or an opt-in mask) → de-emphasise, keep it usable. Once
+      // the user actually made/configured the file it is clearly wanted,
+      // so drop the badge + de-emphasis and free the space for buttons.
+      const wanted = info.exists || info.has_draft || info.configured;
       const card = U.el("div", {
-        class: `obj-card ${info.needed ? "" : "not-needed"}`,
+        class: `obj-card ${info.needed || wanted ? "" : "not-needed"}`,
         dataset: { idx },
       },
         U.el("span", { class: "drag-grip", draggable: "true", title: "Drag to reorder" }, "⠿"),
         eye,
         U.el("span", { class: "lp-name" }, `${name} — ${info.file}`));
 
-      if (!info.needed) {
+      if (!info.needed && !wanted) {
         card.append(U.el("span", {
           class: "opt-badge",
           title: info.note || "not required by the current configuration",
@@ -450,43 +454,48 @@ const DomainTab = (() => {
         card.append(_warnIcon(staleTitle));
       }
 
+      // FIXED button set, same order on every card; buttons that do not
+      // apply in the current state are greyed out (with the reason in the
+      // tooltip), never hidden — so the layout stays stable.
+      const hasData = info.exists || info.has_draft;
       const actions = U.el("span", { class: "obj-actions" });
-      actions.append(U.miniBtn("interp", "Interpolate…", () => _interpolateWizard(name, info)));
-      actions.append(U.miniBtn("wand", "New grid from a constant value (e.g. a mask of 1s)", () => _targetConstant(name)));
-      if (info.exists || info.has_draft) {
-        actions.append(U.miniBtn("modify", "Edit values (set/add/… over a polygon or index box)", () => _targetModifyWizard(name)));
-      }
-      if (info.has_draft) {
-        actions.append(U.miniBtn("save", "Save the draft to the configured file", () => _saveTargetDraft(name)));
-      }
-      actions.append(U.miniBtn("open", "Load an existing .grd on top (as a draft)", () => _loadTarget(name)));
-      if (info.exists || info.has_draft) {
-        actions.append(U.miniBtn("saveas", "Save to a chosen location…", () => _saveTargetAs(name, info)));
-      }
-      if (info.exists && !name.endsWith("_mask")) {
-        actions.append(U.miniBtn("copy", "Duplicate to sample data (for modification)", async () => {
-          try {
-            await Api.post("/api/domain/to_sample", { target: name });
-            U.toast(`${name} duplicated to a sample layer`, "ok");
-            _refresh();
-          } catch (err) {
-            U.toast(err.message, "error");
-          }
-        }));
-      }
-      // an added-but-empty optional file can be dismissed again
-      if (info.hidden && revealedTargets.has(name) && !info.exists) {
-        actions.append(U.miniBtn("trash", "Remove from the list (no file is written)", () => {
-          revealedTargets.delete(name);
+      actions.append(U.miniBtn("interp",
+        "Create / interpolate… (from sample data, another grid, or a constant)",
+        () => _interpolateWizard(name, info)));
+      actions.append(U.miniBtn("modify", "Edit values (set/add/… over a polygon or index box)",
+        () => _targetModifyWizard(name),
+        { disabled: !hasData, disabledTitle: "nothing to edit yet" }));
+      const saveB = U.miniBtn("sync", "Save the draft to the configured file",
+        () => _saveTargetDraft(name),
+        { disabled: !info.has_draft, disabledTitle: "no unsaved draft" });
+      if (info.has_draft) saveB.classList.add("primary");
+      actions.append(saveB);
+      actions.append(U.miniBtn("saveas", "Save as… (choose location; the config is repointed)",
+        () => _saveTargetAs(name, info),
+        { disabled: !hasData, disabledTitle: "nothing to save yet" }));
+      actions.append(U.miniBtn("open", "Load an existing .grd on top (as a draft)",
+        () => _loadTarget(name, info)));
+      actions.append(U.miniBtn("copy", "Duplicate to sample data (for modification)", async () => {
+        try {
+          await Api.post("/api/domain/to_sample", { target: name });
+          U.toast(`${name} duplicated to a sample layer`, "ok");
+          _refresh();
+        } catch (err) {
+          U.toast(err.message, "error");
+        }
+      }, { disabled: !info.exists || name.endsWith("_mask"),
+        disabledTitle: name.endsWith("_mask") ? "not useful for masks" : "save the file first" }));
+      const removable = info.optional || (info.hidden && revealedTargets.has(name) && !info.exists);
+      const trash = U.miniBtn("trash",
+        info.exists ? "Hide from this list (does not delete the file)"
+          : "Remove from the list (no file is written)",
+        () => {
+          if (info.hidden && revealedTargets.has(name) && !info.exists) revealedTargets.delete(name);
+          else hiddenTargets.add(name);
           _build();
-        }));
-      } else if (info.optional) {
-        // optional masks shown by default (configured/exist) can be hidden
-        actions.append(U.miniBtn("trash", "Hide from this list (does not delete the file)", () => {
-          hiddenTargets.add(name);
-          _build();
-        }));
-      }
+        }, { disabled: !removable, disabledTitle: "this file is required" });
+      trash.classList.add("danger-hover");
+      actions.append(trash);
       card.append(actions);
       list.append(card);
     });
@@ -501,12 +510,25 @@ const DomainTab = (() => {
     return list;
   }
 
+  /* The folder the target's CURRENT file lives in — pickers start there,
+   * so save-as / load land where the file actually is by default. */
+  function _fileDir(info) {
+    const file = (info && info.file) || "";
+    const root = App.state.project ? App.state.project.root : "";
+    if (/^[A-Za-z]:[\\/]/.test(file) || file.startsWith("/")) {
+      return file.replace(/[\\/][^\\/]*$/, "") || root;
+    }
+    const dir = file.includes("/") || file.includes("\\")
+      ? file.replace(/[\\/][^\\/]*$/, "") : "";
+    return dir ? `${root}\\${dir}` : root;
+  }
+
   /* Load an existing .grd on top of a target as an unsaved draft. */
-  async function _loadTarget(name) {
+  async function _loadTarget(name, info) {
     const path = await Api.pickFile({
       title: `Load a .grd file for ${name}`,
       patterns: [["Grid files", "*.grd"], ["All files", "*.*"]],
-      initial: App.state.project ? App.state.project.root : "",
+      initial: _fileDir(info),
     }).catch((err) => { U.toast(err.message, "error"); return null; });
     if (!path) return;
     try {
@@ -536,7 +558,7 @@ const DomainTab = (() => {
       title: `Save ${name} as…`,
       save: true,
       patterns: [["Grid files", "*.grd"], ["All files", "*.*"]],
-      initial: App.state.project ? App.state.project.root : "",
+      initial: _fileDir(info),
       filename: info.file || `${name}.grd`,
     }).catch((err) => { U.toast(err.message, "error"); return null; });
     if (!path) return;
@@ -941,35 +963,6 @@ const DomainTab = (() => {
 
   /* ================= interpolated-target editing ================= */
 
-  /* New draft filled with one constant value — e.g. a mask of all 1s
-   * that polygon edits then carve 0s into. */
-  function _targetConstant(target) {
-    const popup = Popup.open({ title: `New ${target} grid — constant value`, width: 380 });
-    const value = U.el("input", { type: "text", value: "1", style: "width:90px" });
-    const okBtn = U.el("button", { class: "primary" }, "Create draft");
-    okBtn.addEventListener("click", async () => {
-      const v = Number(value.value);
-      if (!Number.isFinite(v)) { U.toast("Enter a numeric value", "error"); return; }
-      try {
-        okBtn.disabled = true;
-        await Api.post("/api/domain/target_constant", { target, value: v });
-        U.toast(`${target} draft created (all ${v}) — edit it, then Save`, "ok");
-        popup.close();
-        await _refresh();
-        _reloadLayer(`domain-${target}`);
-      } catch (err) { U.toast(err.message, "error"); okBtn.disabled = false; }
-    });
-    const cancelBtn = U.el("button", { class: "ghost" }, "Cancel");
-    cancelBtn.addEventListener("click", popup.close);
-    popup.body.append(
-      U.el("div", { class: "form-row" }, U.el("label", {}, "Fill value"), value),
-      U.el("div", { class: "muted", style: "font-size:11.5px" },
-        "Creates an unsaved draft on the model grid (e.g. 1 everywhere for a mask). "
-        + "Use Edit values to set areas, then Save to write the .grd."),
-      U.el("div", { class: "btn-row", style: "justify-content:flex-end;margin-top:8px" }, cancelBtn, okBtn),
-    );
-  }
-
   /* Edit the target draft (or saved .grd) — same scope options as the
    * sample modify wizard, but writing to the target draft. */
   function _targetModifyWizard(target) {
@@ -1050,14 +1043,25 @@ const DomainTab = (() => {
 
   /* ================= interpolate wizard ================= */
 
+  /* One dialog for CREATING the target grid, whichever way: interpolate
+   * from sample data / copy another interpolated grid, or start from a
+   * uniform constant (e.g. a mask of all 1s that edits carve 0s into). */
   function _interpolateWizard(target, info) {
     if (!overview.grid_available) {
       U.toast("Create a model grid first (Grid tab)", "error");
       return;
     }
-    const popup = Popup.open({ title: `Interpolate → ${target} (${info.file})`, width: 540 });
+    const popup = Popup.open({ title: `Create ${target} (${info.file})`, width: 540 });
 
-    let order = overview.entries.map((e) => e.id);
+    // sources: sample data + other interpolated grids (direct copy, e.g.
+    // make tide_mask from the wave_mask that was just drawn)
+    const sources = [
+      ...overview.entries,
+      ...Object.entries(overview.targets)
+        .filter(([n, i]) => n !== target && i && (i.exists || i.has_draft))
+        .map(([n]) => ({ id: `tgt:${n}`, label: `model file: ${n}`, kind: "grid (copy)" })),
+    ];
+    let order = sources.map((s) => s.id);
     const checked = new Set();
     const listEl = U.el("div", { class: "obj-list" });
 
@@ -1068,7 +1072,7 @@ const DomainTab = (() => {
         return;
       }
       order.forEach((id, idx) => {
-        const entry = overview.entries.find((e) => e.id === id);
+        const entry = sources.find((e) => e.id === id);
         if (!entry) return;
         const cb = U.el("input", { type: "checkbox" });
         cb.checked = checked.has(id);
@@ -1091,23 +1095,68 @@ const DomainTab = (() => {
       renderList();
     });
 
+    // ---- mode: from data, or a uniform constant ----
+    const modeData = U.el("input", { type: "radio", name: "cw-mode", id: "cwm-data" });
+    const modeConst = U.el("input", { type: "radio", name: "cw-mode", id: "cwm-const" });
+    // no data to interpolate from → start in constant mode
+    if (sources.length) modeData.checked = true; else modeConst.checked = true;
+
     const extrap = U.el("input", { type: "checkbox", id: "interp-extrap" });
     const fill = U.el("input", { type: "text", placeholder: "e.g. -20 (optional)", style: "width:120px" });
+    const constVal = U.el("input", { type: "text", value: "1", style: "width:90px" });
+
+    const dataBox = U.el("div", {},
+      U.el("span", { class: "fg-label" }, "Sample layers (top = highest priority)"),
+      listEl,
+      U.el("span", { class: "fg-label", style: "margin-top:10px" }, "Cells without data"),
+      U.el("div", { class: "choice-row" }, extrap,
+        U.el("label", { for: "interp-extrap" }, "Extrapolate to nearest neighbour"),
+        U.el("span", { class: "muted", style: "font-size:11px" }, "(fill gaps from the closest sample)")),
+      U.el("div", { class: "form-row" },
+        U.el("label", {}, "…or fill with a constant"), fill));
+    const constBox = U.el("div", {},
+      U.el("div", { class: "form-row" }, U.el("label", {}, "Fill value"), constVal),
+      U.el("div", { class: "muted", style: "font-size:11.5px" },
+        "Creates an unsaved draft on the model grid (e.g. 1 everywhere for a mask). "
+        + "Use Edit values to set areas, then Save to write the .grd."));
+
     const progress = U.progressBar();
     const runBtn = U.el("button", { class: "primary" }, "Interpolate");
-    runBtn.addEventListener("click", async () => {
+    const syncMode = () => {
+      dataBox.style.display = modeData.checked ? "" : "none";
+      constBox.style.display = modeConst.checked ? "" : "none";
+      runBtn.textContent = modeData.checked ? "Interpolate" : "Create draft";
+    };
+    modeData.addEventListener("change", syncMode);
+    modeConst.addEventListener("change", syncMode);
+    syncMode();
+
+    // each returns true when a draft was made (false = validation toast only)
+    const runConstant = async () => {
+      const v = Number(constVal.value);
+      if (!Number.isFinite(v)) { U.toast("Enter a numeric value", "error"); return false; }
+      runBtn.disabled = true;
+      await Api.post("/api/domain/target_constant", { target, value: v });
+      U.toast(`${target} draft created (all ${v}) — edit it, then Save`, "ok");
+      return true;
+    };
+    const runInterpolate = async () => {
       const layers = order.filter((id) => checked.has(id));
-      if (!layers.length) { U.toast("Select at least one sample layer", "error"); return; }
+      if (!layers.length) { U.toast("Select at least one sample layer", "error"); return false; }
       const body = { target, layers };
       if (extrap.checked) body.extrapolate = true;
       if (fill.value.trim() !== "") body.fill = Number(fill.value);
+      runBtn.disabled = true;
+      progress.start("interpolating…");
+      const res = await Api.post("/api/domain/interpolate", body);
+      const out = await Api.waitJob(res.job, (j) => progress.update(j));
+      progress.done();
+      U.toast(`Draft ready (${U.fmtNum(out.min)} … ${U.fmtNum(out.max)}) — Save to write the file`, "ok");
+      return true;
+    };
+    runBtn.addEventListener("click", async () => {
       try {
-        runBtn.disabled = true;
-        progress.start("interpolating…");
-        const res = await Api.post("/api/domain/interpolate", body);
-        const out = await Api.waitJob(res.job, (j) => progress.update(j));
-        progress.done();
-        U.toast(`Draft ready (${U.fmtNum(out.min)} … ${U.fmtNum(out.max)}) — Save to write the file`, "ok");
+        if (!await (modeConst.checked ? runConstant() : runInterpolate())) return;
         popup.close();
         await _refresh();
         _reloadLayer(`domain-${target}`);   // previews the draft via gridfield
@@ -1119,14 +1168,11 @@ const DomainTab = (() => {
     });
 
     popup.body.append(
-      U.el("span", { class: "fg-label" }, "Sample layers (top = highest priority)"),
-      listEl,
-      U.el("span", { class: "fg-label", style: "margin-top:10px" }, "Cells without data"),
-      U.el("div", { class: "choice-row" }, extrap,
-        U.el("label", { for: "interp-extrap" }, "Extrapolate to nearest neighbour"),
-        U.el("span", { class: "muted", style: "font-size:11px" }, "(fill gaps from the closest sample)")),
-      U.el("div", { class: "form-row" },
-        U.el("label", {}, "…or fill with a constant"), fill),
+      U.el("div", { class: "choice-row" },
+        modeData, U.el("label", { for: "cwm-data" }, "Interpolate from data"),
+        modeConst, U.el("label", { for: "cwm-const" }, "Uniform constant value")),
+      dataBox,
+      constBox,
       U.el("div", { class: "btn-row" }, runBtn),
       progress.el,
     );

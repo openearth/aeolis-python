@@ -42,8 +42,24 @@ def resolve_target(current, raw, default):
     if not path.is_absolute():
         path = root / path
     path = Path(os.path.normpath(str(path)))   # collapse .. and .
+    # a drive letter anywhere past the anchor means two paths were glued
+    # together (e.g. a picker joined a folder with an absolute filename);
+    # writing there raises WinError 123 with a baffling doubled path
+    if ":" in str(path)[2:]:
+        raise RuntimeError(
+            f"invalid save path (an absolute path was appended to a folder): {path}")
+    # reference format is a per-project preference (default: relative).
+    # Relative refs use FORWARD slashes: they work on Windows AND on the
+    # cluster, so a project copied to /p runs unchanged.
+    fmt = "relative"
     try:
-        return path, str(path.relative_to(root))   # clean relative, no ..
+        fmt = ((current.load_state().get("ui") or {}).get("pathFormat")) or "relative"
+    except Exception:  # noqa: BLE001 - state file missing/corrupt: use default
+        pass
+    if fmt == "absolute":
+        return path, str(path)
+    try:
+        return path, str(path.relative_to(root)).replace("\\", "/")
     except ValueError:
         return path, str(path)                      # truly outside → absolute
 

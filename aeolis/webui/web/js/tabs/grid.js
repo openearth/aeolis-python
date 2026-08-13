@@ -55,18 +55,22 @@ const GridTab = (() => {
     ];
   }
 
-  function gridLines(p, maxLines = 50) {
+  /* TRUE cell-edge lattice. The grid files hold the data points (cell
+   * centres) at integer (i, j); the model's cell edges run halfway
+   * between them, with a half-cell rim beyond the outermost points —
+   * matching how the data itself is rendered (pcolormesh style). All
+   * edges are drawn; decimation only kicks in on absurdly large grids
+   * (and then still lies ON true edges). */
+  function gridLines(p, maxLines = 1500) {
     const lines = [];
-    const si = Math.max(1, Math.round(p.nx / maxLines));
-    const sj = Math.max(1, Math.round(p.ny / maxLines));
-    for (let i = 0; i <= p.nx; i += si) {
-      lines.push([corner(p, i, 0), corner(p, i, p.ny)]);
+    const si = Math.max(1, Math.ceil((p.nx + 2) / maxLines));
+    const sj = Math.max(1, Math.ceil((p.ny + 2) / maxLines));
+    for (let i = 0; i <= p.nx + 1; i += si) {
+      lines.push([corner(p, i - 0.5, -0.5), corner(p, i - 0.5, p.ny + 0.5)]);
     }
-    if (p.nx % si) lines.push([corner(p, p.nx, 0), corner(p, p.nx, p.ny)]);
-    for (let j = 0; j <= p.ny; j += sj) {
-      lines.push([corner(p, 0, j), corner(p, p.nx, j)]);
+    for (let j = 0; j <= p.ny + 1; j += sj) {
+      lines.push([corner(p, -0.5, j - 0.5), corner(p, p.nx + 0.5, j - 0.5)]);
     }
-    if (p.ny % sj) lines.push([corner(p, 0, p.ny), corner(p, p.nx, p.ny)]);
     return lines;
   }
 
@@ -148,7 +152,14 @@ const GridTab = (() => {
     map.setPaintProperty(SRC_FILL, "fill-color", color);
     map.setPaintProperty(SRC_LINES, "line-color", color);
     map.setPaintProperty(SRC_OUTLINE, "line-color", color);
-    map.setPaintProperty(SRC_LINES, "line-opacity", 0.4 * fade);
+    // every true cell edge is drawn, so fade the lattice out as cells
+    // shrink below a few screen pixels (else it becomes a solid wash)
+    const latC = CRS.toLngLat(center(draft))[1];
+    const zFor = (px) => Math.log2(
+      156543.03392 * Math.max(0.05, Math.cos(latC * Math.PI / 180)) * px / draft.dx);
+    map.setPaintProperty(SRC_LINES, "line-opacity",
+      ["interpolate", ["linear"], ["zoom"],
+        zFor(3), 0, zFor(10), 0.4 * fade]);
     map.setPaintProperty(SRC_OUTLINE, "line-opacity", fade);
     // unsaved drafts render dashed
     map.setPaintProperty(SRC_OUTLINE, "line-dasharray", saved ? [1, 0] : [2.5, 1.8]);
@@ -643,6 +654,7 @@ const GridTab = (() => {
 
   function _buildPanel() {
     const panel = document.getElementById("grid-panel");
+    U.keepScroll(panel);
     U.clear(panel);
 
     const drawBtn = U.tbtn("draw", "Draw", {
@@ -870,14 +882,14 @@ const GridTab = (() => {
     const actions = U.el("span", { class: "obj-actions" });
     // Save the current draft to the configured x.grd / y.grd (highlighted
     // while there are unsaved changes)
-    const saveBtn = U.miniBtn("save",
+    const saveBtn = U.miniBtn("sync",
       dirty ? "Save changes to x.grd / y.grd" : "Grid is saved",
       () => _saveGrid());
     saveBtn.classList.toggle("primary", dirty);
     saveBtn.classList.toggle("dirty", dirty);
     saveBtn.disabled = !draft || isSaved();
     actions.append(saveBtn);
-    actions.append(U.miniBtn("saveas", "Save the grid to chosen files…", _saveGridAs));
+    actions.append(U.miniBtn("saveas", "Save as… (grid to chosen files; the config is repointed)", _saveGridAs));
     actions.append(U.miniBtn("open", "Load an existing x/y .grd pair", _loadGrid));
     card.append(actions);
   }
@@ -936,10 +948,22 @@ const GridTab = (() => {
 
   /* Save the grid to chosen x/y files (opens the file browser). The
    * y-grid path is derived from the x-grid file name the user picks. */
+  /* Start the picker where the current x-grid file lives. */
+  function _gridFileDir() {
+    const root = App.state.project ? App.state.project.root : "";
+    const file = (App.state.config || {}).xgrid_file || "";
+    if (/^[A-Za-z]:[\\/]/.test(file) || file.startsWith("/")) {
+      return file.replace(/[\\/][^\\/]*$/, "") || root;
+    }
+    const dir = file.includes("/") || file.includes("\\")
+      ? file.replace(/[\\/][^\\/]*$/, "") : "";
+    return dir ? `${root}\\${dir}` : root;
+  }
+
   async function _saveGridAs() {
     if (!draft) { U.toast("Draw or define a grid first", "error"); return; }
     const cfg = App.state.config || {};
-    const initial = App.state.project ? App.state.project.root : "";
+    const initial = _gridFileDir();
     const xpath = await Api.pickFile({
       title: "Save the x-grid as… (the y-grid is written alongside)",
       save: true,
@@ -954,7 +978,7 @@ const GridTab = (() => {
 
   /* Load an existing x/y .grd pair from disk into the project. */
   async function _loadGrid() {
-    const initial = App.state.project ? App.state.project.root : "";
+    const initial = _gridFileDir();
     const xpath = await Api.pickFile({
       title: "Select the x-grid (.grd) file",
       patterns: [["Grid files", "*.grd"], ["All files", "*.*"]],

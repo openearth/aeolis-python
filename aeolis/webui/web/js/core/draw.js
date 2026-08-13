@@ -110,10 +110,15 @@ const Draw = (() => {
     const feat = td.getSnapshot().find((f) => f.geometry &&
       (f.geometry.type === "LineString" || f.geometry.type === "Polygon"));
     if (!feat) return;
-    let coords = feat.geometry.type === "Polygon"
-      ? feat.geometry.coordinates[0].slice(0, -1).map(CRS.fromLngLat)
-      : feat.geometry.coordinates.map(CRS.fromLngLat);
-    // drop consecutive duplicate points (incl. a trailing cursor point)
+    let raw = feat.geometry.type === "Polygon"
+      ? feat.geometry.coordinates[0].slice(0, -1)   // drop the ring-closing point
+      : feat.geometry.coordinates.slice();
+    // the in-progress feature always carries a provisional coordinate that
+    // follows the cursor — when finishing via the button that point sits
+    // wherever the mouse last was (i.e. near the button), so drop it
+    raw = raw.slice(0, -1);
+    let coords = raw.map(CRS.fromLngLat);
+    // drop consecutive duplicate points
     coords = coords.filter((c, i) => i === 0 || c[0] !== coords[i - 1][0] || c[1] !== coords[i - 1][1]);
     const need = feat.geometry.type === "Polygon" ? 3 : 2;
     if (coords.length < need) { U.toast(`Add at least ${need} points`, ""); return; }

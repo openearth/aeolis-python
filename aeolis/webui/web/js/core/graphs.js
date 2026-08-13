@@ -194,9 +194,22 @@ const Graphs = (() => {
 
   function _availVisible() { return App.state.ui.graphAvail !== false; }
   // height (CSS px) reserved at the BOTTOM of the canvas (below the x-axis
-  // labels) for the availability band when visible; a small pad otherwise
-  const BAND_PX = 70;
-  function _bandPx() { return _availVisible() && availLast ? BAND_PX : 4; }
+  // labels) for the availability band. Scales with the number of lanes
+  // and shrinks (eventually hides) when the graphs pane is short, so the
+  // band never squeezes the chart away or clips its own lane labels.
+  const BAND_LANE_PX = 14;
+  let builtBandPx = 4;   // what the CURRENT plot actually reserved
+  function _bandPx() {
+    if (!_availVisible() || !availLast) return 4;
+    const rows = _availRows(availLast).rows.length;
+    if (!rows) return 4;
+    const want = Math.min(rows * BAND_LANE_PX + 6, 104);
+    const wrap = _wrapEl();
+    // keep at least ~110px of actual chart above the band
+    const spare = ((wrap ? wrap.clientHeight : 240) - 40) - 110;
+    if (spare < 30) return 4;
+    return Math.max(30, Math.min(want, spare));
+  }
 
   async function _rebuild() {
     if (building) { rebuildQueued = true; return; }
@@ -309,6 +322,7 @@ const Graphs = (() => {
       : (unit ? `[${unit}]` : "Time series");
 
     const { width, height } = _plotSize();
+    builtBandPx = _bandPx();
     ts = TSPlot.create(chartHost, {
       title,
       data,
@@ -317,7 +331,7 @@ const Graphs = (() => {
       yZeroFloor: !isDir,
       fullRange: _fullWindow(),
       width, height,
-      bottomBand: _bandPx(),
+      bottomBand: builtBandPx,
       actionsLeft: leftActions,
       actions: rightActions,
       onWindow: (win) => {
@@ -347,7 +361,7 @@ const Graphs = (() => {
       onclick: () => { App.state.ui.graphAvail = !_availVisible(); App.touchUi(); _rebuild(); },
     }, "👁");
     // sit just above the band top when the band is shown, else near the base
-    availBtn.style.bottom = `${(_availVisible() && availLast) ? BAND_PX + 6 : 6}px`;
+    availBtn.style.bottom = `${builtBandPx > 8 ? builtBandPx + 6 : 6}px`;
     chartHost.append(availBtn);
 
     // the first build happens before the flex layout has settled, so the
@@ -577,12 +591,14 @@ const Graphs = (() => {
   function _bandGeom(u) {
     const dpr = window.devicePixelRatio || 1;
     const H = u.ctx.canvas.height;
-    const visible = _availVisible() && Boolean(availLast);
+    // use the height the plot RESERVED at build time (not a live
+    // recompute): reserved padding and drawn band must always match
+    const visible = _availVisible() && Boolean(availLast) && builtBandPx > 8;
     if (!visible) {
       const y = u.bbox.top + u.bbox.height;
       return { top: y, bottom: y, visible: false, dpr };
     }
-    return { top: H - BAND_PX * dpr + 2 * dpr, bottom: H - 3 * dpr, visible: true, dpr };
+    return { top: H - builtBandPx * dpr + 2 * dpr, bottom: H - 3 * dpr, visible: true, dpr };
   }
 
   /* Vertical grid lines at the x-axis ticks. Drawn through the plot AND the
@@ -650,28 +666,37 @@ const Graphs = (() => {
     if (!availLast || !_availVisible()) return;
     const { rows } = _availRows(availLast);
     if (!rows.length) return;
+    const band = _bandGeom(u);
+    if (!band.visible) return;
     const ctx = u.ctx;
     const dpr = window.devicePixelRatio || 1;
     const scale = u.scales.x;
     const left = u.bbox.left;
     const right = u.bbox.left + u.bbox.width;
-    const band = _bandGeom(u);
     const top = band.top;
     const bottom = band.bottom;
     const laneH = (bottom - top) / rows.length;
     const accent = _accent();
     const xOf = (t) => u.valToPos(t, "x", true);
     ctx.save();
-    ctx.font = `${10.5 * dpr}px ${(getComputedStyle(document.documentElement)
+    // labels scale down with cramped lanes instead of overflowing them
+    const fpx = Math.min(10.5, Math.max(8, laneH / dpr - 3.5));
+    ctx.font = `${fpx * dpr}px ${(getComputedStyle(document.documentElement)
       .getPropertyValue("--font-ui") || "system-ui").trim()}`;
     ctx.textBaseline = "middle";
     rows.forEach((row, i) => {
       const cy = top + i * laneH;
       const mid = cy + laneH / 2;
-      // lane label in the left gutter (where the y-axis sits below)
+      // lane label in the left gutter (where the y-axis sits below);
+      // ellipsis-truncate instead of letting maxWidth squash the glyphs
       ctx.fillStyle = _muted();
       ctx.textAlign = "left";
-      ctx.fillText(row.label, 3 * dpr, mid, left - 7 * dpr);
+      const maxW = left - 8 * dpr;
+      let label = row.label;
+      while (label.length > 2 && ctx.measureText(label).width > maxW) {
+        label = label.slice(0, -2).trimEnd() + "…";
+      }
+      ctx.fillText(label, 3 * dpr, mid);
       const barH = Math.max(3 * dpr, laneH * 0.56);
       const barTop = mid - barH / 2;
       for (const [a, b, cls] of row.spans || []) {
@@ -775,6 +800,9 @@ const Graphs = (() => {
 
   function resizeAll() {
     if (!ts) { if (card) _rebuild(); return; }
+    // pane height changes can change the band height -> the reserved
+    // bottom padding must be re-created, not just resized
+    if (_bandPx() !== builtBandPx) { _rebuild(); return; }
     const { width, height } = _plotSize();
     if (width > 50) ts.setSize({ width, height });
   }
@@ -802,9 +830,10 @@ const Graphs = (() => {
       if (fw) Playbar.setSource("graph", fw[0], fw[1]);
       else Playbar.removeSource("graph");
     }
-    // when availability first appears the reserved band height changes, so
-    // the plot must be rebuilt; afterwards a redraw repaints the band
-    if (ts && hadData) ts.redraw();
+    // when the band height changes (availability first appears, a lane is
+    // added/removed, the pane got shorter) the reserved padding must be
+    // re-created; otherwise a redraw repaints the band in place
+    if (ts && hadData && _bandPx() === builtBandPx) ts.redraw();
     else _rebuild();
   }, 400);
 
@@ -901,6 +930,7 @@ const Graphs = (() => {
     App.on("project", refreshAvailability);
     App.on("config-changed", refreshAvailability);
     App.on("run-finished", refreshAvailability);
+    App.on("output-source", refreshAvailability);
     window.addEventListener("keydown", (ev) => {
       if (ev.key === "Escape") _closePicker();
     });

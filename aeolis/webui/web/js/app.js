@@ -11,6 +11,7 @@
   CondHud.init();
 
   await MapView.init("map");
+  await Styles.load();   // colormap presets (global, used by the Viewer)
 
   Draw.init();
 
@@ -118,10 +119,12 @@
       Api.post("/api/project/reveal").catch((err) => U.toast(err.message, "error"));
     });
     document.getElementById("btn-duplicate").addEventListener("click", _duplicateModel);
+    document.getElementById("btn-backup").addEventListener("click", _backupModel);
     App.on("project", () => {
       document.getElementById("btn-cfg-view").disabled = false;
       document.getElementById("btn-cfg-reveal").disabled = false;
       document.getElementById("btn-duplicate").disabled = false;
+      document.getElementById("btn-backup").disabled = false;
     });
   }
 
@@ -179,6 +182,47 @@
         }
       } catch (err) {
         U.toast(`Copied, but loading state failed: ${err.message}`, "error");
+      }
+    }
+  }
+
+  /* Snapshot the entire model setup (config + inputs + GUI state; raw
+   * data optional, run outputs optional) into a timestamped zip in
+   * <project>/backups/. */
+  async function _backupModel() {
+    if (!App.state.project) return;
+    const popup = Popup.open({ title: "Backup model setup", width: 440 });
+    const rawCb = U.el("input", { type: "checkbox", id: "bk-raw", checked: "" });
+    const outCb = U.el("input", { type: "checkbox", id: "bk-out" });
+    const progress = U.progressBar();
+    const btn = U.el("button", { class: "primary" }, "Create backup");
+    btn.addEventListener("click", go);
+    popup.body.append(
+      U.el("div", { class: "muted", style: "font-size:12px;margin-bottom:6px" },
+        "Saves a timestamped zip in this project's backups folder with the "
+        + "configuration, all model input files and the GUI state. Input files "
+        + "referenced from outside the project folder are gathered into the zip "
+        + "as well, so the backup is self-contained."),
+      U.el("div", { class: "choice-row" }, rawCb,
+        U.el("label", { for: "bk-raw" }, "Include raw data (downloads / imports)")),
+      U.el("div", { class: "choice-row" }, outCb,
+        U.el("label", { for: "bk-out" }, "Include run output file(s) (aeolis.nc, logs)")),
+      progress.el,
+      U.el("div", { class: "btn-row", style: "justify-content:flex-end" }, btn));
+
+    async function go() {
+      btn.disabled = true;
+      progress.start("archiving…");
+      try {
+        const res = await Api.post("/api/project/backup",
+          { include_rawdata: rawCb.checked, include_outputs: outCb.checked });
+        const out = await Api.waitJob(res.job, (j) => progress.update(j));
+        popup.close();
+        U.toast(`Backup saved: ${out.file} (${U.fmtBytes(out.bytes)})`, "ok");
+      } catch (err) {
+        btn.disabled = false;
+        progress.done();
+        U.toast(err.message, "error");
       }
     }
   }

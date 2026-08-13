@@ -38,10 +38,9 @@ def load_config(configfile):
 def explicit_keys(configfile):
     """Keys explicitly present in the config file text."""
     keys = []
-    with open(configfile, "r") as fp:
-        for line in fp:
-            if "=" in line and not line.strip().startswith("%"):
-                keys.append(line.split("=")[0].strip())
+    for line in aeolis.inout.read_config_lines(str(configfile)):
+        if "=" in line and not line.strip().startswith("%"):
+            keys.append(line.split("=")[0].strip())
     return keys
 
 

@@ -17,8 +17,10 @@ Per-timestep "field" payloads are only ``float32 v[n*s]`` with the value
 range in the ``X-Data-Range`` response header.
 """
 
+import re
 import struct
 from collections import OrderedDict
+from pathlib import Path
 
 import numpy as np
 
@@ -29,6 +31,7 @@ from aeolis.webui.backend.domain_api import (
     TARGETS, get_entry, get_target_draft, load_raw)
 from aeolis.webui.backend.grid_api import _load_current_grid
 from aeolis.webui.backend.httpd import route
+from aeolis.webui.backend.run_manager import linux_to_local, recorded_hpc_jobs
 from aeolis.webui.backend.util import NC_LOCK, send_bytes, send_error_json, send_json
 
 SENTINEL = -1.0e30
@@ -36,12 +39,142 @@ _slab_cache = OrderedDict()   # (path, var, t, extra) -> (bytes, vmin, vmax)
 SLAB_CACHE_MAX = 80
 _meta_cache = {}              # path -> (mtime, meta)
 
+# Output-source override: the Viewer normally reads the netCDF named by
+# the project's config, from the project folder. When a simulation of
+# this project runs elsewhere (e.g. the /p copy submitted to the HPC),
+# the Viewer can point at that run folder instead. The override is
+# persisted in the project's state file, so reopening the GUI keeps
+# following the run — until the user switches back or starts a local
+# run (which clears it). It is set from three places: the Viewer's
+# output-source switch, the Run tab's job monitor, and automatically by
+# the HPC backend right after a copy-mode submission.
+_source_cache = None          # {"root": str, "dir": Path|None, "config": str|None}
+
+
+def _load_source():
+    """The persisted override of the open project (dir None = read the
+    project's own output file). Cached per project root."""
+    global _source_cache
+    try:
+        current = project.require()
+    except RuntimeError:
+        return None
+    root = str(current.root)
+    if _source_cache is None or _source_cache.get("root") != root:
+        saved = current.load_state().get("output_source") or {}
+        raw = saved.get("dir")
+        _source_cache = {"root": root,
+                         "dir": Path(raw) if raw else None,
+                         "config": saved.get("config")}
+    return _source_cache
+
+
+def set_source(current, dir_str, config=None):
+    """Point *current*'s Viewer at another run folder (``dir_str`` may
+    be in the cluster's /p form), or back at the project itself
+    (``dir_str=None``). Persisted in the project state; raises
+    FileNotFoundError when the folder is not accessible."""
+    global _source_cache
+    folder = None
+    if dir_str:
+        raw = str(dir_str).strip()
+        if re.match(r"^/[A-Za-z](/|$)", raw):
+            raw = linux_to_local(raw)
+        folder = Path(raw).expanduser()
+        if not folder.is_dir():
+            raise FileNotFoundError(
+                f"'{folder}' is not an accessible folder (is the drive mounted?)")
+    config = str(config or "").strip() or None
+    state = current.load_state()
+    if folder is None:
+        state.pop("output_source", None)
+    else:
+        state["output_source"] = {"dir": str(folder), "config": config}
+    current.save_state(state)
+    _source_cache = {"root": str(current.root), "dir": folder,
+                     "config": config if folder else None}
+
+
+def _source_active():
+    src = _load_source()
+    return bool(src and src["dir"])
+
+
+def source_summary():
+    """Cheap {override, dir} for change detection (no config parsing) —
+    embedded in /api/run/status so the frontend notices backend-side
+    switches (e.g. the automatic one after an HPC submission)."""
+    src = _load_source()
+    active = bool(src and src["dir"])
+    return {"override": active, "dir": str(src["dir"]) if active else None}
+
 
 def _output_path():
     current = project.require()
+    src = _load_source()
+    if src and src["dir"]:
+        cfg = src["dir"] / (src.get("config") or current.configfile.name)
+        if not cfg.is_file():
+            cfg = current.configfile
+        values = load_config(cfg)
+        name = str(values.get("output_file") or (cfg.stem + ".nc"))
+        if re.match(r"^/[A-Za-z](/|$)", name):
+            # a linuxified copied config may hold the /p form of the path
+            name = linux_to_local(name)
+        return src["dir"] / name, values
     values = load_config(current.configfile)
     name = values.get("output_file") or (current.configfile.stem + ".nc")
     return current.root / str(name), values
+
+
+def _known_remote():
+    """The most recent HPC submission of this project whose run folder
+    is not the project folder itself — offered as the "HPC run" side of
+    the Viewer's output-source switch."""
+    current = project.require()
+    for entry in recorded_hpc_jobs(current):
+        raw = entry.get("run_dir")
+        if not raw:
+            continue
+        local = linux_to_local(raw) if re.match(r"^/[A-Za-z](/|$)", raw) else raw
+        if Path(local) != current.root:
+            return {"dir": raw, "config": entry.get("config"),
+                    "job_id": entry.get("job_id")}
+    return None
+
+
+def _source_info():
+    """Where the output is effectively read from, the active override
+    and the known remote run folder the user could switch to."""
+    path, _values = _output_path()
+    src = _load_source()
+    active = bool(src and src["dir"])
+    return {
+        "override": active,
+        "dir": str(src["dir"]) if active else None,
+        "path": str(path),
+        "exists": path.is_file(),
+        "known": _known_remote(),
+    }
+
+
+@route("GET", "/api/output/source")
+def _source_get(handler, query, tail):
+    send_json(handler, _source_info())
+
+
+@route("POST", "/api/output/source")
+def _source_set(handler, body, tail):
+    """Point the Viewer at another run folder of this project (body
+    ``{"dir": ..., "config": ...}``; the dir may be given in the
+    cluster's /p form) or back at the project itself (``{"dir": null}``)."""
+    current = project.require()
+    try:
+        set_source(current, body.get("dir"), body.get("config"))
+    except FileNotFoundError as exc:
+        send_error_json(handler, str(exc), 404)
+        return
+    send_json(handler, _source_info())
 
 
 def _open_nc(path):
@@ -53,13 +186,14 @@ def _open_nc(path):
 def _meta(handler, query, tail):
     path, values = _output_path()
     if not path.is_file():
-        send_json(handler, {"exists": False, "file": str(path.name)})
+        send_json(handler, {"exists": False, "file": str(path.name),
+                            "path": str(path), "override": _source_active()})
         return
 
     mtime = path.stat().st_mtime
     cached = _meta_cache.get(str(path))
     if cached and cached[0] == mtime:
-        send_json(handler, cached[1])
+        send_json(handler, {**cached[1], "override": _source_active()})
         return
 
     refdate = parse_refdate(values)
@@ -93,13 +227,14 @@ def _meta(handler, query, tail):
     meta = {
         "exists": True,
         "file": path.name,
+        "path": str(path),
         "shape": [int(n), int(s)],
         "times": times.tolist(),
         "times_epoch": (epoch0 + times).tolist(),
         "variables": variables,
     }
     _meta_cache[str(path)] = (mtime, meta)
-    send_json(handler, meta)
+    send_json(handler, {**meta, "override": _source_active()})
 
 
 @route("GET", "/api/output/mesh")

@@ -21,6 +21,19 @@ const U = (() => {
 
   function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
 
+  /* Preserve a scrollable panel's position across a rebuild (clearing a
+   * panel clamps its scrollTop back to 0, which made every save/remove
+   * jump the panel to the top). Call BEFORE clearing: a restore runs
+   * automatically right after the current synchronous rebuild; builds
+   * that append content asynchronously call the returned function again
+   * once they are done. */
+  function keepScroll(node) {
+    const y = node.scrollTop;
+    const restore = () => { node.scrollTop = y; };
+    queueMicrotask(restore);
+    return restore;
+  }
+
   function toast(message, kind = "") {
     const box = document.getElementById("toasts");
     const t = el("div", { class: `toast ${kind}` }, message);
@@ -96,6 +109,7 @@ const U = (() => {
     draw: "M3 17.2 13.9 6.3l3.8 3.8L6.8 21H3v-3.8zM19.7 8 16 4.2l1.6-1.6a1 1 0 0 1 1.4 0l2.4 2.4a1 1 0 0 1 0 1.4L19.7 8z",
     edit: "M12 2l3.2 3.2h-2.2v4.6h4.6V7.6L20.8 12l-3.2 3.2v-2.2h-4.6v4.6h2.2L12 20.8l-3.2-3.2h2.2v-4.6H6.4v2.2L3.2 12l3.2-3.2v2.2H11V5.2H8.8L12 2z",
     save: "M5 3h11l5 5v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm2 2v5h9V5H7zm10 15v-7H7v7h10z",
+    sync: "M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z",
     saveas: "M5 3h11l5 5v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm2 2v5h9V5H7zm3 9h4v2h2v2h-2v2h-4v-2H8v-2h2v-2z",
     download: "M12 3v10.2l3.6-3.6 1.4 1.4-6 6-6-6 1.4-1.4L10 13.2V3h2zM4 19h16v2H4v-2z",
     upload: "M12 21V10.8l-3.6 3.6L7 13l6-6 6 6-1.4 1.4-3.6-3.6V21h-2zM4 3h16v2H4V3z",
@@ -150,9 +164,16 @@ const U = (() => {
   }
 
   /* Small square icon button for list rows. */
-  function miniBtn(iconName, title, onclick) {
+  function miniBtn(iconName, title, onclick, opts = {}) {
     const btn = el("button", { class: "mini-btn", title }, icon(iconName, 13));
-    if (onclick) btn.addEventListener("click", onclick);
+    if (opts.disabled) {
+      // keep the button visible (consistent card layout) but inert, with
+      // a tooltip explaining WHY it is unavailable
+      btn.disabled = true;
+      btn.title = opts.disabledTitle ? `${title} — ${opts.disabledTitle}` : title;
+    } else if (onclick) {
+      btn.addEventListener("click", onclick);
+    }
     return btn;
   }
 
@@ -268,7 +289,7 @@ const U = (() => {
   const TRUNC_SELECTOR = [
     ".lp-name", ".ts-title", ".avail-label", "#topbar-path", ".ov-desc",
     ".ov-unit", ".ri-path", ".fb-rowname", ".gp-label", ".param-row label",
-    ".gs-label", ".colorbar-title",
+    ".gs-label", ".legend-layers",
   ].join(", ");
 
   function initTruncationTips() {
@@ -324,7 +345,7 @@ const U = (() => {
     return input;
   }
 
-  return { el, clear, toast, showTip, hideTip, fmtNum, fmtBytes, fmtDuration, fmtDate,
+  return { el, clear, keepScroll, toast, showTip, hideTip, fmtNum, fmtBytes, fmtDuration, fmtDate,
     debounce, clamp, numField, icon, tbtn, miniBtn, section, progressBar,
     wireSortable, initTruncationTips, deselectOnOutside };
 })();

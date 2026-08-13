@@ -125,8 +125,11 @@ def _overview(handler, query, tail):
                 needed, note = False, f"method_vegetation = {method} (grass files not used)"
         elif optional:
             needed = False  # masks / threshold / fence / supply are opt-in
-        # optional files with no data yet stay hidden until the user adds them
-        hidden = optional and not configured and not exists
+        has_draft = has_target_draft(name)
+        # optional files with no data yet stay hidden until the user adds
+        # them; an unsaved draft counts as data (else the card would
+        # disappear from the list on a restart)
+        hidden = optional and not configured and not exists and not has_draft
         # vegetation files the current config will never use: hide them too
         if name in VEG and not needed:
             hidden = True
@@ -141,7 +144,7 @@ def _overview(handler, query, tail):
             "hidden": hidden,
             "stale": False,
             "shape_ok": True,
-            "has_draft": has_target_draft(name),
+            "has_draft": has_draft,
         }
         if exists and current_sig:
             stored = signatures.get(name)
@@ -515,6 +518,25 @@ def _interpolate(handler, body, tail):
     def _run(job):
         result = np.full(X.shape, np.nan, dtype="float64")
         for n, entry_id in enumerate(layer_ids):
+            # "tgt:<name>" = another interpolated grid on the same mesh:
+            # copy its values straight into the remaining holes
+            if isinstance(entry_id, str) and entry_id.startswith("tgt:"):
+                src_t = entry_id[4:]
+                if src_t not in TARGETS or src_t == target:
+                    continue
+                job.update(progress=n / len(layer_ids), message=f"copying {src_t}")
+                Z = get_target_draft(src_t)
+                if Z is None:
+                    try:
+                        _, _, _, Z = _load_target(values, src_t, X)
+                    except RuntimeError:
+                        continue
+                Z = np.asarray(Z, dtype="float64")
+                if Z.shape != X.shape:
+                    continue
+                hole = ~np.isfinite(result)
+                result[hole] = Z[hole]
+                continue
             entry = get_entry(entry_id)
             if entry is None:
                 continue

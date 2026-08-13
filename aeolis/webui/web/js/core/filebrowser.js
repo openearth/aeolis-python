@@ -24,7 +24,10 @@ const FileBrowser = (() => {
     state = {
       mode: options.save ? "save" : (options.mode || "open"),
       patterns,
-      filename: options.filename || "aeolis.txt",
+      // callers may pass a configured value that is a full (absolute)
+      // path — only the basename belongs in the file-name box, otherwise
+      // "Save here" would glue a folder and an absolute path together
+      filename: String(options.filename || "aeolis.txt").split(/[\\/]/).pop(),
       title: options.title ||
         (options.mode === "folder" ? "Select folder"
           : options.save ? "Save file" : "Open file"),
@@ -78,7 +81,10 @@ const FileBrowser = (() => {
       if (state.mode === "folder") _finish(state.path);
       else if (state.mode === "save") {
         const name = els.nameInput.value.trim();
-        if (name) _finish(state.path + state.sep + name);
+        if (!name) return;
+        // a typed absolute path wins over the browsed folder
+        const absolute = /^[A-Za-z]:[\\/]/.test(name) || /^[\\/]/.test(name);
+        _finish(absolute ? name : state.path + state.sep + name);
       } else if (state.selected) {
         _finish(state.path + state.sep + state.selected);
       } else {

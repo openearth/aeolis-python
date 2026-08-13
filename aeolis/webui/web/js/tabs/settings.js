@@ -32,6 +32,7 @@ const SettingsTab = (() => {
   async function _load() {
     if (!App.state.project) return;
     const panel = document.getElementById("settings-form");
+    const restoreScroll = U.keepScroll(panel);
     try {
       if (!App.state.schema) App.state.schema = await Api.get("/api/schema");
       const cfg = await Api.get("/api/config");
@@ -43,7 +44,9 @@ const SettingsTab = (() => {
       const first = panel.querySelector(".section");
       if (first) first.classList.remove("collapsed");
       _injectShearToggle(panel);
+      panel.prepend(_prefsSection().wrap);
       _updateButtons();
+      restoreScroll();   // form landed after awaits — restore again
     } catch (err) {
       U.clear(panel);
       panel.append(U.el("div", { class: "muted" }, `Could not load configuration: ${err.message}`));
@@ -53,6 +56,32 @@ const SettingsTab = (() => {
   function _onEdit() {
     App.state.configDirty = true;
     _updateButtons();
+  }
+
+  /* GUI preferences (not aeolis parameters): how file references are
+   * written into aeolis.txt when the GUI saves/repoints a file. */
+  function _prefsSection() {
+    const section = U.section("GUI preferences", { collapsed: true });
+    const sel = U.el("select", {});
+    for (const [v, label] of [["relative", "relative (portable — recommended)"],
+                              ["absolute", "absolute (full Windows path)"]]) {
+      sel.append(U.el("option", {
+        value: v, selected: v === (App.state.ui.pathFormat || "relative") ? "" : null,
+      }, label));
+    }
+    sel.addEventListener("change", () => {
+      App.state.ui.pathFormat = sel.value;
+      App.touchUi();
+    });
+    section.body.append(
+      U.el("div", { class: "form-row" }, U.el("label", {}, "File references"), sel),
+      U.el("div", { class: "muted", style: "font-size:11.5px" },
+        "How the GUI writes file paths into aeolis.txt when saving files. "
+        + "Relative references use forward slashes, so the project also runs "
+        + "unchanged on the cluster (/p); absolute Windows paths are converted "
+        + "to their /p form automatically when the project is copied for an HPC run."),
+    );
+    return section;
   }
 
   /* Mirror the grid tab's shear-grid show/hide eye into the shear section

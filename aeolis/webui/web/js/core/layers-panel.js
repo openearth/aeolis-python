@@ -12,10 +12,20 @@ const Layers = (() => {
   function register(layer) {
     // layer: {id, group, title, subtitle?, visible?, entry?, fieldId?}
     // update in place so in-flight references (e.g. a layer that is
-    // still loading) keep seeing the current state
+    // still loading) keep seeing the current state. Only emit when
+    // something actually changed: register() is also called from render
+    // passes that themselves re-render on the "layers" event, and an
+    // unconditional emit would recurse.
     const existing = App.state.layers.find((l) => l.id === layer.id);
-    if (existing) Object.assign(existing, layer);
-    else App.state.layers.push({ visible: true, ...layer });
+    if (existing) {
+      let changed = false;
+      for (const [key, val] of Object.entries(layer)) {
+        if (existing[key] !== val) { existing[key] = val; changed = true; }
+      }
+      if (changed) App.emit("layers", layer.id);
+      return;
+    }
+    App.state.layers.push({ visible: true, ...layer });
     App.emit("layers", layer.id);
   }
 

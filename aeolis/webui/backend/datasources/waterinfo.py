@@ -12,6 +12,7 @@ Quantities:
 """
 
 import json
+import threading
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
@@ -35,7 +36,22 @@ class LimitExceeded(RuntimeError):
     """The API's max-observations-per-request cap was hit (263 088)."""
 
 
+class Throttled(RuntimeError):
+    """The server answered with an HTML page instead of JSON - the WAF is
+    rate-limiting us; retry after a longer pause."""
+
+
+# One request at a time, with a minimum gap: several downloads running in
+# parallel (multiple stations/quantities) hammer the DDL together and its
+# WAF starts answering with empty/HTML pages. Serializing all waterinfo
+# traffic through this lock keeps every download slower but *finishing*.
+_REQ_LOCK = threading.Lock()
+_MIN_INTERVAL = 0.4
+_last_request = [0.0]
+
+
 def _post(url, payload, timeout=60):
+    import time
     request = urllib.request.Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
@@ -45,13 +61,24 @@ def _post(url, payload, timeout=60):
         },
     )
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            body = response.read().decode("utf-8", "replace")
+        with _REQ_LOCK:
+            gap = _MIN_INTERVAL - (time.monotonic() - _last_request[0])
+            if gap > 0:
+                time.sleep(gap)
+            try:
+                with urllib.request.urlopen(request, timeout=timeout) as response:
+                    body = response.read().decode("utf-8", "replace")
+            finally:
+                _last_request[0] = time.monotonic()
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", "replace")
         try:
             data = json.loads(body)
         except json.JSONDecodeError:
+            if exc.code in (403, 429, 502, 503):
+                raise Throttled(
+                    f"waterinfo server is busy (HTTP {exc.code}) - retrying "
+                    "with a longer pause") from exc
             raise RuntimeError(
                 f"waterinfo: HTTP {exc.code} from {url}: {body[:160]}"
             ) from exc
@@ -64,8 +91,18 @@ def _post(url, payload, timeout=60):
     try:
         return json.loads(body)
     except json.JSONDecodeError as exc:
+        # the DDL fronts requests with a WAF that answers with an HTML
+        # page when it throttles - flag it as such so the retry logic
+        # backs off properly and the user sees a sensible message
+        snippet = body.lstrip()[:120]
+        if snippet.startswith("<") or not snippet:
+            raise Throttled(
+                "waterinfo answered with an "
+                + ("HTML page" if snippet else "empty response")
+                + " instead of JSON - the server is rate-limiting; "
+                "retrying with a longer pause") from exc
         raise RuntimeError(
-            f"waterinfo: unexpected non-JSON response ({body[:120]}...)"
+            f"waterinfo: unexpected non-JSON response ({snippet}...)"
         ) from exc
 
 
@@ -168,10 +205,11 @@ def _fetch_window(station, code, scale, date0, date1):
     return np.asarray(times)[order], np.asarray(values)[order]
 
 
-def _fetch_window_retry(station, code, scale, date0, date1, job=None, attempts=3):
+def _fetch_window_retry(station, code, scale, date0, date1, job=None, attempts=5):
     """_fetch_window with retries for transient failures (timeouts,
-    connection resets, 5xx). LimitExceeded passes straight through -
-    that one is handled by shrinking the chunk, not by retrying."""
+    connection resets, 5xx, WAF throttling). LimitExceeded passes straight
+    through - that one is handled by shrinking the chunk, not by retrying.
+    Throttling waits considerably longer than an ordinary hiccup."""
     import time
     last = None
     for attempt in range(attempts):
@@ -182,10 +220,11 @@ def _fetch_window_retry(station, code, scale, date0, date1, job=None, attempts=3
         except RuntimeError as exc:
             last = exc
             if attempt + 1 < attempts:
+                wait = min(60, (15 if isinstance(exc, Throttled) else 4) * (2 ** attempt))
                 if job:
-                    job.update(message=f"waterinfo {station} {code}: retrying "
-                                       f"({attempt + 2}/{attempts}) — {str(exc)[:80]}")
-                time.sleep(3 * (attempt + 1))
+                    job.update(message=f"waterinfo {station} {code}: retrying in {wait}s "
+                                       f"({attempt + 2}/{attempts}) — {str(exc)[:90]}")
+                time.sleep(wait)
     raise last
 
 
@@ -238,11 +277,15 @@ def fetch_series(station, kind, date0, date1, job=None):
             except RuntimeError as exc:
                 # keep everything downloaded so far instead of losing it
                 warnings.append(f"{code}: download stopped at {cursor:%Y-%m-%d} "
-                                f"after 3 attempts ({exc}) — the data up to there is kept")
+                                f"after several attempts ({exc}) — the data up to there is kept")
                 break
             epochs.append(e)
             values.append(v)
             cursor = end
+            # small pause between chunks so the WAF does not throttle us
+            if cursor < date1:
+                import time
+                time.sleep(0.5)
         epoch = np.concatenate(epochs) if epochs else np.array([])
         vals = np.concatenate(values) if values else np.array([])
         if epoch.size == 0 and not results:

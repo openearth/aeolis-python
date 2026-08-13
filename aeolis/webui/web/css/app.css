@@ -258,6 +258,12 @@ input:focus, select:focus, textarea:focus {
 #speed-wrap { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 0.8571rem; }
 #rng-speed { width: 90px; accent-color: var(--accent); }
 #speed-val { min-width: 46px; font-variant-numeric: tabular-nums; color: var(--text); }
+#step-wrap { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 0.8571rem; }
+#step-idx {
+  width: 58px; height: 24px; padding: 1px 4px;
+  font-size: 0.8571rem; font-variant-numeric: tabular-nums; text-align: right;
+}
+#step-count { font-variant-numeric: tabular-nums; }
 
 /* ============ Forms (settings sections etc.) ============ */
 
@@ -428,6 +434,7 @@ table.data input { width: 100%; border: none; text-align: right; padding: 1px 2p
   background: var(--panel);
 }
 .mini-btn:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.mini-btn:disabled { opacity: .35; cursor: default; }
 .mini-btn.danger-hover:hover { color: var(--danger); border-color: var(--danger); background: #fbeceb; }
 
 /* big floating "done" button on the map while drawing/editing */
@@ -690,6 +697,28 @@ input.readonly { background: var(--panel-2); color: var(--muted); }
   border: 1px solid var(--border); border-radius: 6px; padding: 8px;
 }
 .hpc-script[readonly] { opacity: .85; }
+/* HPC form group headings (Account / Job resources / Run location / …) */
+.hpc-subhead {
+  margin: 12px 0 4px; padding-bottom: 2px;
+  font-size: 11px; font-weight: 600; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+.hpc-subhead:first-child { margin-top: 4px; }
+/* reopened-GUI reminder that an earlier HPC job may still be running */
+.hpc-remind {
+  display: flex; align-items: center; gap: 10px;
+  margin: 6px 0; padding: 7px 10px;
+  font-size: 12px; color: var(--fg);
+  background: var(--panel-2);
+  border: 1px solid var(--border); border-radius: 6px;
+}
+.hpc-remind span { flex: 1 1 auto; min-width: 0; }
+.hpc-remind button { flex: 0 0 auto; white-space: nowrap; }
+/* one selectable job in the "Monitor a HYDRAX job" popup */
+.hpc-job-row { align-items: flex-start; padding: 5px 2px; }
+.hpc-job-row > span { min-width: 0; flex: 1 1 auto; }
+
 /* small help "i" next to a form label */
 .help-i {
   display: inline-flex; vertical-align: middle; margin-left: 5px;
@@ -1098,7 +1127,11 @@ button.toggle.active {
 }
 .obj-card.drop-above::before { top: -4px; }
 .obj-card.drop-below::after { bottom: -4px; }
-.obj-card .lp-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.obj-card .lp-name { flex: 1 1 auto; min-width: 3ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* the muted subtitle gives way (ellipsis) before the name collapses -
+ * a crowded card (e.g. output var with units + dim + style controls)
+ * must never squeeze the layer NAME to zero width */
+.obj-card .lp-mini { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* editable sample name: looks flat until hovered/focused, text caret on hover */
 .obj-card .lp-name-edit {
   flex: 1; min-width: 0; font-size: 0.8571rem; cursor: text;
@@ -1314,31 +1347,35 @@ button.toggle.active {
 }
 .ch-compass.idle .ch-arrow { opacity: .15; }
 
-/* ============ Colorbars (map overlay, top center) ============ */
+/* ============ Map legend (bottom-left, above the coordinates) ============ */
 
-#colorbars {
-  position: absolute; left: 50%; top: 10px; transform: translateX(-50%);
-  z-index: 20;
-  display: flex; flex-direction: row; align-items: center; gap: 5px;
-  max-width: 70%; flex-wrap: wrap; justify-content: center;
-  pointer-events: none;   /* bars never block map panning */
+#map-legend {
+  position: absolute; left: 8px; bottom: 38px; z-index: 20;
+  display: flex; flex-direction: column; gap: 4px;
+  align-items: flex-start;
+  max-width: min(440px, 65%);
+  pointer-events: none;   /* rows never block map panning */
 }
-#colorbars-toggle { pointer-events: auto; }
-.colorbar {
+.legend-row {
   display: flex; align-items: center; gap: 6px;
   background: var(--glass);
   border: 1px solid var(--border); border-radius: 6px;
   padding: 3px 8px;
   font-size: 0.75rem; color: var(--text);
   font-variant-numeric: tabular-nums;
+  max-width: 100%;
 }
-.colorbar-title { font-weight: 700; color: var(--muted); max-width: 90px;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.colorbar-ramp {
-  width: 110px; height: 9px; border-radius: 4px;
+.legend-ramp {
+  flex: none;
+  width: 90px; height: 9px; border-radius: 4px;
   border: 1px solid rgba(0,0,0,.15);
 }
-#colorbars-toggle {
+.legend-min, .legend-max { color: var(--muted); flex: none; }
+.legend-name { font-weight: 700; flex: none; max-width: 110px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.legend-layers { color: var(--muted); overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
+#legend-toggle {
   flex: none; pointer-events: auto; cursor: pointer;
   width: 24px; height: 22px; padding: 0;
   display: inline-flex; align-items: center; justify-content: center;
@@ -1346,9 +1383,8 @@ button.toggle.active {
   background: var(--glass);
   border: 1px solid var(--border); border-radius: 999px;
 }
-#colorbars-toggle:hover { color: var(--accent); border-color: var(--accent); }
-#colorbars-toggle.off { opacity: .55; }
-.colorbars-tools { display: flex; align-items: center; gap: 4px; pointer-events: auto; }
+#legend-toggle:hover { color: var(--accent); border-color: var(--accent); }
+#legend-toggle.off { opacity: .55; }
 
 /* Viewer colormap panel: category → colormap rows */
 .cmap-row { display: flex; align-items: center; gap: 8px; margin: 5px 0; }

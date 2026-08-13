@@ -178,6 +178,78 @@ def _duplicate(handler, body, tail):
     send_json(handler, info)
 
 
+@route("POST", "/api/project/backup")
+def _backup(handler, body, tail):
+    """Zip the whole model setup into <project>/backups/<name>_<stamp>.zip.
+
+    Always includes the config, every model input file and the GUI state;
+    ``include_rawdata`` (default on) also brings the downloaded/imported raw
+    data, ``include_outputs`` (default off) adds run outputs (*.nc, *.log in
+    the project root). Input files referenced from OUTSIDE the project root
+    are archived under ``_external/`` with a manifest of their original
+    paths, so the backup is self-contained. The gui/cache scratch dir and
+    earlier backups are never included."""
+    import json
+    import time
+    import zipfile
+
+    from aeolis.webui.backend import jobs
+    from aeolis.webui.backend.config_api import load_config
+
+    current = project.require()
+    include_outputs = bool(body.get("include_outputs"))
+    include_rawdata = body.get("include_rawdata")
+    include_rawdata = True if include_rawdata is None else bool(include_rawdata)
+    root = current.root
+    cache_dir = current.cache_dir.resolve()
+    rawdata_dir = current.rawdata_dir.resolve()
+    backups_dir = (root / "backups").resolve()
+    zip_path = backups_dir / f"{root.name}_{time.strftime('%Y-%m-%d_%H%M%S')}.zip"
+    values = load_config(current.configfile)
+
+    def _skip(p):
+        rp = p.resolve()
+        if backups_dir == rp.parent or backups_dir in rp.parents:
+            return True
+        if cache_dir == rp.parent or cache_dir in rp.parents:
+            return True
+        if not include_rawdata and (rawdata_dir == rp.parent or rawdata_dir in rp.parents):
+            return True
+        # run outputs live directly in the root; raw-data *.nc stays included
+        if not include_outputs and p.parent == root and p.suffix.lower() in (".nc", ".log"):
+            return True
+        return False
+
+    def _run(job):
+        files = [p for p in sorted(root.rglob("*")) if p.is_file() and not _skip(p)]
+        external = [(key, abs_path)
+                    for key, _raw, abs_path, is_internal, exists
+                    in _referenced_inputs(values, root)
+                    if not is_internal and exists]
+        total = len(files) + len(external)
+        backups_dir.mkdir(exist_ok=True)
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for i, p in enumerate(files):
+                job.update(message=f"archiving {p.name} ({i + 1}/{total})",
+                           progress=(i + 1) / max(total, 1))
+                zf.write(p, p.relative_to(root).as_posix())
+            manifest, used = {}, set()
+            for key, abs_path in external:
+                arc, n = f"_external/{abs_path.name}", 2
+                while arc in used:
+                    arc = f"_external/{abs_path.stem}_{n}{abs_path.suffix}"
+                    n += 1
+                used.add(arc)
+                zf.write(abs_path, arc)
+                manifest[key] = {"original": str(abs_path), "archived": arc}
+            if manifest:
+                zf.writestr("_external/manifest.json", json.dumps(manifest, indent=2))
+        return {"file": str(zip_path), "files": total,
+                "bytes": zip_path.stat().st_size}
+
+    send_json(handler, {"job": jobs.start("backup project", _run)})
+
+
 @route("POST", "/api/project/reveal")
 def _reveal(handler, body, tail):
     """Open the OS file explorer at the config file location."""

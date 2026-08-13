@@ -255,6 +255,7 @@ const ConditionsTab = (() => {
 
   function _build() {
     const panel = document.getElementById("conditions-panel");
+    U.keepScroll(panel);
     U.clear(panel);
 
     panel.append(U.el("div", { class: "muted", style: "font-size:12px" },
@@ -284,7 +285,7 @@ const ConditionsTab = (() => {
         btn.disabled = !sel.length;
         return btn;
       })()));
-    for (const fetching of activeFetch.values()) rawSec.body.append(fetching.progressBar.el);
+    for (const fetching of activeFetch.values()) rawSec.body.append(fetching.row || fetching.progressBar.el);
     if (rawEntries.length) rawSec.body.append(_rawList(rawEntries));
     else rawSec.body.append(U.el("div", { class: "muted" }, "Nothing downloaded or generated yet."));
     panel.append(rawSec.wrap);
@@ -316,11 +317,13 @@ const ConditionsTab = (() => {
       status = `${KIND_TITLES[kind]} file — not created yet`; cls = "muted";
     }
 
+    // fixed button set (same order as the Domain cards); inapplicable
+    // buttons are greyed out, never hidden
     const actions = U.el("span", { class: "obj-actions" });
     actions.append(U.miniBtn("interp", "Fill / create from raw series…", () => _fillWizard(kind)));
-    if (info.series) {
-      actions.append(U.miniBtn("saveas", "Save to a chosen location…", () => _saveFileAs(kind)));
-    }
+    actions.append(U.miniBtn("saveas", "Save as… (choose location; the config is repointed)",
+      () => _saveFileAs(kind),
+      { disabled: !info.series, disabledTitle: "no file to save yet" }));
     actions.append(U.miniBtn("open", "Load an existing file…", () => _loadFile(kind)));
 
     return U.el("div", { class: "obj-card" },
@@ -345,7 +348,7 @@ const ConditionsTab = (() => {
       actions.append(U.miniBtn("copy", "Duplicate this series", () => _duplicateRaw(entry)));
       actions.append(U.miniBtn("modify", "Modify… (clean NaN, crop, arithmetic, …)",
         () => _rawModifyWizard(entry)));
-      actions.append(U.miniBtn("check", "Clean up… (detect sentinel values & stuck-sensor stretches)",
+      actions.append(U.miniBtn("search", "Clean up… (detect sentinel values & stuck-sensor stretches)",
         () => _rawCleanWizard(entry)));
 
       const card = U.el("div", {
@@ -952,7 +955,7 @@ const ConditionsTab = (() => {
   /* One output column's source picker: a priority-ordered, drag-sortable,
    * checkbox list of raw-series columns (top = highest priority; lower ones
    * only fill samples still NaN), plus how to fill whatever gaps remain. */
-  function _fillColumnBlock(colLabel, opts, defaultKey) {
+  function _fillColumnBlock(colLabel, opts, defaultKey, note = null) {
     const keyOf = (o) => `${o.id}:${o.column}`;
     const byKey = new Map(opts.map((o) => [keyOf(o), o]));
     let order = opts.map(keyOf);
@@ -1000,6 +1003,7 @@ const ConditionsTab = (() => {
 
     const el = U.el("div", { class: "form-group" },
       U.el("span", { class: "fg-label" }, `${colLabel} — sources (top = highest priority)`),
+      note ? U.el("div", { class: "muted", style: "font-size:11px" }, `⚠ ${note}`) : "",
       listEl,
       U.el("div", { class: "form-row" }, U.el("label", {}, "fill remaining gaps"), methodSel),
       valRow, otherRow);
@@ -1027,20 +1031,31 @@ const ConditionsTab = (() => {
         "No raw series yet — download or generate some in the Raw data section first."));
       return;
     }
-    // flat list of every (raw series, column) as a pickable option
+    // flat list of every (raw series, column) as a pickable option, tagged
+    // with its canonical physical variable ("Wave height", "Wind speed", …)
     const opts = [];
     for (const e of rawEntries) {
       (e.labels || []).forEach((lab, ci) => {
-        opts.push({ id: e.id, column: ci, entry: e, text: `${e.label}: ${_nameOfLabel(lab)}` });
+        opts.push({ id: e.id, column: ci, entry: e,
+          variable: _variableOf(e.kind, lab),
+          text: `${e.label}: ${_nameOfLabel(lab)}` });
       });
     }
-    // one prioritized-source block per output column; default-select the
-    // best-matching raw column (same kind + column index)
+    // one prioritized-source block per output column, offering ONLY raw
+    // columns of the SAME physical variable (an Hs column must not list Tp
+    // or wind series); default-select the best match (same kind + column)
     const blocks = labels.map((lab, i) => {
-      let match = opts.find((o) => o.entry.kind === kind && o.column === i);
-      if (!match) match = opts[Math.min(i, opts.length - 1)];
+      const want = _variableOf(kind, lab);
+      let colOpts = opts.filter((o) => o.variable === want);
+      let note = null;
+      if (!colOpts.length) {   // nothing of this quantity → show all, flagged
+        colOpts = opts;
+        note = `no raw series with ${want.toLowerCase()} found — showing everything`;
+      }
+      let match = colOpts.find((o) => o.entry.kind === kind && o.column === i);
+      if (!match) match = colOpts[0];
       const defaultKey = match ? `${match.id}:${match.column}` : null;
-      return { label: lab, block: _fillColumnBlock(lab, opts, defaultKey) };
+      return { label: lab, block: _fillColumnBlock(lab, colOpts, defaultKey, note) };
     });
 
     const rsCb = U.el("input", { type: "checkbox", id: "fill-rs" });
@@ -1084,8 +1099,9 @@ const ConditionsTab = (() => {
     popup.body.append(
       U.el("div", { class: "muted", style: "font-size:12px" },
         `Build each column of ${KIND_TITLES[kind].toLowerCase()} from one or more raw series. `
-        + "Higher in the list = higher priority; lower series only fill samples still missing, "
-        + "then the chosen method fills whatever gaps remain."),
+        + "Higher in the list = higher priority; where the top series has gaps "
+        + "(missing samples or NaN), the next series takes over, and the chosen "
+        + "method fills whatever remains."),
       ...blocks.map((b) => b.block.el),
       U.el("div", { class: "form-row" },
         U.el("label", { for: "fill-rs" }, "resample to interval means"), rsCb, rsVal, rsUnit),
@@ -1094,13 +1110,25 @@ const ConditionsTab = (() => {
     );
   }
 
+  /* The folder the kind's current file lives in (pickers start there). */
+  function _condFileDir(kind) {
+    const root = App.state.project ? App.state.project.root : "";
+    const file = ((overview.kinds || {})[kind] || {}).file || "";
+    if (/^[A-Za-z]:[\\/]/.test(file) || file.startsWith("/")) {
+      return file.replace(/[\\/][^\\/]*$/, "") || root;
+    }
+    const dir = file.includes("/") || file.includes("\\")
+      ? file.replace(/[\\/][^\\/]*$/, "") : "";
+    return dir ? `${root}\\${dir}` : root;
+  }
+
   async function _saveFileAs(kind) {
     const info = overview.kinds[kind];
     const path = await Api.pickFile({
       title: `Save ${KIND_TITLES[kind]} file as…`,
       save: true,
       patterns: [["Text files", "*.txt"], ["All files", "*.*"]],
-      initial: App.state.project ? App.state.project.root : "",
+      initial: _condFileDir(kind),
       filename: info.file || `${kind}.txt`,
     }).catch((err) => { U.toast(err.message, "error"); return null; });
     if (!path) return;
@@ -1116,7 +1144,7 @@ const ConditionsTab = (() => {
     const path = await Api.pickFile({
       title: `Load a ${KIND_TITLES[kind].toLowerCase()} file`,
       patterns: [["Text files", "*.txt"], ["All files", "*.*"]],
-      initial: App.state.project ? App.state.project.root : "",
+      initial: _condFileDir(kind),
     }).catch((err) => { U.toast(err.message, "error"); return null; });
     if (!path) return;
     try {
@@ -1249,6 +1277,7 @@ const ConditionsTab = (() => {
       _renderStations([], null);
       _syncPickBtn();
       syncCds();
+      _updateEra5Cache();
     });
     rebuildKindBox();
     syncCds();
@@ -1274,7 +1303,7 @@ const ConditionsTab = (() => {
     });
 
     const pickBtn = U.el("button", { class: "ghost btn-ict", style: "display:none" },
-      U.icon("eye", 14), U.el("span", {}, "Pick on map"));
+      U.icon("target", 14), U.el("span", {}, "Pick on map"));
     const _syncPickBtn = () => {
       pickBtn.style.display = stationMarkers.length ? "" : "none";
     };
@@ -1305,12 +1334,16 @@ const ConditionsTab = (() => {
         row.classList.toggle("selected", row.dataset.sid === station.id);
       }
       _highlightMarker(station.id);
+      _updateEra5Cache();
     };
+
+    let lastEraCells = [];   // era5 cells currently listed (for cache marks)
 
     function _renderStations(stations, onSelect) {
       U.clear(stationList);
       _clearStations();
       if (!stations.length) {
+        lastEraCells = [];
         stationList.append(U.el("div", { class: "muted" }, "—"));
         _syncPickBtn();
         return;
@@ -1333,6 +1366,46 @@ const ConditionsTab = (() => {
         }
       }
       _syncPickBtn();
+      if (sourceSel.value === "era5") {
+        lastEraCells = stations.slice(0, 20);
+        _markEraCells(onSelect);
+      } else {
+        lastEraCells = [];
+      }
+    }
+
+    /* The ERA5 cache is PER CELL: mark each listed cell with its cached
+     * years, and auto-select the best-cached cell so the download reuses
+     * what is already on disk instead of silently starting a fresh cell. */
+    async function _markEraCells(onSelect) {
+      const d0 = date0.value.trim(), d1 = date1.value.trim();
+      if (!lastEraCells.length || !d0 || !d1) return;
+      let res;
+      try {
+        res = await Api.post("/api/conditions/era5_cells_cached", {
+          cells: lastEraCells.map((s) => ({ id: s.id, lon: s.lon, lat: s.lat })),
+          date0: d0, date1: d1,
+        });
+      } catch (e) { return; }
+      let best = null;
+      for (const c of res.cells || []) {
+        if (!best || c.cached > best.cached) best = c;
+        if (!c.cached) continue;
+        const row = stationList.querySelector(`.lp-row[data-sid="${c.id}"]`);
+        const mini = row && row.querySelector(".lp-mini");
+        if (mini) {
+          mini.textContent = `${c.cached}/${c.total} yrs cached`;
+          mini.style.color = "var(--accent)";
+          mini.style.fontWeight = "600";
+        }
+      }
+      if (best && best.cached > 0 && !selectedStation && onSelect) {
+        const st = lastEraCells.find((s) => s.id === best.id);
+        if (st) {
+          onSelect(st);
+          selectedLine.textContent += " — auto-selected: this cell has cached data";
+        }
+      }
     }
 
     const periodBtn = U.el("button", { class: "ghost btn-ict" },
@@ -1366,9 +1439,57 @@ const ConditionsTab = (() => {
     const date0 = U.el("input", { type: "text", value: simFrom, title: "YYYY-MM-DD" });
     const date1 = U.el("input", { type: "text", value: simTo, title: "YYYY-MM-DD" });
 
+    // ERA5: report which years are already cached on disk for the picked
+    // cell + period, BEFORE the user starts the download
+    const cacheLine = U.el("div", { class: "muted", style: "font-size:12px" });
+    let cacheReq = 0;
+    async function _updateEra5Cache() {
+      cacheLine.textContent = "";
+      if (sourceSel.value !== "era5" || !selectedStation) return;
+      const d0 = date0.value.trim(), d1 = date1.value.trim();
+      if (!d0 || !d1) return;
+      const req = ++cacheReq;
+      try {
+        const res = await Api.post("/api/conditions/era5_cached",
+          { lon: selectedStation.lon, lat: selectedStation.lat, date0: d0, date1: d1 });
+        if (req !== cacheReq || !res.total) return;
+        if (!res.missing.length) {
+          cacheLine.textContent = `✔ all ${res.total} year(s) already on disk for this cell — `
+            + "no CDS request needed, the series is assembled from the cache";
+        } else if (res.cached.length) {
+          cacheLine.textContent = `✔ ${res.cached.length} of ${res.total} years already on disk `
+            + `for this cell — only ${res.missing.join(", ")} will be requested from CDS`;
+        } else {
+          cacheLine.textContent = `no cached ERA5 data for this cell yet — `
+            + `${res.total} year(s) will be requested from CDS`;
+        }
+        // the cache is per cell: point at a neighbouring cell with more
+        if (res.missing.length && lastEraCells.length) {
+          const alt = await Api.post("/api/conditions/era5_cells_cached", {
+            cells: lastEraCells.map((s) => ({ id: s.id, lon: s.lon, lat: s.lat })),
+            date0: d0, date1: d1,
+          });
+          if (req !== cacheReq) return;
+          const better = (alt.cells || [])
+            .filter((c) => c.id !== selectedStation.id && c.cached > res.cached.length)
+            .sort((a, b) => b.cached - a.cached)[0];
+          if (better) {
+            cacheLine.append(U.el("div", { style: "color:var(--accent)" },
+              `tip: cell (${better.lat.toFixed(2)}N, ${better.lon.toFixed(2)}E) has `
+              + `${better.cached} cached year(s) for this period — select that cell to reuse them`));
+          }
+        }
+      } catch (e) { /* project closed / bad dates - just show nothing */ }
+    }
+    const _onDates = () => { _updateEra5Cache(); _markEraCells(null); };
+    date0.addEventListener("change", _onDates);
+    date1.addEventListener("change", _onDates);
+
     const progress = U.progressBar();
     const fetchBtn = U.el("button", { class: "primary btn-ict" },
       U.icon("download", 14), U.el("span", {}, "Download raw series"));
+    const stopBtn = U.el("button", { class: "danger", style: "display:none" }, "■ Stop");
+    stopBtn.title = "Stop the download — everything fetched so far is kept";
     const bgNote = U.el("div", { class: "muted", style: "font-size:11.5px" });
     fetchBtn.addEventListener("click", async () => {
       if (!selectedStation) { U.toast("Select a station/cell first", "error"); return; }
@@ -1382,12 +1503,20 @@ const ConditionsTab = (() => {
         fetchBtn.disabled = true;
         progress.start("starting download…");
         bgNote.textContent = "The download continues in the background — " +
-          "you can close this window (progress stays visible in the Conditions tab).";
+          "you can close this window (progress + Stop stay visible in the Conditions tab).";
         const res = await Api.post("/api/conditions/fetch", body);
+        stopBtn.style.display = "";
+        stopBtn.disabled = false;
+        stopBtn.onclick = () => {
+          stopBtn.disabled = true;
+          Api.post(`/api/job/cancel/${res.job}`).catch(() => {});
+        };
         _watchFetch(primaryKind(), res.job, progress, (err) => {
           if (!wizardOpen) return;   // user closed the wizard meanwhile
           fetchBtn.disabled = false;
+          stopBtn.style.display = "none";
           progress.done();
+          _updateEra5Cache();        // partial years may now be cached
           // close on success, keep open on failure
           if (!err) popup.close();
         });
@@ -1410,10 +1539,11 @@ const ConditionsTab = (() => {
       periodLine,
       U.el("div", { class: "form-row" }, U.el("label", {}, "from"), date0),
       U.el("div", { class: "form-row" }, U.el("label", {}, "to"), date1),
+      cacheLine,
       U.el("div", { class: "muted", style: "font-size:11.5px" },
         "The download is stored as a raw series — inspect and clean it, ",
         "then build the input file with Fill (resampling happens there)."),
-      U.el("div", { class: "btn-row" }, fetchBtn),
+      U.el("div", { class: "btn-row" }, fetchBtn, stopBtn),
       progress.el,
       bgNote,
     );
@@ -1424,7 +1554,20 @@ const ConditionsTab = (() => {
   function _watchFetch(kind, jobId, popupProgress, onDone) {
     const bar = U.progressBar();
     bar.start("downloading…");
-    activeFetch.set(jobId, { kind, progressBar: bar });
+    // stop button next to the tab's progress row, so a long download can
+    // be cancelled even after the wizard popup was closed
+    const stop = U.el("button", {
+      class: "ghost danger-hover",
+      style: "font-size:11.5px;padding:1px 8px;flex:none;align-self:center",
+      title: "Stop this download — everything fetched so far is kept",
+    }, "■ Stop");
+    stop.addEventListener("click", () => {
+      stop.disabled = true;
+      Api.post(`/api/job/cancel/${jobId}`).catch(() => {});
+    });
+    const row = U.el("div", { style: "display:flex;gap:8px;align-items:center" },
+      U.el("div", { style: "flex:1;min-width:0" }, bar.el), stop);
+    activeFetch.set(jobId, { kind, progressBar: bar, row });
     _build();
     Api.waitJob(jobId, (j) => {
       bar.update(j);

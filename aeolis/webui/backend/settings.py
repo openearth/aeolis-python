@@ -9,6 +9,7 @@ WEB_DIR = WEBUI_DIR / "web"
 # Per-user application directory (recent projects, global preferences)
 APP_DIR = Path.home() / ".aeolis_webui"
 RECENT_FILE = APP_DIR / "recent.json"
+STYLES_FILE = APP_DIR / "styles.json"   # colormap/style presets (all projects)
 
 # Server
 HOST = "127.0.0.1"
