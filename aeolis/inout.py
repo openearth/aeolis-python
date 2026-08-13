@@ -32,6 +32,7 @@ import re
 import time
 import shutil
 import logging
+import unicodedata
 from webbrowser import UnixBrowser
 import numpy as np
 from matplotlib import pyplot as plt
@@ -44,6 +45,65 @@ from aeolis.constants import *
 
 # initialize logger
 logger = logging.getLogger(__name__)
+
+
+#: Non-ASCII characters that may reach a configuration file through the
+#: parameter descriptions in constants.py (e.g. "Lotka-Volterra", "Von
+#: Karman"), mapped onto plain ASCII.
+ASCII_REPLACEMENTS = {
+    '–': '-', '—': '-', '‐': '-', '‑': '-',
+    '‘': "'", '’': "'", '“': '"', '”': '"',
+    '…': '...', '°': ' deg', 'µ': 'u', '×': 'x',
+}
+
+
+def to_ascii(text):
+    '''Force *text* to plain ASCII
+
+    Configuration files are written on one platform and read on
+    another (e.g. written on Windows, run on a Linux cluster). Python
+    opens files with the platform's preferred encoding by default, so
+    any non-ASCII character in a comment makes the file undecodable on
+    the other side. Descriptions are cosmetic, so they are folded onto
+    ASCII rather than encoded.
+
+    '''
+
+    text = str(text)
+
+    # characters in U+0080-U+009F only occur when a Windows-encoded file
+    # was read back as Latin-1 (e.g. an en dash read as U+0096); map them
+    # onto what they meant in cp1252 before folding
+    if any('\x80' <= c <= '\x9f' for c in text):
+        text = ''.join(
+            bytes([ord(c)]).decode('cp1252', 'ignore')
+            if '\x80' <= c <= '\x9f' else c
+            for c in text)
+
+    for char, repl in ASCII_REPLACEMENTS.items():
+        text = text.replace(char, repl)
+    text = unicodedata.normalize('NFKD', text)
+    return text.encode('ascii', 'ignore').decode('ascii')
+
+
+def read_config_lines(configfile):
+    '''Read a configuration file as text lines, encoding-tolerantly
+
+    Prefers UTF-8, but falls back to Latin-1 so configuration files
+    written by an older version on a Windows machine (which may
+    contain single-byte accented characters in their comments) remain
+    readable everywhere.
+
+    '''
+
+    try:
+        with open(configfile, 'r', encoding='utf-8') as fp:
+            return fp.readlines()
+    except UnicodeDecodeError:
+        logger.warning('Configuration file is not valid UTF-8, '
+                       'falling back to Latin-1 [%s]' % configfile)
+        with open(configfile, 'r', encoding='latin-1') as fp:
+            return fp.readlines()
 
 
 def read_configfile(configfile, parse_files=True, load_defaults=True):
@@ -89,11 +149,10 @@ def read_configfile(configfile, parse_files=True, load_defaults=True):
         p = {}
     
     if os.path.exists(configfile):
-        with open(configfile, 'r') as fp:
-            for line in fp:
-                if '=' in line and not line.strip().startswith('%'):
-                    key, val = line.split('=')[:2]
-                    p[key.strip()] = parse_value(val, parse_files=parse_files)
+        for line in read_config_lines(configfile):
+            if '=' in line and not line.strip().startswith('%'):
+                key, val = line.split('=')[:2]
+                p[key.strip()] = parse_value(val, parse_files=parse_files)
     else:
         logger.log_and_raise('File not found [%s]' % configfile, exc=IOError)
        
@@ -119,6 +178,43 @@ def read_configfile(configfile, parse_files=True, load_defaults=True):
         p['nsavetimes'] = int(p['dzb_interval']/p['dt'])   
     
     return p
+
+
+def _is_float(value):
+    return isinstance(value, (float, np.floating))
+
+
+def _is_int(value):
+    return isinstance(value, (int, np.integer)) and not isinstance(value, bool)
+
+
+def _as_default_type(value, default):
+    '''Cast an integer value onto float if the parameter is a float
+
+    A configuration file carries no type information: a parameter
+    written as ``G_h = 4`` reads back as an integer, while the model
+    expects a float (``p['G_h'] /= 365.25 * 24 * 3600`` fails on an
+    integer array). Writing ``4.00`` instead keeps the parameter a
+    float on the next read, whatever the model does with it.
+
+    '''
+
+    if value is None or isinstance(value, (bool, str)):
+        return value
+
+    sample = default
+    if isiterable(default):
+        default = list(default)
+        sample = default[0] if default else None
+    if not _is_float(sample):
+        return value
+
+    if isiterable(value):
+        values = list(value)
+        if any(_is_int(v) for v in values):
+            return [float(v) if _is_int(v) else v for v in values]
+        return value
+    return float(value) if _is_int(value) else value
 
 
 def _equals_default(value, default):
@@ -220,12 +316,14 @@ def write_configfile(configfile, p=None):
                     # Extract comment (after #)
                     if '#' in line.split(':')[1]:
                         comment_part = line.split('#')[1].strip()
-                        comments[param_name] = comment_part
+                        # comments end up in a file that is read back on
+                        # other platforms/encodings - keep them ASCII
+                        comments[param_name] = to_ascii(comment_part)
     
     # Determine column widths for formatting
     max_key_len = max(len(k) for k in p.keys()) if p else 30
     
-    with open(configfile, 'w') as fp:
+    with open(configfile, 'w', encoding='utf-8') as fp:
         # Write header
         fp.write('%s\n' % ('%' * 70))
         fp.write('%%%% %-64s %%%%\n' % 'AeoLiS model configuration')
@@ -257,9 +355,10 @@ def write_configfile(configfile, p=None):
                     continue
                 
                 comment = comments.get(key, '')
-                
-                # Format the value
-                formatted_value = print_value(value, fill='None')
+
+                # Format the value, keeping the parameter's declared type
+                formatted_value = print_value(
+                    _as_default_type(value, DEFAULT_CONFIG.get(key)), fill='None')
                 
                 # Write the line with proper formatting
                 fp.write('{:<{width}} = {:<20} % {}\n'.format(
@@ -280,8 +379,9 @@ def write_configfile(configfile, p=None):
                 if key in DEFAULT_CONFIG and _equals_default(value, DEFAULT_CONFIG[key]):
                     continue
                 
-                comment = comments.get(key, '')               
-                formatted_value = print_value(value, fill='None')
+                comment = comments.get(key, '')
+                formatted_value = print_value(
+                    _as_default_type(value, DEFAULT_CONFIG.get(key)), fill='None')
                 fp.write('{:<{width}} = {:<20} %% {}\n'.format(
                     key, formatted_value, comment, width=max_key_len
                 ))
