@@ -23,10 +23,12 @@ def initialize(s, p):
     p = gutils.ensure_grass_parameters(p)
 
     # --- Convert yearly to secondly rates ------------------------------------
-    for param in ['G_h', 'G_c', 'G_s', 
+    for param in ['G_h', 'G_c', 'G_s',
                   'dzb_tol_c', 'dzb_tol_s',
                   'dzb_opt_h', 'dzb_opt_c', 'dzb_opt_s']:
-        p[param] /= (365.25 * 24.0 * 3600.0)
+        # integer-valued config entries arrive as int arrays; in-place
+        # division would fail, so always convert to float first
+        p[param] = np.asarray(p[param], dtype=np.float64) / (365.25 * 24.0 * 3600.0)
 
     # --- Read main-grid vegetation state variables --------------------------
     try:
