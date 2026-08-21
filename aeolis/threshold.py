@@ -133,7 +133,13 @@ def compute_grainsize(s, p):
     
     # Shear velocity threshold based on grainsize only (aerodynamic entrainment)
     s['uth0'] = s['uth'].copy()
-    
+
+    # Threshold of the airborne transport mode; identical to uth0 unless the bed
+    # slope factor is applied to it as well (th_bedslope_air), see compute_bedslope.
+    # uth0 stays grainsize-only because it also sets the saltation height and the
+    # grain velocity in transport.grainspeed.
+    s['uthAir'] = s['uth'].copy()
+
     return s
 
 
@@ -194,6 +200,9 @@ def compute_bedslope(s, p):
     M = np.cos(theta_rad) + np.sin(theta_rad) / tan_dry
     factor = np.sqrt(np.maximum(M, 0.))
 
+    # Keep the base factor (gravity only, no cliff ramp) for the airborne mode
+    factor_base = factor.copy()
+
     # Apply Extreme Cliff Effect (Singularity)
     # Only if the domain allows slopes steeper than dry sand (dyn > dry)
     if theta_dyn_deg > theta_dry_deg:
@@ -213,6 +222,20 @@ def compute_bedslope(s, p):
         s['uth'] *= factor[:,:,np.newaxis]
     else:
         s['uth'] *= factor
+
+    # Apply to the airborne threshold as well (optional, default off)
+    # 'iversen': gravity effect only, so no cliff ramp and no singularity
+    # 'full'   : the same factor as the bed, so CuAir = 0 on cliffs (all sediment deposits)
+    mode_air = str(p['th_bedslope_air']).lower()
+
+    if mode_air in ('iversen', 'full'):
+
+        factor_air = factor if mode_air == 'full' else factor_base
+
+        if s['uthAir'].ndim == 3:
+            s['uthAir'] *= factor_air[:,:,np.newaxis]
+        else:
+            s['uthAir'] *= factor_air
 
     return s
 

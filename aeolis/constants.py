@@ -193,6 +193,7 @@ MODEL_STATE = {
         'uth',                              # [m/s] Shear velocity threshold
         'uthf',                             # [m/s] Fluid shear velocity threshold
         'uth0',                             # [m/s] Shear velocity threshold based on grainsize only (aerodynamic entrainment)
+        'uthAir',                           # [m/s] Shear velocity threshold for the airborne transport mode (grainsize, optionally bed slope)
         'u',                                # [m/s] Mean horizontal saltation velocity in saturated state
         'u0',                               # [m/s] Mean horizontal saltation velocity in saturated state over flat bed
         'us',                               # [m/s] Component of the saltation velocity in x-direction
@@ -327,7 +328,8 @@ DEFAULT_CONFIG = {
     'th_salt'                       : False,              # Enable wind velocity threshold based on salt
     'th_sheltering'                 : False,              # Enable wind velocity threshold based on sheltering by roughness elements
     'th_nelayer'                    : False,              # Enable wind velocity threshold based on a non-erodible layer
-    
+    'th_bedslope_air'               : 'none',             # Apply the bed slope factor to the airborne threshold as well (none, iversen, full)
+
     # --- Other spatial files / masks --- #
     'bedcomp_file'                  : None,               # Filename of ASCII file with initial bed composition
     'threshold_file'                : None,               # Filename of ASCII file with shear velocity threshold
