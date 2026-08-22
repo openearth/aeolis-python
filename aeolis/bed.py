@@ -314,9 +314,13 @@ def update(s, p):
         m[ix_ero,-1,:] -= dm[ix_ero,:] * normalize(p['grain_dist'][-1,:])[np.newaxis,:].repeat(np.sum(ix_ero), axis=0)
     elif type(p['bedcomp_file']) == np.ndarray:
         gs = np.zeros(s['mass'].shape)
-        gs[0,:,:,:] = p['bedcomp_file'].reshape((-1,nl,nf))
-        gs[1,:,:,:] = p['bedcomp_file'].reshape((-1,nl,nf))
-        gs[2,:,:,:] = p['bedcomp_file'].reshape((-1,nl,nf))
+        # the same quasi 2D check as in initialize: only there does the file hold one row
+        if gs.shape[0] == 3:
+            gs[0,:,:,:] = p['bedcomp_file'].reshape((-1,nl,nf))
+            gs[1,:,:,:] = p['bedcomp_file'].reshape((-1,nl,nf))
+            gs[2,:,:,:] = p['bedcomp_file'].reshape((-1,nl,nf))
+        else:
+            gs[:,:,:,:] = p['bedcomp_file'].reshape(s['mass'].shape)
         m[ix_ero,-1,:] -= dm[ix_ero,:] * normalize(gs.reshape((-1,nl,nf))[ix_ero,-1, :], axis=1)
     else:
         m[ix_ero,-1,:] -= dm[ix_ero,:] * normalize(p['grain_dist'])[np.newaxis,:].repeat(np.sum(ix_ero), axis=0)
