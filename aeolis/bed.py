@@ -35,6 +35,7 @@ from numba import njit
 
 # package modules
 from aeolis.utils import *
+from aeolis.processes.bed.layers import update_layers, mix_toplayers
 #import matplotlib.pyplot as plt
 
 
@@ -167,7 +168,25 @@ def mixtoplayer(s, p):
     '''
 
     if p['process_mixtoplayer']:
-        
+
+        # depth of disturbance; mixing is done per column by a numba kernel
+        # that reproduces the vectorised implementation below bitwise
+        DOD = p['facDOD'] * s['Hsmix']
+        nl = p['nlayers']
+        nf = p['nfractions']
+        mass = s['mass'].reshape((-1, nl, nf))
+        mix_toplayers(mass, np.ascontiguousarray(s['thlyr']).reshape((-1, nl)),
+                      np.ascontiguousarray(DOD).ravel())
+        s['mass'] = mass.reshape(s['mass'].shape)
+
+    return s
+
+
+def _mixtoplayer_vectorised(s, p):
+    '''Original vectorised implementation of :func:`mixtoplayer` (reference).'''
+
+    if p['process_mixtoplayer']:
+
         # get model dimensions
         nx = p['nx']+1
         ny = p['ny']+1
@@ -242,7 +261,7 @@ def wet_bed_reset(s, p):
     return s
 
 
-def update(s, p):
+def update(s, p, use_kernel=True):
     '''Update bathymetry and bed composition
 
     Update bed composition by moving sediment fractions between bed
@@ -285,6 +304,31 @@ def update(s, p):
     ny = p['ny']
     nl = p['nlayers']
     nf = p['nfractions']
+
+    # Uniform source composition below the bottom layer: per-column numba
+    # kernel (bitwise identical to the vectorised code further below)
+    if use_kernel and p['grain_dist'].ndim == 1 and not isinstance(p['bedcomp_file'], np.ndarray):
+        mass = s['mass'].reshape((-1, nl, nf))
+        pickup = s['pickup'].reshape((-1, nf))   # modified in place, as before
+        dm, burial = update_layers(mass, pickup, normalize(p['grain_dist']), p['max_error'])
+        s['mass'] = mass.reshape((ny+1, nx+1, nl, nf))
+
+        if s['mass'].min() < 0:
+            logger.warning(format_log('Negative mass',
+                                      nrcells=np.sum(np.any(mass < 0., axis=-1)),
+                                      minvalue=s['mass'].min(),
+                                      minwind=s['uw'].min(),
+                                      time=p['_time']))
+
+        s['masstop'][:,:,:] = s['mass'][:,:,0,:]
+
+        if p['process_bedupdate']:
+            dz = (dm + burial).reshape((ny + 1, nx + 1)) / (p['rhog'] * (1. - p['porosity']))
+            s['dzb'] = dz.copy()
+            s['zb'] += dz
+            if p['process_tide']:
+                s['zs'] += dz
+        return s
 
     # determine net erosion
     pickup = s['pickup'].reshape((-1,nf))
