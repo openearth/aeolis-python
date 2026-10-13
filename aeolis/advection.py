@@ -781,8 +781,8 @@ def sweep(Ct, Cu_bed, Cu_air, zeta, mass, dt, Ts, t_current, ds, dn, us, un, w,
         history = np.zeros(max_iter + 2)
         k, stopped = _sweep_iterate(Ct_g, Ct_last, Cu_air_g, Cu_bed_g, zeta_g, mass_g,
                                     pickup_g, pickup0_g, w_g, dt, Ts, ds_g, dn_g, ufs_g, ufn_g,
-                                    _BC_CODES[offshore_bc], _BC_CODES[onshore_bc],
-                                    _BC_CODES[lateral_bc], offshore_flux, onshore_flux,
+                                    _bc_code(offshore_bc), _bc_code(onshore_bc),
+                                    _bc_code(lateral_bc), offshore_flux, onshore_flux,
                                     lateral_flux, max_iter, max_error, bi, iters, history)
         if stopped:
             diff = Ct_g - Ct_last
@@ -942,8 +942,13 @@ def update_weights(Ct, Cu, mass, bi):
     return w
 
 
-# boundary condition names -> integer codes for compiled code
-_BC_CODES = {'circular': 0, 'flux': 1, 'constant': 2}
+def _bc_code(name):
+    '''Boundary condition name -> integer code for compiled code.
+
+    As in :func:`apply_boundary`: 'circular' and 'flux' are special, every
+    other name (e.g. 'constant', 'gradient') copies the neighbouring value.
+    '''
+    return {'circular': 0, 'flux': 1}.get(name, 2)
 
 
 @njit(cache=True)
