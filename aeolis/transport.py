@@ -29,7 +29,6 @@ from __future__ import absolute_import, division
 
 import logging
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy import optimize
 from numba import njit, prange
 

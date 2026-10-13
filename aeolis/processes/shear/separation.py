@@ -85,8 +85,11 @@ def separation_envelope(zb, theta, ds, dn, look_dist=50., k_press_up=0.05, k_cri
         t = 1.
     h = d_along / a if a > 0. else d_along                  # step length along the streamline
 
-    zs = _march(np.ascontiguousarray(Z), t, h, look_dist, k_press_up, k_crit_down,
-                s_crit, s_leeside, per_cross, skip_flat)
+    # scalars as float/bool so the kernel compiles (and caches) one signature,
+    # whatever the type the configuration file gave them
+    zs = _march(np.ascontiguousarray(Z), float(t), float(h), float(look_dist),
+                float(k_press_up), float(k_crit_down), float(s_crit), float(s_leeside),
+                bool(per_cross), bool(skip_flat))
 
     if flip_j:
         zs = zs[::-1, :]

@@ -7,7 +7,6 @@ including their effects on shear stress and sediment transport.
 """
 
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy import ndimage
 from aeolis import grass_utils as gutils
 

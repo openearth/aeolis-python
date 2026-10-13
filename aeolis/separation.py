@@ -57,7 +57,7 @@ def compute_separation(p, z_bed, dx, udir=0):
     return zsep
 
 
-@njit
+@njit(cache=True)
 def _compute_separation_2d(
     z_bed, dx, look_dist,
     k_press_up, k_crit_down,
@@ -93,7 +93,7 @@ def _compute_separation_2d(
 
 
 # Streamline core
-@njit
+@njit(cache=True)
 def _streamline_core_1d(
     z_bed, dx, look_dist,
     k_press_up, k_crit_down,

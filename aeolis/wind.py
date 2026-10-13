@@ -339,7 +339,7 @@ def shear(s, p):
     return s
 
 
-@njit
+@njit(cache=True)
 def _tau_factor_stacked(zb, dx, alfa, beta):
     """
     Kroy/Duna perturbation factor tau/tau0 along x, applied per row (transect).

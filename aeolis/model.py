@@ -42,10 +42,7 @@ import logging
 import warnings
 import operator
 import numpy as np
-import scipy.sparse
 import pickle
-import scipy.sparse.linalg
-import matplotlib.pyplot as plt
 from datetime import timedelta
 from bmi.api import IBmi
 from functools import reduce
@@ -752,14 +749,17 @@ class AeoLiS(IBmi):
 
         '''
 
+        # dt is kept a float: an integer ``dt`` from the configuration file
+        # would make the compiled kernels compile a second variant and switch
+        # to the float one as soon as the time step limiter first applies
         if dt > 0.:
-            self.dt = dt
+            self.dt = float(dt)
         elif dt < -1:
-            self.dt = dt
+            self.dt = float(dt)
             self.t += np.abs(dt)
             return False
         else:
-            self.dt = self.p['dt']
+            self.dt = float(self.p['dt'])
 
         if self.solver == 'euler_forward':
             if self.p['CFL'] > 0.:
@@ -1775,6 +1775,7 @@ class WindGenerator():
         Returns:
 
         """
+        import matplotlib.pyplot as plt
         t, u = self.get_time_series()
 
         fig, axs = plt.subplots(figsize=(10,4))
@@ -1796,6 +1797,7 @@ class WindGenerator():
         Returns:
 
         """
+        import matplotlib.pyplot as plt
         fig, axs = plt.subplots(figsize=(10,4))
         axs.hist(self.wind_speeds, bins=self.bins, normed=True, color='k')
         axs.set_xlabel('wind speed [m/s]')

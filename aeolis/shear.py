@@ -30,7 +30,6 @@ import scipy.special
 import scipy.interpolate
 from scipy import ndimage, misc
 #import matplotlib
-import matplotlib.pyplot as plt
 import os
 #import scipy.interpolate as spint
 #import scipy.spatial.qhull as qhull
@@ -165,6 +164,7 @@ class WindShear:
         u_angle = 270. - udir # wind angle
         
         if plot:
+            import matplotlib.pyplot as plt
             fig, axs = plt.subplots(2, 3, figsize=(16, 9))
             self.plot(ax=axs[0,0], cmap='Reds', stride=10, computational_grid=False)
             axs[0,0].set_title('Original input grid')
@@ -690,6 +690,7 @@ class WindShear:
             Axes used for plotting
 
         '''
+        import matplotlib.pyplot as plt
         
         d = stride
         

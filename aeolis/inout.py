@@ -35,8 +35,6 @@ import logging
 import unicodedata
 from webbrowser import UnixBrowser
 import numpy as np
-from matplotlib import pyplot as plt
-from scipy.io import savemat
 
 # package modules
 from aeolis.utils import *
@@ -549,6 +547,7 @@ def get_backupfilename(fname):
         
 def visualize_grid(s, p):
     '''Create figures and tables for the user to check whether the grid-input is correctly interpreted'''
+    from matplotlib import pyplot as plt
     
     # Read the x,y,z dimensions
     x = s['x']
@@ -633,6 +632,7 @@ def visualize_grid(s, p):
 
 def visualize_timeseries(p, t):
     '''Create figures and tables for the user to check whether the timeseries-input is correctly interpreted'''
+    from matplotlib import pyplot as plt
    
     # Initiate plots
     fig, axs = plt.subplots(5, 1)
@@ -705,6 +705,7 @@ def safe_quiver(ax, x, y, U, V):
 
 def visualize_spatial(s, p):
     '''Create figures and tables for the user to check whether the input is correctly interpreted'''
+    from matplotlib import pyplot as plt
     
     # Read the x,y dimensions
     x = s['x']
@@ -822,6 +823,7 @@ def output_sedtrails(s, p):
     '''Create additional output for SedTRAILS and save as mat-files.
     Chosen for seperate files, such that only relevant (Ct > 0) cells 
     are exported for memory and speed efficiency''' 
+    from scipy.io import savemat
 
     nf = p['nfraction_sedtrails']
 

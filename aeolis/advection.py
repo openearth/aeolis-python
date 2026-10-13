@@ -29,8 +29,6 @@ from __future__ import absolute_import, division
 import logging
 import numpy as np
 import os
-from matplotlib import pyplot as plt
-import matplotlib.colors as colors
 import scipy.sparse.linalg
 from scipy import ndimage, misc
 from numba import njit
@@ -96,6 +94,7 @@ def solve_EF(self, alpha:float=0., beta:float=1.) -> dict:
             w = p['grain_dist'].reshape((1,1,-1))
             w = w.repeat(p['ny']+1, axis=0)
             w = w.repeat(p['nx']+1, axis=1)
+            w = w.astype(np.float64)    # grain_dist may be an int array
     else:
         w = w_init.copy()
 
@@ -220,6 +219,7 @@ def solve_SS(self, alpha:float=0., beta:float=1.) -> dict:
                 
             w = w.repeat(p['ny']+1, axis=0)
             w = w.repeat(p['nx']+1, axis=1)
+            w = w.astype(np.float64)    # grain_dist may be an int array
     else:
         w = w_init.copy()
 
@@ -713,6 +713,15 @@ def sweep(Ct, Cu_bed, Cu_air, zeta, mass, dt, Ts, t_current, ds, dn, us, un, w,
 
     mass = mass[:, :, :1, :]    # only the top layer enters the sweep
 
+    # scalars as float/int so the compiled kernels see one signature, whatever
+    # type the configuration file gave them (``dt = 3600`` parses as int and
+    # would compile, and cache, a second variant of every kernel)
+    dt, Ts, max_error, bi = float(dt), float(Ts), float(max_error), float(bi)
+    offshore_flux, onshore_flux, lateral_flux = (float(offshore_flux), float(onshore_flux),
+                                                 float(lateral_flux))
+    max_iter = int(max_iter)
+    w = np.asarray(w, dtype=np.float64)
+
     # --- adding ghost cells -------------------------------------------------
     (Ct_g, Cu_air_g, Cu_bed_g, zeta_g, mass_g,
     ds_g, dn_g, us_g, un_g, w_g) = [_ghostify(a, offshore_bc, onshore_bc, lateral_bc)
@@ -871,7 +880,7 @@ def sweep(Ct, Cu_bed, Cu_air, zeta, mass, dt, Ts, t_current, ds, dn, us, un, w,
     return Cu, Ct, pickup, pickup0, w, dCt, iters
 
 
-@njit
+@njit(cache=True)
 def update_Cu(Ct, Cu_air, Cu_bed, zeta):
     ''' Update equilibrium sediment concentration Cu,
     based on actual concentration Ct, bed-interaction factor zeta,
@@ -896,7 +905,7 @@ def update_Cu(Ct, Cu_air, Cu_bed, zeta):
     return Cu
 
 
-@njit
+@njit(cache=True)
 def update_weights(Ct, Cu, mass, bi):
     ''' Update weights based on current Ct, Cu and bed mass.
     '''
@@ -1594,6 +1603,8 @@ def plot_convergence_debug(t_current, Cu, Ct, diff, iters, history):
     """
     Generates a debug dashboard for the advection solver.
     """
+    from matplotlib import pyplot as plt
+    import matplotlib.colors as colors
 
     history = np.array(history)
 

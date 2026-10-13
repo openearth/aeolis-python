@@ -4,7 +4,6 @@ Module for computing bed–interaction factor zeta.
 
 import numpy as np
 import logging
-import matplotlib.pyplot as plt
 from scipy.special import gamma
 from scipy import ndimage
 

@@ -30,7 +30,6 @@ from __future__ import absolute_import, division
 import logging
 import numpy as np
 import aeolis.gridparams
-from matplotlib import pyplot as plt
 from numba import njit
 
 # package modules
@@ -554,7 +553,7 @@ def average_change(l, s, p):
     
     return s
 
-@njit
+@njit(cache=True)
 def arrange_layers(m,dm,d,nl,ix_ero,ix_dep):
     '''Arranges mass redistrubution between layers. 
     This function is called in the bed.update fucntion to speed up code using numba

@@ -6,7 +6,6 @@ Contains long, technical, or reusable logic only.
 import numpy as np
 import logging
 from numba import njit, prange
-import matplotlib.pyplot as plt
 
 from aeolis.utils import *
 
@@ -116,7 +115,7 @@ def expand_to_subgrid(A, f):
     return np.repeat(np.repeat(A, f, axis=0), f, axis=1)
 
 
-@njit
+@njit(cache=True)
 def expand_to_subgrid_linear(A, f):
     """
     Expand (ny, nx, nspecies) → (ny*f, nx*f, nspecies)
@@ -230,7 +229,7 @@ def smooth_burial(s, p):
     return dzb_smooth
 
 
-@njit
+@njit(cache=True)
 def neighbourhood_average(Nt, R_cov, dx):
     """
     Compute neighbourhood average of Nt within radius R_cov.
@@ -299,7 +298,7 @@ def build_clonal_kernel(s_min, s_max, mu, dx):
     return kernel, r
 
 
-@njit
+@njit(cache=True)
 def apply_clonal_kernel(S_c, kernel):
     """
     Apply clonal dispersal kernel to clonal production rate S_c.
@@ -330,7 +329,7 @@ def apply_clonal_kernel(S_c, kernel):
 
     return dNt_clonal
 
-@njit
+@njit(cache=True)
 def sample_seed_germination(S_s, B_s, a_s, nu_s, dx):
     """
     Sample stochastic seed germination events from seed production rate S_s.
@@ -498,7 +497,7 @@ def compute_okin_reduction(x, y, R0, udir, L_decay, hvegeff, rNt, wind_conventio
     return R, hvegeff_zeta, rNt_zeta, Rveg_zeta
 
 
-@njit
+@njit(cache=True)
 def _compute_okin_reduction_scatter(x, y, R0, udir, L_decay, hvegeff, rNt, wind_convention_id):
     """
     Compute Okin leeside shear reduction using an effective decay length.
@@ -609,6 +608,7 @@ def debug_okin_geometry(x, y, iy, ix, jy, jx, ux, uy, L_end, W):
     Visualize Okin geometry for one source cell (iy,ix)
     and one target cell (jy,jx).
     """
+    import matplotlib.pyplot as plt
 
     # Extract coordinates
     x0 = x[iy, ix]

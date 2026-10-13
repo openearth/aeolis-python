@@ -29,7 +29,6 @@ from __future__ import absolute_import, division
 
 import logging
 import numpy as np
-from matplotlib import pyplot as plt
 from numba import njit
 from scipy.interpolate import NearestNDInterpolator
 
@@ -418,7 +417,7 @@ def update(s, p, dt,t):
 
 
 
-@njit
+@njit(cache=True)
 def Boussinesq (GW, DSWL, ds, GW_stat, K_gw, ne_gw, D_gw,shl_ix, bound,zb,process_seepage_face):
     '''
     Boussinesq equation for groundwater level change
@@ -500,7 +499,7 @@ def Boussinesq (GW, DSWL, ds, GW_stat, K_gw, ne_gw, D_gw,shl_ix, bound,zb,proces
 
     return dGW
 
-@njit
+@njit(cache=True)
 def runup_overheight_distr(fx, fx_ix,shl_ix,runup_ix, x):
     '''
     Compute distribution of infiltrated water due to wave runup according to Nielsen (1990)
@@ -533,7 +532,7 @@ def runup_overheight_distr(fx, fx_ix,shl_ix,runup_ix, x):
         fx[i,fx_ix[i]]=1
     return fx
 
-@njit
+@njit(cache=True)
 def hdelta(wetting, scan_w, gw,gw_prev,scan_d,h_delta,zb,scan_w_moist,scan_d_moist,w_h,satd_moist,d_h,satw_moist,alfaw_moist,alfad_moist,resw_moist,resd_moist,mw_moist,md_moist,nw_moist,nd_moist):
     '''
     Compute suction at reversal between wetting/drying conditions
@@ -618,7 +617,7 @@ def hdelta(wetting, scan_w, gw,gw_prev,scan_d,h_delta,zb,scan_w_moist,scan_d_moi
                 h_delta[i,j] = h_delta_it          
     return h_delta
 
-@njit
+@njit(cache=True)
 def SWR_curve(wetting,gw,gw_prev,scan_w,moist_swr,w_h,scan_d,scan_w_moist,d_h,scan_d_moist):
     '''
     Compute moisture content due to capillary processes

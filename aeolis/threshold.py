@@ -30,7 +30,6 @@ from __future__ import absolute_import, division
 import logging
 import numpy as np
 import scipy
-import matplotlib.pyplot as plt
 
 # package modules
 from aeolis.utils import *

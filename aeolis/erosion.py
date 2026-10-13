@@ -27,7 +27,6 @@ from __future__ import absolute_import, division
 
 import logging
 from scipy import ndimage, misc
-from scipy.stats import norm, mode
 import numpy as np
 import math
 #import matplotlib.pyplot as plt
@@ -63,6 +62,7 @@ def run_ph12(s, p, t):
         Spatial grids
         
     '''
+    from scipy.stats import norm
 
     Ho = np.interp(t, p['wave_file'][:, 0], p['wave_file'][:, 1])
     Tp = np.interp(t, p['wave_file'][:, 0], p['wave_file'][:, 2])
