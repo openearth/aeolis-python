@@ -160,6 +160,20 @@ def update_layers(mass, pickup, gd_bottom, max_error):
         m = mass[c]
         pk = pickup[c]
 
+        # no pickup in any fraction: the bookkeeping below is the identity
+        # apart from the tiny-negative clean-up, so only that is done (most
+        # cells of a large grid have no transport in a given step)
+        active = False
+        for f in range(nf):
+            if pk[f] != 0.:
+                active = True
+        if not active:
+            for l in range(nl):
+                for f in range(nf):
+                    if m[l, f] < 0. and m[l, f] > -max_error:
+                        m[l, f] = 0.
+            continue
+
         # net exchange; erosion/deposition classification uses the value
         # *before* the negative-mass corrections, as in the original
         dm = -_sum(pk)
