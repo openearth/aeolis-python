@@ -377,7 +377,7 @@ DEFAULT_CONFIG = {
     'method_shear'                  : 'fft',              # Name of method to compute topographic effects on wind shear stress (fft, spectral, 1Dstacks)
     'dx'                            : 1.,
     'dy'                            : 1.,
-    'L'                             : 100.,               # [m] Typical length scale of dune feature (perturbation)
+    'L'                             : 100.,               # [m] Typical wavelength of dune features (perturbation); the theory uses L/4 (Kroy et al. 2002)
     'l'                             : 1.,                 # [m] Inner layer height (perturbation)
 
     # --- Flow separation bubble (OLD) --- #
