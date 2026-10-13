@@ -377,15 +377,20 @@ def append(outputfile, variables):
             if k == 'time':
                 continue
             # this is where a quasi 2D model is stored in 1D
-            if v.shape[0]==3: 
+            if v.shape[0]==3:
                 nc.variables[k][i,...] = v[1,:]
             # this is where a 2D model is stored in 2D
-            else: 
+            else:
                 nc.variables[k][i,...] = v
-            
-            
 
-    set_bounds(outputfile)
+        # CF time bounds, in the same open (opening the file costs as much as
+        # writing all variables of a small model)
+        _set_bounds(nc, i)
+
+
+def _set_bounds(nc, i):
+    nc.variables['time_bounds'][i,0] = 0 if i == 0 else nc.variables['time'][i-1]
+    nc.variables['time_bounds'][i,1] = nc.variables['time'][i]
 
 
 def set_bounds(outputfile):

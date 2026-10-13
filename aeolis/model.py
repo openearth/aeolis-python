@@ -1152,21 +1152,27 @@ class AeoLiSRunner(AeoLiS):
             Statistic of spatial grid
         '''
 
+        o = self.o[var]
+        if not o:
+            # statistics were not requested in the configuration: allocate
+            # them now (they stay zero/inf, as before the lazy allocation)
+            o = self.o[var] = self._statistic_arrays(var)
+
         if stat in ['min', 'max']:
-            return self.o[var][stat]
+            return o[stat]
         elif stat == 'sum':
-            return self.o[var][stat]*self.dt
+            return o[stat]*self.dt
         elif stat == 'avg':
             if self.n > 0:
-                return self.o[var]['sum'] / self.n
+                return o['sum'] / self.n
             else:
-                return np.zeros(self.o[var]['sum'].shape)
+                return np.zeros(o['sum'].shape)
         elif stat == 'var':
             if self.n > 1:
-                return (self.o[var]['var'] - self.o[var]['sum']**2 / self.n) \
+                return (o['var'] - o['sum']**2 / self.n) \
                     / (self.n - 1)
             else:
-                return np.zeros(self.o[var]['var'].shape)
+                return np.zeros(o['var'].shape)
         else:
             return None
 
@@ -1324,14 +1330,25 @@ class AeoLiSRunner(AeoLiS):
 
         '''
 
-        for k in self.p['_output_vars'].keys():
-            s = self.get_var_shape(k)
-            self.o[k] = dict(min=np.zeros(s) + np.inf,
-                             max=np.zeros(s) - np.inf,
-                             var=np.zeros(s),
-                             sum=np.zeros(s))
+        for k, exts in self.p['_output_vars'].items():
+            if any(ext in self._STATISTICS for ext in exts):
+                self.o[k] = self._statistic_arrays(k)
+            else:
+                # no statistics requested: nothing to accumulate (allocated
+                # on demand by get_statistic if a user asks anyway)
+                self.o[k] = {}
 
         self.n = 0
+
+
+    _STATISTICS = ('min', 'max', 'sum', 'avg', 'var')
+
+    def _statistic_arrays(self, k:str) -> dict:
+        s = self.get_var_shape(k)
+        return dict(min=np.zeros(s) + np.inf,
+                    max=np.zeros(s) - np.inf,
+                    var=np.zeros(s),
+                    sum=np.zeros(s))
 
 
     def output_update(self) -> None:
@@ -1344,15 +1361,18 @@ class AeoLiSRunner(AeoLiS):
         '''
 
         for k, exts in self.p['_output_vars'].items():
-            v = self.get_var(k, clear=False).copy()
+            o = self.o[k]
+            if not o:
+                continue            # no statistics requested for this variable
+            v = self.get_var(k, clear=False)        # read only, no copy needed
             if 'min' in exts:
-                self.o[k]['min'] = np.minimum(self.o[k]['min'], v)
+                np.minimum(o['min'], v, out=o['min'])
             if 'max' in exts:
-                self.o[k]['max'] = np.maximum(self.o[k]['max'], v)
+                np.maximum(o['max'], v, out=o['max'])
             if 'sum' in exts or 'avg' in exts or 'var' in exts:
-                self.o[k]['sum'] = self.o[k]['sum'] + v
+                o['sum'] += v
             if 'var' in exts:
-                self.o[k]['var'] = self.o[k]['var'] + v**2
+                o['var'] += v**2
 
         #also update the q variable here
         # self.s['q'] = np.hypot(self.s['qs'], self.s['qn'])
@@ -1377,7 +1397,7 @@ class AeoLiSRunner(AeoLiS):
             for k, exts in self.p['_output_vars'].items():
                 for ext in exts:
                     if ext is None:
-                        variables[k] = self.get_var(k, clear=False).copy()
+                        variables[k] = self.get_var(k, clear=False)  # read only
                     else:
                         variables['%s_%s' % (k, ext)] = self.get_statistic(k, ext)
 
