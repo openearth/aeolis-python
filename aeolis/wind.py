@@ -36,6 +36,7 @@ from numba import njit
 # package modules
 import aeolis.shear
 from aeolis.processes.shear.spectral import SpectralShear
+from aeolis.processes.shear.separation import separation_envelope, shear_reduction
 from aeolis.utils import *
 from aeolis.separation import compute_separation, set_sep_params
 
@@ -84,15 +85,15 @@ def initialize(s, p):
                                                     L=p['L'], l=p['l'], z0=z0,
                                                     buffer_width=p['buffer_width'])
             elif p['method_shear'] == 'spectral':
-                if p['process_separation']:
-                    logger.log_and_raise('method_shear = spectral does not support the separation '
-                                         'bubble yet; use method_shear = fft', exc=NotImplementedError)
                 # grid spacing along the columns (s) and rows (n), from the coordinates
                 ds = np.hypot(s['x'][0, 1] - s['x'][0, 0], s['y'][0, 1] - s['y'][0, 0])
                 dn = np.hypot(s['x'][1, 0] - s['x'][0, 0], s['y'][1, 0] - s['y'][0, 0])
                 z0_eff = float(np.exp(np.mean(np.log(z0)))) if np.size(z0) > 1 else float(z0)
+                # circular boundaries: the topography repeats itself, so no padding
+                periodic = (p['boundary_lateral'] == 'circular',
+                            p['boundary_offshore'] == 'circular' and p['boundary_onshore'] == 'circular')
                 s['shear'] = SpectralShear(s['zb'].shape[0], s['zb'].shape[1], ds, dn,
-                                           L=p['L'], l=p['l'], z0=z0_eff)
+                                           L=p['L'], l=p['l'], z0=z0_eff, periodic=periodic)
             elif p['method_shear'] != '1Dstacks':
                 logger.log_and_raise('Unknown shear method [%s], use fft, spectral or 1Dstacks'
                                      % p['method_shear'], exc=ValueError)
@@ -304,13 +305,30 @@ def shear(s, p):
     # --- Fully 2D shear on the model grid (spectral, no secondary grid) -----
     elif p['method_shear'] == 'spectral':
 
-        s['taus'], s['taun'] = s['shear'].stress(s['zb'], s['taus0'][0, 0], s['taun0'][0, 0])
-        s['tau'] = np.hypot(s['taus'], s['taun'])
+        sh = s['shear']
+        taus0, taun0 = s['taus0'][0, 0], s['taun0'][0, 0]
+
+        # separation envelope along the wind, on the model grid
+        if p['process_separation'] and (taus0 != 0. or taun0 != 0.):
+            s['zsep'] = separation_envelope(
+                s['zb'], np.arctan2(taun0, taus0), sh.ds, sh.dn,
+                look_dist=p['sep_look_dist'], k_press_up=p['sep_k_press_up'],
+                k_crit_down=p['sep_k_crit_down'], s_crit=p['sep_s_crit'],
+                s_leeside=p['sep_s_leeside'], periodic=sh.periodic)
+        else:
+            s['zsep'] = s['zb'].copy()
+        s['hsep'] = s['zsep'] - s['zb']
+
+        # perturbation of the envelope; the air stress is not reduced in the bubble
+        s['taus'], s['taun'] = sh.stress(s['zsep'], taus0, taun0)
         s['tausAir'] = s['taus'].copy()
         s['taunAir'] = s['taun'].copy()
-        s['tauAir'] = s['tau'].copy()
-        s['zsep'] = s['zb'].copy()
-        s['hsep'] = np.zeros_like(s['zb'])
+        s['tauAir'] = np.hypot(s['tausAir'], s['taunAir'])
+        if p['process_separation']:
+            fac = shear_reduction(s['hsep'])
+            s['taus'] *= fac
+            s['taun'] *= fac
+        s['tau'] = np.hypot(s['taus'], s['taun'])
 
         s = stress_velocity(s, p)
 

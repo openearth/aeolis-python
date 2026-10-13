@@ -125,23 +125,34 @@ class SpectralShear:
         Remove the best-fit plane of the bed before padding (default). On the
         blowout case this reduces the boundary error against a much larger
         domain 6-9x compared to padding the bed itself.
+    periodic : (bool, bool)
+        Treat the n (rows) and/or s (columns) direction as periodic, e.g. for
+        circular boundary conditions. A periodic direction is neither padded,
+        tapered nor detrended, so the FFT gives the exact solution for a
+        topography that repeats itself. For a semi-1D transect with circular
+        lateral boundaries this is the solution for an infinitely long ridge.
     '''
 
     def __init__(self, ny, nx, ds, dn, L, l, z0, pad_factor=2., blend_length=None,
-                 filter_frac=0.6, ntable=4096, detrend=True):
+                 filter_frac=0.6, ntable=4096, detrend=True, periodic=(False, False)):
         self.ny, self.nx, self.ds, self.dn = int(ny), int(nx), float(ds), float(dn)
         self.L, self.l, self.z0 = float(L), float(l), float(z0)
+        self.periodic = (bool(periodic[0]), bool(periodic[1]))
 
-        self.NY = scipy.fft.next_fast_len(max(int(np.ceil(pad_factor * ny)), ny + 2), real=True)
-        self.NX = scipy.fft.next_fast_len(max(int(np.ceil(pad_factor * nx)), nx + 2), real=True)
+        def padded(n, per):
+            if per:
+                return n
+            return scipy.fft.next_fast_len(max(int(np.ceil(pad_factor * n)), n + 2), real=True)
+        self.NY = padded(ny, self.periodic[0])
+        self.NX = padded(nx, self.periodic[1])
         self.oy = (self.NY - ny) // 2          # offset of the model grid inside the pad
         self.ox = (self.NX - nx) // 2
 
         # separable taper: 1 on the model grid, extrusion zone, cosine blend to 0
         if blend_length is None:
             blend_length = max(L / 2., 10. * max(ds, dn))
-        self.wy = self._taper(self.NY, self.oy, ny, dn, blend_length)
-        self.wx = self._taper(self.NX, self.ox, nx, ds, blend_length)
+        self.wy = np.ones(ny) if self.periodic[0] else self._taper(self.NY, self.oy, ny, dn, blend_length)
+        self.wx = np.ones(nx) if self.periodic[1] else self._taper(self.NX, self.ox, nx, ds, blend_length)
 
         # wavenumbers of the padded grid (rfft along s)
         self.kx = 2. * np.pi * scipy.fft.rfftfreq(self.NX, ds)[np.newaxis, :]
@@ -169,9 +180,15 @@ class SpectralShear:
         self._cache = {}
 
         # least-squares plane fit z ~ c0 + c1 * i + c2 * j as a precomputed projection
-        self.detrend = detrend
+        # (only along non-periodic directions)
+        self.detrend = detrend and not all(self.periodic)
         j, i = np.mgrid[0:ny, 0:nx]
-        A = np.c_[np.ones(ny * nx), i.ravel(), j.ravel()].astype(float)
+        cols = [np.ones(ny * nx)]
+        if not self.periodic[1]:
+            cols.append(i.ravel())
+        if not self.periodic[0]:
+            cols.append(j.ravel())
+        A = np.stack(cols, axis=1).astype(float)
         self._plane_A = A
         self._plane_pinv = np.linalg.pinv(A)
 
@@ -225,8 +242,14 @@ class SpectralShear:
         zb = np.asarray(zb, dtype=float)
         if self.detrend:
             zb = zb - (self._plane_A @ (self._plane_pinv @ zb.ravel())).reshape(zb.shape)
-        ring = np.concatenate([zb[0, :], zb[-1, :], zb[:, 0], zb[:, -1]])
-        zref = ring.mean()
+        edges = []
+        if not self.periodic[0]:
+            edges += [zb[0, :], zb[-1, :]]
+        if not self.periodic[1]:
+            edges += [zb[:, 0], zb[:, -1]]
+        if not edges:
+            return zb
+        zref = np.concatenate(edges).mean()
         h = np.pad(zb - zref, ((self.oy, self.NY - self.ny - self.oy),
                                (self.ox, self.NX - self.nx - self.ox)), mode='edge')
         return h * self.wy[:, np.newaxis] * self.wx[np.newaxis, :]
