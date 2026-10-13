@@ -33,6 +33,11 @@ import scipy.sparse.linalg
 from scipy import ndimage, misc
 from numba import njit
 
+# the boundary pass and the fraction weights live with the ordered solver
+from aeolis.processes.solvers.steadystate import (_bc_code, _apply_boundary_nb,
+                                                   update_weights, ordering_plans,
+                                                   solve_ordered)
+
 # import AeoLiS modules
 import aeolis.transport
 from aeolis.utils import prevent_tiny_negatives, format_log, rotate
@@ -241,7 +246,8 @@ def solve_SS(self, alpha:float=0., beta:float=1.) -> dict:
                         p['boundary_offshore'], p['boundary_onshore'], p['boundary_lateral'],
                         p['offshore_flux'], p['onshore_flux'], p['lateral_flux'],
                         p['max_iter'], p['max_error'], p['bi'],
-                        do_plot=p['solver_plot'], do_print=p['solver_print'])
+                        do_plot=p['solver_plot'], do_print=p['solver_print'],
+                        order=p['solver_order'])
 
     # compute pickup
     qs = Ct * s['us'] 
@@ -700,15 +706,25 @@ def sweep(Ct, Cu_bed, Cu_air, zeta, mass, dt, Ts, t_current, ds, dn, us, un, w,
           offshore_bc, onshore_bc, lateral_bc,
           offshore_flux, onshore_flux, lateral_flux,
           max_iter, max_error, bi,
-          do_print=True, do_plot=False, use_reference_loop=False):
-    '''Iterate the steady-state advection-pickup equation with upwind sweeps.
+          do_print=True, do_plot=False, use_reference_loop=False, order='quadrant'):
+    '''Solve the steady-state advection-pickup equation with upwind sweeps.
 
     All arrays are on the physical grid; ghost cells are added and removed
     here. Only the top bed layer of ``mass`` is used, so ``mass`` may be
     the full (ny, nx, nl, nf) array or just ``mass[:, :, :1, :]``.
 
-    ``use_reference_loop=True`` runs the original Python iteration loop
-    instead of the compiled one (identical results; used in tests).
+    ``order`` selects the visiting order (configuration key ``solver_order``):
+
+    - ``'upwind'``: cells in topological order of the upwind dependency
+      graph, recirculation cells iterated locally; one pass (plus a confirming
+      pass) without periodic boundaries, a few passes with them. See
+      :mod:`aeolis.processes.solvers.steadystate`.
+    - ``'quadrant'``: the legacy sweeps in a fixed order per wind quadrant,
+      repeated until converged to ``max_error``.
+
+    ``use_reference_loop=True`` runs the original Python iteration loop of the
+    quadrant order instead of the compiled one (identical results; used in
+    tests).
     '''
 
     mass = mass[:, :, :1, :]    # only the top layer enters the sweep
@@ -788,11 +804,27 @@ def sweep(Ct, Cu_bed, Cu_air, zeta, mass, dt, Ts, t_current, ds, dn, us, un, w,
         iters = np.zeros_like(Cu_g, dtype=np.int32)
         Ct_last = np.empty_like(Ct_g)
         history = np.zeros(max_iter + 2)
-        k, stopped = _sweep_iterate(Ct_g, Ct_last, Cu_air_g, Cu_bed_g, zeta_g, mass_g,
-                                    pickup_g, pickup0_g, w_g, dt, Ts, ds_g, dn_g, ufs_g, ufn_g,
-                                    _bc_code(offshore_bc), _bc_code(onshore_bc),
-                                    _bc_code(lateral_bc), offshore_flux, onshore_flux,
-                                    lateral_flux, max_iter, max_error, bi, iters, history)
+        bcs = (_bc_code(offshore_bc), _bc_code(onshore_bc), _bc_code(lateral_bc))
+        if order == 'upwind':
+            # visiting plan per fraction: cells grouped by strongly connected
+            # component, components in upwind order (face signs differ per
+            # fraction, so each fraction has its own plan)
+            orders, cstarts, ncomps = ordering_plans(ufs_g, ufn_g)
+            inner = np.zeros_like(iters)
+            k, stopped = solve_ordered(Ct_g, Ct_last, Cu_air_g, Cu_bed_g, zeta_g, mass_g,
+                                       pickup_g, pickup0_g, w_g, dt, Ts, ds_g, dn_g, ufs_g, ufn_g,
+                                       orders, cstarts, ncomps, bcs[0], bcs[1], bcs[2],
+                                       offshore_flux, onshore_flux, lateral_flux,
+                                       nf > 1, bi, max_iter, max_error, iters, inner, history)
+        elif order == 'quadrant':
+            k, stopped = _sweep_iterate(Ct_g, Ct_last, Cu_air_g, Cu_bed_g, zeta_g, mass_g,
+                                        pickup_g, pickup0_g, w_g, dt, Ts, ds_g, dn_g, ufs_g, ufn_g,
+                                        bcs[0], bcs[1], bcs[2], offshore_flux, onshore_flux,
+                                        lateral_flux, max_iter, max_error, bi, iters, history)
+        else:
+            msg = "solver_order must be 'upwind' or 'quadrant', not %r" % (order,)
+            logger.error(msg)
+            raise ValueError(msg)
         if stopped:
             diff = Ct_g - Ct_last
             if do_print:
@@ -905,108 +937,6 @@ def update_Cu(Ct, Cu_air, Cu_bed, zeta):
     return Cu
 
 
-@njit(cache=True)
-def update_weights(Ct, Cu, mass, bi):
-    ''' Update weights based on current Ct, Cu and bed mass.
-    '''
-    ny, nx, nf = Ct.shape
-    w = np.zeros((ny, nx, nf))
-
-    # loop over all cells
-    for iy in range(ny):
-        for ix in range(nx):
-
-            # air contribution
-            sum_air = 0.0
-            for f in range(nf):
-                ca = Cu[iy, ix, f]
-                if ca != 0.0:
-                    w[iy, ix, f] = Ct[iy, ix, f] / ca
-                    sum_air += w[iy, ix, f]
-                else:
-                    w[iy, ix, f] = 0.0
-
-            # bed contribution 
-            sum_bed = 0.0
-            for f in range(nf):
-                sum_bed += mass[iy, ix, 0, f]
-            scale_bed = 1.0 - min(1.0, (1.0 - bi) * sum_air)
-
-            for f in range(nf):
-                w[iy, ix, f] = (
-                    (1.0 - bi) * w[iy, ix, f] +
-                    (mass[iy, ix, 0, f] / sum_bed if sum_bed > 0.0 else 0.0)
-                    * scale_bed
-                )
-
-            # normalize weights
-            s = 0.0
-            for f in range(nf):
-                s += w[iy, ix, f]
-
-            if s > 0.0:
-                for f in range(nf):
-                    w[iy, ix, f] /= s
-
-    return w
-
-
-def _bc_code(name):
-    '''Boundary condition name -> integer code for compiled code.
-
-    As in :func:`apply_boundary`: 'circular' and 'flux' are special, every
-    other name (e.g. 'constant', 'gradient') copies the neighbouring value.
-    '''
-    return {'circular': 0, 'flux': 1}.get(name, 2)
-
-
-@njit(cache=True)
-def _apply_boundary_nb(Ct, Cu, ufs, ufn, off_bc, on_bc, lat_bc,
-                       offshore_flux, onshore_flux, lateral_flux):
-    '''Compiled equivalent of :func:`apply_boundary` (same order of updates).'''
-    ny, nx, nf = Ct.shape
-
-    if off_bc == 0:   # circular in s (both offshore and onshore)
-        for j in range(ny):
-            for f in range(nf):
-                Ct[j, 0, f] = Ct[j, nx - 2, f]
-                Ct[j, nx - 1, f] = Ct[j, 1, f]
-                Cu[j, 0, f] = Cu[j, nx - 2, f]
-                Cu[j, nx - 1, f] = Cu[j, 1, f]
-    else:
-        for j in range(ny):
-            for f in range(nf):
-                v_in = offshore_flux * Cu[j, 1, f] if off_bc == 1 else Ct[j, 1, f]
-                Ct[j, 0, f] = v_in if ufs[j, 1, f] >= 0 else Ct[j, 1, f]
-        for j in range(ny):
-            for f in range(nf):
-                v_in = onshore_flux * Cu[j, nx - 2, f] if on_bc == 1 else Ct[j, nx - 2, f]
-                Ct[j, nx - 1, f] = v_in if ufs[j, nx - 1, f] < 0 else Ct[j, nx - 2, f]
-        for j in range(ny):
-            for f in range(nf):
-                Cu[j, 0, f] = Cu[j, 1, f]
-                Cu[j, nx - 1, f] = Cu[j, nx - 2, f]
-
-    if lat_bc == 0:
-        for i in range(nx):
-            for f in range(nf):
-                Ct[0, i, f] = Ct[ny - 2, i, f]
-                Ct[ny - 1, i, f] = Ct[1, i, f]
-                Cu[0, i, f] = Cu[ny - 2, i, f]
-                Cu[ny - 1, i, f] = Cu[1, i, f]
-    else:
-        for i in range(nx):
-            for f in range(nf):
-                v_in = lateral_flux * Cu[1, i, f] if lat_bc == 1 else Ct[1, i, f]
-                Ct[0, i, f] = v_in if ufn[1, i, f] >= 0 else Ct[1, i, f]
-        for i in range(nx):
-            for f in range(nf):
-                v_in = lateral_flux * Cu[ny - 2, i, f] if lat_bc == 1 else Ct[ny - 2, i, f]
-                Ct[ny - 1, i, f] = v_in if ufn[ny - 1, i, f] < 0 else Ct[ny - 2, i, f]
-        for i in range(nx):
-            for f in range(nf):
-                Cu[0, i, f] = Cu[1, i, f]
-                Cu[ny - 1, i, f] = Cu[ny - 2, i, f]
 
 
 @njit(cache=True)

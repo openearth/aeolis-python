@@ -348,6 +348,7 @@ DEFAULT_CONFIG = {
     'max_error'                     : 1e-8,               # [-] Maximum error at which to quit iterative solution in implicit numerical schemes
     'max_iter'                      : 1000,               # [-] Maximum number of iterations at which to quit iterative solution in implicit numerical schemes
     'solver'                        : 'steadystate',      # Name of the solver (steadystate, euler_backward, crank_nicolson, euler_forward)
+    'solver_order'                  : 'upwind',           # Visiting order of the steadystate solver: upwind (topological order, one pass) or quadrant (legacy sweeps per wind quadrant)
     'solver_plot'                   : False,              # Boolean to plot convergence behaviour of the solver when max iterations is reached
     'solver_print'                  : True,               # Boolean to print convergence behaviour of the solver when max iterations is reached
 
