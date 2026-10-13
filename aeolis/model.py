@@ -234,6 +234,7 @@ class AeoLiS(IBmi):
         self.s: ModelState = ModelState() # spatial grids
         self.p: dict = {} # parameters
         self.c: dict = {} # counters
+        self.tveg: float = 0. # time since last vegetation update (grass)
 
         self.configfile = configfile
 
@@ -1431,7 +1432,7 @@ class AeoLiSRunner(AeoLiS):
         if restartfile:
             if os.path.exists(restartfile):
                 # Load model state
-                with open(restartfile, 'r') as fp:
+                with open(restartfile, 'rb') as fp:
                     state = pickle.load(fp)
 
                     self.t = state['t']
@@ -1452,7 +1453,7 @@ class AeoLiSRunner(AeoLiS):
         '''Dumps model state to restart file'''
 
         restartfile = '%s.r%010d' % (os.path.splitext(self.p['output_file'])[0], int(self.t))
-        with open(restartfile, 'w') as fp:
+        with open(restartfile, 'wb') as fp:
             pickle.dump({'t':self.t,
                          'p':self.p,
                          's':self.s,
@@ -1581,10 +1582,11 @@ class AeoLiSRunner(AeoLiS):
         logger.info(fmt % ('# time steps', aeolis.inout.print_value(n_time)))
         logger.info(fmt % ('# matrix solves', aeolis.inout.print_value(n_matrixsolve)))
         logger.info(fmt % ('# supply lim', aeolis.inout.print_value(n_supplylim)))
-        logger.info(fmt % ('avg. solves per step',
-                           aeolis.inout.print_value(float(n_matrixsolve) / n_time)))
-        logger.info(fmt % ('avg. time step',
-                           aeolis.inout.print_value(float(self.p['tstop']) / n_time)))
+        if n_time > 0:
+            logger.info(fmt % ('avg. solves per step',
+                               aeolis.inout.print_value(float(n_matrixsolve) / n_time)))
+            logger.info(fmt % ('avg. time step',
+                               aeolis.inout.print_value(float(self.p['tstop'] - self.p['tstart']) / n_time)))
 
         logger.info('**********************************************************')
         logger.info('')

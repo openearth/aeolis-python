@@ -408,11 +408,11 @@ def compute_sheltering(s, p):
 
     .. math::
     
-        \\sigma \\lambda = \\frac{n A_b}{S} = \\sum_{k=n_0}^{n_k} \hat{w}^{\mathrm{bed}}_k
+        \\sigma \\lambda = \\frac{n A_b}{S} = \\sum_{k=n_0}^{n_k} \\hat{w}^{\\mathrm{bed}}_k
 
     where :math:`k` is the fraction index, :math:`n_0` is the smallest
     non-erodible fraction, :math:`n_k` is the largest non-erodible
-    fraction and :math:`\hat{w}^{\mathrm{bed}}_k` is the mass fraction
+    fraction and :math:`\\hat{w}^{\\mathrm{bed}}_k` is the mass fraction
     of sediment fraction :math:`k`. It is assumed that the fractions
     are ordered by increasing size.
 
@@ -421,8 +421,8 @@ def compute_sheltering(s, p):
 
     .. math::
     
-        u_{*,th,r} = u_{*,th,s} * \\sqrt{\\left( 1 - m \\sum_{k=n_0}^{n_k} \hat{w}^{\mathrm{bed}}_k \\right)
-                                         \\left( 1 + m \\frac{\\beta}{\\sigma} \\sum_{k=n_0}^{n_k} \hat{w}^{\mathrm{bed}}_k \\right)}
+        u_{*,th,r} = u_{*,th,s} * \\sqrt{\\left( 1 - m \\sum_{k=n_0}^{n_k} \\hat{w}^{\\mathrm{bed}}_k \\right)
+                                         \\left( 1 + m \\frac{\\beta}{\\sigma} \\sum_{k=n_0}^{n_k} \\hat{w}^{\\mathrm{bed}}_k \\right)}
 
     Parameters
     ----------

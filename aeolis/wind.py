@@ -82,10 +82,9 @@ def initialize(s, p):
                                                     dx=p['dx'], dy=p['dy'],
                                                     L=p['L'], l=p['l'], z0=z0,
                                                     buffer_width=p['buffer_width'])
-            else:
-                s['shear'] = aeolis.rotation.rotationClass(s['x'], s['y'], s['zb'],
-                                                          dx=p['dx'], dy=p['dy'],
-                                                          buffer_width=100)
+            elif p['method_shear'] != '1Dstacks':
+                logger.log_and_raise('Unknown shear method [%s], use fft or 1Dstacks'
+                                     % p['method_shear'], exc=ValueError)
         else:
             s['shear'] = np.zeros(s['x'].shape)
 
@@ -350,6 +349,7 @@ def compute_shear1d(s, p):
     etn[ix] = taun0[ix] / tau0[ix]
 
     # Effective bed used for perturbation
+    zb = s['zb']
     if ('zsep' in s) and (s['zsep'] is not None):
         zb = np.maximum(zb, s['zsep'])
 
@@ -357,10 +357,9 @@ def compute_shear1d(s, p):
     flip = np.sum(taus0) < 0.0
     zb_in = np.flip(zb, axis=1) if flip else zb
 
-    # Compute perturbation factor
-    p['shear_alfa'] = 3. # TEMPORORARY FIX
-    p['shear_beta'] = 1.
-    fac = _tau_factor_stacked(zb_in, s['ds'][0, 0], p['shear_alfa'], p['shear_beta'])
+    # Compute perturbation factor (Kroy et al. 2002 coefficients; fixed for now)
+    shear_alfa, shear_beta = 3., 1.
+    fac = _tau_factor_stacked(zb_in, s['ds'][0, 0], shear_alfa, shear_beta)
     if flip:
         fac = np.flip(fac, axis=1)
 

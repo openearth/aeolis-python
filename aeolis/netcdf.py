@@ -469,7 +469,7 @@ def parse_metadata(outputvars):
     if os.path.exists(pyfile):
         with open(pyfile, 'r') as fp:
             for line in fp:
-                m = re.match('^\s*\'(.*)\',\s*#\s*\[(.*)\]', line)
+                m = re.match(r"^\s*'(.*)',\s*#\s*\[(.*)\]", line)
                 if m:
                     var, units = m.groups()
                     if var in meta.keys():
