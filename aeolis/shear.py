@@ -134,6 +134,7 @@ class WindShear:
         
         # Setting buffer settings                  
         self.buffer_width = buffer_width
+        self._spectral_cache = {}   # wavenumber-dependent factors per grid shape
         self.buffer_relaxation = buffer_relaxation
         
         # Setting shear perturbation settings                  
@@ -400,20 +401,67 @@ class WindShear:
             return
                                 
         ny, nx = gc['z'].shape
-        kx, ky = np.meshgrid(2. * np.pi * np.fft.fftfreq(nx, gc['dx']),
-                             2. * np.pi * np.fft.fftfreq(ny, gc['dy']))
+
+        # Wavenumber-dependent factors (filter, Bessel terms) only depend on
+        # the grid shape and spacing and on a scalar z0, so they are cached
+        z0 = self.z0
+        key = (ny, nx, gc['dx'], gc['dy'], nfilter, float(z0)) if np.size(z0) == 1 else None
+        c = self._spectral_cache.get(key) if key is not None else None
+        if c is None:
+            c = self._spectral_terms(ny, nx, nfilter)
+            if key is not None:
+                if len(self._spectral_cache) >= 16:
+                    self._spectral_cache.pop(next(iter(self._spectral_cache)))
+                self._spectral_cache[key] = c
 
         # Fourier transform of bed level
         hs = np.fft.fft2(gc['z'])
-        hs = self.filter_highfrequenies(kx, ky, hs, nfilter)
-        
+        if c['filter'] is not None:
+            hs *= c['filter']
+
+        # Pre-allocate zero arrays for Fourier-domain shear perturbations
+        dtaux_t = np.zeros_like(hs, dtype=complex)
+        dtauy_t = np.zeros_like(hs, dtype=complex)
+
+        if c['any_valid']:
+            hs_v = hs[c['valid']]
+            ul = c['ul']
+
+            # main x-direction perturbation (vectorized on valid indices)
+            dtaux_v = hs_v * c['kx2_v'] / c['k_v'] * 2. / ul**2 * c['term_x']
+
+            # y-direction perturbation (also vectorized)
+            dtauy_v = hs_v * c['kxky_v'] / c['k_v'] * 2. / ul**2 * 2. * np.sqrt(2.) * c['sigma_v'] * (c['kv1_y'])
+
+            # store back into full arrays (other entries remain zero)
+            dtaux_t[c['valid']] = dtaux_v
+            dtauy_t[c['valid']] = dtauy_v
+
+        # invalid modes remain 0 (physically reasonable for k=0 or kx=0)
+        gc['dtaux'] = np.real(np.fft.ifft2(dtaux_t))
+        gc['dtauy'] = np.real(np.fft.ifft2(dtauy_t))
+
+
+    def _spectral_terms(self, ny, nx, nfilter):
+        '''Wavenumber-dependent factors of the shear perturbation (see compute_shear).'''
+
+        gc = self.cgrid
+        gi = self.igrid
+
+        kx, ky = np.meshgrid(2. * np.pi * np.fft.fftfreq(nx, gc['dx']),
+                             2. * np.pi * np.fft.fftfreq(ny, gc['dy']))
+
+        # high-frequency filter (real factor multiplied onto the bed spectrum)
+        filt = None
+        if nfilter is not None:
+            filt = self.filter_highfrequenies(kx, ky, np.ones((ny, nx)), nfilter)
+
         z0 = self.z0            # roughness length which takes into account saltation
         L  = self.L /4.         # typical length scale of the hill (=1/kx) ??
 
-        
         # Inner layer height
-        l  = self.l    
- 
+        l  = self.l
+
         # interpolate roughness length z0 to computational grid
         if np.size(z0)>1:
             z0new = self.interpolate(gi['x'], gi['y'], z0, gc['x'], gc['y'], 0)
@@ -422,37 +470,26 @@ class WindShear:
 
         for i in range(5):
             l = 2 * 0.41**2 * L /np.log(l/z0new)
-        
+
         # Middle layer height
         hm = 1.0
         for i in range(5):
             hm = L / np.sqrt(np.log(hm/z0new))
-            
-        # Non-dimensional velocity    
+
+        # Non-dimensional velocity
         ul = np.log(l/z0new) / np.log(hm/z0new)
 
-        # Arrays in Fourier 
+        # Arrays in Fourier
         k = np.sqrt(kx**2 + ky**2)
-        
-        
-        time_start_perturbation = time.time()
 
-
-        # Shear stress perturbation
-        # Use masked computation to avoid division by zero and invalid special-function calls.
-        # Build boolean mask for valid Fourier modes where formula is defined.
+        # valid Fourier modes where the formula is defined
         valid = (k != 0) & (kx != 0)
+        c = dict(filter=filt, valid=valid, any_valid=bool(np.any(valid)), ul=ul)
 
-        # Pre-allocate zero arrays for Fourier-domain shear perturbations
-        dtaux_t = np.zeros_like(hs, dtype=complex)
-        dtauy_t = np.zeros_like(hs, dtype=complex)
-
-        if np.any(valid):
-            # Extract valid-mode arrays
+        if c['any_valid']:
             k_v  = k[valid]
             kx_v = kx[valid]
             ky_v = ky[valid]
-            hs_v = hs[valid]
 
             # z0new can be scalar or array; index accordingly
             if np.size(z0new) == 1:
@@ -466,22 +503,12 @@ class WindShear:
             # Evaluate Bessel K functions on valid arguments only
             kv0 = sc_kv(0., 2. * sigma_v)
             kv1 = sc_kv(1., 2. * sigma_v)
-
-            # main x-direction perturbation (vectorized on valid indices)
-            term_x = -1. + (2. * np.log(l / z0_v) + (k_v**2) / (kx_v**2)) * sigma_v * (kv1 / kv0)
-            dtaux_v = hs_v * (kx_v**2) / k_v * 2. / ul**2 * term_x
-
-            # y-direction perturbation (also vectorized)
             kv1_y = sc_kv(1., 2. * np.sqrt(2.) * sigma_v)
-            dtauy_v = hs_v * (kx_v * ky_v) / k_v * 2. / ul**2 * 2. * np.sqrt(2.) * sigma_v * (kv1_y)
 
-            # store back into full arrays (other entries remain zero)
-            dtaux_t[valid] = dtaux_v
-            dtauy_t[valid] = dtauy_v
+            c.update(k_v=k_v, kx2_v=kx_v**2, kxky_v=kx_v * ky_v, sigma_v=sigma_v, kv1_y=kv1_y,
+                     term_x=-1. + (2. * np.log(l / z0_v) + (k_v**2) / (kx_v**2)) * sigma_v * (kv1 / kv0))
 
-        # invalid modes remain 0 (physically reasonable for k=0 or kx=0)
-        gc['dtaux'] = np.real(np.fft.ifft2(dtaux_t))
-        gc['dtauy'] = np.real(np.fft.ifft2(dtauy_t))
+        return c
         
 
         
