@@ -374,7 +374,7 @@ DEFAULT_CONFIG = {
     'kappa'                         : 0.41,               # [-] Von Kármán constant
 
     # --- Shear / Perturbation / Topographic steering --- #
-    'method_shear'                  : 'fft',              # Name of method to compute topographic effects on wind shear stress (fft, quasi2d, duna2d (experimental))
+    'method_shear'                  : 'fft',              # Name of method to compute topographic effects on wind shear stress (fft, 1Dstacks)
     'dx'                            : 1.,
     'dy'                            : 1.,
     'L'                             : 100.,               # [m] Typical length scale of dune feature (perturbation)

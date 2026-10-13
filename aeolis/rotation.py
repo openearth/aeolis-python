@@ -104,16 +104,6 @@ class rotationClass:
             gc['fence_height'] = self.interpolate(gi['x'], gi['y'], gi['fence_height'], gc['x'], gc['y'], 0)
             gc['ustar'] = aeolis.fences.compute_fence_shear(gc['x'], gc['ustar'], gc['fence_height'], params)
             gi['ustar'] = self.interpolate(gc['x'], gc['y'], gc['ustar'], gi['x'], gi['y'], 0)
-        if type_flag == 3: #shear perturbation calcs
-            gc['tau'] = self.interpolate(gi['x'], gi['y'], gi['tau'], gc['x'], gc['y'], 0)
-            if params['shear_type'] == 'duna2d':
-                gc['tau'] = aeolis.wind.compute_shear_perturbation_1D(gc['x'], gc['z'], gc['tau'], params)
-            if params['shear_type'] == 'quasi2d':
-                gc['tau'] = aeolis.wind.compute_shear_perturbation_kroy1D(gc['x'], gc['y'], gc['z'], gc['tau'], params)
-            gc['zsep'], gc['hsep'], gc['tau'] = aeolis.wind.separation_quasi2d(gc['x'], gc['y'], gc['z'], gc['tau'], gc['dx'], gc['dy'], params)
-            gi['zsep'] = self.interpolate(gc['x'], gc['y'], gc['zsep'], gi['x'], gi['y'], 0)
-            gi['hsep'] = self.interpolate(gc['x'], gc['y'], gc['hsep'], gi['x'], gi['y'], 0)
-            gi['tau'] = self.interpolate(gc['x'], gc['y'], gc['tau'], gi['x'], gi['y'], 0)
 
         self.igrid = gi # initial grid
         self.cgrid = gc  # computational grid
