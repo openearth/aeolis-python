@@ -13,9 +13,12 @@ wavenumbers of the *model grid* are rotated:
     k_perp = -kx sin(theta) + ky cos(theta)     (across the wind)
 
 No secondary grid and no interpolation are needed. The convolution is made
-linear (non-periodic) by padding the bed to about twice its size; the pad
-continues the edge values and is blended smoothly to a reference level in
-both directions. See docs/overhaul/SHEAR_ON_MAIN_GRID.md.
+linear (non-periodic) by padding the bed to about twice its size. A
+best-fit plane is removed first: a uniform slope produces no perturbation
+in linear theory, and removing it makes the edges of the residual much
+smaller. The pad continues the edge values of the residual and is blended
+smoothly to its boundary mean in both directions. See
+docs/overhaul/SHEAR_ON_MAIN_GRID.md.
 
 Everything here works on plain numpy arrays and can be used outside AeoLiS:
 
@@ -118,10 +121,14 @@ class SpectralShear:
     filter_frac : float
         Isotropic low-pass cut-off as a fraction of the Nyquist wavenumber of
         the coarser grid direction (``None`` to disable).
+    detrend : bool
+        Remove the best-fit plane of the bed before padding (default). On the
+        blowout case this reduces the boundary error against a much larger
+        domain 6-9x compared to padding the bed itself.
     '''
 
     def __init__(self, ny, nx, ds, dn, L, l, z0, pad_factor=2., blend_length=None,
-                 filter_frac=0.6, ntable=4096):
+                 filter_frac=0.6, ntable=4096, detrend=True):
         self.ny, self.nx, self.ds, self.dn = int(ny), int(nx), float(ds), float(dn)
         self.L, self.l, self.z0 = float(L), float(l), float(z0)
 
@@ -160,6 +167,13 @@ class SpectralShear:
         self._loglz0 = 2. * np.log(l_ / z0)
         self._ltk = np.log(self._tk)
         self._cache = {}
+
+        # least-squares plane fit z ~ c0 + c1 * i + c2 * j as a precomputed projection
+        self.detrend = detrend
+        j, i = np.mgrid[0:ny, 0:nx]
+        A = np.c_[np.ones(ny * nx), i.ravel(), j.ravel()].astype(float)
+        self._plane_A = A
+        self._plane_pinv = np.linalg.pinv(A)
 
     @staticmethod
     def _taper(N, offset, n, d, blend_length):
@@ -207,8 +221,10 @@ class SpectralShear:
         return out
 
     def pad(self, zb):
-        '''Bed on the padded grid: edge extrusion blended to the boundary mean.'''
+        '''Bed on the padded grid: plane removed, edge extrusion blended to the boundary mean.'''
         zb = np.asarray(zb, dtype=float)
+        if self.detrend:
+            zb = zb - (self._plane_A @ (self._plane_pinv @ zb.ravel())).reshape(zb.shape)
         ring = np.concatenate([zb[0, :], zb[-1, :], zb[:, 0], zb[:, -1]])
         zref = ring.mean()
         h = np.pad(zb - zref, ((self.oy, self.NY - self.ny - self.oy),
