@@ -35,6 +35,7 @@ from numba import njit
 
 # package modules
 import aeolis.shear
+from aeolis.processes.shear.spectral import SpectralShear
 from aeolis.utils import *
 from aeolis.separation import compute_separation, set_sep_params
 
@@ -82,8 +83,18 @@ def initialize(s, p):
                                                     dx=p['dx'], dy=p['dy'],
                                                     L=p['L'], l=p['l'], z0=z0,
                                                     buffer_width=p['buffer_width'])
+            elif p['method_shear'] == 'spectral':
+                if p['process_separation']:
+                    logger.log_and_raise('method_shear = spectral does not support the separation '
+                                         'bubble yet; use method_shear = fft', exc=NotImplementedError)
+                # grid spacing along the columns (s) and rows (n), from the coordinates
+                ds = np.hypot(s['x'][0, 1] - s['x'][0, 0], s['y'][0, 1] - s['y'][0, 0])
+                dn = np.hypot(s['x'][1, 0] - s['x'][0, 0], s['y'][1, 0] - s['y'][0, 0])
+                z0_eff = float(np.exp(np.mean(np.log(z0)))) if np.size(z0) > 1 else float(z0)
+                s['shear'] = SpectralShear(s['zb'].shape[0], s['zb'].shape[1], ds, dn,
+                                           L=p['L'], l=p['l'], z0=z0_eff)
             elif p['method_shear'] != '1Dstacks':
-                logger.log_and_raise('Unknown shear method [%s], use fft or 1Dstacks'
+                logger.log_and_raise('Unknown shear method [%s], use fft, spectral or 1Dstacks'
                                      % p['method_shear'], exc=ValueError)
         else:
             s['shear'] = np.zeros(s['x'].shape)
@@ -287,6 +298,19 @@ def shear(s, p):
         else:
             s['zsep'] = s['zb'].copy()
             s['hsep'] = np.zeros_like(s['zb'])
+
+        s = stress_velocity(s, p)
+
+    # --- Fully 2D shear on the model grid (spectral, no secondary grid) -----
+    elif p['method_shear'] == 'spectral':
+
+        s['taus'], s['taun'] = s['shear'].stress(s['zb'], s['taus0'][0, 0], s['taun0'][0, 0])
+        s['tau'] = np.hypot(s['taus'], s['taun'])
+        s['tausAir'] = s['taus'].copy()
+        s['taunAir'] = s['taun'].copy()
+        s['tauAir'] = s['tau'].copy()
+        s['zsep'] = s['zb'].copy()
+        s['hsep'] = np.zeros_like(s['zb'])
 
         s = stress_velocity(s, p)
 
