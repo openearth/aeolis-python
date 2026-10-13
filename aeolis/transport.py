@@ -31,6 +31,7 @@ import logging
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import optimize
+from numba import njit, prange
 
 
 # package modules
@@ -526,10 +527,11 @@ def renormalize_weights(w, ix):
     return w
 
 
-@njit()
+@njit(parallel=True, cache=True)
 def solve_duran(us, un, ueff, ets, etn, dhs, dhn, uf, alpha, maxiter=100, tol=1e-2):
     """
-    Loops over every cell to solve Duran eq 1.61.
+    Loops over every cell to solve Duran eq 1.61 (cells are independent, so
+    rows are solved in parallel; results do not depend on the thread count).
     Returns velocities and a 'status' map (1=converged, 0=failed).
     """
 
@@ -542,7 +544,7 @@ def solve_duran(us, un, ueff, ets, etn, dhs, dhn, uf, alpha, maxiter=100, tol=1e
     status = np.zeros((rows, cols), dtype=np.int8) # For debugging
   
     # Loop over every grid cell
-    for r in range(rows):
+    for r in prange(rows):
         for c in range(cols):
 
             # Local parameters
