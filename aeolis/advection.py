@@ -233,8 +233,9 @@ def solve_SS(self, alpha:float=0., beta:float=1.) -> dict:
     Ct = np.zeros(Ct.shape)
             
     # iterate to steady state
-    Cu, Ct, pickup, pickup0, w, dCt, iters = sweep(Ct, s['CuBed'].copy(), s['CuAir'].copy(), 
-                        s['zeta'].copy(), s['mass'].copy(), 
+    # (sweep adds ghost cells, i.e. works on copies, and only uses the top bed layer)
+    Cu, Ct, pickup, pickup0, w, dCt, iters = sweep(Ct, s['CuBed'], s['CuAir'],
+                        s['zeta'], s['mass'], 
                         self.dt, p['T'], p['_time'], 
                         s['ds'], s['dn'], s['us'], s['un'], w,
                         p['boundary_offshore'], p['boundary_onshore'], p['boundary_lateral'],
@@ -695,11 +696,22 @@ def solve_EB(self, alpha:float=.5, beta:float=1.) -> dict:
 # This function acts as an orchestrator, delegating work to Numba-compiled helper functions.
 # Decorating the orchestrator itself with njit provides no performance benefit,
 # since most of the computation is already handled by optimized Numba functions.
-def sweep(Ct, Cu_bed, Cu_air, zeta, mass, dt, Ts, t_current, ds, dn, us, un, w, 
+def sweep(Ct, Cu_bed, Cu_air, zeta, mass, dt, Ts, t_current, ds, dn, us, un, w,
           offshore_bc, onshore_bc, lateral_bc,
           offshore_flux, onshore_flux, lateral_flux,
           max_iter, max_error, bi,
-          do_print=True, do_plot=False):
+          do_print=True, do_plot=False, use_reference_loop=False):
+    '''Iterate the steady-state advection-pickup equation with upwind sweeps.
+
+    All arrays are on the physical grid; ghost cells are added and removed
+    here. Only the top bed layer of ``mass`` is used, so ``mass`` may be
+    the full (ny, nx, nl, nf) array or just ``mass[:, :, :1, :]``.
+
+    ``use_reference_loop=True`` runs the original Python iteration loop
+    instead of the compiled one (identical results; used in tests).
+    '''
+
+    mass = mass[:, :, :1, :]    # only the top layer enters the sweep
 
     # --- adding ghost cells -------------------------------------------------
     (Ct_g, Cu_air_g, Cu_bed_g, zeta_g, mass_g,
@@ -757,6 +769,36 @@ def sweep(Ct, Cu_bed, Cu_air, zeta, mass, dt, Ts, t_current, ds, dn, us, un, w,
     # --- set Ct for the first iteration (reduces number of iterations) ------
     for i in range(nf):
         Ct_g[:,:,i] = Cu_air_g[:,:,i] * zeta_g + Cu_bed_g[:,:,i] * (1. - zeta_g)
+
+    if not use_reference_loop:
+        # --- iterate to steady state in compiled code ------------------------
+        if (offshore_bc == 'circular') != (onshore_bc == 'circular'):
+            msg = "offshore_bc/onshore_bc must both be 'circular' or non-circular."
+            logger.error(msg)
+            raise ValueError(msg)
+        iters = np.zeros_like(Cu_g, dtype=np.int32)
+        Ct_last = np.empty_like(Ct_g)
+        history = np.zeros(max_iter + 2)
+        k, stopped = _sweep_iterate(Ct_g, Ct_last, Cu_air_g, Cu_bed_g, zeta_g, mass_g,
+                                    pickup_g, pickup0_g, w_g, dt, Ts, ds_g, dn_g, ufs_g, ufn_g,
+                                    _BC_CODES[offshore_bc], _BC_CODES[onshore_bc],
+                                    _BC_CODES[lateral_bc], offshore_flux, onshore_flux,
+                                    lateral_flux, max_iter, max_error, bi, iters, history)
+        if stopped:
+            diff = Ct_g - Ct_last
+            if do_print:
+                print_convergence(k, diff, Ct_last)
+            if do_plot:
+                plot_convergence_debug(t_current, np.maximum(Cu_air_g, 0.), Ct_g, diff, iters,
+                                       list(history[:k]))
+
+        Cu_g = update_Cu(Ct_g, Cu_air_g, Cu_bed_g, zeta_g)
+        dCt = Ct_g - Ct_last
+        (Cu, Ct, pickup, pickup0, w, dCt, iters) = [
+            _deghost(a) for a in (Cu_g, Ct_g, pickup_g, pickup0_g, w_g, dCt, iters)]
+        return Cu, Ct, pickup, pickup0, w, dCt, iters
+
+    # --- reference implementation (Python loop), kept for verification -----
 
     # Storage for convergence history
     dCt_max_history = []
@@ -898,6 +940,158 @@ def update_weights(Ct, Cu, mass, bi):
                     w[iy, ix, f] /= s
 
     return w
+
+
+# boundary condition names -> integer codes for compiled code
+_BC_CODES = {'circular': 0, 'flux': 1, 'constant': 2}
+
+
+@njit(cache=True)
+def _apply_boundary_nb(Ct, Cu, ufs, ufn, off_bc, on_bc, lat_bc,
+                       offshore_flux, onshore_flux, lateral_flux):
+    '''Compiled equivalent of :func:`apply_boundary` (same order of updates).'''
+    ny, nx, nf = Ct.shape
+
+    if off_bc == 0:   # circular in s (both offshore and onshore)
+        for j in range(ny):
+            for f in range(nf):
+                Ct[j, 0, f] = Ct[j, nx - 2, f]
+                Ct[j, nx - 1, f] = Ct[j, 1, f]
+                Cu[j, 0, f] = Cu[j, nx - 2, f]
+                Cu[j, nx - 1, f] = Cu[j, 1, f]
+    else:
+        for j in range(ny):
+            for f in range(nf):
+                v_in = offshore_flux * Cu[j, 1, f] if off_bc == 1 else Ct[j, 1, f]
+                Ct[j, 0, f] = v_in if ufs[j, 1, f] >= 0 else Ct[j, 1, f]
+        for j in range(ny):
+            for f in range(nf):
+                v_in = onshore_flux * Cu[j, nx - 2, f] if on_bc == 1 else Ct[j, nx - 2, f]
+                Ct[j, nx - 1, f] = v_in if ufs[j, nx - 1, f] < 0 else Ct[j, nx - 2, f]
+        for j in range(ny):
+            for f in range(nf):
+                Cu[j, 0, f] = Cu[j, 1, f]
+                Cu[j, nx - 1, f] = Cu[j, nx - 2, f]
+
+    if lat_bc == 0:
+        for i in range(nx):
+            for f in range(nf):
+                Ct[0, i, f] = Ct[ny - 2, i, f]
+                Ct[ny - 1, i, f] = Ct[1, i, f]
+                Cu[0, i, f] = Cu[ny - 2, i, f]
+                Cu[ny - 1, i, f] = Cu[1, i, f]
+    else:
+        for i in range(nx):
+            for f in range(nf):
+                v_in = lateral_flux * Cu[1, i, f] if lat_bc == 1 else Ct[1, i, f]
+                Ct[0, i, f] = v_in if ufn[1, i, f] >= 0 else Ct[1, i, f]
+        for i in range(nx):
+            for f in range(nf):
+                v_in = lateral_flux * Cu[ny - 2, i, f] if lat_bc == 1 else Ct[ny - 2, i, f]
+                Ct[ny - 1, i, f] = v_in if ufn[ny - 1, i, f] < 0 else Ct[ny - 2, i, f]
+        for i in range(nx):
+            for f in range(nf):
+                Cu[0, i, f] = Cu[1, i, f]
+                Cu[ny - 1, i, f] = Cu[ny - 2, i, f]
+
+
+@njit(cache=True)
+def _sweep_iterate(Ct, Ct_last, Cu_air, Cu_bed, zeta, mass, pickup, pickup0, w,
+                   dt, Ts, ds, dn, ufs, ufn, off_bc, on_bc, lat_bc,
+                   offshore_flux, onshore_flux, lateral_flux,
+                   max_iter, max_error, bi, iters, history):
+    '''Steady-state iteration of :func:`sweep` in compiled code.
+
+    Reproduces the Python reference loop exactly. All arrays are on the
+    ghosted grid; ``Ct``, ``Ct_last``, ``Cu_air`` (ghost cells), ``pickup``,
+    ``pickup0``, ``w``, ``iters`` and ``history`` are updated in place.
+
+    Returns the number of iterations and whether the iteration limit was hit.
+    '''
+    ny, nx, nf = Ct.shape
+    visited = np.zeros((ny, nx), dtype=np.bool_)
+    quad = np.zeros((ny, nx), dtype=np.uint8)
+    Cu = np.empty_like(Cu_air)
+    k = 0
+    stopped = False
+
+    while True:
+        Ct_last[:] = Ct
+
+        # boundary conditions; supply limitation does not affect the air
+        # concentration, so the boundaries use Cu_air (whose ghosts are set here)
+        _apply_boundary_nb(Ct, Cu_air, ufs, ufn, off_bc, on_bc, lat_bc,
+                           offshore_flux, onshore_flux, lateral_flux)
+
+        # physical limits: 0 <= Ct <= max(Cu_air) per fraction (as np.clip)
+        for f in range(nf):
+            cmax = -np.inf
+            has_nan = False
+            for j in range(ny):
+                for i in range(nx):
+                    v = Cu_air[j, i, f]
+                    if np.isnan(v):
+                        has_nan = True
+                    elif v > cmax:
+                        cmax = v
+            if has_nan:
+                cmax = np.nan
+            for j in range(ny):
+                for i in range(nx):
+                    x = Ct[j, i, f]
+                    if not np.isnan(x):
+                        x = x if x > 0.0 else 0.0
+                        x = x if x < cmax else cmax
+                    Ct[j, i, f] = x
+
+        # Cu = max(Cu_air, 0) (as np.maximum), used for the weights
+        for j in range(ny):
+            for i in range(nx):
+                for f in range(nf):
+                    v = Cu_air[j, i, f]
+                    Cu[j, i, f] = v if (v >= 0.0 or np.isnan(v)) else 0.0
+
+        if nf > 1:
+            w[:] = update_weights(Ct, Cu, mass, bi)
+
+        visited[:] = False
+        quad[:] = 0
+        _solve_quadrant1(Ct, Cu_air, Cu_bed, zeta, mass, pickup, pickup0, w,
+                         dt, Ts, ds, dn, ufs, ufn, visited, quad, nf)
+        _solve_quadrant2(Ct, Cu_air, Cu_bed, zeta, mass, pickup, pickup0, w,
+                         dt, Ts, ds, dn, ufs, ufn, visited, quad, nf)
+        _solve_quadrant3(Ct, Cu_air, Cu_bed, zeta, mass, pickup, pickup0, w,
+                         dt, Ts, ds, dn, ufs, ufn, visited, quad, nf)
+        _solve_quadrant4(Ct, Cu_air, Cu_bed, zeta, mass, pickup, pickup0, w,
+                         dt, Ts, ds, dn, ufs, ufn, visited, quad, nf)
+        _solve_generic_stencil(Ct, Cu_air, Cu_bed, zeta, mass, pickup, pickup0, w,
+                               dt, Ts, ds, dn, ufs, ufn, visited, quad, nf)
+        k += 1
+
+        # convergence bookkeeping
+        notconverged = False
+        dmax = -1.0
+        dval = 0.0
+        for j in range(ny):
+            for i in range(nx):
+                for f in range(nf):
+                    d = Ct[j, i, f] - Ct_last[j, i, f]
+                    ad = abs(d)
+                    if ad > max_error:
+                        iters[j, i, f] = k
+                        notconverged = True
+                    if ad > dmax:
+                        dmax = ad
+                        dval = d
+        history[min(k - 1, history.shape[0] - 1)] = dval
+
+        if k > max_iter:
+            stopped = True
+            break
+        if not notconverged:
+            break
+
+    return k, stopped
 
 
 def apply_boundary(Ct, Cu, ufs, ufn,
