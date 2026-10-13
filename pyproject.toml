@@ -29,6 +29,7 @@ dependencies = [
   "docopt",
   "typer",
   "bmi-python",
+  "setuptools<81",  # bmi-python imports pkg_resources, removed in setuptools 81
   "netCDF4",
   "scipy",
   "numpy",
