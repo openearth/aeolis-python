@@ -792,10 +792,13 @@ class AeoLiS(IBmi):
         return True
 
     def grid_rotate(self, angle:float) -> ModelState:
-        
+
         s = self.s
         p = self.p
-        
+
+        if angle == 0.:
+            return s    # identity (avoids rounding the coordinates through (x - mean) + mean)
+
         s['x'], s['y'] = rotate(s['x'], s['y'], angle, origin=(np.mean(s['x']), np.mean(s['y'])))
         
         s['taus'], s['taun'] = rotate(s['taus'], s['taun'], angle, origin=(0, 0))
