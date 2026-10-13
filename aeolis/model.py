@@ -103,6 +103,54 @@ if not __version__ :
     logger.warning('WARNING: Unknown model version.')
 
 
+# Solvers for the advection-pickup equation and the legacy names that map onto them
+SOLVERS = ('steadystate', 'euler_forward', 'euler_backward', 'crank_nicolson')
+LEGACY_SOLVERS = ('trunk', 'pieter', 'steadystatepieter')
+
+
+def resolve_solver(p:dict) -> str:
+    '''Return the solver name to use for a model configuration.
+
+    The current solver names are listed in :data:`SOLVERS`. Older
+    configurations combine ``solver = trunk | pieter`` with a separate
+    ``scheme = euler_forward | euler_backward | crank_nicolson`` setting,
+    or use ``solver = steadystatepieter``. These are mapped onto the
+    current solvers with a deprecation warning, so that existing input
+    files keep working.
+
+    Parameters
+    ----------
+    p : dict
+        Model configuration parameters
+
+    Returns
+    -------
+    str
+        One of :data:`SOLVERS`
+
+    '''
+
+    solver = str(p['solver']).lower()
+    if solver in SOLVERS:
+        return solver
+
+    if solver == 'steadystatepieter':
+        resolved = 'steadystate'
+    elif solver in ('trunk', 'pieter'):
+        resolved = str(p.get('scheme') or 'euler_backward').lower()
+        if resolved not in SOLVERS:
+            logger.log_and_raise('Unknown scheme [%s] for solver [%s]' % (resolved, solver), exc=ValueError)
+    else:
+        logger.log_and_raise('Unknown solver [%s], use one of: %s' % (solver, ', '.join(SOLVERS)),
+                             exc=ValueError)
+
+    msg = ('Solver "%s" (scheme "%s") is deprecated and is mapped to solver = %s. '
+           'Please update the configuration file.' % (solver, p.get('scheme'), resolved))
+    warnings.warn(msg, DeprecationWarning)
+    logger.warning(msg)
+    return resolved
+
+
 class ModelState(dict):
     """Dictionary-like object to store model state.
     Model state variables are mutable by default, but can be set
@@ -208,6 +256,7 @@ class AeoLiS(IBmi):
         # read configuration file
         self.p = aeolis.inout.read_configfile(self.configfile)
         aeolis.inout.check_configuration(self.p)
+        self.solver = resolve_solver(self.p)
 
         # set nx, ny and nfractions and make 1D into quasi 2D
         if self.p['xgrid_file'].ndim == 2:
@@ -392,14 +441,14 @@ class AeoLiS(IBmi):
         self.s = aeolis.transport.equilibrium(self.s, self.p)
 
         # compute instantaneous transport
-        if self.p['solver'] == 'steadystate': 
+        if self.solver == 'steadystate':
             solve_dict = self.solve_SS()
-        elif self.p['solver'] == 'euler_backward':
+        elif self.solver == 'euler_backward':
             solve_dict = self.solve_EB()
-        elif self.p['solver'] == 'euler_forward':
+        elif self.solver == 'crank_nicolson':
+            solve_dict = self.solve_EB(alpha=.5)
+        elif self.solver == 'euler_forward':
             solve_dict = self.solve_EF()
-        else:
-            logger.log_and_raise('Unknown solver [%s]' % self.p['solver'], exc=ValueError)
         self.s.update(solve_dict)
 
         # update bed
@@ -711,7 +760,7 @@ class AeoLiS(IBmi):
         else:
             self.dt = self.p['dt']
 
-        if self.p['solver'] == 'euler_forward':
+        if self.solver == 'euler_forward':
             if self.p['CFL'] > 0.:
                 dtref = np.max(np.abs(self.s['uws']) / self.s['ds']) + \
                         np.max(np.abs(self.s['uwn']) / self.s['dn'])
@@ -764,68 +813,6 @@ class AeoLiS(IBmi):
         
         return s
     
-    def euler_forward(self) -> Any:
-        '''Convenience function for explicit solver based on Euler forward scheme
-
-        See Also
-        --------
-        model.AeoLiS.solve
-
-        '''
-        
-        if self.p['solver'].lower() == 'trunk':
-            solve = self.solve_EF(alpha=0., beta=1)
-            #solve = self.solve(alpha=0., beta=1)
-        elif self.p['solver'].lower() == 'pieter': 
-            solve = self.solve_pieter(alpha=0., beta=1)
-        elif self.p['solver'].lower() == 'steadystate':
-            solve = self.solve_SS()
-        elif self.p['solver'].lower() == 'steadystatepieter':
-            solve = self.solve_steadystatepieter()
-
-        return solve
-
-
-    def euler_backward(self) -> Any:
-        '''Convenience function for implicit solver based on Euler backward scheme
-
-        See Also
-        --------
-        model.AeoLiS.solve
-
-        '''
-        
-        if self.p['solver'].lower() == 'trunk':
-            solve = self.solve(alpha=1., beta=1)
-        elif self.p['solver'].lower() == 'pieter': 
-            solve = self.solve_pieter(alpha=1., beta=1)
-        elif self.p['solver'].lower() == 'steadystate':
-            solve = self.solve_SS()
-        elif self.p['solver'].lower() == 'steadystatepieter':
-            solve = self.solve_steadystatepieter()
-            
-        return solve
-
-    def crank_nicolson(self) -> Any:
-        '''Convenience function for semi-implicit solver based on Crank-Nicolson scheme
-
-        See Also
-        --------
-        model.AeoLiS.solve
-        '''
-
-        if self.p['solver'].lower() == 'trunk':
-            solve = self.solve(alpha=.5, beta=1)
-        elif self.p['solver'].lower() == 'pieter': 
-            solve = self.solve_pieter(alpha=.5, beta=1)
-        elif self.p['solver'].lower() == 'steadystate':
-            solve = self.solve_steadystate()
-        elif self.p['solver'].lower() == 'steadystatepieter':
-            solve = self.solve_steadystatepieter()
-
-        return solve
-     
-
     def get_count(self, name:str) -> int:
         '''Get counter value
 

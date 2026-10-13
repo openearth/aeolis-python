@@ -64,14 +64,14 @@ def solve_EF(self, alpha:float=0., beta:float=1.) -> dict:
 
     Examples
     --------
-    >>> model.s.update(model.solve(alpha=1., beta=1.) # euler backward
+    >>> model.s.update(model.solve_EB(alpha=1., beta=1.)) # euler backward
 
-    >>> model.s.update(model.solve(alpha=.5, beta=1.) # crank-nicolson
+    >>> model.s.update(model.solve_EB(alpha=.5, beta=1.)) # crank-nicolson
 
     See Also
     --------
-    model.AeoLiS.euler_forward
-    model.AeoLiS.euler_backward
+    model.AeoLiS.update
+    model.resolve_solver
     transport.compute_weights
     transport.renormalize_weights
 
@@ -180,15 +180,14 @@ def solve_SS(self, alpha:float=0., beta:float=1.) -> dict:
 
     Examples
     --------
-    >>> model.s.update(model.solve(alpha=1., beta=1.) # euler backward
+    >>> model.s.update(model.solve_EB(alpha=1., beta=1.)) # euler backward
 
-    >>> model.s.update(model.solve(alpha=.5, beta=1.) # crank-nicolson
+    >>> model.s.update(model.solve_EB(alpha=.5, beta=1.)) # crank-nicolson
 
     See Also
     --------
-    model.AeoLiS.euler_forward
-    model.AeoLiS.euler_backward
-    model.AeoLiS.crank_nicolson
+    model.AeoLiS.update
+    model.resolve_solver
     transport.compute_weights
     transport.renormalize_weights
 
@@ -285,15 +284,14 @@ def solve_EB(self, alpha:float=.5, beta:float=1.) -> dict:
 
     Examples
     --------
-    >>> model.s.update(model.solve(alpha=1., beta=1.) # euler backward
+    >>> model.s.update(model.solve_EB(alpha=1., beta=1.)) # euler backward
 
-    >>> model.s.update(model.solve(alpha=.5, beta=1.) # crank-nicolson
+    >>> model.s.update(model.solve_EB(alpha=.5, beta=1.)) # crank-nicolson
 
     See Also
     --------
-    model.AeoLiS.euler_forward
-    model.AeoLiS.euler_backward
-    model.AeoLiS.crank_nicolson
+    model.AeoLiS.update
+    model.resolve_solver
     transport.compute_weights
     transport.renormalize_weights
     '''

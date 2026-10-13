@@ -347,7 +347,7 @@ DEFAULT_CONFIG = {
     'max_bedlevel_change'           : 999.,               # [m] Maximum bedlevel change after one timestep. Next timestep dt will be modified (use 999. if not used)
     'max_error'                     : 1e-8,               # [-] Maximum error at which to quit iterative solution in implicit numerical schemes
     'max_iter'                      : 1000,               # [-] Maximum number of iterations at which to quit iterative solution in implicit numerical schemes
-    'solver'                        : 'steadystate',      # Name of the solver (steadystate, euler_backward, euler_forward)
+    'solver'                        : 'steadystate',      # Name of the solver (steadystate, euler_backward, crank_nicolson, euler_forward)
     'solver_plot'                   : False,              # Boolean to plot convergence behaviour of the solver when max iterations is reached
     'solver_print'                  : True,               # Boolean to print convergence behaviour of the solver when max iterations is reached
 
