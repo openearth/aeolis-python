@@ -445,7 +445,7 @@ class AeoLiS(IBmi):
         if self.solver == 'steadystate':
             solve_dict = self.solve_SS()
         elif self.solver == 'euler_backward':
-            solve_dict = self.solve_EB()
+            solve_dict = self.solve_EB(alpha=1.)
         elif self.solver == 'crank_nicolson':
             solve_dict = self.solve_EB(alpha=.5)
         elif self.solver == 'euler_forward':
