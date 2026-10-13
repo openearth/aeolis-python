@@ -468,6 +468,7 @@ DEFAULT_CONFIG = {
     # --- Dune erosion parameters --- #
     'dune_toe_elevation'            : 3,                  # Choose dune toe elevation, only used in the PH12 dune erosion solver
     'beach_slope'                   : 0.1,                # Define the beach slope, only used in the PH12 dune erosion solver
+    'Cs'                            : 2.5e-3,             # [-] Dune erosion coefficient, only used in the PH12 dune erosion solver
     'veg_min_elevation'             : -10.,               # Minimum elevation (m) where vegetation can grow; default -10 disables restriction.
 
     # --- Bed interaction in advection equation (new process) --- #
