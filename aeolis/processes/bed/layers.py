@@ -44,41 +44,75 @@ def _floor_divide(a, b):
 
 
 @njit(cache=True)
-def _pairwise(a, start, n):
-    '''numpy's pairwise summation of ``a[start:start+n]`` (8-way unrolled blocks).'''
+def _pairwise_block(a, start, n):
+    '''numpy's pairwise summation of ``a[start:start+n]`` for ``n <= 128``.'''
     if n < 8:
         res = 0.
         for i in range(n):
             res += a[start + i]
         return res
-    elif n <= 128:
-        r0 = a[start]
-        r1 = a[start + 1]
-        r2 = a[start + 2]
-        r3 = a[start + 3]
-        r4 = a[start + 4]
-        r5 = a[start + 5]
-        r6 = a[start + 6]
-        r7 = a[start + 7]
-        i = 8
-        while i < n - (n % 8):
-            r0 += a[start + i]
-            r1 += a[start + i + 1]
-            r2 += a[start + i + 2]
-            r3 += a[start + i + 3]
-            r4 += a[start + i + 4]
-            r5 += a[start + i + 5]
-            r6 += a[start + i + 6]
-            r7 += a[start + i + 7]
-            i += 8
-        res = ((r0 + r1) + (r2 + r3)) + ((r4 + r5) + (r6 + r7))
-        while i < n:
-            res += a[start + i]
-            i += 1
-        return res
+    r0 = a[start]
+    r1 = a[start + 1]
+    r2 = a[start + 2]
+    r3 = a[start + 3]
+    r4 = a[start + 4]
+    r5 = a[start + 5]
+    r6 = a[start + 6]
+    r7 = a[start + 7]
+    i = 8
+    while i < n - (n % 8):
+        r0 += a[start + i]
+        r1 += a[start + i + 1]
+        r2 += a[start + i + 2]
+        r3 += a[start + i + 3]
+        r4 += a[start + i + 4]
+        r5 += a[start + i + 5]
+        r6 += a[start + i + 6]
+        r7 += a[start + i + 7]
+        i += 8
+    res = ((r0 + r1) + (r2 + r3)) + ((r4 + r5) + (r6 + r7))
+    while i < n:
+        res += a[start + i]
+        i += 1
+    return res
+
+
+@njit(cache=True)
+def _split(n):
     n2 = n // 2
-    n2 -= n2 % 8
-    return _pairwise(a, start, n2) + _pairwise(a, start + n2, n - n2)
+    return n2 - n2 % 8
+
+
+@njit(cache=True)
+def _pairwise(a, start, n):
+    '''numpy's pairwise summation of ``a[start:start+n]``.
+
+    numpy halves blocks larger than 128 recursively; numba cannot cache
+    functions that call recursive functions, so the first three levels of
+    that recursion are written out (exact for n <= 1024).
+    '''
+    if n <= 128:
+        return _pairwise_block(a, start, n)
+    if n > 1024:
+        raise ValueError('pairwise summation emulated up to 1024 values')
+    h = _split(n)
+    return _pairwise_l2(a, start, h) + _pairwise_l2(a, start + h, n - h)
+
+
+@njit(cache=True)
+def _pairwise_l2(a, start, n):
+    if n <= 128:
+        return _pairwise_block(a, start, n)
+    h = _split(n)
+    return _pairwise_l3(a, start, h) + _pairwise_l3(a, start + h, n - h)
+
+
+@njit(cache=True)
+def _pairwise_l3(a, start, n):
+    if n <= 128:
+        return _pairwise_block(a, start, n)
+    h = _split(n)
+    return _pairwise_block(a, start, h) + _pairwise_block(a, start + h, n - h)
 
 
 @njit(cache=True)
