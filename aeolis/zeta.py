@@ -7,9 +7,15 @@ import logging
 from scipy.special import gamma
 from scipy import ndimage
 
+from aeolis.processes.transport import zeta_kernels as _kernels
+
 # initialize logger
 import logging
 logger = logging.getLogger(__name__)
+
+#: use the fused compiled kernel for the vegetation part (agrees with the numpy
+#: version to round-off; the tests switch this off to produce the reference)
+USE_KERNELS = True
 
 def initialize(s, p):
     """
@@ -128,6 +134,9 @@ def zeta_from_vegetation(s, p):
     The computation is performed per vegetation species and subsequently
     normalised using species weights based on vegetation maturity and density.
     """
+
+    if USE_KERNELS and p.get('fused_kernels', True):
+        return _kernels.zeta_from_vegetation(s, p)
 
     # --- Reference decay length for flat-bed (L_d) --------------------------
     lambda_salt = 1.

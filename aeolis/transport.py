@@ -35,6 +35,13 @@ from numba import njit, prange
 
 # package modules
 from aeolis.utils import *
+from aeolis.processes.transport import kernels as _kernels
+
+#: use the fused compiled kernels for the grain speed and the equilibrium
+#: concentrations (results agree with the numpy versions below to round-off;
+#: the tests switch this off to produce the reference, users set the
+#: configuration key ``fused_kernels``)
+USE_KERNELS = True
 
 
 # initialize logger
@@ -56,10 +63,13 @@ def duran_grainspeed(s, p, mode='normal'):
         Spatial grids
         '''
     
+    if USE_KERNELS and p.get('fused_kernels', True):
+        return _kernels.duran_grainspeed(s, p, mode)
+
     # Nr of fractions and grainsizes
     nf = p['nfractions']
     d = p['grain_size']
-    
+
     # Copy basic variables
     z = s['zb']
     x = s['x']
@@ -360,6 +370,10 @@ def equilibrium(s, p):
             u = s['u']
      
         
+        if USE_KERNELS and p.get('fused_kernels', True) and p['method_transport'].lower() in _kernels.TRANSPORT:
+            # one fused pass; includes the accfac scaling applied below
+            return _kernels.equilibrium(s, p, u)
+
         ustar  = s['ustar'][:,:,np.newaxis].repeat(nf, axis=2)
         ustar0 = s['ustar0'][:,:,np.newaxis].repeat(nf, axis=2)
         ustar_air = s['ustarAir'][:,:,np.newaxis].repeat(nf, axis=2)

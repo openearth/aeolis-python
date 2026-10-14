@@ -351,6 +351,7 @@ DEFAULT_CONFIG = {
     'dt_layer_limit'                : True,               # Limit the bed level change per step to the sediment available in the top layer (legacy: overwrites max_bedlevel_change)
     'max_error'                     : 1e-8,               # [-] Maximum error at which to quit iterative solution in implicit numerical schemes
     'max_iter'                      : 1000,               # [-] Maximum number of iterations at which to quit iterative solution in implicit numerical schemes
+    'fused_kernels'                 : True,               # Compiled fused kernels for grain speed, equilibrium transport and vegetation zeta (False: the numpy reference; results differ at round-off level only)
     'solver'                        : 'steadystate',      # Name of the solver (steadystate, euler_backward, crank_nicolson, euler_forward)
     'solver_order'                  : 'upwind',           # Visiting order of the steadystate solver: upwind (topological order, one pass) or quadrant (legacy sweeps per wind quadrant)
     'solver_plot'                   : False,              # Boolean to plot convergence behaviour of the solver when max iterations is reached
