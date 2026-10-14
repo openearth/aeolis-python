@@ -13,12 +13,17 @@ wavenumbers of the *model grid* are rotated:
     k_perp = -kx sin(theta) + ky cos(theta)     (across the wind)
 
 No secondary grid and no interpolation are needed. The convolution is made
-linear (non-periodic) by padding the bed to about twice its size. A
-best-fit plane is removed first: a uniform slope produces no perturbation
-in linear theory, and removing it makes the edges of the residual much
-smaller. The pad continues the edge values of the residual and is blended
-smoothly to its boundary mean in both directions. See
-docs/overhaul/SHEAR_ON_MAIN_GRID.md.
+linear (non-periodic) by padding the bed to about twice its size. The pad
+continues the edge values of the bed (relative to its boundary mean) and is
+blended smoothly to that mean in both directions, i.e. the topography is
+continued flat outside the domain. Compared with the same operator on a
+domain extended 3-6x beyond every open edge, this reproduces the stress on
+the embryo-dune, foredune, blowout and Boschplaat beds to within 0.4-2 % of
+the perturbation rms (see docs/overhaul/PROGRESS.md, "Why the shear fields
+differ"). Removing a best-fit plane first (``detrend=True``) is optional: it
+treats the domain-mean slope as an infinite slope, which has no perturbation
+in linear theory, and so deletes the real speed-up over a finite ramp such as
+a beach rising to a dune. See docs/overhaul/SHEAR_ON_MAIN_GRID.md.
 
 Everything here works on plain numpy arrays and can be used outside AeoLiS:
 
@@ -114,7 +119,8 @@ class SpectralShear:
     L, l, z0 : float
         Hill length scale, inner-layer height and roughness length [m].
     pad_factor : float
-        Padded FFT size relative to the grid (>= 2 for a non-circular result).
+        Padded FFT size relative to the grid (>= 2 for a non-circular result;
+        3 halves the remaining boundary error at 2.25x the FFT cost).
     blend_length : float, optional
         Distance over which the padded bed relaxes to the reference level
         [m]; default ``max(L/2, 10 grid cells)``, limited by the pad.
@@ -122,9 +128,13 @@ class SpectralShear:
         Isotropic low-pass cut-off as a fraction of the Nyquist wavenumber of
         the coarser grid direction (``None`` to disable).
     detrend : bool
-        Remove the best-fit plane of the bed before padding (default). On the
-        blowout case this reduces the boundary error against a much larger
-        domain 6-9x compared to padding the bed itself.
+        Remove the best-fit plane of the bed before padding (default off).
+        A finite ramp (a beach rising from the sea to a dune) speeds the wind
+        up along its length; the plane removal treats that ramp as an
+        infinite slope and removes the speed-up (embryo-dune beach: tau/tau0
+        = 1.000 everywhere instead of 1.01-1.14 on a 6x larger domain). Only
+        useful for a domain whose mean slope really does continue far beyond
+        its edges.
     periodic : (bool, bool)
         Treat the n (rows) and/or s (columns) direction as periodic, e.g. for
         circular boundary conditions. A periodic direction is neither padded,
@@ -134,7 +144,7 @@ class SpectralShear:
     '''
 
     def __init__(self, ny, nx, ds, dn, L, l, z0, pad_factor=2., blend_length=None,
-                 filter_frac=0.6, ntable=4096, detrend=True, periodic=(False, False)):
+                 filter_frac=0.6, ntable=4096, detrend=False, periodic=(False, False)):
         self.ny, self.nx, self.ds, self.dn = int(ny), int(nx), float(ds), float(dn)
         self.L, self.l, self.z0 = float(L), float(l), float(z0)
         self.periodic = (bool(periodic[0]), bool(periodic[1]))
@@ -238,7 +248,7 @@ class SpectralShear:
         return out
 
     def pad(self, zb):
-        '''Bed on the padded grid: plane removed, edge extrusion blended to the boundary mean.'''
+        '''Bed on the padded grid: (optionally) plane removed, edge extrusion blended to the boundary mean.'''
         zb = np.asarray(zb, dtype=float)
         if self.detrend:
             zb = zb - (self._plane_A @ (self._plane_pinv @ zb.ravel())).reshape(zb.shape)
