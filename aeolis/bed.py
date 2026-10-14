@@ -131,11 +131,19 @@ def initialize(s, p):
     # (assumed non-erodible, assumed not included for transport but as roughness element for sheltering)
     norm_grain_dist = normalize(p['grain_dist'])
     layer_availability = np.min(norm_grain_dist[(p['grain_size'] < 0.01)]) * p['layer_thickness']
-    if p['max_bedlevel_change'] > layer_availability:
-        logger.warning(f'WARNING: Adjusting timesteps accommodate enough sand in the top layer. \
-                       \n Try to avoid this by increasing your layer thickness! Further timestep reduction will be based on pickup rates. \
-                       \n This does not account for individual fractions with small availability (user responsibility!)')
-        p['max_bedlevel_change'] = layer_availability
+    p['_layer_availability'] = layer_availability
+    if p['dt_limiter'] == 'legacy':
+        # the legacy limiter overwrites the configured value (so 999 never
+        # means "off"); the aeolian limiter applies the availability as a
+        # separate limit in set_timestep when dt_layer_limit is set
+        if p['max_bedlevel_change'] > layer_availability:
+            logger.warning(f'WARNING: Adjusting timesteps accommodate enough sand in the top layer. \
+                           \n Try to avoid this by increasing your layer thickness! Further timestep reduction will be based on pickup rates. \
+                           \n This does not account for individual fractions with small availability (user responsibility!)')
+            p['max_bedlevel_change'] = layer_availability
+    elif p['dt_layer_limit'] and p['max_bedlevel_change'] > layer_availability:
+        logger.info('The bed level change per step is limited to the %.3f m of sediment available in the '
+                    'top layer (dt_layer_limit); increase layer_thickness to relax this.' % layer_availability)
 
     return s
 

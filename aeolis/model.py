@@ -451,6 +451,10 @@ class AeoLiS(IBmi):
 
         # update bed
         self.s = aeolis.bed.update(self.s, self.p)
+        if self.p['dt_limiter'] != 'legacy':
+            # the aeolian bed change of this step, for the time step limiter
+            # (average_change overwrites dzb with the total change)
+            self.dzb_aeolian = self.s['dzb'].copy()
 
         # avalanching
         self.s = aeolis.avalanching.angele_of_repose(self.s, self.p)
@@ -484,6 +488,10 @@ class AeoLiS(IBmi):
 
         # increment time
         self.t += self.dt * self.p['accfac']
+        if getattr(self, '_t_target', None) is not None:
+            # the step was cut to end on an output time or tstop: land on it exactly
+            self.t = self._t_target
+            self._t_target = None
         self._count('time')
         
         # Rotate gridparams back to original grid orientation
@@ -773,6 +781,11 @@ class AeoLiS(IBmi):
                     #self.dt = np.minimum(self.dt, 1.)
                     #return False
            
+        if self.p['dt_limiter'] != 'legacy':
+            self._set_timestep_aeolian()
+            self.p['dt_opt'] = self.dt
+            return True
+
         if self.p['max_bedlevel_change'] != 999. and np.max(self.s['dzb']) != 0. and self.dt_prev != 0.:
 
             # # limit dt based on pickup rate (if non-limited pickup is larger than available mass in toplayer)
@@ -790,6 +803,44 @@ class AeoLiS(IBmi):
         self.p['dt_opt'] = self.dt
 
         return True
+
+    def _set_timestep_aeolian(self) -> None:
+        '''Time step limiter ``dt_limiter = aeolian`` (see constants).
+
+        Limits the aeolian bed level change of the next step to
+        ``max_bedlevel_change`` and, with ``dt_layer_limit``, to the sediment
+        available in the top layer, using the magnitude of the aeolian bed
+        change of the previous step (avalanching and the wet-bed reset do
+        not scale with the time step and are left out). The step may grow
+        by at most ``dt_growth`` per step and ends exactly on the next output
+        time and on ``tstop``.
+        '''
+        p = self.p
+        limit = p['max_bedlevel_change']
+        if p['dt_layer_limit']:
+            limit = min(limit, p.get('_layer_availability', limit))
+        dzb = getattr(self, 'dzb_aeolian', None)
+        if dzb is None:
+            dzb = self.s['dzb']
+        if limit != 999. and self.dt_prev > 0.:
+            dzmax = np.max(np.abs(dzb))
+            if dzmax > 0.:
+                self.dt = min(self.dt, self.dt_prev * limit / dzmax)
+            if p['dt_growth'] > 0.:
+                self.dt = min(self.dt, self.dt_prev * p['dt_growth'])
+
+        # end the step on the next output time or on tstop
+        acc = p['accfac']
+        out = p['output_times']
+        t_next = p['tstop']
+        if out and out > 0.:
+            n_out = np.floor((self.t - p['tstart']) / out + 1e-9) + 1
+            t_next = min(t_next, p['tstart'] + n_out * out)
+        remaining = (t_next - self.t) / acc
+        self._t_target = None
+        if 0. < remaining < self.dt * (1. + 1e-9):
+            self.dt = remaining
+            self._t_target = t_next
 
     def grid_rotate(self, angle:float) -> ModelState:
 
@@ -1099,7 +1150,7 @@ class AeoLiSRunner(AeoLiS):
         # start model loop
         self.t0 = time.time()
         self.output_write()
-        while self.t <= self.p['tstop']:
+        while (self.t <= self.p['tstop']) if self.p['tstop_inclusive'] else (self.t < self.p['tstop']):
             if callback is not None:
                 callback(self)
             self.update()

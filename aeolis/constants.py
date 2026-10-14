@@ -248,6 +248,7 @@ DEFAULT_CONFIG = {
     # --- Model, grid and time settings --- #
     'tstart'                        : 0.,                 # [s] Start time of simulation
     'tstop'                         : 3600.,              # [s] End time of simulation
+    'tstop_inclusive'               : False,              # Run one more step when the time equals tstop (the legacy loop bound; the last output is then one step past tstop)
     'dt'                            : 60.,                # [s] Time step size
     'restart'                       : None,               # [s] Interval for which to write restart files
     'refdate'                       : '2020-01-01 00:00', # [-] Reference datetime in netCDF output
@@ -345,6 +346,9 @@ DEFAULT_CONFIG = {
     'CFL'                           : 1.,                 # [-] CFL number to determine time step in explicit scheme
     'accfac'                        : 1.,                 # [-] Numerical acceleration factor
     'max_bedlevel_change'           : 999.,               # [m] Maximum bedlevel change after one timestep. Next timestep dt will be modified (use 999. if not used)
+    'dt_limiter'                    : 'aeolian',          # Time step limiter: aeolian (max |dzb| of the aeolian bed change only, growth cap dt_growth, steps land on output times and tstop) or legacy (signed max of the total bed change, no cap)
+    'dt_growth'                     : 2.,                 # [-] Maximum growth factor of the time step from one step to the next (dt_limiter = aeolian; 0 = no cap)
+    'dt_layer_limit'                : True,               # Limit the bed level change per step to the sediment available in the top layer (legacy: overwrites max_bedlevel_change)
     'max_error'                     : 1e-8,               # [-] Maximum error at which to quit iterative solution in implicit numerical schemes
     'max_iter'                      : 1000,               # [-] Maximum number of iterations at which to quit iterative solution in implicit numerical schemes
     'solver'                        : 'steadystate',      # Name of the solver (steadystate, euler_backward, crank_nicolson, euler_forward)
