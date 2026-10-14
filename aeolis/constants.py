@@ -347,7 +347,7 @@ DEFAULT_CONFIG = {
     'accfac'                        : 1.,                 # [-] Numerical acceleration factor
     'max_bedlevel_change'           : 999.,               # [m] Maximum bedlevel change after one timestep. Next timestep dt will be modified (use 999. if not used)
     'dt_limiter'                    : 'aeolian',          # Time step limiter: aeolian (max |dzb| of the aeolian bed change only, growth cap dt_growth, steps land on output times and tstop) or legacy (signed max of the total bed change, no cap)
-    'dt_growth'                     : 2.,                 # [-] Maximum growth factor of the time step from one step to the next (dt_limiter = aeolian; 0 = no cap)
+    'dt_growth'                     : 0.,                 # [-] Maximum growth factor of the time step from one step to the next (dt_limiter = aeolian; 0 = no cap, e.g. 2 lets dt at most double per step)
     'dt_layer_limit'                : True,               # Limit the bed level change per step to the sediment available in the top layer (legacy: overwrites max_bedlevel_change)
     'max_error'                     : 1e-8,               # [-] Maximum error at which to quit iterative solution in implicit numerical schemes
     'max_iter'                      : 1000,               # [-] Maximum number of iterations at which to quit iterative solution in implicit numerical schemes

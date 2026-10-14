@@ -812,7 +812,7 @@ class AeoLiS(IBmi):
         available in the top layer, using the magnitude of the aeolian bed
         change of the previous step (avalanching and the wet-bed reset do
         not scale with the time step and are left out). The step may grow
-        by at most ``dt_growth`` per step and ends exactly on the next output
+        by at most ``dt_growth`` per step (if set) and ends exactly on the next output
         time and on ``tstop``.
         '''
         p = self.p
