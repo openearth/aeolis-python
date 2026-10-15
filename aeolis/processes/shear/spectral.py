@@ -46,6 +46,7 @@ KAPPA = 0.41
 
 #: transfer functions SpectralShear accepts
 TRANSFERS = ('weng', 'weng_mode', 'fca2010')
+SHORT_WAVES = ('none', 'cell_avg', 'floor')
 
 #: Fourriere, Claudin & Andreotti (2010): coefficients of the empirical fit of
 #: A(k z0) and B(k z0) for the rough mixing-length closure (arXiv:0708.2823v3,
@@ -180,6 +181,19 @@ class SpectralShear:
         cells. With 0.6 such ripples neither grow nor decay and grid-scale
         bed noise accumulates into stripes; without it the model flattens
         them as on a fine grid (docs/overhaul/SHEAR_ON_MAIN_GRID.md).
+    short_waves : str
+        Treatment of the shortest resolved waves, on top of ``filter_frac``.
+        ``none`` (default): full response. ``cell_avg``: the stress averaged
+        over a grid cell, F = sinc(kx ds/2) sinc(ky dn/2), which is how the
+        grid represents the bed itself (no parameter; keeps 64 % of the
+        response at two cells along an axis, 41 % on the diagonal).
+        ``floor``: F = f + (1 - f) exp(-(k/kc)^8) with kc at four cells of the
+        coarser direction and f = ``short_floor``. Both lower the cell-scale u*
+        noise from a rough bed but keep part of the in-phase response that
+        flattens two-cell ripples, unlike ``filter_frac``, which removes it.
+    short_floor : float
+        Fraction f of the response kept for waves shorter than four cells
+        with ``short_waves = floor``.
     transfer : str
         ``weng`` (default): Weng et al. (1991) with the configured L for all
         modes. ``weng_mode`` and ``fca2010``: A(k z0) + iB(k z0) per mode
@@ -196,7 +210,11 @@ class SpectralShear:
     '''
 
     def __init__(self, ny, nx, ds, dn, L, l, z0, pad_factor=2., blend_length=None,
-                 filter_frac=0., ntable=4096, periodic=(False, False), transfer='weng'):
+                 filter_frac=0., ntable=4096, periodic=(False, False), transfer='weng',
+                 short_waves='none', short_floor=0.5):
+        if short_waves not in SHORT_WAVES:
+            raise ValueError('SpectralShear: unknown short_waves %r, use one of %s'
+                             % (short_waves, ', '.join(SHORT_WAVES)))
         if transfer not in TRANSFERS:
             raise ValueError('SpectralShear: unknown transfer %r, use one of %s' % (transfer, ', '.join(TRANSFERS)))
         self.kind = transfer
@@ -228,6 +246,11 @@ class SpectralShear:
             self.lowpass = np.exp(-(k / kc) ** 8)
         else:
             self.lowpass = np.ones_like(k)
+        if short_waves == 'cell_avg':
+            self.lowpass = self.lowpass * (np.sinc(self.kx * ds / (2. * np.pi)) * np.sinc(self.ky * dn / (2. * np.pi)))
+        elif short_waves == 'floor':
+            kc = 0.5 * np.pi / max(ds, dn)
+            self.lowpass = self.lowpass * (short_floor + (1. - short_floor) * np.exp(-(k / kc) ** 8))
 
         # 1D tables of the k_par-dependent Bessel factors (exact symmetry for k_par < 0);
         # below the fundamental wavenumber of the padded domain R is ramped to 0

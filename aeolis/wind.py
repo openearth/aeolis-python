@@ -105,7 +105,9 @@ def initialize(s, p):
                                            L=p['L'], l=p['l'], z0=z0_eff, periodic=periodic,
                                            pad_factor=p['shear_pad_factor'],
                                            filter_frac=p['shear_filter_frac'],
-                                           transfer=p['shear_transfer'])
+                                           transfer=p['shear_transfer'],
+                                           short_waves=p['shear_short_waves'],
+                                           short_floor=p['shear_short_floor'])
             elif p['method_shear'] != '1Dstacks':
                 logger.log_and_raise('Unknown shear method [%s], use fft, fft_grid or 1Dstacks'
                                      % p['method_shear'], exc=ValueError)
