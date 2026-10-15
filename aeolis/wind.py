@@ -38,6 +38,10 @@ import aeolis.shear
 from aeolis.processes.shear.spectral import SpectralShear
 from aeolis.processes.shear.separation import separation_envelope, shear_reduction
 from aeolis.utils import *
+
+# FFT on the model grid (no rotated grid, no interpolation); 'spectral' is the
+# name it had until 2026-10-15 and stays accepted
+FFT_GRID = ('fft_grid', 'spectral')
 from aeolis.separation import compute_separation, set_sep_params
 
 # initialize logger
@@ -84,7 +88,9 @@ def initialize(s, p):
                                                     dx=p['dx'], dy=p['dy'],
                                                     L=p['L'], l=p['l'], z0=z0,
                                                     buffer_width=p['buffer_width'])
-            elif p['method_shear'] == 'spectral':
+            elif p['method_shear'] in FFT_GRID:
+                if p['method_shear'] == 'spectral':
+                    logger.info('method_shear = spectral is now called fft_grid; both names work')
                 # grid spacing along the columns (s) and rows (n), from the coordinates
                 ds = np.hypot(s['x'][0, 1] - s['x'][0, 0], s['y'][0, 1] - s['y'][0, 0])
                 dn = np.hypot(s['x'][1, 0] - s['x'][0, 0], s['y'][1, 0] - s['y'][0, 0])
@@ -100,7 +106,7 @@ def initialize(s, p):
                                            pad_factor=p['shear_pad_factor'],
                                            filter_frac=p['shear_filter_frac'])
             elif p['method_shear'] != '1Dstacks':
-                logger.log_and_raise('Unknown shear method [%s], use fft, spectral or 1Dstacks'
+                logger.log_and_raise('Unknown shear method [%s], use fft, fft_grid or 1Dstacks'
                                      % p['method_shear'], exc=ValueError)
         else:
             s['shear'] = np.zeros(s['x'].shape)
@@ -307,8 +313,8 @@ def shear(s, p):
 
         s = stress_velocity(s, p)
 
-    # --- Fully 2D shear on the model grid (spectral, no secondary grid) -----
-    elif p['method_shear'] == 'spectral':
+    # --- Fully 2D shear on the model grid (fft_grid, no secondary grid) -----
+    elif p['method_shear'] in FFT_GRID:
 
         sh = s['shear']
         taus0, taun0 = s['taus0'][0, 0], s['taun0'][0, 0]

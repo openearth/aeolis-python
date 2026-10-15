@@ -380,13 +380,13 @@ DEFAULT_CONFIG = {
     'kappa'                         : 0.41,               # [-] Von Kármán constant
 
     # --- Shear / Perturbation / Topographic steering --- #
-    'method_shear'                  : 'fft',              # Name of method to compute topographic effects on wind shear stress (fft, spectral, 1Dstacks)
+    'method_shear'                  : 'fft',              # Name of method to compute topographic effects on wind shear stress (fft: rotated FFT grid; fft_grid: FFT on the model grid, formerly 'spectral'; 1Dstacks)
     'dx'                            : 1.,
     'dy'                            : 1.,
     'L'                             : 100.,               # [m] Typical wavelength of dune features (perturbation); the theory uses L/4 (Kroy et al. 2002)
     'l'                             : 1.,                 # [m] Inner layer height (perturbation)
-    'shear_pad_factor'              : 2.,                 # [-] method_shear = spectral: padded FFT size relative to the grid along non-periodic directions (2 = linear convolution; 3 halves the remaining boundary error at 2.25x the FFT cost)
-    'shear_filter_frac'             : 0.,                 # [-] method_shear = spectral: low-pass cut-off of the stress response as a fraction of the Nyquist wavenumber of the coarser grid direction. 0 = no filter (default since 2026-10-15): ripples of two to three cells are flattened as on a fine grid. 0.6 = behaviour before: such ripples are neither damped nor amplified and grid-scale noise accumulates
+    'shear_pad_factor'              : 2.,                 # [-] method_shear = fft_grid: padded FFT size relative to the grid along non-periodic directions (2 = linear convolution; 3 halves the remaining boundary error at 2.25x the FFT cost)
+    'shear_filter_frac'             : 0.,                 # [-] method_shear = fft_grid: low-pass cut-off of the stress response as a fraction of the Nyquist wavenumber of the coarser grid direction. 0 = no filter (default since 2026-10-15): ripples of two to three cells are flattened as on a fine grid. 0.6 = behaviour before: such ripples are neither damped nor amplified and grid-scale noise accumulates
 
     # --- Flow separation bubble (OLD) --- #
     'buffer_width'                  : 10,                 # [m] Width of the bufferzone around the rotational grid for wind perturbation
