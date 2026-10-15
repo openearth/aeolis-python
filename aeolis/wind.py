@@ -89,12 +89,15 @@ def initialize(s, p):
                 ds = np.hypot(s['x'][0, 1] - s['x'][0, 0], s['y'][0, 1] - s['y'][0, 0])
                 dn = np.hypot(s['x'][1, 0] - s['x'][0, 0], s['y'][1, 0] - s['y'][0, 0])
                 z0_eff = float(np.exp(np.mean(np.log(z0)))) if np.size(z0) > 1 else float(z0)
+                if p.get('shear_detrend'):
+                    logger.warning('shear_detrend was removed on 2026-10-15 and is ignored: removing the '
+                                   'best-fit plane deleted the real speed-up over a beach ramp')
                 # circular boundaries: the topography repeats itself, so no padding
                 periodic = (p['boundary_lateral'] == 'circular',
                             p['boundary_offshore'] == 'circular' and p['boundary_onshore'] == 'circular')
                 s['shear'] = SpectralShear(s['zb'].shape[0], s['zb'].shape[1], ds, dn,
                                            L=p['L'], l=p['l'], z0=z0_eff, periodic=periodic,
-                                           pad_factor=p['shear_pad_factor'], detrend=p['shear_detrend'],
+                                           pad_factor=p['shear_pad_factor'],
                                            filter_frac=p['shear_filter_frac'])
             elif p['method_shear'] != '1Dstacks':
                 logger.log_and_raise('Unknown shear method [%s], use fft, spectral or 1Dstacks'

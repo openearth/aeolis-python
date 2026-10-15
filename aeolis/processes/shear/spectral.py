@@ -20,10 +20,11 @@ continued flat outside the domain. Compared with the same operator on a
 domain extended 3-6x beyond every open edge, this reproduces the stress on
 the embryo-dune, foredune, blowout and Boschplaat beds to within 0.4-2 % of
 the perturbation rms (see docs/overhaul/PROGRESS.md, "Why the shear fields
-differ"). Removing a best-fit plane first (``detrend=True``) is optional: it
-treats the domain-mean slope as an infinite slope, which has no perturbation
-in linear theory, and so deletes the real speed-up over a finite ramp such as
-a beach rising to a dune. See docs/overhaul/SHEAR_ON_MAIN_GRID.md.
+differ"). The pad uses the edge cells only, so a feature that does not reach
+the edges cannot change how the edges are treated. A first version removed a
+best-fit plane of the whole bed before padding; that deleted the real
+speed-up over a finite ramp such as a beach rising to a dune and was removed
+(2026-10-15). See docs/overhaul/SHEAR_ON_MAIN_GRID.md.
 
 Everything here works on plain numpy arrays and can be used outside AeoLiS:
 
@@ -133,24 +134,16 @@ class SpectralShear:
         cells. With 0.6 such ripples neither grow nor decay and grid-scale
         bed noise accumulates into stripes; without it the model flattens
         them as on a fine grid (docs/overhaul/SHEAR_ON_MAIN_GRID.md).
-    detrend : bool
-        Remove the best-fit plane of the bed before padding (default off).
-        A finite ramp (a beach rising from the sea to a dune) speeds the wind
-        up along its length; the plane removal treats that ramp as an
-        infinite slope and removes the speed-up (embryo-dune beach: tau/tau0
-        = 1.000 everywhere instead of 1.01-1.14 on a 6x larger domain). Only
-        useful for a domain whose mean slope really does continue far beyond
-        its edges.
     periodic : (bool, bool)
         Treat the n (rows) and/or s (columns) direction as periodic, e.g. for
-        circular boundary conditions. A periodic direction is neither padded,
-        tapered nor detrended, so the FFT gives the exact solution for a
+        circular boundary conditions. A periodic direction is neither padded
+        nor tapered, so the FFT gives the exact solution for a
         topography that repeats itself. For a semi-1D transect with circular
         lateral boundaries this is the solution for an infinitely long ridge.
     '''
 
     def __init__(self, ny, nx, ds, dn, L, l, z0, pad_factor=2., blend_length=None,
-                 filter_frac=0., ntable=4096, detrend=False, periodic=(False, False)):
+                 filter_frac=0., ntable=4096, periodic=(False, False)):
         self.ny, self.nx, self.ds, self.dn = int(ny), int(nx), float(ds), float(dn)
         self.L, self.l, self.z0 = float(L), float(l), float(z0)
         self.periodic = (bool(periodic[0]), bool(periodic[1]))
@@ -194,19 +187,6 @@ class SpectralShear:
         self._loglz0 = 2. * np.log(l_ / z0)
         self._ltk = np.log(self._tk)
         self._cache = {}
-
-        # least-squares plane fit z ~ c0 + c1 * i + c2 * j as a precomputed projection
-        # (only along non-periodic directions)
-        self.detrend = detrend and not all(self.periodic)
-        j, i = np.mgrid[0:ny, 0:nx]
-        cols = [np.ones(ny * nx)]
-        if not self.periodic[1]:
-            cols.append(i.ravel())
-        if not self.periodic[0]:
-            cols.append(j.ravel())
-        A = np.stack(cols, axis=1).astype(float)
-        self._plane_A = A
-        self._plane_pinv = np.linalg.pinv(A)
 
     @staticmethod
     def _taper(N, offset, n, d, blend_length):
@@ -254,10 +234,8 @@ class SpectralShear:
         return out
 
     def pad(self, zb):
-        '''Bed on the padded grid: (optionally) plane removed, edge extrusion blended to the boundary mean.'''
+        '''Bed on the padded grid: edge extrusion blended to the boundary mean.'''
         zb = np.asarray(zb, dtype=float)
-        if self.detrend:
-            zb = zb - (self._plane_A @ (self._plane_pinv @ zb.ravel())).reshape(zb.shape)
         edges = []
         if not self.periodic[0]:
             edges += [zb[0, :], zb[-1, :]]
