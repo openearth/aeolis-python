@@ -94,7 +94,8 @@ def initialize(s, p):
                             p['boundary_offshore'] == 'circular' and p['boundary_onshore'] == 'circular')
                 s['shear'] = SpectralShear(s['zb'].shape[0], s['zb'].shape[1], ds, dn,
                                            L=p['L'], l=p['l'], z0=z0_eff, periodic=periodic,
-                                           pad_factor=p['shear_pad_factor'], detrend=p['shear_detrend'])
+                                           pad_factor=p['shear_pad_factor'], detrend=p['shear_detrend'],
+                                           filter_frac=p['shear_filter_frac'])
             elif p['method_shear'] != '1Dstacks':
                 logger.log_and_raise('Unknown shear method [%s], use fft, spectral or 1Dstacks'
                                      % p['method_shear'], exc=ValueError)

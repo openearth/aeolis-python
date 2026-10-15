@@ -126,7 +126,13 @@ class SpectralShear:
         [m]; default ``max(L/2, 10 grid cells)``, limited by the pad.
     filter_frac : float
         Isotropic low-pass cut-off as a fraction of the Nyquist wavenumber of
-        the coarser grid direction (``None`` to disable).
+        the coarser grid direction; 0 or ``None`` (the default) disables it.
+        The filter removes the whole stress response of the shortest
+        resolved waves, including the in-phase part (stress highest on the
+        crest) that erodes the crest and flattens a ripple of two to three
+        cells. With 0.6 such ripples neither grow nor decay and grid-scale
+        bed noise accumulates into stripes; without it the model flattens
+        them as on a fine grid (docs/overhaul/SHEAR_ON_MAIN_GRID.md).
     detrend : bool
         Remove the best-fit plane of the bed before padding (default off).
         A finite ramp (a beach rising from the sea to a dune) speeds the wind
@@ -144,7 +150,7 @@ class SpectralShear:
     '''
 
     def __init__(self, ny, nx, ds, dn, L, l, z0, pad_factor=2., blend_length=None,
-                 filter_frac=0.6, ntable=4096, detrend=False, periodic=(False, False)):
+                 filter_frac=0., ntable=4096, detrend=False, periodic=(False, False)):
         self.ny, self.nx, self.ds, self.dn = int(ny), int(nx), float(ds), float(dn)
         self.L, self.l, self.z0 = float(L), float(l), float(z0)
         self.periodic = (bool(periodic[0]), bool(periodic[1]))
