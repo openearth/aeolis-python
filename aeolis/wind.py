@@ -104,7 +104,8 @@ def initialize(s, p):
                 s['shear'] = SpectralShear(s['zb'].shape[0], s['zb'].shape[1], ds, dn,
                                            L=p['L'], l=p['l'], z0=z0_eff, periodic=periodic,
                                            pad_factor=p['shear_pad_factor'],
-                                           filter_frac=p['shear_filter_frac'])
+                                           filter_frac=p['shear_filter_frac'],
+                                           transfer=p['shear_transfer'])
             elif p['method_shear'] != '1Dstacks':
                 logger.log_and_raise('Unknown shear method [%s], use fft, fft_grid or 1Dstacks'
                                      % p['method_shear'], exc=ValueError)

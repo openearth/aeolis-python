@@ -387,6 +387,7 @@ DEFAULT_CONFIG = {
     'l'                             : 1.,                 # [m] Inner layer height (perturbation)
     'shear_pad_factor'              : 2.,                 # [-] method_shear = fft_grid: padded FFT size relative to the grid along non-periodic directions (2 = linear convolution; 3 halves the remaining boundary error at 2.25x the FFT cost)
     'shear_filter_frac'             : 0.,                 # [-] method_shear = fft_grid: low-pass cut-off of the stress response as a fraction of the Nyquist wavenumber of the coarser grid direction. 0 = no filter (default since 2026-10-15): ripples of two to three cells are flattened as on a fine grid. 0.6 = behaviour before: such ripples are neither damped nor amplified and grid-scale noise accumulates
+    'shear_transfer'                : 'weng',             # [-] method_shear = fft_grid: stress response per bed wave. weng: Weng et al. (1991) with L for all wavelengths; weng_mode: the same with L = wavelength for every wave; fca2010: fit of Fourriere, Claudin & Andreotti (2010). L and l are not used by weng_mode and fca2010
 
     # --- Flow separation bubble (OLD) --- #
     'buffer_width'                  : 10,                 # [m] Width of the bufferzone around the rotational grid for wind perturbation

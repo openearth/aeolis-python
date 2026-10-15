@@ -26,6 +26,12 @@ best-fit plane of the whole bed before padding; that deleted the real
 speed-up over a finite ramp such as a beach rising to a dune and was removed
 (2026-10-15). See docs/overhaul/SHEAR_ON_MAIN_GRID.md.
 
+Three transfer functions are available (``transfer``): ``weng``, the
+original form with one length scale L for all modes; ``weng_mode``, the same
+Weng et al. (1991) coefficients with L/4 = lambda/4 for every mode; and
+``fca2010``, the fit of Fourriere, Claudin & Andreotti (2010) for a rough bed.
+The last two depend on k z0 only, so the configured L has no effect.
+
 Everything here works on plain numpy arrays and can be used outside AeoLiS:
 
 >>> sh = SpectralShear(ny=200, nx=300, ds=2., dn=2., L=100., l=1., z0=0.001)
@@ -34,9 +40,18 @@ Everything here works on plain numpy arrays and can be used outside AeoLiS:
 
 import numpy as np
 import scipy.fft
-from scipy.special import kve
+from scipy.special import kve, lambertw
 
 KAPPA = 0.41
+
+#: transfer functions SpectralShear accepts
+TRANSFERS = ('weng', 'weng_mode', 'fca2010')
+
+#: Fourriere, Claudin & Andreotti (2010): coefficients of the empirical fit of
+#: A(k z0) and B(k z0) for the rough mixing-length closure (arXiv:0708.2823v3,
+#: section "Geometrically induced roughness"; not in the printed JFM paper)
+FCA_A = (1.0702, 0.093069, 0.10838, 0.024835, 0.041603, 0.0010625)
+FCA_B = (0.036989, 0.15765, 0.11518, 0.0020249, 0.0028725, 0.00053483)
 
 
 def boundary_layer_scales(L, l, z0):
@@ -108,6 +123,37 @@ def weng_transfer(kpar, kperp, L, l, z0, kfloor=0.):
     return T_par, T_perp
 
 
+def mode_coefficients(kz0, transfer):
+    '''A + iB of a bed wave along the wind as a function of k z0.
+
+    For a single mode along the wind (k > 0) the stress perturbation is
+    dtau_hat = (A + iB) k h_hat: A is the response in phase with the bed (the
+    stress is highest on the crest), B the upwind shift of the maximum.
+
+    ``weng_mode``: the Weng et al. (1991) function of :func:`weng_transfer`
+    with L/4 = lambda/4 = pi/(2k) for every mode (Charru et al. 2013, eq. 9),
+    with the inner- and middle-layer heights solved exactly.
+    ``fca2010``: the fit of Fourriere, Claudin & Andreotti (2010),
+    A = 2 + P_a(R)/Q_a(R), B = P_b(R)/Q_b(R), R = ln(2 pi / k z0); A -> 2 and
+    B -> 0 for very long waves (potential flow), but only as 1/R.
+    '''
+    kz0 = np.asarray(kz0, dtype=float)
+    if transfer == 'fca2010':
+        R = np.log(2. * np.pi / kz0)
+        a, b = FCA_A, FCA_B
+        A = 2. + (a[0] + a[1] * R + a[2] * R ** 2 + a[3] * R ** 3) / (1. + a[4] * R ** 2 + a[5] * R ** 4)
+        B = (b[0] + b[1] * R + b[2] * R ** 2 + b[3] * R ** 3) / (1. + b[4] * R ** 2 + b[5] * R ** 4)
+        return A + 1j * B
+    if transfer == 'weng_mode':
+        L4 = np.pi / (2. * kz0)                                 # lambda/4 in units of z0
+        lnl = lambertw(2. * KAPPA ** 2 * L4).real               # l ln(l/z0) = 2 kappa^2 lambda/4
+        lnhm = 0.5 * lambertw(2. * L4 ** 2).real                # hm ln^1/2(hm/z0) = lambda/4
+        sigma = np.sqrt(1j * L4 * kz0 * np.exp(-lnl))           # sqrt(i (lambda/4) k z0 / l)
+        R = sigma * kve(1, 2. * sigma) / kve(0, 2. * sigma)
+        return 2. * (lnhm / lnl) ** 2 * (-1. + (1. + 2. * lnl) * R)
+    raise ValueError('mode_coefficients: unknown transfer %r' % (transfer,))
+
+
 class SpectralShear:
     '''Shear perturbation on a uniform rectilinear grid (no secondary grid).
 
@@ -134,6 +180,13 @@ class SpectralShear:
         cells. With 0.6 such ripples neither grow nor decay and grid-scale
         bed noise accumulates into stripes; without it the model flattens
         them as on a fine grid (docs/overhaul/SHEAR_ON_MAIN_GRID.md).
+    transfer : str
+        ``weng`` (default): Weng et al. (1991) with the configured L for all
+        modes. ``weng_mode`` and ``fca2010``: A(k z0) + iB(k z0) per mode
+        (see :func:`mode_coefficients`), applied in the usual
+        two-dimensional form T_par = (A + iB) k_par^2/k and
+        T_perp = (A + iB) k_par k_perp/k, with B changing sign with k_par.
+        Here L and l have no effect.
     periodic : (bool, bool)
         Treat the n (rows) and/or s (columns) direction as periodic, e.g. for
         circular boundary conditions. A periodic direction is neither padded
@@ -143,7 +196,10 @@ class SpectralShear:
     '''
 
     def __init__(self, ny, nx, ds, dn, L, l, z0, pad_factor=2., blend_length=None,
-                 filter_frac=0., ntable=4096, periodic=(False, False)):
+                 filter_frac=0., ntable=4096, periodic=(False, False), transfer='weng'):
+        if transfer not in TRANSFERS:
+            raise ValueError('SpectralShear: unknown transfer %r, use one of %s' % (transfer, ', '.join(TRANSFERS)))
+        self.kind = transfer
         self.ny, self.nx, self.ds, self.dn = int(ny), int(nx), float(ds), float(dn)
         self.L, self.l, self.z0 = float(L), float(l), float(z0)
         self.periodic = (bool(periodic[0]), bool(periodic[1]))
@@ -186,6 +242,8 @@ class SpectralShear:
         self._c = 2. / ul ** 2
         self._loglz0 = 2. * np.log(l_ / z0)
         self._ltk = np.log(self._tk)
+        if transfer != 'weng':
+            self._AB = mode_coefficients(self._tk * z0, transfer)
         self._cache = {}
 
     @staticmethod
@@ -221,10 +279,17 @@ class SpectralShear:
         kperp = -self.kx * s + self.ky * c
         k = np.hypot(self.kx, self.ky)
         ksafe = np.where(k == 0., 1., k)
-        R = self._table(kpar, self._R, ramp=True)
-        S = self._table(kpar, self._S)
-        T_par = self._c * (-kpar ** 2 / ksafe + (self._loglz0 * kpar ** 2 / ksafe + k) * R)
-        T_perp = self._c * (kpar * kperp / ksafe) * S
+        if self.kind == 'weng':
+            R = self._table(kpar, self._R, ramp=True)
+            S = self._table(kpar, self._S)
+            T_par = self._c * (-kpar ** 2 / ksafe + (self._loglz0 * kpar ** 2 / ksafe + k) * R)
+            T_perp = self._c * (kpar * kperp / ksafe) * S
+        else:
+            lk = np.log(np.maximum(k, self._tk[0]))
+            AB = (np.interp(lk, self._ltk, self._AB.real)
+                  + 1j * np.sign(kpar) * np.interp(lk, self._ltk, self._AB.imag))   # T(-k) = conj T(k)
+            T_par = AB * kpar ** 2 / ksafe
+            T_perp = AB * kpar * kperp / ksafe
         T_par[k == 0.] = 0.
         T_perp[k == 0.] = 0.
         out = (T_par * self.lowpass, T_perp * self.lowpass)
