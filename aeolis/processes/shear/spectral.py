@@ -201,6 +201,10 @@ class SpectralShear:
         two-dimensional form T_par = (A + iB) k_par^2/k and
         T_perp = (A + iB) k_par k_perp/k, with B changing sign with k_par.
         Here L and l have no effect.
+    scale_AB : (float, float)
+        Factors on A and B of the per-mode transfers (not ``weng``). The joint
+        fit to the wind validation cases gives (0.75, 0.8) for ``fca2010``
+        (benchmarks/shear_validation/fit.py).
     periodic : (bool, bool)
         Treat the n (rows) and/or s (columns) direction as periodic, e.g. for
         circular boundary conditions. A periodic direction is neither padded
@@ -211,10 +215,13 @@ class SpectralShear:
 
     def __init__(self, ny, nx, ds, dn, L, l, z0, pad_factor=2., blend_length=None,
                  filter_frac=0., ntable=4096, periodic=(False, False), transfer='weng',
-                 short_waves='none', short_floor=0.5):
+                 short_waves='none', short_floor=0.5, scale_AB=(1., 1.)):
         if short_waves not in SHORT_WAVES:
             raise ValueError('SpectralShear: unknown short_waves %r, use one of %s'
                              % (short_waves, ', '.join(SHORT_WAVES)))
+        if transfer == 'weng' and tuple(scale_AB) != (1., 1.):
+            raise ValueError('SpectralShear: scale_AB applies to the per-mode transfers (weng_mode, fca2010), '
+                             'not to weng')
         if transfer not in TRANSFERS:
             raise ValueError('SpectralShear: unknown transfer %r, use one of %s' % (transfer, ', '.join(TRANSFERS)))
         self.kind = transfer
@@ -266,7 +273,8 @@ class SpectralShear:
         self._loglz0 = 2. * np.log(l_ / z0)
         self._ltk = np.log(self._tk)
         if transfer != 'weng':
-            self._AB = mode_coefficients(self._tk * z0, transfer)
+            AB = mode_coefficients(self._tk * z0, transfer)
+            self._AB = scale_AB[0] * AB.real + 1j * scale_AB[1] * AB.imag
         self._cache = {}
 
     @staticmethod
