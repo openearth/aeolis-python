@@ -256,6 +256,12 @@ class AeoLiS(IBmi):
         aeolis.inout.check_configuration(self.p)
         self.solver = resolve_solver(self.p)
 
+        # the time series are read one column at a time every step; column-major
+        # storage makes each column contiguous, so numpy.interp does not copy it
+        for key in ('wind_file', 'tide_file', 'wave_file', 'meteo_file'):
+            if isinstance(self.p.get(key), np.ndarray) and self.p[key].ndim == 2:
+                self.p[key] = np.asfortranarray(self.p[key])
+
         # set nx, ny and nfractions and make 1D into quasi 2D
         if self.p['xgrid_file'].ndim == 2:
             self.p['ny'], self.p['nx'] = self.p['xgrid_file'].shape

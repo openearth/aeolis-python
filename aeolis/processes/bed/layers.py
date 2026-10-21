@@ -121,6 +121,19 @@ def _sum(x):
     return _pairwise(x, 0, x.shape[0])
 
 
+@njit(cache=True)
+def _sum_row(a, l):
+    '''``_sum(a[l])`` for a 2D array without creating the row view (views are
+    reference counted, which dominates the cost of the per-column kernels).'''
+    n = a.shape[1]
+    if n < 8:
+        res = 0.
+        for i in range(n):
+            res += a[l, i]
+        return res
+    return _sum(a[l])
+
+
 @njit(cache=True, parallel=True, error_model='numpy')
 def update_layers(mass, pickup, gd_bottom, max_error):
     '''Move sediment between bed layers after erosion and deposition.
@@ -201,7 +214,7 @@ def update_layers(mass, pickup, gd_bottom, max_error):
                 dm = -_sum(pk)
 
         # --- case 2: deposition larger than the mass of the top layer
-        mx = _sum(m[0])
+        mx = _sum_row(m, 0)
         n = _floor_divide(dm, mx)
         if n > 0.:
             pksum = _sum(pk)
@@ -224,7 +237,7 @@ def update_layers(mass, pickup, gd_bottom, max_error):
         # --- distribution of each layer over the fractions
         d = np.empty((nl, nf))
         for l in range(nl):
-            ref = _sum(m[l])
+            ref = _sum_row(m, l)
             for f in range(nf):
                 d[l, f] = m[l, f] / ref if ref != 0. else 0.
 

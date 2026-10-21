@@ -133,11 +133,12 @@ def interp_circular(x: ndarray, xp: ndarray, fp: ndarray, **kwargs) -> ndarray:
         If ``xp`` and ``fp`` have different length
 
     '''
-    
-    xmin = xp.min()
-    xmax = xp.max()
+
+    # xp is increasing (numpy.interp requires it), so its ends are its minimum and maximum
+    xmin = xp[0]
+    xmax = xp[-1]
     xrng = xmax - xmin
-    
+
     x = xmin + np.mod(x - xmax - 1., xrng + 1.)
     return np.interp(x, xp, fp, **kwargs)
 
@@ -174,13 +175,19 @@ def interp_circular_nearest(x: ndarray, xp: ndarray, fp: ndarray) -> ndarray:
 
     '''
     
+    return fp[index_circular_nearest(x, xp)]
+
+
+def index_circular_nearest(x, xp):
+    '''Index of the data point that :func:`interp_circular_nearest` returns for a scalar ``x``.'''
+
     xmin = xp.min()
     xmax = xp.max()
     xrng = xmax - xmin
 
     x = xmin + np.mod(x - xmin, xrng)
-  
-    return fp[xp<=x][-1]
+
+    return np.flatnonzero(xp<=x)[-1]
 
 def normalize(x: ndarray, ref:ndarray = None, axis: int =0, fill: float =0.):
     '''Normalize array
@@ -365,14 +372,15 @@ def rotate(x, y, alpha, origin=(0,0)):
     
     a = alpha / 180. * np.pi
     
-    R = np.asmatrix([[np.cos(a), -np.sin(a)],
-                     [np.sin(a),  np.cos(a)]])
-    
-    xy = np.concatenate((xr.reshape((-1,1)), 
-                         yr.reshape((-1,1))), axis=1) * R
-                     
-    return (np.asarray(xy[:,0].reshape(x.shape) + origin[0]),
-            np.asarray(xy[:,1].reshape(y.shape) + origin[1]))
+    R = np.array([[np.cos(a), -np.sin(a)],
+                  [np.sin(a),  np.cos(a)]])
+
+    # np.dot is what the matrix product of np.matrix calls, without the matrix overhead
+    xy = np.dot(np.concatenate((xr.reshape((-1,1)),
+                                yr.reshape((-1,1))), axis=1), R)
+
+    return (xy[:,0].reshape(x.shape) + origin[0],
+            xy[:,1].reshape(y.shape) + origin[1])
 
 # @numba.njit 
 def sc_kv(v, z):

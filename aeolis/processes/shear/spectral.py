@@ -275,6 +275,9 @@ class SpectralShear:
         if transfer != 'weng':
             AB = mode_coefficients(self._tk * z0, transfer)
             self._AB = scale_AB[0] * AB.real + 1j * scale_AB[1] * AB.imag
+            # A and B depend on |k| only: interpolate them once, not for every wind angle
+            lk = np.log(np.maximum(np.hypot(self.kx, self.ky), self._tk[0]))
+            self._ABk = (np.interp(lk, self._ltk, self._AB.real), np.interp(lk, self._ltk, self._AB.imag))
         self._cache = {}
 
     @staticmethod
@@ -316,9 +319,7 @@ class SpectralShear:
             T_par = self._c * (-kpar ** 2 / ksafe + (self._loglz0 * kpar ** 2 / ksafe + k) * R)
             T_perp = self._c * (kpar * kperp / ksafe) * S
         else:
-            lk = np.log(np.maximum(k, self._tk[0]))
-            AB = (np.interp(lk, self._ltk, self._AB.real)
-                  + 1j * np.sign(kpar) * np.interp(lk, self._ltk, self._AB.imag))   # T(-k) = conj T(k)
+            AB = self._ABk[0] + 1j * np.sign(kpar) * self._ABk[1]       # T(-k) = conj T(k)
             T_par = AB * kpar ** 2 / ksafe
             T_perp = AB * kpar * kperp / ksafe
         T_par[k == 0.] = 0.

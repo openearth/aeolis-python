@@ -153,12 +153,14 @@ def interpolate(s, p, t):
         else:
             uw_t = p['wind_file'][:,0]
             uw_s = p['wind_file'][:,1]
-            uw_d = p['wind_file'][:,2] / 180. * np.pi
 
-            s['uw'][:,:] = interp_circular_nearest(t, uw_t, uw_s)
-            
-            s['udir'][:,:] = np.arctan2(interp_circular_nearest(t, uw_t, np.sin(uw_d)),
-                                        interp_circular_nearest(t, uw_t, np.cos(uw_d))) * 180. / np.pi
+            # the nearest record only: the same values as the sine and cosine of the whole series
+            k = index_circular_nearest(t, uw_t)
+            uw_d = p['wind_file'][k:k+1,2] / 180. * np.pi
+
+            s['uw'][:,:] = uw_s[k]
+
+            s['udir'][:,:] = np.arctan2(np.sin(uw_d)[0], np.cos(uw_d)[0]) * 180. / np.pi
 
 
     s['uws'] = - s['uw'] * np.sin((-p['alfa'] + s['udir']) / 180. * np.pi)        # alfa [deg] is real world grid cell orientation (clockwise)
