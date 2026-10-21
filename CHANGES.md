@@ -50,6 +50,47 @@ keep the results the same, and about 2 hours with the new shear method.
    run time. The 1D regression case now runs in 2 s instead of 12 s.
 6. **The repaired time step** (section 5) fixes errors. It hardly changes the run time.
 
+### Where the time goes
+
+We measured the time per step of each part of the model for seven cases. The measurement leaves out
+start-up and compilation. It was made on 14 October 2026, on the same workstation as the table above.
+
+The first figure shows which parts became faster. Each case has three bars: `bedinteraction_dev`, the
+changes that keep results the same, and all changes. The length of a bar is its time per step, as a
+percentage of `bedinteraction_dev`.
+
+![Time per step and part of the model, as a percentage of bedinteraction_dev](docs/changes/compute_per_module.png)
+
+The second figure shows the share of each part in the time per step, before and after. It shows what
+takes the most time now.
+
+![Share of each part of the model in the time per step, before and after](docs/changes/compute_share.png)
+
+What became faster:
+
+- **Wind shear** took 68 to 79 % of the time on the barchan, parabolic dune, embryo dunes and foredune.
+  The new shear method cuts it by a factor of 11 to 17 on the 2D cases. On the foredune transect, the
+  shear now takes almost no time at all.
+- **Bed layers** took 44 % on the blowout and 38 % on the Boschplaat. The compiled bed code cuts this
+  part by a factor of 10 to 18.
+- **The solver** on the blowout went from 0.96 s to 0.15 s per step.
+- **Transport** on the blowout went from 0.34 s to 0.10 s per step.
+
+What could still become faster:
+
+- **The solver** now takes the largest share on the embryo dunes (58 %), the parabolic dune (26 %) and
+  the barchan (24 %). These cases have periodic boundaries. Sand that leaves one side enters at the other,
+  so the solver still needs several passes per step.
+- **Tide, waves and moisture** now take 30 % on the Boschplaat. We have not touched this part.
+- **Vegetation shear reduction** takes 19 % on the blowout. It did not become faster (0.11 s per step
+  before, 0.17 s after).
+- **Output and bookkeeping** dominate small and 1D runs: 42 % on the foredune transect and 77 % on the
+  1D regression case.
+- **Bed layers** still take 29 % on the parabolic dune.
+
+The speed-ups per step in the figures are larger than the speed-ups of whole runs in the table above.
+Whole runs also include start-up, and some cases take more or fewer steps with the new code.
+
 ## 1. Wind shear on the model grid
 
 Dunes change the wind. The wind speeds up over a crest and slows down in front of a dune. AeoLiS
