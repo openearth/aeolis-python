@@ -7,7 +7,7 @@ and `pyproject.toml`. The branch is meant for review and is not meant to be merg
 [This comparison](https://github.com/openearth/aeolis-python/compare/bedinteraction_dev...aeolis-claude)
 shows every changed line. This document explains which changes matter and why.
 
-## Two kinds of changes
+## Types of changes
 
 Most commits make the code faster and leave the results unchanged. We ran 13 test cases with both
 versions and compared every output variable. The output is identical to the last bit. The test cases
@@ -38,7 +38,7 @@ For a longer run: ten years of the Boschplaat at hourly steps take about 5 hours
 Deltares cluster with `bedinteraction_dev`. The same run takes 3.1 to 3.5 hours with the changes that
 keep the results the same, and about 2 hours with the new shear method.
 
-### Which changes matter most
+### Contribution per change
 
 1. **Wind shear on the model grid** (section 1) gives the largest gain. It makes the model 2 to 8 times
    faster on its own. It also changes the results more than any other commit.
@@ -50,7 +50,7 @@ keep the results the same, and about 2 hours with the new shear method.
    run time. The 1D regression case now runs in 2 s instead of 12 s.
 6. **The repaired time step** (section 5) fixes errors. It hardly changes the run time.
 
-### Where the time goes
+### Computation time per model component
 
 We measured the time per step of each part of the model for seven cases. The measurement leaves out
 start-up and compilation. It was made on 14 October 2026, on the same workstation as the table above.
@@ -66,7 +66,7 @@ takes the most time now.
 
 ![Share of each part of the model in the time per step, before and after](docs/changes/compute_share.png)
 
-What became faster:
+Improved components:
 
 - **Wind shear** took 68 to 79 % of the time on the barchan, parabolic dune, embryo dunes and foredune.
   The new shear method cuts it by a factor of 11 to 17 on the 2D cases. On the foredune transect, the
@@ -76,7 +76,7 @@ What became faster:
 - **The solver** on the blowout went from 0.96 s to 0.15 s per step.
 - **Transport** on the blowout went from 0.34 s to 0.10 s per step.
 
-What could still become faster:
+Remaining bottlenecks:
 
 - **The solver** now takes the largest share on the embryo dunes (58 %), the parabolic dune (26 %) and
   the barchan (24 %). These cases have periodic boundaries. Sand that leaves one side enters at the other,
@@ -191,7 +191,7 @@ Main files: [`aeolis/processes/transport/kernels.py`](aeolis/processes/transport
 [`aeolis/processes/transport/zeta_kernels.py`](aeolis/processes/transport/zeta_kernels.py),
 [`aeolis/transport.py`](aeolis/transport.py) and [`aeolis/zeta.py`](aeolis/zeta.py).
 
-## 5. Time step
+## 5. Time-step limiter
 
 AeoLiS shortens the time step when the bed changes too fast (`max_bedlevel_change`). This limiter had
 five errors:
@@ -239,7 +239,7 @@ All of these keep the results the same. Main files: [`aeolis/netcdf.py`](aeolis/
 | [`d784341`](https://github.com/openearth/aeolis-python/commit/d784341) | Removes code that nothing used or that did not work, such as `advection_old.py`. |
 | [`7733c91`](https://github.com/openearth/aeolis-python/commit/7733c91) | Updates the reference output of the regression tests to the new defaults. |
 
-## Errors found but not fixed yet
+## Known open issues
 
 Each of these fixes would change results, so they need a decision first:
 
@@ -249,7 +249,7 @@ Each of these fixes would change results, so they need a decision first:
 - `Cu` and `Ct` are scaled by `accfac`.
 - The size of the separation bubble depends on the grid cell size.
 
-## What is not on this branch
+## Scope of this branch
 
 We developed this work on a separate branch that also holds the test cases, the comparison scripts, the
 cluster scripts and new unit tests. This branch leaves them out, so that it shows only the model code.
