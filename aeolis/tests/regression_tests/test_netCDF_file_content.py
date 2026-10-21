@@ -64,13 +64,17 @@ def test_netCDF_file_content(path_test_input):
         Path to the test input directory.
 
     """
-    for dimension in os.listdir(path_test_input):
-        for case in os.listdir(path_test_input + "/" + dimension):
-            os.chdir(path_test_input + "/" + dimension + "/" + case)
-            tmp_model = initialize_model()
-            run_model(tmp_model)
-            assert_netCDF_content_consistency(dimension, case)
-            delete_output_files()
+    cwd = os.getcwd()
+    try:
+        for dimension in os.listdir(path_test_input):
+            for case in os.listdir(path_test_input + "/" + dimension):
+                os.chdir(path_test_input + "/" + dimension + "/" + case)
+                tmp_model = initialize_model()
+                run_model(tmp_model)
+                assert_netCDF_content_consistency(dimension, case)
+                delete_output_files()
+    finally:
+        os.chdir(cwd)   # do not leak the working directory into other tests
 
 
 def assert_netCDF_content_consistency(dimension: str, case: str):

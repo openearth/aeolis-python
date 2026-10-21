@@ -56,13 +56,17 @@ def test_output_files_generation(path_test_input):
         Path to the test input directory.
 
     """
-    for dimension in os.listdir(path_test_input):
-        for case in os.listdir(path_test_input + "/" + dimension):
-            os.chdir(path_test_input + "/" + dimension + "/" + case)
-            tmp_model = initialize_model()
-            run_model(tmp_model)
-            assert_output_files_existence()
-            delete_output_files()
+    cwd = os.getcwd()
+    try:
+        for dimension in os.listdir(path_test_input):
+            for case in os.listdir(path_test_input + "/" + dimension):
+                os.chdir(path_test_input + "/" + dimension + "/" + case)
+                tmp_model = initialize_model()
+                run_model(tmp_model)
+                assert_output_files_existence()
+                delete_output_files()
+    finally:
+        os.chdir(cwd)   # do not leak the working directory into other tests
 
 
 def initialize_model():
