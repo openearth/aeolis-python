@@ -218,6 +218,43 @@ All of these keep the results the same. Main files: [`aeolis/netcdf.py`](aeolis/
 | [`2938ab3`](https://github.com/openearth/aeolis-python/commit/2938ab3) | Gives the dune erosion coefficient `Cs` a default value again. Without it, the model stopped with a KeyError. |
 | [`d784341`](https://github.com/openearth/aeolis-python/commit/d784341) | Removes code that nothing used or that did not work, such as `advection_old.py`. |
 | [`7733c91`](https://github.com/openearth/aeolis-python/commit/7733c91) | Updates the reference output of the regression tests to the new defaults. |
+| this update | Reads numbers in exponent notation, such as `max_error = 1e-06`, as numbers. They used to be read as text, and the run then stopped inside a compiled function. |
+
+## 8. Transects on one row
+
+A cross-shore transect runs as three identical rows with a circular lateral boundary. Two of the three
+rows are repeated work, so with `transect_1d = T` the model computes one row. It does so only when every
+state variable has identical rows. The output, the callback, `get_var`/`set_var` and restart files still
+see all rows. If the callback makes the rows differ, the model goes back to all rows and says so in the log.
+
+While building this, we found that the three rows of a transect were never identical:
+
+- The solver stops at `max_error`. With an alongshore wind component it couples the rows, and the rows
+  then differ within the tolerance. At `max_error = 1e-5` this also makes the transect deposit about
+  0.7 % too much sand per year compared with the converged solution.
+- Where the shear velocity is zero, in the lee of a steep slope, round-off decides the sign of the
+  alongshore grain speed, so neighbouring rows exchange sand. The supply limit of the top layer switches
+  on differences of 1e-10.
+- The grass model draws its random numbers per cell.
+- [physics] The grass kernels and the leeside wake stopped at the lateral boundary, so the outer rows got
+  about 10 % fewer new tillers. They now wrap across a circular boundary (`grass_wrap_lateral`, default `T`).
+
+One row computes the transect that is uniform alongshore. On the transect of Hondsbossche (169 cells,
+2015, four random seeds) bed level, tiller density and vegetation height on one row stay within the spread
+between seeds of the three-row run, and the deposited volume equals that of three rows at a tight solver
+tolerance. With shore-normal wind, one row equals three rows to 1e-12 m. A model year takes 16 s instead
+of 25 s on one laptop core.
+
+The same update makes small grids cheaper without changing results: the vegetation weights of the shear
+reduction in one compiled function, the padding of the shear on the model grid without `np.pad`, and a
+binary search for the wind record. On one row the shear separates the wind angle analytically
+([physics], round-off only). The option `shear_reuse_dz` (default 0) keeps the shear until the bed has
+changed more than a given height; on the transect it saves little and adds errors on the beach, so we do
+not recommend it.
+
+Main files: [`aeolis/onerow.py`](aeolis/onerow.py), [`aeolis/grass.py`](aeolis/grass.py),
+[`aeolis/grass_utils.py`](aeolis/grass_utils.py) and
+[`aeolis/processes/shear/spectral.py`](aeolis/processes/shear/spectral.py).
 
 ## Known open issues
 

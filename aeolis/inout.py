@@ -470,6 +470,8 @@ def parse_value(val, parse_files=True, force_list=False):
         int
     >>> type(parse_value('123.2'))
         float
+    >>> type(parse_value('1e-06'))
+        float
     >>> type(parse_value('euler_forward'))
         str
     >>> type(parse_value(''))
@@ -503,7 +505,7 @@ def parse_value(val, parse_files=True, force_list=False):
         return val == 'T'
     elif re.match(r'^-?\d+$', val):
         return int(val)
-    elif re.match(r'^-?[\d.]+$', val):
+    elif re.match(r'^-?[\d.]+$', val) or re.match(r'^[-+]?(\d+\.?\d*|\.\d+)[eE][-+]?\d+$', val):
         return float(val)
     elif re.match('None', val):
         return None

@@ -67,6 +67,10 @@ def separation_envelope(zb, theta, ds, dn, look_dist=50., k_press_up=0.05, k_cri
 
     # canonical frame: march along +i (axis 1) with 0 <= t <= 1
     transpose = abs(ey) * ds > abs(ex) * dn  # compare index-space components
+    if zb.shape[0] == 1:
+        # one row of a transect that is uniform alongshore (transect_1d): the
+        # streamline crosses the transect at any angle, nothing changes along it
+        transpose = False
     Z = zb.T if transpose else zb
     a, b = (ey, ex) if transpose else (ex, ey)          # along-march, cross-march components
     d_along, d_cross = (dn, ds) if transpose else (ds, dn)

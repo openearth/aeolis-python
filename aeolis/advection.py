@@ -237,12 +237,16 @@ def solve_SS(self, alpha:float=0., beta:float=1.) -> dict:
     # initiate emmpty solution matrix, this will effectively kill time dependence and create steady state.
     Ct = np.zeros(Ct.shape)
             
+    # a transect on one row (transect_1d) is uniform alongshore: the alongshore
+    # flux has no divergence, so the solver has no lateral coupling to iterate
+    un = np.zeros_like(s['un']) if p.get('_one_row') else s['un']
+
     # iterate to steady state
     # (sweep adds ghost cells, i.e. works on copies, and only uses the top bed layer)
     Cu, Ct, pickup, pickup0, w, dCt, iters = sweep(Ct, s['CuBed'], s['CuAir'],
                         s['zeta'], s['mass'], 
                         self.dt, p['T'], p['_time'], 
-                        s['ds'], s['dn'], s['us'], s['un'], w,
+                        s['ds'], s['dn'], s['us'], un, w,
                         p['boundary_offshore'], p['boundary_onshore'], p['boundary_lateral'],
                         p['offshore_flux'], p['onshore_flux'], p['lateral_flux'],
                         p['max_iter'], p['max_error'], p['bi'],

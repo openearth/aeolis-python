@@ -65,6 +65,7 @@ import aeolis.grass
 import aeolis.fences
 import aeolis.gridparams
 import aeolis.zeta
+import aeolis.onerow
 
 from aeolis.advection import (
     solve_EF,
@@ -166,9 +167,10 @@ class ModelState(dict):
         to the model state
         """
         
-        if k not in self.keys() or k in self.ismutable:
-            super(ModelState, self).__setitem__(k, v)
-            self.set_mutable(k)
+        # (called some 70 times per step: plain dict and set operations, same rule)
+        if k in self.ismutable or not dict.__contains__(self, k):
+            dict.__setitem__(self, k, v)
+            self.ismutable.add(k)
 
 
     def set_mutable(self, k:str) -> None:
@@ -232,6 +234,7 @@ class AeoLiS(IBmi):
         self.p: dict = {} # parameters
         self.c: dict = {} # counters
         self.tveg: float = 0. # time since last vegetation update (grass)
+        self._one_row = None # transect on one row (aeolis.onerow): undecided, False or OneRow
 
         self.configfile = configfile
 
@@ -252,6 +255,7 @@ class AeoLiS(IBmi):
         '''
 
         # read configuration file
+        self._one_row = None
         self.p = aeolis.inout.read_configfile(self.configfile)
         aeolis.inout.check_configuration(self.p)
         self.solver = resolve_solver(self.p)
@@ -393,6 +397,10 @@ class AeoLiS(IBmi):
         '''
 
         self.p['_time'] = self.t 
+
+        # a transect of identical rows is computed on one row (transect_1d)
+        if self._one_row is None:
+            self._one_row = aeolis.onerow.start(self)
         
         # store previous state
         self.l = self.s.copy()
@@ -574,11 +582,14 @@ class AeoLiS(IBmi):
         '''
 
         if var in self.s:
+            v = self._one_row.get(self, var) if self._one_row else self.s[var]
             if var in ['Ct', 'Cu']:
-                return self.s[var] / self.p['accfac']
+                return v / self.p['accfac']
             else:
-                return self.s[var]
+                return v
         elif var in self.p:
+            if self._one_row and var in ('ny', 'ny_vsub'):
+                return (self._one_row.n - 1) * (self._one_row.f if var == 'ny_vsub' else 1)
             return self.p[var]
         else:
             return None
@@ -646,6 +657,8 @@ class AeoLiS(IBmi):
         '''
 
         if var in self.s:
+            if self._one_row:
+                return self._one_row.shape(self, var)
             return self.s[var].shape
         else:
             return -1
@@ -706,7 +719,10 @@ class AeoLiS(IBmi):
         '''
 
         if var in self.s:
-            self.s[var] = val
+            if self._one_row:
+                self._one_row.put(self, {var: val}, assigned={var})
+            else:
+                self.s[var] = val
         elif var in self.p:
             self.p[var] = val
 
@@ -1158,7 +1174,10 @@ class AeoLiSRunner(AeoLiS):
         self.output_write()
         while (self.t <= self.p['tstop']) if self.p['tstop_inclusive'] else (self.t < self.p['tstop']):
             if callback is not None:
-                callback(self)
+                if self._one_row:
+                    self._one_row.call(self, callback)      # the callback sees all rows
+                else:
+                    callback(self)
             self.update()
             self.output_write()
             self.print_progress()
@@ -1533,11 +1552,12 @@ class AeoLiSRunner(AeoLiS):
         '''Dumps model state to restart file'''
 
         restartfile = '%s.r%010d' % (os.path.splitext(self.p['output_file'])[0], int(self.t))
+        s, l, p = self._one_row.full_state(self) if self._one_row else (self.s, self.l, self.p)
         with open(restartfile, 'wb') as fp:
             pickle.dump({'t':self.t,
-                         'p':self.p,
-                         's':self.s,
-                         'l':self.l,
+                         'p':p,
+                         's':s,
+                         'l':l,
                          'c':self.c}, fp)
 
         logger.info('Written restart file [%s]' % restartfile)

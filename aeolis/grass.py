@@ -46,6 +46,12 @@ def initialize(s, p):
                       + (s['y'][0, 1] - s['y'][0, 0])**2)
     print(f"Grass.py: Vegetation subgrid created with a resolution of {p['dx_veg']:.3f} m (main grid: {dx_main:.3f} m, factor: {f})")
 
+    # --- Vector from one row to the next, for the periodic leeside wake ---------
+    if s['x'].shape[0] > 1:
+        p['_row_step'] = (float(s['x'][1, 0] - s['x'][0, 0]), float(s['y'][1, 0] - s['y'][0, 0]))
+    else:
+        p['_row_step'] = (float(s['y'][0, 0] - s['y'][0, 1]), float(s['x'][0, 1] - s['x'][0, 0]))
+
     # --- One-time lift: main grid → vegetation subgrid ----------------------
     s['Nt_vsub']   = gutils.expand_to_subgrid(s['Nt'], f)
     s['hveg_vsub'] = gutils.expand_to_subgrid(s['hveg'], f)
@@ -64,6 +70,11 @@ def initialize(s, p):
     s['rhoveg'] = s['Nt'] * np.pi * (p['d_tiller'] / 2.0)**2
 
     return s, p
+
+
+def wraps(p):
+    """True if the grass kernels continue across a circular lateral boundary."""
+    return bool(p['grass_wrap_lateral']) and p['boundary_lateral'] == 'circular'
 
 
 def update(s, p):
@@ -90,7 +101,7 @@ def update(s, p):
     Nt_avg = np.zeros_like(s['Nt_vsub'])
     for l in range(p['nspecies']):
         Nt_avg[:, :, l] = gutils.neighbourhood_average(
-            s['Nt_vsub'][:, :, l], p['R_cov'][l], p['dx_veg'])
+            s['Nt_vsub'][:, :, l], p['R_cov'][l], p['dx_veg'], wraps(p))
 
     # --- Loop over species (subgrid physics) --------------------------------
     for k in range(p['nspecies']):
@@ -167,7 +178,7 @@ def spreading(k, Nt, hveg, Nt_avg, B_c, B_s, p, s):
 
     # --- Clonal expansion ---------------------------------------------------
     Nt_clonal_new = np.zeros_like(Nt)
-    dNt_clonal = gutils.apply_clonal_kernel(S_c, s['kernel_c'][k])
+    dNt_clonal = gutils.apply_clonal_kernel(S_c, s['kernel_c'][k], wraps(p))
 
     dNt_clonal *= saturation  # Limit expansion in saturated areas (after kernel, so on target instead of source)
     ix_pos = dNt_clonal >= 0.0
@@ -177,7 +188,7 @@ def spreading(k, Nt, hveg, Nt_avg, B_c, B_s, p, s):
 
     # --- Seed dispersal -----------------------------------------------------
     Nt_seed_new = gutils.sample_seed_germination(S_s, B_s, p['alpha_s'][k], 
-                                                 p['nu_s'][k], p['dx_veg'])
+                                                 p['nu_s'][k], p['dx_veg'], wraps(p))
 
     # --- Sum contributions --------------------------------------------------
     dNt = Nt_clonal_new + Nt_seed_new
@@ -190,68 +201,23 @@ def compute_shear_reduction(s, p):
     Compute vegetation-induced shear reduction.
     """
 
-    # --- Vegetation bending -------------------------------------------------
-    for k in range(p['nspecies']):
-        s['fbend'][:,:,k] = (p['r_stem'][k] + (1.0 - p['r_stem'][k])
-                       * (p['alpha_uw'][k] * s['uw']
-                         + p['alpha_Nt'][k] * s['Nt'][:,:,k] 
-                         + p['alpha_0'][k]))
-        s['fbend'][:,:,k] = np.clip(s['fbend'][:,:,k], 0.0, 1.0)
-
-    # --- Main-grid vegetation metrics ---------------------------------------
-    s['hvegeff'] = s['hveg'] * s['fbend']
-    s['lamveg'] = s['Nt'] * s['hvegeff'] * p['d_tiller']
-    s['rhoveg'] = s['Nt'] * np.pi * (p['d_tiller'] / 2.0)**2
-
-    # --- Weights for normalization ------------------------------------------
-    w_sum = np.zeros_like(s['x'])
-    w_num_R0 = np.zeros_like(s['x'])
-    w_num_L = np.zeros_like(s['x'])
-    w_num_h = np.zeros_like(s['x'])
-    w_sum_rNt = np.zeros_like(s['x'])
-
-    s['R0veg'] = np.ones_like(s['x'])
-    L_decay = np.zeros_like(s['x'])
-    hvegeff = np.zeros_like(s['x'])
-    rNt = np.zeros_like(s['x'])
-
-    # --- Wind convention ID (Numba) -----------------------------------------
-    if p['wind_convention'] == 'nautical':
-        udir_id = 0
-    elif p['wind_convention'] == 'cartesian':
-        udir_id = 1
-    else:
+    # --- Bending, main-grid metrics and the maturity-density weighted means ----
+    # (one compiled pass with the same arithmetic as the numpy reference in
+    # gutils.shear_reduction_weights_reference, which the tests compare bitwise)
+    if p['wind_convention'] not in ('nautical', 'cartesian'):
         raise ValueError(f"Unknown wind_convention: {p['wind_convention']}")
-
-    # --- Compute per-species local and leeside reduction --------------------
-    for k in range(p['nspecies']):
-
-        # Weighting function based on maturity and density
-        maturity = s['hveg'][:, :, k] / p['Hveg'][k]
-        density  = s['Nt'][:, :, k] / p['Nt_max'][k]
-        w = maturity * density
-
-        # Local Raupach reduction per species 
-        R0_k = 1.0 / np.sqrt(1.0 + p['m_veg'][k] * p['beta_veg'][k] * s['lamveg'][:, :, k])
-
-        # Accumulate weighted numerators for later normalization
-        w_sum   += w
-        w_num_R0 += w * R0_k
-        w_num_L += w * (s['hvegeff'][:, :, k] / p['c1_okin'][k])
-        w_num_h += w * s['hvegeff'][:, :, k]
-        w_sum_rNt += w * (s['Nt'][:, :, k] / p['Nt_max'][k])
-
-    # --- Final normalization (separate loop / block) ------------------------
-    ix = w_sum != 0.0
-    s['R0veg'][ix] = w_num_R0[ix] / w_sum[ix]
-    L_decay[ix] = w_num_L[ix] / w_sum[ix]
-    hvegeff[ix] = w_num_h[ix] / w_sum[ix]
-    rNt[ix] = w_sum_rNt[ix] / w_sum[ix]
+    udir_id = 0 if p['wind_convention'] == 'nautical' else 1
+    s['fbend'], s['hvegeff'], s['lamveg'], s['rhoveg'], s['R0veg'], L_decay, hvegeff, rNt = \
+        gutils.shear_reduction_weights(s['uw'], s['Nt'], s['hveg'], *gutils.weight_parameters(p))
 
     # --- Compute leeside Okin reduction -------------------------------------
     if p['process_vegetation_leeside']:
-        R_okin, hvegeff_zeta, rNt_zeta, Rveg_zeta = gutils.compute_okin_reduction(
-            s['x'], s['y'], s['R0veg'], s['udir'], L_decay, hvegeff, rNt, udir_id)
+        if wraps(p):
+            R_okin, hvegeff_zeta, rNt_zeta, Rveg_zeta = gutils.compute_okin_reduction_periodic(
+                s['x'], s['y'], s['R0veg'], s['udir'], L_decay, hvegeff, rNt, udir_id, *p['_row_step'])
+        else:
+            R_okin, hvegeff_zeta, rNt_zeta, Rveg_zeta = gutils.compute_okin_reduction(
+                s['x'], s['y'], s['R0veg'], s['udir'], L_decay, hvegeff, rNt, udir_id)
         s['Rveg'] = np.minimum(s['R0veg'], R_okin)
 
         # Store representative vegetation metrics for zeta adjustment in vegetation wake
@@ -266,7 +232,8 @@ def compute_shear_reduction(s, p):
 
     # --- Apply Gaussian filter to Rveg --------------------------------------
     if p['veg_sigma'] > 0.0:
-        s['Rveg'] = ndimage.gaussian_filter(s['Rveg'], sigma=p['veg_sigma'])
+        mode = ('wrap', 'reflect') if wraps(p) else 'reflect'
+        s['Rveg'] = ndimage.gaussian_filter(s['Rveg'], sigma=p['veg_sigma'], mode=mode)
 
     return s
 

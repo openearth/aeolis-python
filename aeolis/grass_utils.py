@@ -233,13 +233,17 @@ def smooth_burial(s, p):
 
 
 @njit(cache=True)
-def neighbourhood_average(Nt, R_cov, dx):
+def neighbourhood_average(Nt, R_cov, dx, wrap=False):
     """
     Compute neighbourhood average of Nt within radius R_cov.
+
+    With ``wrap`` the rows are periodic (circular lateral boundary): the
+    neighbourhood continues across the first and last row.
     """
 
     # Determine radius in grid cells
     r = int(np.ceil(R_cov / dx))
+    ny = Nt.shape[0]
 
     # Loop over grid and compute average
     Nt_avg = np.zeros_like(Nt)
@@ -249,8 +253,12 @@ def neighbourhood_average(Nt, R_cov, dx):
             cnt = 0 
 
             # Define neighbourhood bounds
-            i0 = max(i - r, 0)
-            i1 = min(i + r + 1, Nt.shape[0])
+            if wrap:
+                i0 = i - r
+                i1 = i + r + 1
+            else:
+                i0 = max(i - r, 0)
+                i1 = min(i + r + 1, ny)
             j0 = max(j - r, 0)
             j1 = min(j + r + 1, Nt.shape[1])
 
@@ -258,7 +266,7 @@ def neighbourhood_average(Nt, R_cov, dx):
             for ii in range(i0, i1):
                 for jj in range(j0, j1):
                     if ((ii - i)**2 + (jj - j)**2) * dx**2 <= R_cov**2:
-                        ssum += Nt[ii, jj]
+                        ssum += Nt[ii % ny, jj]
                         cnt += 1
 
             # Compute average
@@ -302,13 +310,17 @@ def build_clonal_kernel(s_min, s_max, mu, dx):
 
 
 @njit(cache=True)
-def apply_clonal_kernel(S_c, kernel):
+def apply_clonal_kernel(S_c, kernel, wrap=False):
     """
     Apply clonal dispersal kernel to clonal production rate S_c.
+
+    With ``wrap`` the rows are periodic (circular lateral boundary), so no
+    production is lost across the first and last row.
     """
 
     # Kernel radius
     r = kernel.shape[0] // 2
+    ny = S_c.shape[0]
 
     # Initialize output
     dNt_clonal = np.zeros_like(S_c)
@@ -324,7 +336,10 @@ def apply_clonal_kernel(S_c, kernel):
                     ii = i + ki - r
                     jj = j + kj - r
 
-                    if 0 <= ii < S_c.shape[0] and 0 <= jj < S_c.shape[1]:
+                    if wrap:
+                        if 0 <= jj < S_c.shape[1]:
+                            ssum += kernel[ki, kj] * S_c[ii % ny, jj]
+                    elif 0 <= ii < ny and 0 <= jj < S_c.shape[1]:
                         ssum += kernel[ki, kj] * S_c[ii, jj]
 
             # Assign spreaded value
@@ -333,9 +348,12 @@ def apply_clonal_kernel(S_c, kernel):
     return dNt_clonal
 
 @njit(cache=True)
-def sample_seed_germination(S_s, B_s, a_s, nu_s, dx):
+def sample_seed_germination(S_s, B_s, a_s, nu_s, dx, wrap=False):
     """
     Sample stochastic seed germination events from seed production rate S_s.
+
+    With ``wrap`` the rows are periodic (circular lateral boundary): a seed
+    that lands beyond the first or last row enters on the other side.
     """
 
     ny, nx = S_s.shape
@@ -382,6 +400,8 @@ def sample_seed_germination(S_s, B_s, a_s, nu_s, dx):
 
         yy = iy + dy
         xx = ix + dx_
+        if wrap:
+            yy = yy % ny
 
         if 0 <= yy < ny and 0 <= xx < nx:
             # Check burial probability at the landing site (yy, xx)
@@ -389,6 +409,133 @@ def sample_seed_germination(S_s, B_s, a_s, nu_s, dx):
                 dNt_seed[yy, xx] += 1
 
     return dNt_seed
+
+
+def weight_parameters(p):
+    """Per-species parameters of :func:`shear_reduction_weights`, as float arrays."""
+    f = lambda k: np.asarray(p[k], dtype=np.float64)
+    d = f('d_tiller')
+    return (f('r_stem'), f('alpha_uw'), f('alpha_Nt'), f('alpha_0'), d, (d / 2.0)**2,
+            f('Hveg'), f('Nt_max'), f('m_veg') * f('beta_veg'), f('c1_okin'))
+
+
+@njit(cache=True)
+def shear_reduction_weights(uw, Nt, hveg, r_stem, alpha_uw, alpha_Nt, alpha_0, d_tiller, d_sq,
+                            Hveg, Nt_max, mbeta, c1):
+    """Bending, main-grid vegetation metrics and the weighted means of the shear reduction.
+
+    Per species k: fbend = clip(r + (1 - r)(a_uw uw + a_Nt Nt + a_0), 0, 1),
+    hvegeff = hveg fbend, lamveg = Nt hvegeff d, rhoveg = Nt pi (d/2)^2,
+    R0 = 1 / sqrt(1 + m beta lamveg) and the weight w = (hveg / Hveg)(Nt / Nt_max).
+    Returns fbend, hvegeff, lamveg, rhoveg (per species) and the w-weighted
+    means R0veg (1 where w sums to 0), L_decay = hvegeff / c1, hvegeff and Nt / Nt_max.
+    Each expression is evaluated in the order of the numpy version
+    (:func:`shear_reduction_weights_reference`), so the results are identical.
+    """
+    ny, nx, ns = Nt.shape
+    fbend = np.empty((ny, nx, ns))
+    hvegeff = np.empty((ny, nx, ns))
+    lamveg = np.empty((ny, nx, ns))
+    rhoveg = np.empty((ny, nx, ns))
+    R0veg = np.ones((ny, nx))
+    L_decay = np.zeros((ny, nx))
+    hv = np.zeros((ny, nx))
+    rNt = np.zeros((ny, nx))
+    for i in range(ny):
+        for j in range(nx):
+            w_sum = 0.0
+            n_R0 = 0.0
+            n_L = 0.0
+            n_h = 0.0
+            n_rNt = 0.0
+            for k in range(ns):
+                nt = Nt[i, j, k]
+                fb = r_stem[k] + (1.0 - r_stem[k]) * (alpha_uw[k] * uw[i, j] + alpha_Nt[k] * nt + alpha_0[k])
+                fb = min(max(fb, 0.0), 1.0)
+                he = hveg[i, j, k] * fb
+                lam = nt * he * d_tiller[k]
+                fbend[i, j, k] = fb
+                hvegeff[i, j, k] = he
+                lamveg[i, j, k] = lam
+                rhoveg[i, j, k] = (nt * np.pi) * d_sq[k]
+                w = (hveg[i, j, k] / Hveg[k]) * (nt / Nt_max[k])
+                R0 = 1.0 / np.sqrt(1.0 + mbeta[k] * lam)
+                w_sum += w
+                n_R0 += w * R0
+                n_L += w * (he / c1[k])
+                n_h += w * he
+                n_rNt += w * (nt / Nt_max[k])
+            if w_sum != 0.0:
+                R0veg[i, j] = n_R0 / w_sum
+                L_decay[i, j] = n_L / w_sum
+                hv[i, j] = n_h / w_sum
+                rNt[i, j] = n_rNt / w_sum
+    return fbend, hvegeff, lamveg, rhoveg, R0veg, L_decay, hv, rNt
+
+
+def shear_reduction_weights_reference(uw, Nt, hveg, r_stem, alpha_uw, alpha_Nt, alpha_0, d_tiller, d_sq,
+                                      Hveg, Nt_max, mbeta, c1):
+    """The numpy form of :func:`shear_reduction_weights` (the code it replaced), for the tests."""
+    ny, nx, ns = Nt.shape
+    fbend = np.ones_like(hveg)
+    for k in range(ns):
+        fbend[:, :, k] = (r_stem[k] + (1.0 - r_stem[k]) * (alpha_uw[k] * uw + alpha_Nt[k] * Nt[:, :, k] + alpha_0[k]))
+        fbend[:, :, k] = np.clip(fbend[:, :, k], 0.0, 1.0)
+    hvegeff = hveg * fbend
+    lamveg = Nt * hvegeff * d_tiller
+    rhoveg = Nt * np.pi * d_sq
+    w_sum, n_R0, n_L, n_h, n_rNt = (np.zeros((ny, nx)) for _ in range(5))
+    R0veg, L_decay, hv, rNt = np.ones((ny, nx)), np.zeros((ny, nx)), np.zeros((ny, nx)), np.zeros((ny, nx))
+    for k in range(ns):
+        w = (hveg[:, :, k] / Hveg[k]) * (Nt[:, :, k] / Nt_max[k])
+        R0_k = 1.0 / np.sqrt(1.0 + mbeta[k] * lamveg[:, :, k])
+        w_sum += w
+        n_R0 += w * R0_k
+        n_L += w * (hvegeff[:, :, k] / c1[k])
+        n_h += w * hvegeff[:, :, k]
+        n_rNt += w * (Nt[:, :, k] / Nt_max[k])
+    ix = w_sum != 0.0
+    R0veg[ix] = n_R0[ix] / w_sum[ix]
+    L_decay[ix] = n_L[ix] / w_sum[ix]
+    hv[ix] = n_h[ix] / w_sum[ix]
+    rNt[ix] = n_rNt[ix] / w_sum[ix]
+    return fbend, hvegeff, lamveg, rhoveg, R0veg, L_decay, hv, rNt
+
+
+@njit(cache=True)
+def _okin_sources(R0, udir, L_decay, dx, wind_convention_id):
+    """Wake direction, wake length and search radius of every vegetated source cell."""
+    ny, nx = R0.shape
+    deg2rad = np.pi / 180.0
+    R_end = 0.999
+
+    # source-cell properties (identical expressions to the scatter loop)
+    active = np.zeros((ny, nx), dtype=np.bool_)
+    ux = np.zeros((ny, nx))
+    uy = np.zeros((ny, nx))
+    L_end = np.zeros((ny, nx))
+    rad = np.zeros((ny, nx), dtype=np.int64)
+    rmax = -1
+    for iy in range(ny):
+        for ix in range(nx):
+            R0_ij = R0[iy, ix]
+            if R0_ij >= 1.0:
+                continue
+            L_ij = L_decay[iy, ix]
+            if L_ij <= 0.0:
+                continue
+            if wind_convention_id == 0:
+                th = (270.0 - udir[iy, ix]) * deg2rad
+            else:
+                th = udir[iy, ix] * deg2rad
+            ux[iy, ix] = np.cos(th)
+            uy[iy, ix] = np.sin(th)
+            L_end[iy, ix] = -L_ij * np.log((1.0 - R_end) / (1.0 - R0_ij))
+            rad[iy, ix] = int(L_end[iy, ix] / dx) + 2
+            active[iy, ix] = True
+            if rad[iy, ix] > rmax:
+                rmax = rad[iy, ix]
+    return active, ux, uy, L_end, rad, rmax
 
 
 @njit(parallel=True, cache=True)
@@ -426,35 +573,7 @@ def compute_okin_reduction(x, y, R0, udir, L_decay, hvegeff, rNt, wind_conventio
     Rveg_zeta = np.ones((ny, nx))
 
     dx = np.sqrt((x[0, 1] - x[0, 0])**2 + (y[0, 1] - y[0, 0])**2)
-    deg2rad = np.pi / 180.0
-    R_end = 0.999
-
-    # source-cell properties (identical expressions to the scatter loop)
-    active = np.zeros((ny, nx), dtype=np.bool_)
-    ux = np.zeros((ny, nx))
-    uy = np.zeros((ny, nx))
-    L_end = np.zeros((ny, nx))
-    rad = np.zeros((ny, nx), dtype=np.int64)
-    rmax = -1
-    for iy in range(ny):
-        for ix in range(nx):
-            R0_ij = R0[iy, ix]
-            if R0_ij >= 1.0:
-                continue
-            L_ij = L_decay[iy, ix]
-            if L_ij <= 0.0:
-                continue
-            if wind_convention_id == 0:
-                th = (270.0 - udir[iy, ix]) * deg2rad
-            else:
-                th = udir[iy, ix] * deg2rad
-            ux[iy, ix] = np.cos(th)
-            uy[iy, ix] = np.sin(th)
-            L_end[iy, ix] = -L_ij * np.log((1.0 - R_end) / (1.0 - R0_ij))
-            rad[iy, ix] = int(L_end[iy, ix] / dx) + 2
-            active[iy, ix] = True
-            if rad[iy, ix] > rmax:
-                rmax = rad[iy, ix]
+    active, ux, uy, L_end, rad, rmax = _okin_sources(R0, udir, L_decay, dx, wind_convention_id)
 
     if rmax < 0:
         return R, hvegeff_zeta, rNt_zeta, Rveg_zeta
@@ -475,6 +594,77 @@ def compute_okin_reduction(x, y, R0, udir, L_decay, hvegeff, rNt, wind_conventio
 
                     rx = x[jy, jx] - x[iy, ix]
                     ry = y[jy, jx] - y[iy, ix]
+                    s = rx * ux[iy, ix] + ry * uy[iy, ix]
+                    if s <= 0.0 or s > L_end[iy, ix]:
+                        continue
+                    d_perp = np.sqrt((rx - s * ux[iy, ix])**2 + (ry - s * uy[iy, ix])**2)
+                    if d_perp >= dx:
+                        continue
+
+                    R0_ij = R0[iy, ix]
+                    R_s = 1.0 - (1.0 - R0_ij) * np.exp(-s / L_decay[iy, ix])
+                    w = 1.0 - d_perp / dx
+                    R_loc = 1.0 - w * (1.0 - R_s)
+
+                    if R_loc < Rt:
+                        Rt = R_loc
+                        ht = hvegeff[iy, ix]
+                        nt = rNt[iy, ix]
+                        zt = (1 - R_loc) / (1 - R0_ij)
+            R[jy, jx] = Rt
+            hvegeff_zeta[jy, jx] = ht
+            rNt_zeta[jy, jx] = nt
+            Rveg_zeta[jy, jx] = zt
+
+    return R, hvegeff_zeta, rNt_zeta, Rveg_zeta
+
+
+@njit(parallel=True, cache=True)
+def compute_okin_reduction_periodic(x, y, R0, udir, L_decay, hvegeff, rNt, wind_convention_id,
+                                    row_dx, row_dy):
+    """
+    Okin leeside shear reduction on a grid whose rows repeat (circular lateral boundary).
+
+    As :func:`compute_okin_reduction`, but a wake also reaches targets beyond
+    the first and last row: the rows are continued periodically, row ``iv``
+    being row ``iv % ny`` moved by ``iv // ny`` periods. The position of a
+    source relative to a target is the column offset within the target's row
+    plus a whole number of row steps (``row_dx``, ``row_dy``, the vector from
+    one row to the next), so a single row with identical neighbours gives the
+    same wake as any number of identical rows.
+    """
+
+    ny, nx = x.shape
+    R = np.ones((ny, nx))
+    hvegeff_zeta = np.zeros((ny, nx))
+    rNt_zeta = np.zeros((ny, nx))
+    Rveg_zeta = np.ones((ny, nx))
+
+    dx = np.sqrt((x[0, 1] - x[0, 0])**2 + (y[0, 1] - y[0, 0])**2)
+    active, ux, uy, L_end, rad, rmax = _okin_sources(R0, udir, L_decay, dx, wind_convention_id)
+
+    if rmax < 0:
+        return R, hvegeff_zeta, rNt_zeta, Rveg_zeta
+
+    for jy in prange(ny):
+        for jx in range(nx):
+            Rt = 1.0
+            ht = 0.0
+            nt = 0.0
+            zt = 1.0
+            for iv in range(jy - rmax, jy + rmax + 1):
+                iy = iv % ny
+                ox = (jy - iv) * row_dx
+                oy = (jy - iv) * row_dy
+                for ix in range(max(0, jx - rmax), min(nx, jx + rmax + 1)):
+                    if not active[iy, ix]:
+                        continue
+                    r = rad[iy, ix]
+                    if jy < iv - r or jy > iv + r or jx < ix - r or jx > ix + r:
+                        continue
+
+                    rx = (x[jy, jx] - x[jy, ix]) + ox
+                    ry = (y[jy, jx] - y[jy, ix]) + oy
                     s = rx * ux[iy, ix] + ry * uy[iy, ix]
                     if s <= 0.0 or s > L_end[iy, ix]:
                         continue

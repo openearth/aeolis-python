@@ -215,7 +215,7 @@ class SpectralShear:
 
     def __init__(self, ny, nx, ds, dn, L, l, z0, pad_factor=2., blend_length=None,
                  filter_frac=0., ntable=4096, periodic=(False, False), transfer='weng',
-                 short_waves='none', short_floor=0.5, scale_AB=(1., 1.)):
+                 short_waves='none', short_floor=0.5, scale_AB=(1., 1.), reuse_dz=0.):
         if short_waves not in SHORT_WAVES:
             raise ValueError('SpectralShear: unknown short_waves %r, use one of %s'
                              % (short_waves, ', '.join(SHORT_WAVES)))
@@ -225,6 +225,12 @@ class SpectralShear:
         if transfer not in TRANSFERS:
             raise ValueError('SpectralShear: unknown transfer %r, use one of %s' % (transfer, ', '.join(TRANSFERS)))
         self.kind = transfer
+        self._settings = dict(L=L, l=l, z0=z0, pad_factor=pad_factor, blend_length=blend_length,
+                              filter_frac=filter_frac, ntable=ntable, periodic=periodic,
+                              transfer=transfer, short_waves=short_waves, short_floor=short_floor,
+                              scale_AB=scale_AB, reuse_dz=reuse_dz)
+        self.reuse_dz = float(reuse_dz)
+        self._last = None                      # (bed, its spectrum, {sign: one-row response}) for reuse_dz
         self.ny, self.nx, self.ds, self.dn = int(ny), int(nx), float(ds), float(dn)
         self.L, self.l, self.z0 = float(L), float(l), float(z0)
         self.periodic = (bool(periodic[0]), bool(periodic[1]))
@@ -248,6 +254,8 @@ class SpectralShear:
         self.kx = 2. * np.pi * scipy.fft.rfftfreq(self.NX, ds)[np.newaxis, :]
         self.ky = 2. * np.pi * scipy.fft.fftfreq(self.NY, dn)[:, np.newaxis]
         k = np.hypot(self.kx, self.ky)
+        # the parts of the transfer that do not depend on the wind angle
+        self._k, self._ksafe, self._k0 = k, np.where(k == 0., 1., k), k == 0.
         if filter_frac:
             kc = filter_frac * np.pi / max(ds, dn)
             self.lowpass = np.exp(-(k / kc) ** 8)
@@ -280,6 +288,18 @@ class SpectralShear:
             self._ABk = (np.interp(lk, self._ltk, self._AB.real), np.interp(lk, self._ltk, self._AB.imag))
         self._cache = {}
 
+        # one periodic row and a per-mode transfer: ky = 0, so k_par = kx cos(theta) and
+        # k_perp = -kx sin(theta), and T_par = cos^2 Q, T_perp = -cos sin Q with Q depending
+        # only on the sign of cos(theta). The wind angle then needs no transfer of its own.
+        self._rowQ = None
+        if self.NY == 1 and transfer != 'weng':
+            sk = np.sign(self.kx)
+            self._rowQ = {}
+            for sg in (1., -1.):
+                Q = (self._ABk[0] + 1j * (sg * sk) * self._ABk[1]) * self.kx ** 2 / self._ksafe
+                Q[self._k0] = 0.
+                self._rowQ[sg] = Q * self.lowpass
+
     @staticmethod
     def _taper(N, offset, n, d, blend_length):
         w = np.zeros(N)
@@ -311,8 +331,7 @@ class SpectralShear:
         c, s = np.cos(theta), np.sin(theta)
         kpar = self.kx * c + self.ky * s
         kperp = -self.kx * s + self.ky * c
-        k = np.hypot(self.kx, self.ky)
-        ksafe = np.where(k == 0., 1., k)
+        k, ksafe = self._k, self._ksafe
         if self.kind == 'weng':
             R = self._table(kpar, self._R, ramp=True)
             S = self._table(kpar, self._S)
@@ -322,8 +341,8 @@ class SpectralShear:
             AB = self._ABk[0] + 1j * np.sign(kpar) * self._ABk[1]       # T(-k) = conj T(k)
             T_par = AB * kpar ** 2 / ksafe
             T_perp = AB * kpar * kperp / ksafe
-        T_par[k == 0.] = 0.
-        T_perp[k == 0.] = 0.
+        T_par[self._k0] = 0.
+        T_perp[self._k0] = 0.
         out = (T_par * self.lowpass, T_perp * self.lowpass)
         if len(self._cache) > 64:
             self._cache.pop(next(iter(self._cache)))
@@ -341,9 +360,23 @@ class SpectralShear:
         if not edges:
             return zb
         zref = np.concatenate(edges).mean()
-        h = np.pad(zb - zref, ((self.oy, self.NY - self.ny - self.oy),
-                               (self.ox, self.NX - self.nx - self.ox)), mode='edge')
-        return h * self.wy[:, np.newaxis] * self.wx[np.newaxis, :]
+        # np.pad(zb - zref, mode='edge') and the taper, filled in place (np.pad costs more
+        # than the FFT on a transect)
+        oy, ox, ny, nx = self.oy, self.ox, self.ny, self.nx
+        h = np.empty((self.NY, self.NX))
+        core = h[oy:oy + ny, ox:ox + nx]
+        np.subtract(zb, zref, out=core)
+        h[oy:oy + ny, :ox] = core[:, :1]
+        h[oy:oy + ny, ox + nx:] = core[:, -1:]
+        h[:oy] = h[oy]
+        h[oy + ny:] = h[oy + ny - 1]
+        h *= self.wy[:, np.newaxis]
+        h *= self.wx[np.newaxis, :]
+        return h
+
+    def with_rows(self, ny):
+        '''The same operator for a grid of ``ny`` rows (and the same columns).'''
+        return SpectralShear(ny, self.nx, self.ds, self.dn, **self._settings)
 
     def perturbation(self, zb, theta, workers=-1):
         '''Relative stress perturbation along and across the wind on the model grid.
@@ -360,9 +393,22 @@ class SpectralShear:
         -------
         dtau_par, dtau_perp : ndarray (ny, nx)
         '''
-        H = scipy.fft.rfft2(self.pad(zb), workers=workers)
-        T_par, T_perp = self.transfer(theta)
         sl = (slice(self.oy, self.oy + self.ny), slice(self.ox, self.ox + self.nx))
+        last = self._last
+        if last is not None and np.abs(zb - last[0]).max() <= self.reuse_dz:
+            H, resp = last[1], last[2]                  # T4: the bed has hardly changed
+        else:
+            H, resp = scipy.fft.rfft2(self.pad(zb), workers=workers), {}
+            if self.reuse_dz > 0.:
+                self._last = (np.array(zb, dtype=float), H, resp)
+        if self._rowQ is not None:
+            c, s = np.cos(theta), np.sin(theta)
+            sg = 1. if c >= 0. else -1.
+            if sg not in resp:
+                resp[sg] = scipy.fft.irfft2(self._rowQ[sg] * H, s=(self.NY, self.NX), workers=workers)[sl]
+            G = resp[sg]
+            return (c * c) * G, (-c * s) * G
+        T_par, T_perp = self.transfer(theta)
         dpar = scipy.fft.irfft2(T_par * H, s=(self.NY, self.NX), workers=workers)[sl]
         dperp = scipy.fft.irfft2(T_perp * H, s=(self.NY, self.NX), workers=workers)[sl]
         return dpar, dperp

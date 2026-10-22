@@ -108,7 +108,8 @@ def initialize(s, p):
                                            transfer=p['shear_transfer'],
                                            short_waves=p['shear_short_waves'],
                                            short_floor=p['shear_short_floor'],
-                                           scale_AB=(p['shear_scale_A'], p['shear_scale_B']))
+                                           scale_AB=(p['shear_scale_A'], p['shear_scale_B']),
+                                           reuse_dz=p['shear_reuse_dz'])
             elif p['method_shear'] != '1Dstacks':
                 logger.log_and_raise('Unknown shear method [%s], use fft, fft_grid or 1Dstacks'
                                      % p['method_shear'], exc=ValueError)
@@ -144,9 +145,17 @@ def interpolate(s, p, t):
         
     if p['process_wind'] and p['wind_file'] is not None:
         # defining the wind inputs the same as the timestep speeds up the simulation significantly 
-        if (np.any(p['wind_file'][:,0]==t)):
-            s['uw'][:,:] = p['wind_file'][p['wind_file'][:,0]==t,1][0]      # this extra bracket is needed to accound for messy input files
-            s['udir'][:,:] = p['wind_file'][p['wind_file'][:,0]==t,2][0] 
+        # (the first record at time t; a binary search when the times increase, as usual)
+        wt = p['wind_file'][:,0]
+        if _increasing(p, wt):
+            i = int(np.searchsorted(wt, t))
+            exact = i < wt.size and wt[i] == t
+        else:
+            exact = bool(np.any(wt == t))
+            i = int(np.flatnonzero(wt == t)[0]) if exact else -1
+        if exact:
+            s['uw'][:,:] = p['wind_file'][i,1]
+            s['udir'][:,:] = p['wind_file'][i,2]
         
         # alternatively, wind inputs are interpolated based on a circular interpolation.
         # this is more time expensive
@@ -189,6 +198,14 @@ def interpolate(s, p, t):
     
     return s
     
+def _increasing(p, wt):
+    '''True if the wind file times increase strictly (checked once per wind file).'''
+    key = (id(p['wind_file']), wt.size)
+    if p.get('_wind_increasing', (None,))[0] != key:
+        p['_wind_increasing'] = (key, bool(wt.size > 1 and np.all(np.diff(wt) > 0.)))
+    return p['_wind_increasing'][1]
+
+
 def calculate_z0(p, s):
     '''Calculate z0 according to chosen roughness method
 
@@ -265,7 +282,7 @@ def shear(s, p):
         return s
 
     # --- 1D and stacked-1D (independent rows) --------------------------------
-    if p['ny'] == 0 or p['method_shear'] == '1Dstacks':
+    if (p['ny'] == 0 and not p.get('_one_row')) or p['method_shear'] == '1Dstacks':
 
         # Compute separation bubble
         if p['process_separation']:

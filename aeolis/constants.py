@@ -353,6 +353,7 @@ DEFAULT_CONFIG = {
     'max_iter'                      : 1000,               # [-] Maximum number of iterations at which to quit iterative solution in implicit numerical schemes
     'fused_kernels'                 : True,               # Compiled fused kernels for grain speed, equilibrium transport and vegetation zeta (False: the numpy reference; results differ at round-off level only)
     'solver'                        : 'steadystate',      # Name of the solver (steadystate, euler_backward, crank_nicolson, euler_forward)
+    'transect_1d'                   : False,              # Compute a transect of identical rows with a circular lateral boundary on one row (falls back to all rows when the rows are not identical; see aeolis/onerow.py)
     'solver_order'                  : 'upwind',           # Visiting order of the steadystate solver: upwind (topological order, one pass) or quadrant (legacy sweeps per wind quadrant)
     'solver_plot'                   : False,              # Boolean to plot convergence behaviour of the solver when max iterations is reached
     'solver_print'                  : True,               # Boolean to print convergence behaviour of the solver when max iterations is reached
@@ -391,6 +392,7 @@ DEFAULT_CONFIG = {
     'shear_short_waves'             : 'none',             # [-] method_shear = fft_grid: treatment of waves of a few cells. none: full response; cell_avg: stress averaged over a cell (sinc, no parameter); floor: response of waves under four cells scaled to shear_short_floor. Both reduce cell-scale u* noise and keep part of the damping of two-cell ripples
     'shear_scale_A'                 : 1.,                 # [-] method_shear = fft_grid, shear_transfer = weng_mode or fca2010: factor on the in-phase coefficient A of every wave. 0.75 with fca2010: the joint fit to six wind validation cases (benchmarks/shear_validation/fit.py, 2026-10-15)
     'shear_scale_B'                 : 1.,                 # [-] as shear_scale_A, for the upwind-shift coefficient B. 0.8 with fca2010: the joint fit
+    'shear_reuse_dz'                : 0.,                 # [m] fft_grid: keep the bed spectrum (on one row: the whole perturbation) until the bed changed more than this anywhere (0: compute every step; a physics approximation, T4)
     'shear_short_floor'             : 0.5,                # [-] method_shear = fft_grid, shear_short_waves = floor: fraction of the response kept for waves under four cells
 
     # --- Flow separation bubble (OLD) --- #
@@ -536,6 +538,7 @@ DEFAULT_CONFIG = {
     'c1_okin'                       : [0.48],        # [-] Downwind decay coefficient in Okin shear reduction
 
     'veg_sigma'                     : 0.,            # [-] Sigma in gaussian distrubtion of vegetation cover filter
+    'grass_wrap_lateral'            : True,          # Clonal spreading, density averaging, seed dispersal, the leeside wake and the cover filter wrap across a circular lateral boundary (False: they stop at the edge, as before 2026-10-23)
     # 'zeta_sigma'                    : 0.,            # [-] Standard deviation for smoothing vegetation bed interaction parameter
 
     'alpha_comp'                    : [0.],          # [-] Lotka–Volterra competition coefficients
