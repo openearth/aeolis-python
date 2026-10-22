@@ -20,40 +20,73 @@ back to the old behaviour.
 
 ## Improvements
 
-The table shows the run time of six cases on one workstation. The first column is
-`bedinteraction_dev`. The second column adds only the changes that keep the results the same. The third
-column also includes the changes that alter results: the new shear method (`method_shear = fft_grid`),
-the new solver order and the repaired time step.
+We measured every version on one core of the Deltares cluster (HYDRAX, 22 October 2026). All versions
+of a case ran one after the other on the same node, so they share the same hardware. The first column
+is `bedinteraction_dev`. The second column adds only the changes that keep the results the same. The
+third column also includes the changes that alter results: the new shear method (`method_shear =
+fft_grid`, with its default settings), the new solver order, the combined transport calculations and the
+repaired time step.
 
 | Case | `bedinteraction_dev` | Same results | All changes | Speed-up |
 |---|---:|---:|---:|---:|
-| Blowout, 2 days (396 × 396 cells) | 287 s | 160 s | 76 s | 3.8× |
-| Foredune transect, 7 days | 42 s | 19 s | 2 s | 20× |
-| Barchan, 7 days | 147 s | 137 s | 25 s | 5.9× |
-| Parabolic dune, 7 days | 60 s | 42 s | 13 s | 4.6× |
-| Embryo dunes, 7 days | 452 s | 360 s | 25 s | 18× |
-| Boschplaat, 30 days (121 × 121 cells) | 176 s | 95 s | 53 s | 3.3× |
+| Blowout, 14 days (396 × 396 cells) | 2055 s | 905 s | 353 s | 5.8× |
+| Foredune transect, 1 year | 1079 s | 671 s | 66 s | 16× |
+| Barchan, 60 days | 780 s | 723 s | 217 s | 3.6× |
+| Parabolic dune, 60 days | 468 s | 406 s | 170 s | 2.8× |
+| Embryo dunes, 60 days | 1423 s | 1156 s | 208 s | 6.8× |
+| Boschplaat, 1 year (121 × 121 cells) | 2162 s | 1111 s | 662 s | 3.3× |
 
-For a longer run: ten years of the Boschplaat at hourly steps take about 5 hours on one core of the
-Deltares cluster with `bedinteraction_dev`. The same run takes 3.1 to 3.5 hours with the changes that
-keep the results the same, and about 2 hours with the new shear method.
+These are single runs. Shorter runs of the same cases (2 to 30 days), each repeated three times in turn,
+give the same picture. Their medians are in the next table.
+
+For a longer run: ten years of the Boschplaat at hourly steps take 4.8 hours with `bedinteraction_dev`,
+2.7 hours with the changes that keep the results the same, and 1.3 hours with all changes. The last run
+uses the new shear method with the settings calibrated for this case.
 
 ### Contribution per change
 
-1. **Wind shear on the model grid** (section 1) gives the largest gain. It makes the model 2 to 8 times
-   faster on its own. It also changes the results more than any other commit.
-2. **Bed layers in compiled code** (section 2) give the largest gain without any change in results.
-3. **The new solver order** (section 3) saves another 20 to 30 % on large 2D grids. On the 121 × 121
-   Boschplaat grid it saves almost nothing.
-4. **Combined transport calculations** (section 4) make the transport and zeta steps 3 to 6 times faster.
-5. **Start-up and output** (section 6) matter only for small and 1D runs. There, they took most of the
-   run time. The 1D regression case now runs in 2 s instead of 12 s.
-6. **The repaired time step** (section 5) fixes errors. It hardly changes the run time.
+We ran each change that alters results on its own, on top of the changes that keep the results the
+same. The table gives the speed-up of each version over "Same results", from the median of three runs.
+The second column gives the speed-up of "Same results" over `bedinteraction_dev`.
+
+| Case | Same results | Combined transport | Solver order | Time step | Shear on the model grid | All changes |
+|---|---:|---:|---:|---:|---:|---:|
+| Blowout, 2 days | 2.2× | 1.08× | 1.21× | 0.96× | 1.43× | 2.1× |
+| Foredune transect, 7 days | 2.7× | 1.02× | 1.00× | 1.01× | 6.6× | 7.7× |
+| Barchan, 7 days | 1.22× | 1.08× | 1.02× | 1.00× | 2.4× | 2.9× |
+| Parabolic dune, 7 days | 1.62× | 1.03× | 1.07× | 1.02× | 1.67× | 1.89× |
+| Embryo dunes, 7 days | 1.32× | 1.01× | 0.96× | 0.99× | 9.5× | 9.1× |
+| Boschplaat, 30 days | 2.0× | 1.02× | 0.99× | 0.99× | 1.30× | 1.25× |
+
+1. **Wind shear on the model grid** (section 1) gives the largest gain: 1.3 to 9.5 times faster on its
+   own. It also changes the results more than any other commit.
+2. **Bed layers in compiled code** (section 2), the faster time-series lookups (section 6) and the other
+   changes that keep the results the same make the model 1.2 to 2.7 times faster.
+3. **The new solver order** (section 3) saves 20 % on the blowout. On the other cases it saves almost
+   nothing.
+4. **Combined transport calculations** (section 4) save up to 8 %.
+5. **The repaired time step** (section 5) fixes errors. It hardly changes the run time.
+
+The next table shows how much each change alters the results. It gives the rms difference of the final
+bed from `bedinteraction_dev`, in mm, for the longer runs of the first table. The rms of the bed change
+itself is given for scale.
+
+| Case | Bed change | Combined transport | Solver order | Time step | Shear on the model grid | All changes |
+|---|---:|---:|---:|---:|---:|---:|
+| Blowout, 14 days | 89 | 0 | 0.5 | 5.4 | 27 | 27 |
+| Foredune transect, 1 year | 556 | < 0.001 | 6.8 | 5.1 | 189 | 192 |
+| Barchan, 60 days | 7 | 0 | 0.05 | 1.1 | 1.2 | 1.3 |
+| Parabolic dune, 60 days | 381 | 0.45 | 0.49 | 5.9 | 6.2 | 7.0 |
+| Embryo dunes, 60 days | 40 | 0 | < 0.001 | 5.8 | 23 | 23 |
+| Boschplaat, 1 year | 573 | 0 | 11.5 | 24 | 179 | 171 |
+
+The changes that keep the results the same gave output identical to the last bit in all 15
+comparisons, including the ten-year Boschplaat run.
 
 ### Computation time per model component
 
 We measured the time per step of each part of the model for seven cases. The measurement leaves out
-start-up and compilation. It was made on 14 October 2026, on the same workstation as the table above.
+start-up and compilation. It comes from the same runs as the table above (median of three).
 
 The first figure shows which parts became faster. Each case has three bars: `bedinteraction_dev`, the
 changes that keep results the same, and all changes. The length of a bar is its time per step, as a
@@ -68,27 +101,29 @@ takes the most time now.
 
 Improved components:
 
-- **Wind shear** took 68 to 79 % of the time on the barchan, parabolic dune, embryo dunes and foredune.
-  The new shear method cuts it by a factor of 11 to 17 on the 2D cases. On the foredune transect, the
+- **Wind shear** took 56 to 74 % of the time on the barchan, parabolic dune, embryo dunes and foredune.
+  The new shear method cuts it by a factor of 4 to 13 on the 2D cases. On the foredune transect, the
   shear now takes almost no time at all.
-- **Bed layers** took 44 % on the blowout and 38 % on the Boschplaat. The compiled bed code cuts this
-  part by a factor of 10 to 18.
-- **The solver** on the blowout went from 0.96 s to 0.15 s per step.
-- **Transport** on the blowout went from 0.34 s to 0.10 s per step.
+- **Bed layers** took 47 % on the blowout and 37 % on the Boschplaat. The compiled bed code cuts this
+  part by a factor of 7 to 15.
+- **Tide, waves and moisture** took 7 % on the Boschplaat. The faster time-series lookups cut this part
+  by a factor of 7.
+- **The solver** on the blowout went from 0.97 s to 0.16 s per step.
+- **Transport** on the blowout went from 0.36 s to 0.19 s per step.
 
 Remaining bottlenecks:
 
-- **The solver** now takes the largest share on the embryo dunes (58 %), the parabolic dune (26 %) and
-  the barchan (24 %). These cases have periodic boundaries. Sand that leaves one side enters at the other,
-  so the solver still needs several passes per step.
-- **Tide, waves and moisture** now take 30 % on the Boschplaat. We have not touched this part.
-- **Vegetation shear reduction** takes 19 % on the blowout. It did not become faster (0.11 s per step
-  before, 0.17 s after).
-- **Output and bookkeeping** dominate small and 1D runs: 42 % on the foredune transect and 77 % on the
+- **The solver** now takes the largest share on the embryo dunes (56 %), the Boschplaat (44 %) and the
+  barchan (25 %). The embryo dunes and the barchan have periodic boundaries. Sand that leaves one side
+  enters at the other, so the solver still needs several passes per step. On the Boschplaat, the new
+  solver order takes 0.036 s per step with the new shear, against 0.015 s with the old shear.
+- **Vegetation shear reduction** takes 31 % on the blowout. It became slower: 0.13 s per step before and
+  0.32 s after. We have not yet found out why.
+- **Output and bookkeeping** dominate small and 1D runs: 42 % on the foredune transect and 72 % on the
   1D regression case.
-- **Bed layers** still take 29 % on the parabolic dune.
+- **Bed layers** still take 38 % on the parabolic dune.
 
-The speed-ups per step in the figures are larger than the speed-ups of whole runs in the table above.
+The speed-ups per step in the figures differ from the speed-ups of whole runs in the tables above.
 Whole runs also include start-up, and some cases take more or fewer steps with the new code.
 
 ## 1. Wind shear on the model grid
@@ -178,7 +213,9 @@ operations per time step. Each operation passed over the whole grid. Now one com
 it per cell. On the blowout, transport takes 0.05 s per step instead of 0.28 s, and zeta takes 0.02 s
 instead of 0.07 s.
 
-The results differ from the numpy version by about 1e-12. These differences come from rounding.
+The results differ from the numpy version by about 1e-12. These differences come from rounding. On
+most cases they stay that small: after 60 days to a year, the final bed differs by less than 1 µm. On
+the parabolic dune they grow: after 60 days the bed differs by up to 2.7 cm (rms 0.45 mm).
 `fused_kernels = F` switches back to the numpy version.
 
 | Commit | What it does |
@@ -216,7 +253,7 @@ gives the old behaviour.
 Main files: [`aeolis/model.py`](aeolis/model.py), [`aeolis/bed.py`](aeolis/bed.py) and
 [`aeolis/constants.py`](aeolis/constants.py).
 
-## 6. Start-up and output
+## 6. Start-up, output and bookkeeping
 
 | Commit | What it does |
 |---|---|
@@ -224,9 +261,11 @@ Main files: [`aeolis/model.py`](aeolis/model.py), [`aeolis/bed.py`](aeolis/bed.p
 | [`3ae5283`](https://github.com/openearth/aeolis-python/commit/3ae5283) | Opens the netCDF file once per output time instead of twice, and stops copying output variables that have no statistics. |
 | [`d4bd5b2`](https://github.com/openearth/aeolis-python/commit/d4bd5b2) | Uses half the logical processors by default and lets idle threads sleep instead of wait actively. The environment variable `AEOLIS_THREADS` sets another number. |
 | [`a76e51e`](https://github.com/openearth/aeolis-python/commit/a76e51e) | Skips the grid rotation when the grid is not rotated. |
+| [`6ff269c`](https://github.com/openearth/aeolis-python/commit/6ff269c) | Looks up the tide, waves and wind of each time step faster. The time series are stored column by column, and the sine and cosine of the wind direction are computed only for the record in use. Also sums the bed layers in place, computes A and B of `fca2010` once per wavenumber and rotates with `np.dot`. On the Boschplaat, a step takes about 40 % less time. |
 
 All of these keep the results the same. Main files: [`aeolis/netcdf.py`](aeolis/netcdf.py),
-[`aeolis/model.py`](aeolis/model.py) and [`aeolis/__init__.py`](aeolis/__init__.py).
+[`aeolis/model.py`](aeolis/model.py), [`aeolis/utils.py`](aeolis/utils.py) and
+[`aeolis/__init__.py`](aeolis/__init__.py).
 
 ## 7. Bug fixes
 
