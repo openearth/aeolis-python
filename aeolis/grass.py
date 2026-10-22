@@ -152,7 +152,7 @@ def spreading(k, Nt, hveg, Nt_avg, B_c, B_s, p, s):
     # --- Competition-weighted relative densities (Option B) --------------------
     comp = np.zeros_like(Nt)
     for l in range(p['nspecies']):
-        comp += p['alpha_comp'][k, l] * (Nt_avg[:, :, l] / p['Nt_max'][l])
+        comp += p['alpha_comp'][k, l] * (Nt_avg[:, :, l] / p['Nt_cap'][l])
 
     saturation = 1.0 - comp #  np.maximum(1.0 - comp, 0.0)
 

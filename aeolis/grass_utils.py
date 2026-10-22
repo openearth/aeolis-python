@@ -21,7 +21,7 @@ def ensure_grass_parameters(p):
     param_lists = [
         'd_tiller', 'r_stem', 'alpha_uw', 'alpha_Nt', 'alpha_0',
         'G_h', 'G_c', 'G_s', 'Hveg', 'phi_h',
-        'Nt_max', 'R_cov',
+        'Nt_max', 'Nt_cap', 'R_cov',
         'lmax_c', 'mu_c', 'alpha_s', 'nu_s',
         'gamma_h', 'dzb_tol_c', 'dzb_tol_s',
         'dzb_opt_h', 'dzb_opt_c', 'dzb_opt_s',
@@ -50,6 +50,9 @@ def ensure_grass_parameters(p):
             logger.error(f"Parameter '{param}' is missing for grass model.")
             raise KeyError(f"Parameter '{param}' is missing for grass model.")
         
+    # Competition density defaults to the maximum tiller density, which also scales the shelter
+    p['Nt_cap'] = np.where(p['Nt_cap'] > 0., p['Nt_cap'], p['Nt_max'])
+
     # Handle alpha_comp separately as it is a matrix (nspecies x nspecies)
     if 'alpha_comp' in p:
 

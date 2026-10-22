@@ -515,6 +515,7 @@ DEFAULT_CONFIG = {
     'phi_h'                         : [1.0],         # [-] Saturation exponent for height growth
 
     'Nt_max'                        : [900.0],       # [1/m^2] Maximum attainable tiller density
+    'Nt_cap'                        : [0.],          # [1/m^2] Tiller density at which competition stops clonal expansion (0: Nt_max)
     'R_cov'                         : [1.2],         # [m] Radius for neighbourhood density averaging
 
     'lmax_c'                        : [0.9],         # [m] Maximum clonal dispersal distance
