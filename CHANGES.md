@@ -62,9 +62,15 @@ The second figure shows the share of each part, before and after.
   The new method cuts it by a factor of 4 to 13 on the 2D cases.
 - **Bed layers** took 47 % on the blowout and 37 % on the Boschplaat. Compiled code cuts this by a
   factor of 7 to 15.
-- **The solver** now takes the largest share on the embryo dunes (56 %) and the Boschplaat (44 %).
+- **The solver** now takes the largest share on the embryo dunes (56 %) and the Boschplaat (44 %). On
+  the Boschplaat this depends on the shear settings, as section 3 explains.
 - **Vegetation shear reduction** takes 31 % on the blowout. It became slower (0.13 s per step before,
-  0.32 s after), and we have not yet found out why.
+  0.32 s after). The cause was an earlier commit on this branch that rewrote the leeside wake so that it
+  could run on several cores: each cell then searched the largest wake of the whole grid, which is 2.8
+  times as much work on one core and no faster on four. Commit
+  [`337f8fe`](https://github.com/openearth/aeolis-python/commit/337f8fe) goes back to the original
+  loop. The results stay the same, and the wake takes 0.10 s per call instead of 0.20 s on one laptop
+  core. The figures and the speed table were made before this fix.
 - **Output and bookkeeping** dominate small 1D runs: 72 % on the 1D regression case.
 
 ## 1. Wind shear on the model grid
@@ -137,6 +143,20 @@ small group of cells.
 Both solvers converge to the same solution. Small differences remain, because the old solver stops at
 its convergence limit. On the blowout, the solver time per step drops from 0.54 s to 0.16 s. With
 `solver_order = quadrant` you get the old sweeps back.
+
+The solver time follows the number of sweeps, and that depends on the wind field. Where the grain velocity
+changes sign from one cell to the next, sand can move back and forth between the cells, and the solver
+needs more sweeps to settle. On the Boschplaat the shear settings decide how often that happens. Mean
+sweeps per time step over 145 steps, with the new solver order:
+
+| Shear | Sweeps per step |
+|---|---:|
+| `method_shear = fft` (old) | 12 |
+| `fft_grid`, `shear_transfer = weng` (the speed table) | 30 |
+| `fft_grid`, `fca2010`, A = B = 1 | 21 |
+| `fft_grid`, `fca2010`, A = 0.5, B = 0.3 (calibrated for this case) | 4 |
+
+This is why the solver share on the Boschplaat grew in the figures above. It is not an error.
 
 | Commit | What it does |
 |---|---|
