@@ -509,7 +509,7 @@ def _okin_sources(R0, udir, L_decay, dx, wind_convention_id):
     deg2rad = np.pi / 180.0
     R_end = 0.999
 
-    # source-cell properties (identical expressions to the scatter loop)
+    # source-cell properties (identical expressions to compute_okin_reduction)
     active = np.zeros((ny, nx), dtype=np.bool_)
     ux = np.zeros((ny, nx))
     uy = np.zeros((ny, nx))
@@ -536,87 +536,6 @@ def _okin_sources(R0, udir, L_decay, dx, wind_convention_id):
             if rad[iy, ix] > rmax:
                 rmax = rad[iy, ix]
     return active, ux, uy, L_end, rad, rmax
-
-
-@njit(parallel=True, cache=True)
-def compute_okin_reduction(x, y, R0, udir, L_decay, hvegeff, rNt, wind_convention_id):
-    """
-    Compute Okin leeside shear reduction using an effective decay length.
-
-    Every vegetated source cell reduces the shear in a wake downwind of it;
-    the strongest reduction wins. This is the "gather" form of the original
-    loop (kept as ``_compute_okin_reduction_scatter``): each target cell
-    visits its candidate source cells in the same row-major order and applies
-    the same update rule, so results are bitwise identical while targets are
-    processed in parallel.
-
-    Parameters
-    ----------
-    x, y               : 2D arrays of cell-center coordinates [m]
-    R0                 : 2D array of local Raupach reduction [-]
-    udir               : 2D array of wind direction [deg]
-    L_decay            : 2D array of Okin decay length h/c1 [m]
-    hvegeff, rNt       : 2D arrays at the source cells, passed on to the wake
-    wind_convention_id : int
-                          0 = nautical (from North, clockwise)
-                          1 = cartesian (0° = +x, CCW)
-
-    Returns
-    -------
-    R, hvegeff_zeta, rNt_zeta, Rveg_zeta : 2D arrays
-    """
-
-    ny, nx = x.shape
-    R = np.ones((ny, nx))
-    hvegeff_zeta = np.zeros((ny, nx))
-    rNt_zeta = np.zeros((ny, nx))
-    Rveg_zeta = np.ones((ny, nx))
-
-    dx = np.sqrt((x[0, 1] - x[0, 0])**2 + (y[0, 1] - y[0, 0])**2)
-    active, ux, uy, L_end, rad, rmax = _okin_sources(R0, udir, L_decay, dx, wind_convention_id)
-
-    if rmax < 0:
-        return R, hvegeff_zeta, rNt_zeta, Rveg_zeta
-
-    for jy in prange(ny):
-        for jx in range(nx):
-            Rt = 1.0
-            ht = 0.0
-            nt = 0.0
-            zt = 1.0
-            for iy in range(max(0, jy - rmax), min(ny, jy + rmax + 1)):
-                for ix in range(max(0, jx - rmax), min(nx, jx + rmax + 1)):
-                    if not active[iy, ix]:
-                        continue
-                    r = rad[iy, ix]
-                    if jy < iy - r or jy > iy + r or jx < ix - r or jx > ix + r:
-                        continue
-
-                    rx = x[jy, jx] - x[iy, ix]
-                    ry = y[jy, jx] - y[iy, ix]
-                    s = rx * ux[iy, ix] + ry * uy[iy, ix]
-                    if s <= 0.0 or s > L_end[iy, ix]:
-                        continue
-                    d_perp = np.sqrt((rx - s * ux[iy, ix])**2 + (ry - s * uy[iy, ix])**2)
-                    if d_perp >= dx:
-                        continue
-
-                    R0_ij = R0[iy, ix]
-                    R_s = 1.0 - (1.0 - R0_ij) * np.exp(-s / L_decay[iy, ix])
-                    w = 1.0 - d_perp / dx
-                    R_loc = 1.0 - w * (1.0 - R_s)
-
-                    if R_loc < Rt:
-                        Rt = R_loc
-                        ht = hvegeff[iy, ix]
-                        nt = rNt[iy, ix]
-                        zt = (1 - R_loc) / (1 - R0_ij)
-            R[jy, jx] = Rt
-            hvegeff_zeta[jy, jx] = ht
-            rNt_zeta[jy, jx] = nt
-            Rveg_zeta[jy, jx] = zt
-
-    return R, hvegeff_zeta, rNt_zeta, Rveg_zeta
 
 
 @njit(parallel=True, cache=True)
@@ -691,9 +610,16 @@ def compute_okin_reduction_periodic(x, y, R0, udir, L_decay, hvegeff, rNt, wind_
 
 
 @njit(cache=True)
-def _compute_okin_reduction_scatter(x, y, R0, udir, L_decay, hvegeff, rNt, wind_convention_id):
+def compute_okin_reduction(x, y, R0, udir, L_decay, hvegeff, rNt, wind_convention_id):
     """
     Compute Okin leeside shear reduction using an effective decay length.
+
+    Every vegetated source cell reduces the shear in a wake downwind of it;
+    the strongest reduction wins. The loop runs over the sources, each over
+    its own wake. A parallel form that runs over the targets (e5df619) had to
+    search the largest wake radius of the grid around every target: on the
+    blowout it visited 2.8 times as many cells and took twice as long on one
+    core, and was no faster on four.
 
     Parameters
     ----------
@@ -708,6 +634,7 @@ def _compute_okin_reduction_scatter(x, y, R0, udir, L_decay, hvegeff, rNt, wind_
     Returns
     -------
     R : 2D array of shear reduction including leeside effects [-]
+    hvegeff_zeta, rNt_zeta, Rveg_zeta : 2D arrays of the strongest wake per target
     """
 
     ny, nx = x.shape
