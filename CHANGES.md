@@ -242,8 +242,18 @@ While building this, we found that the three rows of a transect were never ident
 One row computes the transect that is uniform alongshore. On the transect of Hondsbossche (169 cells,
 2015, four random seeds) bed level, tiller density and vegetation height on one row stay within the spread
 between seeds of the three-row run, and the deposited volume equals that of three rows at a tight solver
-tolerance. With shore-normal wind, one row equals three rows to 1e-12 m. A model year takes 16 s instead
-of 25 s on one laptop core.
+tolerance. With shore-normal wind, one row equals three rows to 1e-12 m.
+
+A model year of this transect on one core:
+
+| | Laptop | Cluster (hal8) |
+|---|---:|---:|
+| Three rows, code before this update | 25 s | 25 s |
+| Three rows, this update | 23–25 s | 26 s |
+| One row (`transect_1d = T`) | 16 s | 17 s |
+
+One row is about 1.5 times faster. The lateral wrap of the grass kernels adds about 3 s per year to a
+three-row run.
 
 The same update makes small grids cheaper without changing results: the vegetation weights of the shear
 reduction in one compiled function, the padding of the shear on the model grid without `np.pad`, and a
