@@ -28,7 +28,7 @@ tide_file 				= None  								% Filename of ASCII file with time series of water
 wave_file 				= None  								% Filename of ASCII file with time series of wave heights (and periods)
 wind_file 				= wind.txt								% Filename of ASCII file with time series of wind velocity and direction
 bedcomp_file 			= None                 					% Filename of ASCII file with initial bed composition
-supply_file             = supply_file.txt                                  % Filename of ASCII file with a manual definition of sediment supply (mainly used in academic cases)
+supply_file             = supply_file.txt                       % Filename of ASCII file with a manual definition of sediment supply (mainly used in academic cases)
 meteo_file              = None               					% Filename of ASCII file with time series of meteorlogical conditions
 
 %% -------------------- [Output] ----------------------------- %%	
